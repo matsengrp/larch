@@ -1,8 +1,7 @@
 syntax = "proto3";                                                                                                                                                                                              
 package DAG;
 
-/// I think you can basically leave this as it is for now. 
-/// You might kill the "ref_nuc" since you really only care about the parent and child and you can traverse to the root to find the ancestral state if needed.  
+
 message mut {
     int32 position = 1; // Position in the chromosome
     /* All nucleotides are encoded as integers (0:A, 1:C, 2:G, 3:T) */
@@ -12,28 +11,23 @@ message mut {
     string chromosome = 5; // Chromosome string. Currently unused.
 }
 
-/// in this version everything is represented as edges
-/// nodes are not recorded separately, but since each must touch an edge when you construct the DAG you'll infer their existence.
 message edge {
-    int64 edge_id = 1;   // probably more convenient as ints and you don't really need string IDs in the same way as you do for leafs
     int64 parent_node = 2; 
     int64 parent_clade = 3;
     int64 child_node = 4; 
     repeated mut edge_mutations = 5; 
-    float edge_weight = 6; // e.g., if you want to attach a probability to an individual edge. Might not be needed for a bare-bones version of this. Can also add other fields.  
+    float edge_weight = 6; // probability in node-clade pair? other weight?
 }
 
-/// sample IDs linked to the integer node representation in the DAG
-/// this might also be modified to include an idea of node metadata, e.g., sample dates
+/// Data about each node.
 message node_name {
-    int64 node_id = 1; // The node name as given in the edges from the DAG
     repeated string condensed_leaves = 2; // A list of strings for the names of the sequence/sequences which are represented by the node above. can be just one if a leaf is unique. 
 }
 
 /// removed the newick since the DAG will have nodes that cannot be represented within a single tree anyway.  
 message data {
-    repeated edge edges = 1; /// since we are explicitly referencing each node and each edge,   
-    repeated node_name node_names = 2; // A dictionary-like object mapping names in the DAG to the larger set of sample IDs for leaf nodes (can be still collapsed). 
+    repeated edge edges = 1; /// since we are explicitly referencing each node and each edge,
+    repeated node_name node_names = 2; /// Parent_node and child_node edge data refers to index in this list of nodes
     string reference_id = 3; /// the name for the implied sequence at the UA node
     string reference_seq = 4; /// the reference sequence at the UA node
 }
