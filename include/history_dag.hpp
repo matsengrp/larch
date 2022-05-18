@@ -31,56 +31,57 @@
 #include "counter_map.hpp"
 
 class HistoryDAG {
-public:
+ public:
+  using Weight = double;
+  using ArbitraryPrecisionInteger = long;
 
-	using Weight = double;
-	using ArbitraryPrecisionInteger = long;
-	
-	MutableNode AddNode(NodeId id);
-	
-	MutableEdge AddEdge(EdgeId id, Node parent, Node child, CladeIdx clade);
-	MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
+  MutableNode AddNode(NodeId id);
 
-	void BuildConnections();
-	
-	inline auto GetNodes() const;
-	inline auto GetNodes();
-	inline auto GetEdges() const;
-	inline auto GetEdges();
-	
-	Node GetNode(NodeId id) const;
-	MutableNode GetNode(NodeId id);
-	Edge GetEdge(EdgeId id) const;
-	MutableEdge GetEdge(EdgeId id);
+  MutableEdge AddEdge(EdgeId id, Node parent, Node child, CladeIdx clade);
+  MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
 
-	Node GetRoot() const;
-	MutableNode GetRoot();
+  void BuildConnections();
 
-	inline auto GetLeafs() const;
-	inline auto GetLeafs();
+  inline auto GetNodes() const;
+  inline auto GetNodes();
+  inline auto GetEdges() const;
+  inline auto GetEdges();
 
-	inline auto TraversePreOrder() const;
-	inline auto TraversePreOrder();
-	inline auto TraversePostOrder() const;
-	inline auto TraversePostOrder();
+  Node GetNode(NodeId id) const;
+  MutableNode GetNode(NodeId id);
+  Edge GetEdge(EdgeId id) const;
+  MutableEdge GetEdge(EdgeId id);
 
-	ArbitraryPrecisionInteger CountHistories() const;
-	void WriteProtobuf(std::string_view filename) const;
-	HistoryDAG SampleHistory() const;
-	HistoryDAG FindHistoryByIndex(ArbitraryPrecisionInteger) const;
-	bool IsCladeTree() const;
-    void AddAllAllowedEdges();
+  Node GetRoot() const;
+  MutableNode GetRoot();
 
-private:
-	template <typename> friend class NodeView;
-	template <typename> friend class EdgeView;
+  inline auto GetLeafs() const;
+  inline auto GetLeafs();
 
-	std::vector<NodeStorage> nodes_;
+  inline auto TraversePreOrder() const;
+  inline auto TraversePreOrder();
+  inline auto TraversePostOrder() const;
+  inline auto TraversePostOrder();
 
-	std::vector<EdgeStorage<Weight>> edges_;
+  ArbitraryPrecisionInteger CountHistories() const;
+  void WriteProtobuf(std::string_view filename) const;
+  HistoryDAG SampleHistory() const;
+  HistoryDAG FindHistoryByIndex(ArbitraryPrecisionInteger) const;
+  bool IsCladeTree() const;
+  void AddAllAllowedEdges();
 
-	NodeId root_ = {NoId};
-	std::vector<NodeId> leafs_;
+ private:
+  template <typename>
+  friend class NodeView;
+  template <typename>
+  friend class EdgeView;
+
+  std::vector<NodeStorage> nodes_;
+
+  std::vector<EdgeStorage<Weight>> edges_;
+
+  NodeId root_ = {NoId};
+  std::vector<NodeId> leafs_;
 };
 
 #include "history_dag_node.hpp"

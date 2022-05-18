@@ -1,27 +1,43 @@
 template <typename T>
-TraverseValue<T>::TraverseValue(T dag, NodeId node, EdgeId edge) :
-		dag_{dag}, node_{node}, edge_{edge} {}
+TraverseValue<T>::TraverseValue(T dag, NodeId node, EdgeId edge)
+    : dag_{dag}, node_{node}, edge_{edge} {}
 
 template <typename T>
-NodeView<T> TraverseValue<T>::GetNode() const { return dag_.GetNode(node_); }
+NodeView<T> TraverseValue<T>::GetNode() const {
+  return dag_.GetNode(node_);
+}
 
 template <typename T>
-EdgeView<T> TraverseValue<T>::GetEdge() const { return dag_.GetEdge(edge_); }
+EdgeView<T> TraverseValue<T>::GetEdge() const {
+  return dag_.GetEdge(edge_);
+}
 
 template <typename T>
-TraverseValue<T>::operator MutableNode() const { return GetNode(); }
+TraverseValue<T>::operator MutableNode() const {
+  return GetNode();
+}
 
 template <typename T>
-TraverseValue<T>::operator MutableEdge() const { return GetEdge(); }
+TraverseValue<T>::operator MutableEdge() const {
+  return GetEdge();
+}
 
 template <typename T>
-TraverseValue<T>::operator Node() const { return GetNode(); }
+TraverseValue<T>::operator Node() const {
+  return GetNode();
+}
 
 template <typename T>
-TraverseValue<T>::operator Edge() const { return GetEdge(); }
+TraverseValue<T>::operator Edge() const {
+  return GetEdge();
+}
 
 template <typename T>
-bool TraverseValue<T>::IsRoot() const { return GetNode().IsRoot(); }
+bool TraverseValue<T>::IsRoot() const {
+  return GetNode().IsRoot();
+}
 
 template <typename T>
-bool TraverseValue<T>::IsLeaf() const { return GetNode().IsLeaf(); }
+bool TraverseValue<T>::IsLeaf() const {
+  return GetNode().IsLeaf();
+}

@@ -20,8 +20,17 @@ ExternalProject_Add(range-v3
     INSTALL_DIR         range-v3/install
 )
 
-add_executable(larch
+add_library(larch_autogen OBJECT
     ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
+)
+set_target_properties(larch_autogen
+    PROPERTIES CXX_CLANG_TIDY ""
+)
+
+set(CMAKE_CXX_CLANG_TIDY clang-tidy)
+
+add_executable(larch
+    $<TARGET_OBJECTS:larch_autogen>
     src/history_dag.cpp
     src/history_dag_loader.cpp
     src/history_dag_node_storage.cpp
@@ -30,8 +39,14 @@ add_executable(larch
     test/test_merge.cpp)
 
 add_dependencies(larch range-v3)
+
+if (${CMAKE_BUILD_TYPE} STREQUAL "San")
+target_compile_options(larch PUBLIC -fsanitize=address -fsanitize=undefined)
+target_link_libraries(larch PUBLIC -lasan -lubsan)
+endif()
+
 target_compile_options(larch PUBLIC -std=c++17 -Werror -Wall -Wextra -pedantic -pedantic-errors -Wno-unused)
-target_include_directories(larch PUBLIC include test ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
+target_include_directories(larch PUBLIC include test ${Protobuf_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
 target_link_libraries(larch PUBLIC -lz)
 target_link_libraries(larch PUBLIC nlohmann_json::nlohmann_json)
 target_link_libraries(larch PUBLIC ${Protobuf_LIBRARIES})

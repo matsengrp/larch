@@ -13,27 +13,28 @@ class HistoryDAG;
 
 template <typename T>
 class EdgeView {
-public:
-	constexpr static const bool is_mutable = std::is_same_v<T, HistoryDAG&>;
-	using NodeType = std::conditional_t<is_mutable, MutableNode, Node>;
-	EdgeView(T dag, EdgeId id);
-	operator Edge() const;
-	T GetDAG() const;
-	EdgeId GetId() const;
-	NodeType GetParent() const;
-	NodeType GetChild() const;
-	CladeIdx GetClade() const;
-	bool IsRoot() const;
-	bool IsLeaf() const;
-    double GetProbability() const;
-	const auto& GetWeight() const;
-	std::optional<EdgeView> FindNextSibling() const;
-	
-private:
-	template <typename U> friend bool operator==(EdgeView<U>, EdgeView<U>);
-	const auto& GetStorage() const;
-	auto& GetStorage();
+ public:
+  constexpr static const bool is_mutable = std::is_same_v<T, HistoryDAG&>;
+  using NodeType = std::conditional_t<is_mutable, MutableNode, Node>;
+  EdgeView(T dag, EdgeId id);
+  operator Edge() const;
+  T GetDAG() const;
+  EdgeId GetId() const;
+  NodeType GetParent() const;
+  NodeType GetChild() const;
+  CladeIdx GetClade() const;
+  bool IsRoot() const;
+  bool IsLeaf() const;
+  double GetProbability() const;
+  const auto& GetWeight() const;
+  std::optional<EdgeView> FindNextSibling() const;
 
-	T dag_;
-	const EdgeId id_;
+ private:
+  template <typename U>
+  friend bool operator==(EdgeView<U>, EdgeView<U>);
+  const auto& GetStorage() const;
+  auto& GetStorage();
+
+  T dag_;
+  const EdgeId id_;
 };

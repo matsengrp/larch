@@ -111,11 +111,15 @@ void ZStringBuf::ensure_avail(std::streamsize count) {
       std::streamsize produced = 0;
       while (produced < static_cast<std::streamsize>(ret.out_count)) {
         const auto prod = sputn(out_buf_.get() + produced, ret.out_count - produced);
-        if (prod < 1) break;
+        if (prod < 1) {
+          break;
+        }
         produced += prod;
       }
     }
-    if (consumed < 1) break;
+    if (consumed < 1) {
+      break;
+    }
   }
 }
 
