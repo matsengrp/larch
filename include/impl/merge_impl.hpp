@@ -1,4 +1,4 @@
-Merge::Merge(const std::string& refseq,
+Merge::Merge(const std::string_view& refseq,
              std::vector<std::reference_wrapper<const HistoryDAG>>&& trees,
              const std::vector<std::vector<NodeLabel>>& labels)
     : refseq_{refseq}, trees_{std::move(trees)}, labels_{labels} {

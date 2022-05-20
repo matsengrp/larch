@@ -108,7 +108,8 @@ static void test_protobuf(const std::string& correct_path,
   std::vector<HistoryDAG> trees;
   for (auto& path : paths) {
     std::vector<CompactGenome> tree_mutations;
-    trees.emplace_back(LoadHistoryDAGFromProtobufGZ(path, tree_mutations));
+    std::string ref_seq;
+    trees.emplace_back(LoadHistoryDAGFromProtobufGZ(path, ref_seq, tree_mutations));
     mutations.emplace_back(std::move(tree_mutations));
   }
   std::string refseq;

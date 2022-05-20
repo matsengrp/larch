@@ -9,14 +9,17 @@
 #include "dag.pb.h"
 #include "newick.hpp"
 
-HistoryDAG LoadHistoryDAGFromProtobufGZ(const std::string& path,
+HistoryDAG LoadHistoryDAGFromProtobufGZ(const std::string_view& path,
+                                        std::string& ref_seq,
                                         std::vector<CompactGenome>& mutations) {
-  std::ifstream in_compressed(path.c_str());
+  std::ifstream in_compressed{std::string{path}};
   assert(in_compressed);
-  zlib::ZStringBuf zbuf(in_compressed, 1, 128 * 1024 * 1024);
-  std::istream in(&zbuf);
+  zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
+  std::istream in{&zbuf};
   DAG::data data;
   data.ParseFromIstream(&in);
+
+  ref_seq = data.reference_seq();
   HistoryDAG dag;
 
   for (auto& i : data.node_names()) {

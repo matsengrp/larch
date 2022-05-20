@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <tuple>
 #include <cassert>
-#include <string>
+#include <string_view>
 
 #include "history_dag.hpp"
 
@@ -21,7 +21,7 @@ class Merge;
 
 class Merge {
  public:
-  inline Merge(const std::string& refseq,
+  inline Merge(const std::string_view& refseq,
                std::vector<std::reference_wrapper<const HistoryDAG>>&& trees,
                const std::vector<std::vector<NodeLabel>>& labels);
 
