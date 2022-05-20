@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.11)
 project (larch)
 
+find_package(Protobuf REQUIRED)
+protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS
+    proto/dag.proto
+    proto/parsimony.proto)
+
 include(FetchContent)
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
 FetchContent_MakeAvailable(json)
-
-find_package(Protobuf REQUIRED)
-protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS proto/dag.proto)
 
 include(ExternalProject)
 ExternalProject_Add(range-v3
@@ -45,6 +47,7 @@ function(larch_link_opts PRODUCT)
     target_link_libraries(${PRODUCT} PUBLIC -lz)
     target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
     target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
+    target_link_libraries(${PRODUCT} PUBLIC tbb)
 endfunction()
 
 function(larch_executable PRODUCT)

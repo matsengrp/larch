@@ -32,6 +32,10 @@
 
 class HistoryDAG {
  public:
+  HistoryDAG() = default;
+  HistoryDAG(HistoryDAG&&) = default;
+  HistoryDAG& operator=(HistoryDAG&&) = default;
+
   using Weight = double;
   using ArbitraryPrecisionInteger = long;
 

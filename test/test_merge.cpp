@@ -7,101 +7,6 @@
 #include "history_dag_loader.hpp"
 #include "benchmark.hpp"
 
-void GetLabels(const HistoryDAG& tree, std::vector<NodeLabel>& labels,
-               const std::string& refseq, const std::vector<CompactGenome>& mutations) {
-  labels.resize(tree.GetNodes().size());
-  for (auto iter : tree.TraversePreOrder()) {
-    if (iter.IsRoot()) {
-      continue;
-    }
-    const CompactGenome& muts = mutations.at(iter.GetEdge().GetId().value);
-    NodeLabel& label = labels.at(iter.GetNode().GetId().value);
-    const CompactGenome& parent_cgs =
-        labels.at(iter.GetEdge().GetParent().GetId().value).first;
-    label.first = parent_cgs;
-    for (auto [pos, base] : muts) {
-      if (base != refseq.at(pos - 1)) {
-        label.first[pos] = base;
-      } else {
-        label.first.erase(pos);
-      }
-    }
-  }
-
-  for (Node node : tree.TraversePostOrder()) {
-    if (node.IsLeaf()) {
-      continue;
-    }
-    LeafSet& leaf_set = labels.at(node.GetId().value).second;
-    for (auto clade : node.GetClades()) {
-      std::set<CompactGenome> clade_leafs;
-      for (Node child : clade | ranges::views::transform(Transform::GetChild)) {
-        if (child.IsLeaf()) {
-          clade_leafs.insert(labels.at(child.GetId().value).first);
-        } else {
-          for (auto& child_leafs : labels.at(child.GetId().value).second) {
-            clade_leafs.insert(child_leafs.begin(), child_leafs.end());
-          }
-        }
-      }
-      leaf_set.insert(clade_leafs);
-    }
-  }
-}
-
-[[maybe_unused]] std::string ToString(const NodeLabel& label) {
-  std::string result;
-  for (auto [pos, mut] : label.first) {
-    result += std::to_string(pos);
-    result += mut;
-    result += " ";
-  }
-  result += "[";
-  for (auto& clade : label.second) {
-    result += "(";
-    for (auto& leaf : clade) {
-      for (auto [pos, mut] : leaf) {
-        result += std::to_string(pos);
-        result += mut;
-        result += " ";
-      }
-    }
-    result += ") ";
-  }
-  result += "]";
-  return result;
-}
-
-std::string ToDOT(Node node, const NodeLabel& label) {
-  std::string result;
-  size_t count = 0;
-  for (auto [pos, mut] : label.first) {
-    result += std::to_string(pos);
-    result += mut;
-    result += ++count % 3 == 0 ? "\\n" : " ";
-  }
-  result += "\\n[";
-  result += std::to_string(node.GetId().value);
-  result += "]";
-  return result;
-}
-
-std::string ToDOT(const HistoryDAG& tree, const std::vector<NodeLabel>& labels) {
-  std::string result;
-  result += "digraph {\n";
-  for (auto i : tree.GetEdges()) {
-    std::string parent = ToDOT(i.GetParent(), labels.at(i.GetParent().GetId().value));
-    std::string child = ToDOT(i.GetChild(), labels.at(i.GetChild().GetId().value));
-    result += "  \"";
-    result += parent;
-    result += "\" -> \"";
-    result += child;
-    result += "\"\n";
-  }
-  result += "}";
-  return result;
-}
-
 static void test_protobuf(const std::string& correct_path,
                           const std::vector<std::string>& paths) {
   std::vector<std::vector<CompactGenome>> mutations;
@@ -112,25 +17,23 @@ static void test_protobuf(const std::string& correct_path,
     trees.emplace_back(LoadHistoryDAGFromProtobufGZ(path, ref_seq, tree_mutations));
     mutations.emplace_back(std::move(tree_mutations));
   }
-  std::string refseq;
-  HistoryDAG correct_result = LoadHistoryDAGFromJsonGZ(correct_path, refseq);
+  std::string reference_sequence;
+  HistoryDAG correct_result = LoadHistoryDAGFromJsonGZ(correct_path, reference_sequence);
 
-  std::vector<std::vector<NodeLabel>> labels;
+  std::vector<TreeLabels> labels;
   std::vector<std::reference_wrapper<const HistoryDAG>> tree_refs;
   for (size_t i = 0; i < trees.size(); ++i) {
-    std::vector<NodeLabel> tree_labels;
-    GetLabels(trees.at(i), tree_labels, refseq, mutations.at(i));
-    labels.emplace_back(std::move(tree_labels));
+    labels.emplace_back(GetLabels(trees.at(i), reference_sequence, mutations.at(i)));
     tree_refs.push_back(trees.at(i));
   }
 
-  Merge merged(refseq, std::move(tree_refs), labels);
-  merged.Run();
+  Merge merge(reference_sequence, std::move(tree_refs), labels);
+  merge.Run();
 
-  assert_equal(correct_result.GetNodes().size(), merged.GetResult().GetNodes().size(),
+  assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
                "Nodes count");
 
-  assert_equal(correct_result.GetEdges().size(), merged.GetResult().GetEdges().size(),
+  assert_equal(correct_result.GetEdges().size(), merge.GetResult().GetEdges().size(),
                "Edges count");
 }
 

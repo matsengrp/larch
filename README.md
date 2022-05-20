@@ -7,10 +7,11 @@ Requirements
 * cmake 3.11
 * protobuf libraries and compiler
 * zlib
+* TBB
 
 For Ubuntu 18.04 LTS the following commands installs the requirements:
 
-`sudo apt get install make g++ protobuf-compiler libprotobuf-dev zlib1g-dev`
+`sudo apt get install make g++ protobuf-compiler libprotobuf-dev zlib1g-dev libtbb-dev`
 
 To get a recent cmake, download from `https://cmake.org/download/`, for example:
 
