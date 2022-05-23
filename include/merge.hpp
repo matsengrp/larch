@@ -51,7 +51,8 @@ class LeafSet {
   LeafSet& operator=(LeafSet&&) = default;
   LeafSet& operator=(const LeafSet&) = delete;
 
-  inline LeafSet(Node node, const std::vector<NodeLabel>& labels);
+  inline LeafSet(Node node, const std::vector<NodeLabel>& labels,
+                 std::vector<LeafSet>& computed_leafsets);
 
   inline bool operator==(const LeafSet& rhs) const;
 
@@ -148,9 +149,7 @@ class Merge {
 
   void Run() {
     ComputeCompactGenomes();
-    std::cout << "CGS: " << all_compact_genomes_.size() << "\n";
     ComputeLeafSets();
-    std::cout << "LSS: " << all_leaf_sets_.size() << "\n";
     MergeTrees();
     std::cout << "Nodes: " << result_nodes_.size() << "\n";
     std::cout << "Edges: " << result_edges_.size() << "\n";
@@ -212,13 +211,15 @@ class Merge {
     std::iota(tree_idxs.begin(), tree_idxs.end(), 0);
 
     std::atomic<size_t> node_id{0};
+    std::mutex mtx;
     std::for_each(std::execution::par, tree_idxs.begin(), tree_idxs.end(),
                   [&](size_t tree_idx) {
                     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
                     for (auto label : labels) {
-                      auto i = result_nodes_.insert({label, {NoId}});
-                      if (i.second) {
-                        i.first->second = {node_id.fetch_add(1)};
+                      std::lock_guard<std::mutex> lock{mtx};
+                      auto i = result_nodes_.find(label);
+                      if (i == result_nodes_.end()) {
+                        result_nodes_.insert({label, {node_id.fetch_add(1)}});
                       }
                     }
                   });
@@ -234,13 +235,17 @@ class Merge {
           }
         });
     result_.InitializeComponents(result_nodes_.size(), result_edges_.size());
+    size_t edge_id = 0;
     for (auto& edge : result_edges_) {
       auto parent = result_nodes_.find(
           NodeLabel{edge.parent_compact_genome, edge.parent_leaf_set});
       auto child =
           result_nodes_.find(NodeLabel{edge.child_compact_genome, edge.child_leaf_set});
-      assert(child != result_nodes_.end());
-      result_.AddEdge({result_.GetEdges().size()}, parent->second, child->second, {0});
+      Assert(parent != result_nodes_.end());
+      Assert(child != result_nodes_.end());
+      Assert(parent->second.value != NoId);
+      Assert(child->second.value != NoId);
+      result_.AddEdge({edge_id++}, parent->second, child->second, {0});
     }
   }
 
@@ -250,9 +255,6 @@ class Merge {
     std::vector<CompactGenome> result;
     result.resize(tree.GetNodes().size());
     for (auto iter : tree.TraversePreOrder()) {
-      if (iter.IsRoot()) {
-        continue;
-      }
       const Mutations& mutations = edge_mutations.at(iter.GetEdge().GetId().value);
       const CompactGenome& parent = result.at(iter.GetEdge().GetParent().GetId().value);
       CompactGenome& compact_genome = result.at(iter.GetNode().GetId().value);
@@ -266,10 +268,7 @@ class Merge {
     std::vector<LeafSet> result;
     result.resize(tree.GetNodes().size());
     for (Node node : tree.TraversePostOrder()) {
-      if (node.IsLeaf()) {
-        continue;
-      }
-      result.at(node.GetId().value) = LeafSet{node, labels};
+      result.at(node.GetId().value) = LeafSet{node, labels, result};
     }
     return result;
   }

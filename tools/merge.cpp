@@ -4,8 +4,6 @@
 #include <algorithm>
 #include <execution>
 
-#include <valgrind/callgrind.h>  //XXX
-
 #include <range/v3/action/push_back.hpp>
 
 #include "arguments.hpp"
@@ -59,11 +57,9 @@ static HistoryDAG MergeTrees(const std::vector<std::string_view>& paths,
 
   Benchmark merge_time;
   Merge merge(reference_sequence, trees, mutations);
-  CALLGRIND_START_INSTRUMENTATION;
   merge_time.start();
   merge.Run();
   merge_time.stop();
-  CALLGRIND_STOP_INSTRUMENTATION;
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
   return std::move(merge.GetResult());
 }

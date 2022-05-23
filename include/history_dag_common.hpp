@@ -88,3 +88,8 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) {
   lhs ^= rhs + 0x9e3779b97f4a7c15 + (lhs << 6) + (lhs >> 2);
   return lhs;
 };
+
+#define Assert(x)                                          \
+  {                                                        \
+    if (not(x)) throw std::runtime_error("Assert failed"); \
+  }

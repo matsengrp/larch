@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 #include "test_common.hpp"
 #include "history_dag_loader.hpp"
@@ -23,6 +24,9 @@ static void test_protobuf(const std::string& correct_path,
 
   Merge merge(reference_sequence, trees, mutations);
   merge.Run();
+
+  std::cout << "Correct nodes: " << correct_result.GetNodes().size() << "\n";
+  std::cout << "Correct edges: " << correct_result.GetEdges().size() << "\n";
 
   assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
                "Nodes count");
@@ -63,6 +67,47 @@ static void test_case_ref() {
                 });
 }
 
+static void test_case_20d() {
+  std::vector<std::string> paths;
+  const std::filesystem::path dir{"data/20D_from_fasta"};
+  for (auto& file : std::filesystem::directory_iterator{dir}) {
+    if (file.path().filename().string() != "20D_full_dag.json.gz") {
+      paths.push_back(file.path().string());
+    }
+  }
+
+  std::vector<std::vector<Mutations>> mutations;
+  std::vector<HistoryDAG> trees;
+  std::string reference_sequence;
+
+  reference_sequence = LoadRefseqFromJsonGZ("data/20D_from_fasta/20D_full_dag.json.gz");
+
+  trees.resize(paths.size());
+  mutations.resize(paths.size());
+  std::vector<std::pair<size_t, std::string_view>> paths_idx;
+  for (size_t i = 0; i < paths.size(); ++i) {
+    paths_idx.push_back({i, paths.at(i)});
+  }
+  std::cout << "Loading trees ";
+  std::for_each(std::execution::par, paths_idx.begin(), paths_idx.end(),
+                [&](auto path_idx) {
+                  std::vector<Mutations> tree_mutations;
+                  std::cout << "." << std::flush;
+                  trees.at(path_idx.first) =
+                      LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
+                  mutations.at(path_idx.first) = std::move(tree_mutations);
+                });
+  std::cout << " done."
+            << "\n";
+
+  Benchmark merge_time;
+  Merge merge(reference_sequence, trees, mutations);
+  merge_time.start();
+  merge.Run();
+  merge_time.stop();
+  std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
+}
+
 [[maybe_unused]] static const auto test0_added = add_test({test_case_2, "Test case 2"});
 
 [[maybe_unused]] static const auto test1_added =
@@ -70,3 +115,5 @@ static void test_case_ref() {
 
 [[maybe_unused]] static const auto test2_added =
     add_test({test_case_ref, "Tree with different ref"});
+
+[[maybe_unused]] static const auto test3_added = add_test({test_case_20d, "800 trees"});

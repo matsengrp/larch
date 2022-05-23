@@ -41,18 +41,19 @@ const LeafSet* LeafSet::Empty() {
   return &empty;
 }
 
-LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels)
+LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
+                 std::vector<LeafSet>& computed_leafsets)
     : clades_{[&] {
         std::set<std::set<const CompactGenome*>> clades;
         for (auto clade : node.GetClades()) {
           std::set<const CompactGenome*> clade_leafs;
           for (Node child : clade | ranges::views::transform(Transform::GetChild)) {
-            const LeafSet& child_leaf_set = *labels.at(child.GetId().value).leaf_set;
+            const LeafSet& child_leaf_set = computed_leafsets.at(child.GetId().value);
             if (child.IsLeaf()) {
               clade_leafs.insert(labels.at(child.GetId().value).compact_genome);
             } else {
               for (auto& child_leafs :
-                   (*labels.at(child.GetId().value).leaf_set).clades_) {
+                   computed_leafsets.at(child.GetId().value).clades_) {
                 clade_leafs.insert(child_leafs.begin(), child_leafs.end());
               }
             }
