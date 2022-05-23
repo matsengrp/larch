@@ -12,47 +12,47 @@
 #include "parsimony.pb.h"
 #include "newick.hpp"
 
-// HistoryDAG LoadHistoryDAGFromProtobufGZ(const std::string_view& path,
-//                                         std::string& ref_seq,
-//                                         std::vector<CompactGenome>& mutations) {
-//   std::ifstream in_compressed{std::string{path}};
-//   assert(in_compressed);
-//   zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
-//   std::istream in{&zbuf};
-//   DAG::data data;
-//   data.ParseFromIstream(&in);
+HistoryDAG LoadHistoryDAGFromProtobufGZ(std::string_view path, std::string& ref_seq,
+                                        std::vector<Mutations>& mutations) {
+  std::ifstream in_compressed{std::string{path}};
+  assert(in_compressed);
+  zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
+  std::istream in{&zbuf};
+  DAG::data data;
+  data.ParseFromIstream(&in);
 
-//   ref_seq = data.reference_seq();
-//   HistoryDAG dag;
+  ref_seq = data.reference_seq();
+  HistoryDAG dag;
 
-//   for (auto& i : data.node_names()) {
-//     dag.AddNode({static_cast<size_t>(i.node_id())});
-//   }
+  for (auto& i : data.node_names()) {
+    dag.AddNode({static_cast<size_t>(i.node_id())});
+  }
 
-//   size_t edge_id = 0;
-//   for (auto& i : data.edges()) {
-//     dag.AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
-//                 {static_cast<size_t>(i.child_node())},
-//                 {static_cast<size_t>(i.parent_clade())});
-//   }
+  size_t edge_id = 0;
+  for (auto& i : data.edges()) {
+    dag.AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
+                {static_cast<size_t>(i.child_node())},
+                {static_cast<size_t>(i.parent_clade())});
+  }
 
-//   dag.BuildConnections();
+  dag.BuildConnections();
 
-//   mutations.resize(dag.GetEdges().size());
-//   edge_id = 0;
-//   for (auto& i : data.edges()) {
-//     CompactGenome& cg = mutations.at(edge_id++);
-//     for (auto& mut : i.edge_mutations()) {
-//       static const char decode[] = {'A', 'C', 'G', 'T'};
-//       assert(mut.mut_nuc().size() == 1);
-//       cg[mut.position()] = decode[mut.mut_nuc().Get(0)];
-//     }
-//   }
+  mutations.resize(dag.GetEdges().size());
+  edge_id = 0;
+  for (auto& i : data.edges()) {
+    Mutations& cg = mutations.at(edge_id++);
+    for (auto& mut : i.edge_mutations()) {
+      static const char decode[] = {'A', 'C', 'G', 'T'};
+      assert(mut.mut_nuc().size() == 1);
+      cg[{static_cast<size_t>(mut.position())}] = decode[mut.mut_nuc().Get(0)];
+    }
+  }
 
-//   return dag;
-// }
+  return dag;
+}
 
-static HistoryDAG LoadTreeFromProtobuf(std::istream& in, std::vector<Mutations>& mutations) {
+static HistoryDAG LoadTreeFromProtobuf(std::istream& in,
+                                       std::vector<Mutations>& mutations) {
   Parsimony::data data;
   data.ParseFromIstream(&in);
 
@@ -82,7 +82,8 @@ static HistoryDAG LoadTreeFromProtobuf(std::istream& in, std::vector<Mutations>&
     }
     auto& edge_muts = mutations.at(node.GetSingleParent().GetId().value);
     for (auto i :
-         pb_muts | ranges::view::transform([](auto& mut) -> std::pair<MutationPosition, char> {
+         pb_muts | ranges::view::transform([](auto& mut)
+                                               -> std::pair<MutationPosition, char> {
            static const char decode[] = {'A', 'C', 'G', 'T'};
            assert(mut.mut_nuc().size() == 1);
            return {{static_cast<size_t>(mut.position())}, decode[mut.mut_nuc()[0]]};
@@ -144,28 +145,28 @@ the clade in the parent node's clade_list from which this edge descends.
 
 */
 
-// HistoryDAG LoadHistoryDAGFromJsonGZ(const std::string_view& path, std::string& refseq) {
-//   std::ifstream in_compressed{std::string{path}};
-//   assert(in_compressed);
-//   zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
-//   std::istream in{&zbuf};
-//   nlohmann::json json;
-//   in >> json;
-//   HistoryDAG result;
+HistoryDAG LoadHistoryDAGFromJsonGZ(std::string_view path, std::string& refseq) {
+  std::ifstream in_compressed{std::string{path}};
+  assert(in_compressed);
+  zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
+  std::istream in{&zbuf};
+  nlohmann::json json;
+  in >> json;
+  HistoryDAG result;
 
-//   refseq = json["refseq"][1];
+  refseq = json["refseq"][1];
 
-//   size_t id = 0;
-//   for ([[maybe_unused]] auto& i : json["nodes"]) {
-//     result.AddNode({id++});
-//   }
-//   id = 0;
-//   for (auto& i : json["edges"]) {
-//     result.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
-//   }
-//   result.BuildConnections();
-//   return result;
-// }
+  size_t id = 0;
+  for ([[maybe_unused]] auto& i : json["nodes"]) {
+    result.AddNode({id++});
+  }
+  id = 0;
+  for (auto& i : json["edges"]) {
+    result.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
+  }
+  result.BuildConnections();
+  return result;
+}
 
 // static CompactGenome GetCompactGenome(const nlohmann::json& json,
 //                                       size_t compact_genome_index) {
@@ -190,7 +191,7 @@ the clade in the parent node's clade_list from which this edge descends.
 //   return result;
 // }
 
-// std::vector<NodeLabel> LoadLabelsJsonGZ(const std::string_view& path) {
+// std::vector<NodeLabel> LoadLabelsJsonGZ(std::string_view path) {
 //   std::ifstream in_compressed{std::string{path}};
 //   assert(in_compressed);
 //   zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};

@@ -44,6 +44,8 @@ class HistoryDAG {
   MutableEdge AddEdge(EdgeId id, Node parent, Node child, CladeIdx clade);
   MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
 
+  void InitializeComponents(size_t nodes_count, size_t edges_count);
+
   void BuildConnections();
 
   inline auto GetNodes() const;

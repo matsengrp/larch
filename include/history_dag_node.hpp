@@ -9,8 +9,6 @@
 
 class NodeStorage;
 
-class Mutation;
-
 template <typename T>
 class NodeView {
  public:

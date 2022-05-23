@@ -9,25 +9,19 @@
 
 static void test_protobuf(const std::string& correct_path,
                           const std::vector<std::string>& paths) {
-  std::vector<std::vector<CompactGenome>> mutations;
+  std::vector<std::vector<Mutations>> mutations;
   std::vector<HistoryDAG> trees;
   for (auto& path : paths) {
-    std::vector<CompactGenome> tree_mutations;
+    std::vector<Mutations> tree_mutations;
     std::string ref_seq;
     trees.emplace_back(LoadHistoryDAGFromProtobufGZ(path, ref_seq, tree_mutations));
     mutations.emplace_back(std::move(tree_mutations));
   }
   std::string reference_sequence;
-  HistoryDAG correct_result = LoadHistoryDAGFromJsonGZ(correct_path, reference_sequence);
+  HistoryDAG correct_result =
+      LoadHistoryDAGFromJsonGZ(correct_path, reference_sequence);
 
-  std::vector<TreeLabels> labels;
-  std::vector<std::reference_wrapper<const HistoryDAG>> tree_refs;
-  for (size_t i = 0; i < trees.size(); ++i) {
-    labels.emplace_back(GetLabels(trees.at(i), reference_sequence, mutations.at(i)));
-    tree_refs.push_back(trees.at(i));
-  }
-
-  Merge merge(reference_sequence, std::move(tree_refs), labels);
+  Merge merge(reference_sequence, trees, mutations);
   merge.Run();
 
   assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),

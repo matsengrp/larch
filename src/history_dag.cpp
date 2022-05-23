@@ -20,6 +20,11 @@ MutableEdge HistoryDAG::AddEdge(EdgeId id, NodeId parent, NodeId child,
   return {*this, id};
 }
 
+void HistoryDAG::InitializeComponents(size_t nodes_count, size_t edges_count) {
+  nodes_.resize(nodes_count);
+  edges_.resize(edges_count);
+}
+
 void HistoryDAG::BuildConnections() {
   root_ = {NoId};
   leafs_ = {};

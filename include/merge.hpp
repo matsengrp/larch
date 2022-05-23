@@ -9,8 +9,10 @@
 #include <execution>
 #include <shared_mutex>
 #include <thread>
+#include <atomic>
 
 #include <tbb/concurrent_unordered_set.h>
+#include <tbb/concurrent_unordered_map.h>
 #include <range/v3/view/enumerate.hpp>
 
 #include "history_dag.hpp"
@@ -65,6 +67,7 @@ class LeafSet {
 class NodeLabel {
  public:
   inline NodeLabel();
+  inline NodeLabel(const CompactGenome* cg, const LeafSet* ls);
 
   inline bool operator==(const NodeLabel& rhs) const;
 
@@ -208,10 +211,16 @@ class Merge {
     tree_idxs.resize(trees_.size());
     std::iota(tree_idxs.begin(), tree_idxs.end(), 0);
 
+    std::atomic<size_t> node_id{0};
     std::for_each(std::execution::par, tree_idxs.begin(), tree_idxs.end(),
                   [&](size_t tree_idx) {
                     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-                    result_nodes_.insert(labels.begin(), labels.end());
+                    for (auto label : labels) {
+                      auto i = result_nodes_.insert({label, {NoId}});
+                      if (i.second) {
+                        i.first->second = {node_id.fetch_add(1)};
+                      }
+                    }
                   });
     std::for_each(
         std::execution::par, tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
@@ -224,11 +233,20 @@ class Merge {
                                   child_label.compact_genome, child_label.leaf_set});
           }
         });
+    result_.InitializeComponents(result_nodes_.size(), result_edges_.size());
+    for (auto& edge : result_edges_) {
+      auto parent = result_nodes_.find(
+          NodeLabel{edge.parent_compact_genome, edge.parent_leaf_set});
+      auto child =
+          result_nodes_.find(NodeLabel{edge.child_compact_genome, edge.child_leaf_set});
+      assert(child != result_nodes_.end());
+      result_.AddEdge({result_.GetEdges().size()}, parent->second, child->second, {0});
+    }
   }
 
   static std::vector<CompactGenome> ComputeCompactGenomes(
       const HistoryDAG& tree, const std::vector<Mutations>& edge_mutations,
-      const std::string_view& reference_sequence) {
+      std::string_view reference_sequence) {
     std::vector<CompactGenome> result;
     result.resize(tree.GetNodes().size());
     for (auto iter : tree.TraversePreOrder()) {
@@ -267,7 +285,7 @@ class Merge {
       all_leaf_sets_;
   std::vector<std::vector<NodeLabel>> tree_labels_;
 
-  tbb::concurrent_unordered_set<NodeLabel, std::hash<NodeLabel>,
+  tbb::concurrent_unordered_map<NodeLabel, NodeId, std::hash<NodeLabel>,
                                 std::equal_to<NodeLabel>>
       result_nodes_;
   tbb::concurrent_unordered_set<EdgeLabel, std::hash<EdgeLabel>,

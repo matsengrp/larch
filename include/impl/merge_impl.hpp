@@ -78,6 +78,9 @@ size_t LeafSet::Hash() const { return hash_; }
 NodeLabel::NodeLabel()
     : compact_genome{CompactGenome::Empty()}, leaf_set{LeafSet::Empty()} {}
 
+NodeLabel::NodeLabel(const CompactGenome* cg, const LeafSet* ls)
+    : compact_genome{cg}, leaf_set{ls} {}
+
 bool NodeLabel::operator==(const NodeLabel& rhs) const {
   return compact_genome == rhs.compact_genome && leaf_set == rhs.leaf_set;
 }

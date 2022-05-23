@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <execution>
 
-#include <valgrind/callgrind.h>//XXX
+#include <valgrind/callgrind.h>  //XXX
 
 #include <range/v3/action/push_back.hpp>
 
@@ -46,14 +46,14 @@ static HistoryDAG MergeTrees(const std::vector<std::string_view>& paths,
     paths_idx.push_back({i, paths.at(i)});
   }
   std::cout << "Loading trees ";
-  std::for_each(
-      std::execution::par, paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
-        std::vector<Mutations> tree_mutations;
-        std::cout << "." << std::flush;
-        trees.at(path_idx.first) =
-            LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
-        mutations.at(path_idx.first) = std::move(tree_mutations);
-      });
+  std::for_each(std::execution::par, paths_idx.begin(), paths_idx.end(),
+                [&](auto path_idx) {
+                  std::vector<Mutations> tree_mutations;
+                  std::cout << "." << std::flush;
+                  trees.at(path_idx.first) =
+                      LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
+                  mutations.at(path_idx.first) = std::move(tree_mutations);
+                });
   std::cout << " done."
             << "\n";
 
