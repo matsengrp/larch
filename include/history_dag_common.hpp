@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <limits>
 #include <vector>
+#include <map>
 #include <range/v3/view/transform.hpp>
 #include <range/v3/view/subrange.hpp>
 #include <range/v3/view/join.hpp>
@@ -27,6 +28,8 @@ struct CladeIdx {
 struct MutationPosition {
   size_t value = NoId;
 };
+
+using Mutations = std::map<MutationPosition, char>;
 
 inline bool operator==(NodeId lhs, NodeId rhs) { return lhs.value == rhs.value; }
 

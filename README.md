@@ -37,7 +37,7 @@ From the build directory:
 
 `./larch`
 
-Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch nocatch`.
+Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
 
 Third-party 
 -----------

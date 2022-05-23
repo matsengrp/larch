@@ -5,16 +5,16 @@
 
 #include "merge.hpp"
 
-[[nodiscard]] HistoryDAG LoadHistoryDAGFromProtobufGZ(
-    const std::string_view& path, std::string& ref_seq,
-    std::vector<CompactGenome>& mutations);
+// [[nodiscard]] HistoryDAG LoadHistoryDAGFromProtobufGZ(
+//     std::string_view path, std::string& ref_seq,
+//     std::vector<CompactGenome>& mutations);
 
-[[nodiscard]] HistoryDAG LoadTreeFromProtobufGZ(const std::string_view& path,
-                                                std::vector<CompactGenome>& mutations);
+[[nodiscard]] HistoryDAG LoadTreeFromProtobufGZ(std::string_view path,
+                                                std::vector<Mutations>& mutations);
 
-[[nodiscard]] std::string LoadRefseqFromJsonGZ(const std::string_view& path);
+[[nodiscard]] std::string LoadRefseqFromJsonGZ(std::string_view path);
 
-[[nodiscard]] HistoryDAG LoadHistoryDAGFromJsonGZ(const std::string_view& path,
-                                                  std::string& refseq);
+// [[nodiscard]] HistoryDAG LoadHistoryDAGFromJsonGZ(std::string_view path,
+//                                                   std::string& refseq);
 
-[[nodiscard]] std::vector<NodeLabel> LoadLabelsJsonGZ(const std::string_view& path);
+// [[nodiscard]] std::vector<NodeLabel> LoadLabelsJsonGZ(std::string_view path);

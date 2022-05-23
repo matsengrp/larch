@@ -1,109 +1,104 @@
-#include <iostream>  //XXX
-
-Merge::Merge(const std::string_view& refseq,
-             std::vector<std::reference_wrapper<const HistoryDAG>>&& trees,
-             const std::vector<TreeLabels>& labels)
-    : refseq_{refseq}, trees_{std::move(trees)}, labels_{labels} {
-  assert(labels_.size() >= trees_.size());
-  for (size_t tree_idx = 0; tree_idx < trees_.size(); ++tree_idx) {
-    assert(labels_.at(tree_idx).compact_genomes.size() >=
-           trees_.at(tree_idx).get().GetNodes().size());
-    assert(labels_.at(tree_idx).leaf_sets.size() >=
-           trees_.at(tree_idx).get().GetNodes().size());
-  }
+const CompactGenome* CompactGenome::Empty() {
+  static CompactGenome empty = {};
+  return &empty;
 }
 
-void Merge::Run() {
-  std::cout << "Merging trees ";
-  for (size_t tree_idx = 0; tree_idx < trees_.size(); ++tree_idx) {
-    std::cout << "." << std::flush;
-    for (Edge edge : trees_.at(tree_idx).get().GetEdges()) {
-      MakeResultEdge(tree_idx, edge.GetId());
-    }
-  }
-  std::cout << " done."
-            << "\n";
-  result_.BuildConnections();
-}
-
-NodeLabel Merge::GetNodeLabel(size_t tree_idx, NodeId node_id) {
-  return labels_.at(tree_idx).GetLabel(node_id);
-}
-
-NodeId Merge::GetResultNode(NodeLabel label) {
-  auto i = result_nodes_.find(label);
-  NodeId id;
-  if (i == result_nodes_.end()) {
-    id = result_.AddNode({result_.GetNodes().size()}).GetId();
-    result_nodes_.emplace_hint(i, label, id);
-  } else {
-    id = i->second;
-  }
-  return id;
-}
-
-void Merge::MakeResultEdge(size_t tree_idx, EdgeId edge_id) {
-  Edge edge = trees_.at(tree_idx).get().GetEdge(edge_id);
-  NodeId parent = edge.GetParent().GetId(), child = edge.GetChild().GetId();
-  EdgeLabel label = {
-      GetNodeLabel(tree_idx, parent), GetNodeLabel(tree_idx, child), {0}};
-  auto i = result_edges_.find(label);
-  if (i == result_edges_.end()) {
-    NodeId result_parent = GetResultNode(std::get<0>(label));
-    NodeId result_child = GetResultNode(std::get<1>(label));
-    result_.AddEdge({result_.GetEdges().size()}, result_parent, result_child,
-                    std::get<2>(label));
-    result_edges_.emplace_hint(i, std::move(label));
-  }
-}
-
-HistoryDAG& Merge::GetResult() { return result_; }
-
-const HistoryDAG& Merge::GetResult() const { return result_; }
-
-TreeLabels GetLabels(const HistoryDAG& tree, const std::string_view& refseq,
-                     const std::vector<CompactGenome>& mutations) {
-  TreeLabels result;
-  result.compact_genomes.resize(tree.GetNodes().size());
-  for (auto iter : tree.TraversePreOrder()) {
-    if (iter.IsRoot()) {
-      continue;
-    }
-    const CompactGenome& muts = mutations.at(iter.GetEdge().GetId().value);
-    const CompactGenome& parent_cgs =
-        result.compact_genomes.at(iter.GetEdge().GetParent().GetId().value);
-    CompactGenome& cgs = result.compact_genomes.at(iter.GetNode().GetId().value);
-    cgs = parent_cgs;
-    for (auto [pos, base] : muts) {
-      if (base != refseq.at(pos - 1)) {
-        cgs[pos] = base;
-      } else {
-        cgs.erase(pos);
-      }
-    }
-  }
-
-  result.leaf_sets.resize(tree.GetNodes().size());
-  for (Node node : tree.TraversePostOrder()) {
-    if (node.IsLeaf()) {
-      continue;
-    }
-    LeafSet& leaf_set = result.leaf_sets.at(node.GetId().value);
-    for (auto clade : node.GetClades()) {
-      std::unordered_set<CompactGenomePointer> clade_leafs;
-      for (Node child : clade | ranges::views::transform(Transform::GetChild)) {
-        const LeafSet& child_leaf_set = result.leaf_sets.at(child.GetId().value);
-        if (child.IsLeaf()) {
-          clade_leafs.insert({&result.compact_genomes.at(child.GetId().value)});
-        } else {
-          for (auto& child_leafs : result.leaf_sets.at(child.GetId().value)) {
-            clade_leafs.insert(child_leafs.begin(), child_leafs.end());
+CompactGenome::CompactGenome(const Mutations& mutations, const CompactGenome& parent,
+                             std::string_view reference_sequence)
+    : mutations_{[&] {
+        std::map<MutationPosition, char> result{parent.mutations_};
+        for (auto [pos, base] : mutations) {
+          if (base != reference_sequence.at(pos.value - 1)) {
+            result[pos] = base;
+          } else {
+            result.erase(pos);
           }
         }
-      }
-      leaf_set.push_back(clade_leafs);
-    }
-  }
+        return result;
+      }()},
+      hash_{[this] {
+        size_t result = 0;
+        for (auto [pos, base] : mutations_) {
+          result = HashCombine(result, pos.value);
+          result = HashCombine(result, base);
+        }
+        return result;
+      }()} {}
 
-  return result;
+bool CompactGenome::operator==(const CompactGenome& rhs) const {
+  if (hash_ != rhs.hash_) return false;
+  return mutations_ == rhs.mutations_;
+}
+
+bool CompactGenome::operator<(const CompactGenome& rhs) const {
+  return mutations_ < rhs.mutations_;
+}
+
+size_t CompactGenome::Hash() const { return hash_; }
+
+const LeafSet* LeafSet::Empty() {
+  static LeafSet empty = {};
+  return &empty;
+}
+
+LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels)
+    : clades_{[&] {
+        std::set<std::set<const CompactGenome*>> clades;
+        for (auto clade : node.GetClades()) {
+          std::set<const CompactGenome*> clade_leafs;
+          for (Node child : clade | ranges::views::transform(Transform::GetChild)) {
+            const LeafSet& child_leaf_set = *labels.at(child.GetId().value).leaf_set;
+            if (child.IsLeaf()) {
+              clade_leafs.insert(labels.at(child.GetId().value).compact_genome);
+            } else {
+              for (auto& child_leafs :
+                   (*labels.at(child.GetId().value).leaf_set).clades_) {
+                clade_leafs.insert(child_leafs.begin(), child_leafs.end());
+              }
+            }
+          }
+          clades.emplace(std::move(clade_leafs));
+        }
+        return clades;
+      }()},
+      hash_{[this] {
+        size_t hash = 0;
+        return hash;
+      }()} {}
+
+bool LeafSet::operator==(const LeafSet& rhs) const {
+  if (hash_ != rhs.hash_) return false;
+  return clades_ == rhs.clades_;
+}
+
+bool LeafSet::operator<(const LeafSet& rhs) const { return clades_ < rhs.clades_; }
+
+size_t LeafSet::Hash() const { return hash_; }
+
+NodeLabel::NodeLabel()
+    : compact_genome{CompactGenome::Empty()}, leaf_set{LeafSet::Empty()} {}
+
+bool NodeLabel::operator==(const NodeLabel& rhs) const {
+  return compact_genome == rhs.compact_genome && leaf_set == rhs.leaf_set;
+}
+
+size_t NodeLabel::Hash() const {
+  return HashCombine(reinterpret_cast<std::uintptr_t>(compact_genome),
+                     reinterpret_cast<std::uintptr_t>(leaf_set));
+}
+
+bool EdgeLabel::operator==(const EdgeLabel& rhs) const {
+  return parent_compact_genome == rhs.parent_compact_genome &&
+         parent_leaf_set == rhs.parent_leaf_set &&
+         child_compact_genome == rhs.child_compact_genome &&
+         child_leaf_set == rhs.child_leaf_set;
+}
+
+size_t EdgeLabel::Hash() const {
+  size_t hash = 0;
+  hash = HashCombine(hash, reinterpret_cast<std::uintptr_t>(parent_compact_genome));
+  hash = HashCombine(hash, reinterpret_cast<std::uintptr_t>(parent_leaf_set));
+  hash = HashCombine(hash, reinterpret_cast<std::uintptr_t>(child_compact_genome));
+  hash = HashCombine(hash, reinterpret_cast<std::uintptr_t>(child_leaf_set));
+  return hash;
 }

@@ -4,11 +4,14 @@
 #include <algorithm>
 #include <execution>
 
+#include <valgrind/callgrind.h>//XXX
+
 #include <range/v3/action/push_back.hpp>
 
 #include "arguments.hpp"
 #include "merge.hpp"
 #include "history_dag_loader.hpp"
+#include "benchmark.hpp"
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
@@ -30,55 +33,38 @@
 
 static HistoryDAG MergeTrees(const std::vector<std::string_view>& paths,
                              std::string_view refseq_json_path) {
-  std::vector<std::vector<CompactGenome>> mutations;
+  std::vector<std::vector<Mutations>> mutations;
   std::vector<HistoryDAG> trees;
-  std::vector<TreeLabels> labels;
   std::string reference_sequence;
 
-  if (refseq_json_path.empty()) {
-    std::vector<std::string> ref_sequences;
+  reference_sequence = LoadRefseqFromJsonGZ(refseq_json_path);
 
-    for (auto path : paths) {
-      std::vector<CompactGenome> tree_mutations;
-      std::string ref_seq;
-      trees.emplace_back(LoadHistoryDAGFromProtobufGZ(path, ref_seq, tree_mutations));
-      mutations.emplace_back(std::move(tree_mutations));
-      ref_sequences.emplace_back(std::move(ref_seq));
-    }
-    reference_sequence = ref_sequences.front();
-  } else {
-    reference_sequence = LoadRefseqFromJsonGZ(refseq_json_path);
-
-    trees.resize(paths.size());
-    mutations.resize(paths.size());
-    labels.resize(trees.size());
-    std::vector<std::pair<size_t, std::string_view>> paths_idx;
-    for (size_t i = 0; i < paths.size(); ++i) {
-      paths_idx.push_back({i, paths.at(i)});
-    }
-    std::cout << "Loading trees ";
-    std::for_each(std::execution::par, paths_idx.begin(), paths_idx.end(),
-                  [&](auto path_idx) {
-                    std::vector<CompactGenome> tree_mutations;
-                    std::cout << "." << std::flush;
-                    trees.at(path_idx.first) =
-                        LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
-                    mutations.at(path_idx.first) = std::move(tree_mutations);
-                    labels.at(path_idx.first) =
-                        GetLabels(trees.at(path_idx.first), reference_sequence,
-                                  mutations.at(path_idx.first));
-                  });
-    std::cout << " done."
-              << "\n";
+  trees.resize(paths.size());
+  mutations.resize(paths.size());
+  std::vector<std::pair<size_t, std::string_view>> paths_idx;
+  for (size_t i = 0; i < paths.size(); ++i) {
+    paths_idx.push_back({i, paths.at(i)});
   }
+  std::cout << "Loading trees ";
+  std::for_each(
+      std::execution::par, paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
+        std::vector<Mutations> tree_mutations;
+        std::cout << "." << std::flush;
+        trees.at(path_idx.first) =
+            LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
+        mutations.at(path_idx.first) = std::move(tree_mutations);
+      });
+  std::cout << " done."
+            << "\n";
 
-  std::vector<std::reference_wrapper<const HistoryDAG>> tree_refs;
-  for (size_t i = 0; i < trees.size(); ++i) {
-    tree_refs.push_back(trees.at(i));
-  }
-
-  Merge merge(reference_sequence, std::move(tree_refs), labels);
+  Benchmark merge_time;
+  Merge merge(reference_sequence, trees, mutations);
+  CALLGRIND_START_INSTRUMENTATION;
+  merge_time.start();
   merge.Run();
+  merge_time.stop();
+  CALLGRIND_STOP_INSTRUMENTATION;
+  std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
   return std::move(merge.GetResult());
 }
 
