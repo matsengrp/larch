@@ -25,16 +25,12 @@ CompactGenome::CompactGenome(const Mutations& mutations, const CompactGenome& pa
         return result;
       }()} {}
 
-bool CompactGenome::operator==(const CompactGenome& rhs) const {
+bool CompactGenome::operator==(const CompactGenome& rhs) const noexcept {
   if (hash_ != rhs.hash_) return false;
   return mutations_ == rhs.mutations_;
 }
 
-bool CompactGenome::operator<(const CompactGenome& rhs) const {
-  return mutations_ < rhs.mutations_;
-}
-
-size_t CompactGenome::Hash() const { return hash_; }
+size_t CompactGenome::Hash() const noexcept { return hash_; }
 
 const LeafSet* LeafSet::Empty() {
   static LeafSet empty = {};
@@ -44,37 +40,45 @@ const LeafSet* LeafSet::Empty() {
 LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
                  std::vector<LeafSet>& computed_leafsets)
     : clades_{[&] {
-        std::set<std::set<const CompactGenome*>> clades;
+        std::vector<std::vector<const CompactGenome*>> clades;
+        clades.reserve(node.GetClades().size());
         for (auto clade : node.GetClades()) {
-          std::set<const CompactGenome*> clade_leafs;
+          std::vector<const CompactGenome*> clade_leafs;
+          clade_leafs.reserve(clade.size());
           for (Node child : clade | ranges::views::transform(Transform::GetChild)) {
             const LeafSet& child_leaf_set = computed_leafsets.at(child.GetId().value);
             if (child.IsLeaf()) {
-              clade_leafs.insert(labels.at(child.GetId().value).compact_genome);
+              clade_leafs.push_back(labels.at(child.GetId().value).compact_genome);
             } else {
               for (auto& child_leafs :
                    computed_leafsets.at(child.GetId().value).clades_) {
-                clade_leafs.insert(child_leafs.begin(), child_leafs.end());
+                clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
+                                   child_leafs.end());
               }
             }
           }
-          clades.emplace(std::move(clade_leafs));
+          clade_leafs |= ranges::actions::sort | ranges::actions::unique;
+          clades.emplace_back(std::move(clade_leafs));
         }
+        clades |= ranges::actions::sort | ranges::actions::unique;
         return clades;
       }()},
-      hash_{[this] {
+      hash_{[&] {
         size_t hash = 0;
+        for (auto& clade : clades_) {
+          for (auto& leaf : clade) {
+            hash = HashCombine(hash, leaf->Hash());
+          }
+        }
         return hash;
       }()} {}
 
-bool LeafSet::operator==(const LeafSet& rhs) const {
+bool LeafSet::operator==(const LeafSet& rhs) const noexcept {
   if (hash_ != rhs.hash_) return false;
   return clades_ == rhs.clades_;
 }
 
-bool LeafSet::operator<(const LeafSet& rhs) const { return clades_ < rhs.clades_; }
-
-size_t LeafSet::Hash() const { return hash_; }
+size_t LeafSet::Hash() const noexcept { return hash_; }
 
 NodeLabel::NodeLabel()
     : compact_genome{CompactGenome::Empty()}, leaf_set{LeafSet::Empty()} {}
@@ -82,23 +86,23 @@ NodeLabel::NodeLabel()
 NodeLabel::NodeLabel(const CompactGenome* cg, const LeafSet* ls)
     : compact_genome{cg}, leaf_set{ls} {}
 
-bool NodeLabel::operator==(const NodeLabel& rhs) const {
+bool NodeLabel::operator==(const NodeLabel& rhs) const noexcept {
   return compact_genome == rhs.compact_genome && leaf_set == rhs.leaf_set;
 }
 
-size_t NodeLabel::Hash() const {
+size_t NodeLabel::Hash() const noexcept {
   return HashCombine(reinterpret_cast<std::uintptr_t>(compact_genome),
                      reinterpret_cast<std::uintptr_t>(leaf_set));
 }
 
-bool EdgeLabel::operator==(const EdgeLabel& rhs) const {
+bool EdgeLabel::operator==(const EdgeLabel& rhs) const noexcept {
   return parent_compact_genome == rhs.parent_compact_genome &&
          parent_leaf_set == rhs.parent_leaf_set &&
          child_compact_genome == rhs.child_compact_genome &&
          child_leaf_set == rhs.child_leaf_set;
 }
 
-size_t EdgeLabel::Hash() const {
+size_t EdgeLabel::Hash() const noexcept {
   size_t hash = 0;
   hash = HashCombine(hash, reinterpret_cast<std::uintptr_t>(parent_compact_genome));
   hash = HashCombine(hash, reinterpret_cast<std::uintptr_t>(parent_leaf_set));
@@ -126,6 +130,18 @@ void Merge::Run() {
 HistoryDAG& Merge::GetResult() { return result_; }
 
 const HistoryDAG& Merge::GetResult() const { return result_; }
+
+const std::vector<std::vector<NodeLabel>>& Merge::GetTreeLabels() const {
+  return tree_labels_;
+}
+
+const ConcurrentUnorderedMap<NodeLabel, NodeId>& Merge::GetResultNodes() const {
+  return result_nodes_;
+}
+
+const ConcurrentUnorderedSet<EdgeLabel>& Merge::GetResultEdges() const {
+  return result_edges_;
+}
 
 void Merge::ComputeCompactGenomes() {
   std::vector<size_t> tree_idxs;

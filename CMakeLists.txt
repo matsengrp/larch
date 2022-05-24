@@ -32,7 +32,7 @@ set_target_properties(larch_autogen
 set(CMAKE_CXX_CLANG_TIDY clang-tidy)
 
 function(larch_compile_opts PRODUCT)
-    target_compile_options(${PRODUCT} PUBLIC -std=c++17 -Werror -Wall -Wextra -pedantic -pedantic-errors -Wno-unused)
+    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -Werror -Wall -Wextra -pedantic -pedantic-errors -Wno-unused)
     if (${CMAKE_BUILD_TYPE} STREQUAL "San")
         target_compile_options(${PRODUCT} PUBLIC -fsanitize=address -fsanitize=undefined)
     endif()
@@ -71,3 +71,6 @@ larch_executable(larch-test
 
 larch_executable(merge
     tools/merge.cpp)
+
+larch_executable(dag_diff
+    tools/dag_diff.cpp)

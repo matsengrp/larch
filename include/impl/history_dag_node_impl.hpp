@@ -1,4 +1,3 @@
-#include <set>
 #include "history_dag_node_storage.hpp"
 
 template <typename T>

@@ -84,7 +84,7 @@ inline constexpr const auto GetChild = [](auto&& i) { return i.GetChild(); };
 inline constexpr const auto GetId = [](auto&& i) { return i.GetId(); };
 }  // namespace Transform
 
-inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) {
+inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   lhs ^= rhs + 0x9e3779b97f4a7c15 + (lhs << 6) + (lhs >> 2);
   return lhs;
 };

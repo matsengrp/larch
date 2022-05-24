@@ -3,7 +3,6 @@
 #include <string_view>
 #include <vector>
 #include <map>
-#include <unordered_set>
 #include <iostream>
 #include <algorithm>
 #include <shared_mutex>
@@ -14,6 +13,8 @@
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/parallel_for_each.h>
 #include <range/v3/view/enumerate.hpp>
+#include <range/v3/action/sort.hpp>
+#include <range/v3/action/unique.hpp>
 
 #include "history_dag.hpp"
 
@@ -29,11 +30,9 @@ class CompactGenome {
   inline CompactGenome(const Mutations& mutations, const CompactGenome& parent,
                        std::string_view reference_sequence);
 
-  inline bool operator==(const CompactGenome& rhs) const;
+  inline bool operator==(const CompactGenome& rhs) const noexcept;
 
-  inline bool operator<(const CompactGenome& rhs) const;
-
-  inline size_t Hash() const;
+  inline size_t Hash() const noexcept;
 
  private:
   std::map<MutationPosition, char> mutations_ = {};
@@ -54,14 +53,12 @@ class LeafSet {
   inline LeafSet(Node node, const std::vector<NodeLabel>& labels,
                  std::vector<LeafSet>& computed_leafsets);
 
-  inline bool operator==(const LeafSet& rhs) const;
+  inline bool operator==(const LeafSet& rhs) const noexcept;
 
-  inline bool operator<(const LeafSet& rhs) const;
-
-  inline size_t Hash() const;
+  inline size_t Hash() const noexcept;
 
  private:
-  std::set<std::set<const CompactGenome*>> clades_ = {};
+  std::vector<std::vector<const CompactGenome*>> clades_ = {};
   size_t hash_ = {};
 };
 
@@ -70,9 +67,9 @@ class NodeLabel {
   inline NodeLabel();
   inline NodeLabel(const CompactGenome* cg, const LeafSet* ls);
 
-  inline bool operator==(const NodeLabel& rhs) const;
+  inline bool operator==(const NodeLabel& rhs) const noexcept;
 
-  inline size_t Hash() const;
+  inline size_t Hash() const noexcept;
 
   const CompactGenome* compact_genome;
   const LeafSet* leaf_set;
@@ -80,9 +77,9 @@ class NodeLabel {
 
 class EdgeLabel {
  public:
-  inline bool operator==(const EdgeLabel& rhs) const;
+  inline bool operator==(const EdgeLabel& rhs) const noexcept;
 
-  inline size_t Hash() const;
+  inline size_t Hash() const noexcept;
 
   const CompactGenome* parent_compact_genome = nullptr;
   const LeafSet* parent_leaf_set = nullptr;
@@ -139,6 +136,13 @@ struct std::equal_to<EdgeLabel> {
   }
 };
 
+template <typename T>
+using ConcurrentUnorderedSet =
+    tbb::concurrent_unordered_set<T, std::hash<T>, std::equal_to<T>>;
+template <typename K, typename V>
+using ConcurrentUnorderedMap =
+    tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
+
 class Merge {
  public:
   inline Merge(std::string_view reference_sequence,
@@ -150,6 +154,9 @@ class Merge {
 
   inline HistoryDAG& GetResult();
   inline const HistoryDAG& GetResult() const;
+  inline const std::vector<std::vector<NodeLabel>>& GetTreeLabels() const;
+  inline const ConcurrentUnorderedMap<NodeLabel, NodeId>& GetResultNodes() const;
+  inline const ConcurrentUnorderedSet<EdgeLabel>& GetResultEdges() const;
 
  private:
   inline void ComputeCompactGenomes();
@@ -170,19 +177,12 @@ class Merge {
   const std::vector<std::vector<Mutations>>& mutations_;
   bool show_progress_;
 
-  tbb::concurrent_unordered_set<CompactGenome, std::hash<CompactGenome>,
-                                std::equal_to<CompactGenome>>
-      all_compact_genomes_;
-  tbb::concurrent_unordered_set<LeafSet, std::hash<LeafSet>, std::equal_to<LeafSet>>
-      all_leaf_sets_;
+  ConcurrentUnorderedSet<CompactGenome> all_compact_genomes_;
+  ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
   std::vector<std::vector<NodeLabel>> tree_labels_;
 
-  tbb::concurrent_unordered_map<NodeLabel, NodeId, std::hash<NodeLabel>,
-                                std::equal_to<NodeLabel>>
-      result_nodes_;
-  tbb::concurrent_unordered_set<EdgeLabel, std::hash<EdgeLabel>,
-                                std::equal_to<EdgeLabel>>
-      result_edges_;
+  ConcurrentUnorderedMap<NodeLabel, NodeId> result_nodes_;
+  ConcurrentUnorderedSet<EdgeLabel> result_edges_;
   HistoryDAG result_;
 };
 

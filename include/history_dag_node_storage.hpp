@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <set>
 
 #include "history_dag_common.hpp"
 
