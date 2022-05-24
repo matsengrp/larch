@@ -11,7 +11,7 @@ Requirements
 
 For Ubuntu 18.04 LTS the following commands installs the requirements:
 
-`sudo apt get install make g++ protobuf-compiler libprotobuf-dev zlib1g-dev libtbb-dev`
+`sudo apt get install make g++ protobuf-compiler libprotobuf-dev zlib1g-dev libtbb-dev clang-tidy`
 
 To get a recent cmake, download from `https://cmake.org/download/`, for example:
 

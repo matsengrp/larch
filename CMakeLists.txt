@@ -47,7 +47,7 @@ function(larch_link_opts PRODUCT)
     target_link_libraries(${PRODUCT} PUBLIC -lz)
     target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
     target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
-    target_link_libraries(${PRODUCT} PUBLIC tbb)
+    target_link_libraries(${PRODUCT} PUBLIC tbb -lstdc++fs)
 endfunction()
 
 function(larch_executable PRODUCT)

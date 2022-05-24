@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <fstream>
-#include <filesystem>
+#include <experimental/filesystem>
 
 #include "test_common.hpp"
 #include "history_dag_loader.hpp"
@@ -69,8 +69,8 @@ static void test_case_ref() {
 
 static void test_case_20d() {
   std::vector<std::string> paths;
-  const std::filesystem::path dir{"data/20D_from_fasta"};
-  for (auto& file : std::filesystem::directory_iterator{dir}) {
+  const std::experimental::filesystem::path dir{"data/20D_from_fasta"};
+  for (auto& file : std::experimental::filesystem::directory_iterator{dir}) {
     if (file.path().filename().string() != "20D_full_dag.json.gz") {
       paths.push_back(file.path().string());
     }
@@ -89,7 +89,7 @@ static void test_case_20d() {
     paths_idx.push_back({i, paths.at(i)});
   }
   std::cout << "Loading trees ";
-  std::for_each(std::execution::par, paths_idx.begin(), paths_idx.end(),
+  tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(),
                 [&](auto path_idx) {
                   std::vector<Mutations> tree_mutations;
                   std::cout << "." << std::flush;

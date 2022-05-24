@@ -76,7 +76,7 @@ static HistoryDAG LoadTreeFromProtobuf(std::istream& in,
 
   size_t muts_idx = 0;
   for (MutableNode node : dag.TraversePreOrder()) {
-    const auto& pb_muts = data.node_mutations()[muts_idx++].mutation();
+    const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
     if (node.IsRoot()) {
       continue;
     }
@@ -86,7 +86,7 @@ static HistoryDAG LoadTreeFromProtobuf(std::istream& in,
                                                -> std::pair<MutationPosition, char> {
            static const char decode[] = {'A', 'C', 'G', 'T'};
            assert(mut.mut_nuc().size() == 1);
-           return {{static_cast<size_t>(mut.position())}, decode[mut.mut_nuc()[0]]};
+           return {{static_cast<size_t>(mut.position())}, decode[mut.mut_nuc().Get(0)]};
          })) {
       edge_muts.insert(i);
     }

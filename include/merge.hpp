@@ -6,13 +6,13 @@
 #include <unordered_set>
 #include <iostream>
 #include <algorithm>
-#include <execution>
 #include <shared_mutex>
 #include <thread>
 #include <atomic>
 
 #include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_unordered_map.h>
+#include <tbb/parallel_for_each.h>
 #include <range/v3/view/enumerate.hpp>
 
 #include "history_dag.hpp"
@@ -166,8 +166,8 @@ class Merge {
     std::iota(tree_idxs.begin(), tree_idxs.end(), 0);
 
     std::cout << "Computing compact genomes " << std::flush;
-    std::for_each(
-        std::execution::par, tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
+    tbb::parallel_for_each(
+        tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
           const HistoryDAG& tree = trees_.at(tree_idx);
           const std::vector<Mutations>& edge_mutations = mutations_.at(tree_idx);
           std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
@@ -191,8 +191,8 @@ class Merge {
 
     std::cout << "Computing leaf sets " << std::flush;
 
-    std::for_each(
-        std::execution::par, tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
+    tbb::parallel_for_each(
+        tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
           const HistoryDAG& tree = trees_.at(tree_idx);
           std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
           std::vector<LeafSet> computed_ls = ComputeLeafSets(tree, labels);
@@ -212,7 +212,7 @@ class Merge {
 
     std::atomic<size_t> node_id{0};
     std::mutex mtx;
-    std::for_each(std::execution::par, tree_idxs.begin(), tree_idxs.end(),
+    tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(),
                   [&](size_t tree_idx) {
                     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
                     for (auto label : labels) {
@@ -223,8 +223,8 @@ class Merge {
                       }
                     }
                   });
-    std::for_each(
-        std::execution::par, tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
+    tbb::parallel_for_each(
+        tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
           const HistoryDAG& tree = trees_.at(tree_idx);
           const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
           for (Edge edge : tree.GetEdges()) {

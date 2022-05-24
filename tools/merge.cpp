@@ -2,7 +2,6 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <execution>
 
 #include <range/v3/action/push_back.hpp>
 
@@ -44,7 +43,7 @@ static HistoryDAG MergeTrees(const std::vector<std::string_view>& paths,
     paths_idx.push_back({i, paths.at(i)});
   }
   std::cout << "Loading trees ";
-  std::for_each(std::execution::par, paths_idx.begin(), paths_idx.end(),
+  tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(),
                 [&](auto path_idx) {
                   std::vector<Mutations> tree_mutations;
                   std::cout << "." << std::flush;
