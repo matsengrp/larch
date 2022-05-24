@@ -35,7 +35,7 @@ class CompactGenome {
   inline size_t Hash() const noexcept;
 
  private:
-  std::map<MutationPosition, char> mutations_ = {};
+  std::vector<std::pair<MutationPosition, char>> mutations_ = {};
   size_t hash_ = {};
 };
 

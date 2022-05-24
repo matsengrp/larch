@@ -6,12 +6,24 @@ const CompactGenome* CompactGenome::Empty() {
 CompactGenome::CompactGenome(const Mutations& mutations, const CompactGenome& parent,
                              std::string_view reference_sequence)
     : mutations_{[&] {
-        std::map<MutationPosition, char> result{parent.mutations_};
+        std::vector<std::pair<MutationPosition, char>> result{parent.mutations_.begin(),
+                                                              parent.mutations_.end()};
         for (auto [pos, base] : mutations) {
-          if (base != reference_sequence.at(pos.value - 1)) {
-            result[pos] = base;
+          const bool is_valid = base != reference_sequence.at(pos.value - 1);
+          auto it =
+              std::lower_bound(result.begin(), result.end(), pos,
+                               [](std::pair<MutationPosition, char> lhs,
+                                  MutationPosition rhs) { return lhs.first < rhs; });
+          if (it != result.end() and it->first == pos) {
+            if (is_valid) {
+              it->second = base;
+            } else {
+              result.erase(it);
+            }
           } else {
-            result.erase(pos);
+            if (is_valid) {
+              result.insert(it, {pos, base});
+            }
           }
         }
         return result;
