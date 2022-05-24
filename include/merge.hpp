@@ -141,141 +141,34 @@ struct std::equal_to<EdgeLabel> {
 
 class Merge {
  public:
-  Merge(std::string_view reference_sequence, const std::vector<HistoryDAG>& trees,
-        const std::vector<std::vector<Mutations>>& mutations)
-      : reference_sequence_{reference_sequence}, trees_{trees}, mutations_{mutations} {
-    tree_labels_.resize(trees_.size());
-  }
+  inline Merge(std::string_view reference_sequence,
+               const std::vector<HistoryDAG>& trees,
+               const std::vector<std::vector<Mutations>>& mutations,
+               bool show_progress = false);
 
-  void Run() {
-    ComputeCompactGenomes();
-    ComputeLeafSets();
-    MergeTrees();
-    std::cout << "Nodes: " << result_nodes_.size() << "\n";
-    std::cout << "Edges: " << result_edges_.size() << "\n";
-    result_.BuildConnections();
-  }
+  inline void Run();
 
-  HistoryDAG& GetResult() { return result_; }
-  const HistoryDAG& GetResult() const { return result_; }
+  inline HistoryDAG& GetResult();
+  inline const HistoryDAG& GetResult() const;
 
  private:
-  void ComputeCompactGenomes() {
-    std::vector<size_t> tree_idxs;
-    tree_idxs.resize(trees_.size());
-    std::iota(tree_idxs.begin(), tree_idxs.end(), 0);
+  inline void ComputeCompactGenomes();
 
-    std::cout << "Computing compact genomes " << std::flush;
-    tbb::parallel_for_each(
-        tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-          const HistoryDAG& tree = trees_.at(tree_idx);
-          const std::vector<Mutations>& edge_mutations = mutations_.at(tree_idx);
-          std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-          labels.resize(tree.GetNodes().size());
-          std::vector<CompactGenome> computed_cgs =
-              ComputeCompactGenomes(tree, edge_mutations, reference_sequence_);
-          for (size_t node_idx = 0; node_idx < tree.GetNodes().size(); ++node_idx) {
-            auto cg_iter =
-                all_compact_genomes_.insert(std::move(computed_cgs.at(node_idx)));
-            labels.at(node_idx).compact_genome = std::addressof(*cg_iter.first);
-          }
-          std::cout << "." << std::flush;
-        });
-    std::cout << " done.\n";
-  }
+  inline void ComputeLeafSets();
 
-  void ComputeLeafSets() {
-    std::vector<size_t> tree_idxs;
-    tree_idxs.resize(trees_.size());
-    std::iota(tree_idxs.begin(), tree_idxs.end(), 0);
+  inline void MergeTrees();
 
-    std::cout << "Computing leaf sets " << std::flush;
-
-    tbb::parallel_for_each(
-        tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-          const HistoryDAG& tree = trees_.at(tree_idx);
-          std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-          std::vector<LeafSet> computed_ls = ComputeLeafSets(tree, labels);
-          for (size_t node_idx = 0; node_idx < tree.GetNodes().size(); ++node_idx) {
-            auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node_idx)));
-            labels.at(node_idx).leaf_set = std::addressof(*ls_iter.first);
-          }
-          std::cout << "." << std::flush;
-        });
-    std::cout << " done.\n";
-  }
-
-  void MergeTrees() {
-    std::vector<size_t> tree_idxs;
-    tree_idxs.resize(trees_.size());
-    std::iota(tree_idxs.begin(), tree_idxs.end(), 0);
-
-    std::atomic<size_t> node_id{0};
-    std::mutex mtx;
-    tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(),
-                  [&](size_t tree_idx) {
-                    const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-                    for (auto label : labels) {
-                      std::lock_guard<std::mutex> lock{mtx};
-                      auto i = result_nodes_.find(label);
-                      if (i == result_nodes_.end()) {
-                        result_nodes_.insert({label, {node_id.fetch_add(1)}});
-                      }
-                    }
-                  });
-    tbb::parallel_for_each(
-        tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-          const HistoryDAG& tree = trees_.at(tree_idx);
-          const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-          for (Edge edge : tree.GetEdges()) {
-            auto& parent_label = labels.at(edge.GetParent().GetId().value);
-            auto& child_label = labels.at(edge.GetChild().GetId().value);
-            result_edges_.insert({parent_label.compact_genome, parent_label.leaf_set,
-                                  child_label.compact_genome, child_label.leaf_set});
-          }
-        });
-    result_.InitializeComponents(result_nodes_.size(), result_edges_.size());
-    size_t edge_id = 0;
-    for (auto& edge : result_edges_) {
-      auto parent = result_nodes_.find(
-          NodeLabel{edge.parent_compact_genome, edge.parent_leaf_set});
-      auto child =
-          result_nodes_.find(NodeLabel{edge.child_compact_genome, edge.child_leaf_set});
-      Assert(parent != result_nodes_.end());
-      Assert(child != result_nodes_.end());
-      Assert(parent->second.value != NoId);
-      Assert(child->second.value != NoId);
-      result_.AddEdge({edge_id++}, parent->second, child->second, {0});
-    }
-  }
-
-  static std::vector<CompactGenome> ComputeCompactGenomes(
+  static inline std::vector<CompactGenome> ComputeCompactGenomes(
       const HistoryDAG& tree, const std::vector<Mutations>& edge_mutations,
-      std::string_view reference_sequence) {
-    std::vector<CompactGenome> result;
-    result.resize(tree.GetNodes().size());
-    for (auto iter : tree.TraversePreOrder()) {
-      const Mutations& mutations = edge_mutations.at(iter.GetEdge().GetId().value);
-      const CompactGenome& parent = result.at(iter.GetEdge().GetParent().GetId().value);
-      CompactGenome& compact_genome = result.at(iter.GetNode().GetId().value);
-      compact_genome = CompactGenome{mutations, parent, reference_sequence};
-    }
-    return result;
-  }
+      std::string_view reference_sequence);
 
-  static std::vector<LeafSet> ComputeLeafSets(const HistoryDAG& tree,
-                                              const std::vector<NodeLabel>& labels) {
-    std::vector<LeafSet> result;
-    result.resize(tree.GetNodes().size());
-    for (Node node : tree.TraversePostOrder()) {
-      result.at(node.GetId().value) = LeafSet{node, labels, result};
-    }
-    return result;
-  }
+  static inline std::vector<LeafSet> ComputeLeafSets(
+      const HistoryDAG& tree, const std::vector<NodeLabel>& labels);
 
   std::string_view reference_sequence_;
   const std::vector<HistoryDAG>& trees_;
   const std::vector<std::vector<Mutations>>& mutations_;
+  bool show_progress_;
 
   tbb::concurrent_unordered_set<CompactGenome, std::hash<CompactGenome>,
                                 std::equal_to<CompactGenome>>

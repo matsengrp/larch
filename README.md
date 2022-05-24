@@ -5,6 +5,7 @@ Requirements
 
 * GCC 7.5
 * cmake 3.11
+* clang-tidy
 * protobuf libraries and compiler
 * zlib
 * TBB
@@ -35,7 +36,7 @@ From the build directory:
 
 `ln -s ../data`
 
-`./larch`
+`./larch-test`
 
 Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
 

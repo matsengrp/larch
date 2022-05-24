@@ -2,6 +2,13 @@
 #include <vector>
 #include <unordered_map>
 
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/gzip_stream.h>
+
 #include <range/v3/view/transform.hpp>
 
 #include "nlohmann/json.hpp"
@@ -12,14 +19,36 @@
 #include "parsimony.pb.h"
 #include "newick.hpp"
 
+template <typename T>
+static void Parse(T& data, std::string_view path) {
+  std::ifstream in{std::string{path}};
+  assert(in);
+  unsigned char header[2];
+  in >> header[0] >> header[1];
+  if (header[0] == 0x1f and header[1] == 0x8b) {
+    google::protobuf::io::FileInputStream in_compressed{
+        open(std::string{path}.c_str(), O_RDONLY)};
+    in_compressed.SetCloseOnDelete(true);
+    google::protobuf::io::GzipInputStream in{&in_compressed};
+    data.ParseFromZeroCopyStream(&in);
+  } else {
+    std::ifstream in_raw{std::string{path}};
+    data.ParseFromIstream(&in_raw);
+  }
+}
+
+static bool IsGzipped(std::string_view path) {
+  std::ifstream in{std::string{path}};
+  assert(in);
+  unsigned char header[2];
+  in >> header[0] >> header[1];
+  return header[0] == 0x1f and header[1] == 0x8b;
+}
+
 HistoryDAG LoadHistoryDAGFromProtobufGZ(std::string_view path, std::string& ref_seq,
                                         std::vector<Mutations>& mutations) {
-  std::ifstream in_compressed{std::string{path}};
-  assert(in_compressed);
-  zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
-  std::istream in{&zbuf};
   DAG::data data;
-  data.ParseFromIstream(&in);
+  Parse(data, path);
 
   ref_seq = data.reference_seq();
   HistoryDAG dag;
@@ -51,10 +80,10 @@ HistoryDAG LoadHistoryDAGFromProtobufGZ(std::string_view path, std::string& ref_
   return dag;
 }
 
-static HistoryDAG LoadTreeFromProtobuf(std::istream& in,
-                                       std::vector<Mutations>& mutations) {
+HistoryDAG LoadTreeFromProtobufGZ(std::string_view path,
+                                  std::vector<Mutations>& mutations) {
   Parsimony::data data;
-  data.ParseFromIstream(&in);
+  Parse(data, path);
 
   HistoryDAG dag;
 
@@ -95,35 +124,19 @@ static HistoryDAG LoadTreeFromProtobuf(std::istream& in,
   return dag;
 }
 
-static bool IsGzipped(std::string_view path) {
-  std::ifstream in{std::string{path}};
-  assert(in);
-  unsigned char header[2];
-  in >> header[0] >> header[1];
-  return header[0] == 0x1f and header[1] == 0x8b;
-}
-
-HistoryDAG LoadTreeFromProtobufGZ(std::string_view path,
-                                  std::vector<Mutations>& mutations) {
+[[nodiscard]] std::string LoadRefseqFromJsonGZ(std::string_view path) {
+  nlohmann::json json;
   if (IsGzipped(path)) {
     std::ifstream in_compressed{std::string{path}};
     assert(in_compressed);
     zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
     std::istream in{&zbuf};
-    return LoadTreeFromProtobuf(in, mutations);
+    in >> json;
   } else {
     std::ifstream in{std::string{path}};
-    return LoadTreeFromProtobuf(in, mutations);
+    assert(in);
+    in >> json;
   }
-}
-
-[[nodiscard]] std::string LoadRefseqFromJsonGZ(std::string_view path) {
-  std::ifstream in_compressed{std::string{path}};
-  assert(in_compressed);
-  zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
-  std::istream in{&zbuf};
-  nlohmann::json json;
-  in >> json;
   return json["refseq"][1];
 }
 
@@ -146,12 +159,18 @@ the clade in the parent node's clade_list from which this edge descends.
 */
 
 HistoryDAG LoadHistoryDAGFromJsonGZ(std::string_view path, std::string& refseq) {
-  std::ifstream in_compressed{std::string{path}};
-  assert(in_compressed);
-  zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
-  std::istream in{&zbuf};
   nlohmann::json json;
-  in >> json;
+  if (IsGzipped(path)) {
+    std::ifstream in_compressed{std::string{path}};
+    assert(in_compressed);
+    zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
+    std::istream in{&zbuf};
+    in >> json;
+  } else {
+    std::ifstream in{std::string{path}};
+    assert(in);
+    in >> json;
+  }
   HistoryDAG result;
 
   refseq = json["refseq"][1];

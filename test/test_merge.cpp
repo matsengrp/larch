@@ -25,9 +25,6 @@ static void test_protobuf(const std::string& correct_path,
   Merge merge(reference_sequence, trees, mutations);
   merge.Run();
 
-  std::cout << "Correct nodes: " << correct_result.GetNodes().size() << "\n";
-  std::cout << "Correct edges: " << correct_result.GetEdges().size() << "\n";
-
   assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
                "Nodes count");
 
@@ -80,7 +77,8 @@ static void test_case_20d() {
   std::vector<HistoryDAG> trees;
   std::string reference_sequence;
 
-  reference_sequence = LoadRefseqFromJsonGZ("data/20D_from_fasta/20D_full_dag.json.gz");
+  HistoryDAG correct_result = LoadHistoryDAGFromJsonGZ(
+      "data/20D_from_fasta/20D_full_dag.json.gz", reference_sequence);
 
   trees.resize(paths.size());
   mutations.resize(paths.size());
@@ -89,23 +87,30 @@ static void test_case_20d() {
     paths_idx.push_back({i, paths.at(i)});
   }
   std::cout << "Loading trees ";
-  tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(),
-                [&](auto path_idx) {
-                  std::vector<Mutations> tree_mutations;
-                  std::cout << "." << std::flush;
-                  trees.at(path_idx.first) =
-                      LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
-                  mutations.at(path_idx.first) = std::move(tree_mutations);
-                });
+  tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
+    std::vector<Mutations> tree_mutations;
+    std::cout << "." << std::flush;
+    trees.at(path_idx.first) = LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
+    mutations.at(path_idx.first) = std::move(tree_mutations);
+  });
   std::cout << " done."
             << "\n";
 
   Benchmark merge_time;
-  Merge merge(reference_sequence, trees, mutations);
+  Merge merge(reference_sequence, trees, mutations, true);
   merge_time.start();
   merge.Run();
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
+
+  std::cout << "Nodes: " << merge.GetResult().GetNodes().size() << "\n";
+  std::cout << "Edges: " << merge.GetResult().GetEdges().size() << "\n";
+
+  assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
+               "Nodes count");
+
+  assert_equal(correct_result.GetEdges().size(), merge.GetResult().GetEdges().size(),
+               "Edges count");
 }
 
 [[maybe_unused]] static const auto test0_added = add_test({test_case_2, "Test case 2"});
