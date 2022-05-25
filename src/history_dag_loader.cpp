@@ -187,21 +187,28 @@ HistoryDAG LoadHistoryDAGFromJsonGZ(std::string_view path, std::string& refseq) 
   return result;
 }
 
-// static CompactGenome GetCompactGenome(const nlohmann::json& json,
-//                                       size_t compact_genome_index) {
-//   CompactGenome result;
-//   for (auto& mutation : json["compact_genomes"][compact_genome_index]) {
-//     size_t position = mutation[0];
-//     std::string new_base = mutation[1][1].get<std::string>();
-//     result[position] = new_base.at(0);
-//   }
-//   return result;
-// }
+static CompactGenome GetCompactGenome(const nlohmann::json& json,
+                                      size_t compact_genome_index) {
+  std::vector<std::pair<MutationPosition, char>> result;
+  result.reserve(json["compact_genomes"][compact_genome_index].size());
+  std::string new_base;
+  for (auto& mutation : json["compact_genomes"][compact_genome_index]) {
+    MutationPosition position = {mutation[0]};
+    new_base = mutation[1][1].get<std::string>();
+    result.emplace_back(position, new_base.at(0));
+  }
+  std::sort(result.begin(), result.end(),
+            [](auto lhs, auto rhs) { return lhs.first < rhs.first; });
+  result.erase(std::unique(result.begin(), result.end(),
+                           [](auto lhs, auto rhs) { return lhs.first == rhs.first; }),
+               result.end());
+  return result;
+}
 
 // static LeafSet GetLeafSet(const nlohmann::json& json, size_t node_index) {
-//   LeafSet result;
+//   std::vector<std::vector<const CompactGenome*>> result;
 //   for (auto& clade : json["nodes"][node_index][1]) {
-//     std::set<CompactGenome*> leafs;
+//     std::vector<const CompactGenome*> leafs;
 //     for (size_t leaf : clade) {
 //       leafs.insert(GetCompactGenome(json, leaf));
 //     }
@@ -223,8 +230,15 @@ HistoryDAG LoadHistoryDAGFromJsonGZ(std::string_view path, std::string& refseq) 
 //   for (auto& node : json["nodes"]) {
 //     size_t compact_genome_index = node[0];
 //     result.push_back(
-//         {GetCompactGenome(json, compact_genome_index), GetLeafSet(json,
-//         node_index++)});
+//         {GetCompactGenome(json, compact_genome_index), GetLeafSet(json, node_index++)});
 //   }
 //   return result;
 // }
+
+void StoreDAGToProtobuf(const HistoryDAG& dag, std::string_view reference_sequence,
+                        const ConcurrentUnorderedMap<NodeLabel, NodeId>& labels,
+                        std::string_view path) {
+  DAG::data data;
+
+  data.set_reference_seq(std::string{reference_sequence});
+}

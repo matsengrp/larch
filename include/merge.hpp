@@ -2,7 +2,7 @@
 
 #include <string_view>
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <iostream>
 #include <algorithm>
 #include <shared_mutex>
@@ -30,11 +30,15 @@ class CompactGenome {
   inline CompactGenome(const Mutations& mutations, const CompactGenome& parent,
                        std::string_view reference_sequence);
 
+  inline CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations);
+
   inline bool operator==(const CompactGenome& rhs) const noexcept;
 
   inline size_t Hash() const noexcept;
 
  private:
+  static inline size_t ComputeHash(
+      const std::vector<std::pair<MutationPosition, char>>& mutations);
   std::vector<std::pair<MutationPosition, char>> mutations_ = {};
   size_t hash_ = {};
 };
@@ -53,11 +57,15 @@ class LeafSet {
   inline LeafSet(Node node, const std::vector<NodeLabel>& labels,
                  std::vector<LeafSet>& computed_leafsets);
 
+  inline LeafSet(std::vector<std::vector<const CompactGenome*>>&& clades);
+
   inline bool operator==(const LeafSet& rhs) const noexcept;
 
   inline size_t Hash() const noexcept;
 
  private:
+  static inline size_t ComputeHash(
+      const std::vector<std::vector<const CompactGenome*>>& clades);
   std::vector<std::vector<const CompactGenome*>> clades_ = {};
   size_t hash_ = {};
 };
@@ -155,7 +163,7 @@ class Merge {
   inline HistoryDAG& GetResult();
   inline const HistoryDAG& GetResult() const;
   inline const std::vector<std::vector<NodeLabel>>& GetTreeLabels() const;
-  inline const ConcurrentUnorderedMap<NodeLabel, NodeId>& GetResultNodes() const;
+  inline const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
   inline const ConcurrentUnorderedSet<EdgeLabel>& GetResultEdges() const;
 
  private:
@@ -181,7 +189,7 @@ class Merge {
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
   std::vector<std::vector<NodeLabel>> tree_labels_;
 
-  ConcurrentUnorderedMap<NodeLabel, NodeId> result_nodes_;
+  std::unordered_map<NodeLabel, NodeId> result_nodes_;
   ConcurrentUnorderedSet<EdgeLabel> result_edges_;
   HistoryDAG result_;
 };
