@@ -79,9 +79,15 @@ using Edge = EdgeView<const HistoryDAG&>;
 using MutableEdge = EdgeView<HistoryDAG&>;
 
 namespace Transform {
-inline constexpr const auto GetParent = [](auto&& i) { return i.GetParent(); };
-inline constexpr const auto GetChild = [](auto&& i) { return i.GetChild(); };
-inline constexpr const auto GetId = [](auto&& i) { return i.GetId(); };
+inline auto GetParent() {
+  return ranges::views::transform([](auto&& i) { return i.GetParent(); });
+}
+inline auto GetChild() {
+  return ranges::views::transform([](auto&& i) { return i.GetChild(); });
+}
+inline auto GetId() {
+  return ranges::views::transform([](auto&& i) { return i.GetId(); });
+}
 }  // namespace Transform
 
 inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {

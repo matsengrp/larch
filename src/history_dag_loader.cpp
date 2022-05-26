@@ -230,7 +230,8 @@ static CompactGenome GetCompactGenome(const nlohmann::json& json,
 //   for (auto& node : json["nodes"]) {
 //     size_t compact_genome_index = node[0];
 //     result.push_back(
-//         {GetCompactGenome(json, compact_genome_index), GetLeafSet(json, node_index++)});
+//         {GetCompactGenome(json, compact_genome_index), GetLeafSet(json,
+//         node_index++)});
 //   }
 //   return result;
 // }
@@ -241,4 +242,15 @@ void StoreDAGToProtobuf(const HistoryDAG& dag, std::string_view reference_sequen
   DAG::data data;
 
   data.set_reference_seq(std::string{reference_sequence});
+
+  for (Edge edge : dag.GetEdges()) {
+    auto* proto_edge = data.add_edges();
+    proto_edge->set_edge_id(edge.GetId().value);
+    proto_edge->set_parent_node(edge.GetParentId().value);
+    proto_edge->set_parent_clade(edge.GetChildId().value);
+    proto_edge->set_child_node(edge.GetClade().value);
+  }
+
+  std::ofstream file{std::string{path}};
+  data.SerializeToOstream(&file);
 }

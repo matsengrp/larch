@@ -14,6 +14,16 @@ EdgeView<T>::operator Edge() const {
 }
 
 template <typename T>
+EdgeView<T>::operator EdgeId() const {
+  return id_;
+}
+
+template <typename T>
+EdgeView<T>::operator CladeIdx() const {
+  return GetClade();
+}
+
+template <typename T>
 T EdgeView<T>::GetDAG() const {
   return dag_;
 }
@@ -39,6 +49,16 @@ CladeIdx EdgeView<T>::GetClade() const {
 }
 
 template <typename T>
+NodeId EdgeView<T>::GetParentId() const {
+  return GetParent();
+}
+
+template <typename T>
+NodeId EdgeView<T>::GetChildId() const {
+  return GetChild();
+}
+
+template <typename T>
 bool EdgeView<T>::IsRoot() const {
   return GetParent().IsRoot();
 }
@@ -60,11 +80,10 @@ const auto& EdgeView<T>::GetWeight() const {
 
 template <typename T>
 std::optional<EdgeView<T>> EdgeView<T>::FindNextSibling() const {
-  auto parent = GetParent();
-  auto child = GetChild();
+  auto [parent, child] = *this;
   auto children = parent.GetChildren();
   for (auto i = children.begin(); i != children.end(); ++i) {
-    if ((*i).GetChild().GetId() == child.GetId()) {
+    if ((*i).GetChildId() == child.GetId()) {
       if (++i != children.end()) {
         return *i;
       }
@@ -87,4 +106,19 @@ auto& EdgeView<T>::GetStorage() {
 template <typename T>
 inline bool operator==(EdgeView<T> lhs, EdgeView<T> rhs) {
   return std::addressof(lhs.dag_) == std::addressof(rhs.dag_) && lhs.id_ == rhs.id_;
+}
+
+namespace std {
+template <typename T>
+struct tuple_size<::EdgeView<T>> : integral_constant<size_t, 2> {};
+
+template <size_t Index, typename T>
+struct tuple_element<Index, ::EdgeView<T>>
+    : tuple_element<Index, tuple<NodeView<T>, NodeView<T>>> {};
+}  // namespace std
+
+template <std::size_t Index, typename T>
+std::tuple_element_t<Index, EdgeView<T>> get(EdgeView<T> edge) {
+  if constexpr (Index == 0) return edge.GetParent();
+  if constexpr (Index == 1) return edge.GetChild();
 }

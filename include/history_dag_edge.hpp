@@ -18,11 +18,15 @@ class EdgeView {
   using NodeType = std::conditional_t<is_mutable, MutableNode, Node>;
   EdgeView(T dag, EdgeId id);
   operator Edge() const;
+  operator EdgeId() const;
+  operator CladeIdx() const;
   T GetDAG() const;
   EdgeId GetId() const;
   NodeType GetParent() const;
   NodeType GetChild() const;
   CladeIdx GetClade() const;
+  NodeId GetParentId() const;
+  NodeId GetChildId() const;
   bool IsRoot() const;
   bool IsLeaf() const;
   double GetProbability() const;

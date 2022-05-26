@@ -41,7 +41,6 @@ class HistoryDAG {
 
   MutableNode AddNode(NodeId id);
 
-  MutableEdge AddEdge(EdgeId id, Node parent, Node child, CladeIdx clade);
   MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
 
   void InitializeComponents(size_t nodes_count, size_t edges_count);
@@ -53,10 +52,10 @@ class HistoryDAG {
   inline auto GetEdges() const;
   inline auto GetEdges();
 
-  Node GetNode(NodeId id) const;
-  MutableNode GetNode(NodeId id);
-  Edge GetEdge(EdgeId id) const;
-  MutableEdge GetEdge(EdgeId id);
+  Node Get(NodeId id) const;
+  MutableNode Get(NodeId id);
+  Edge Get(EdgeId id) const;
+  MutableEdge Get(EdgeId id);
 
   Node GetRoot() const;
   MutableNode GetRoot();

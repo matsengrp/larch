@@ -63,7 +63,7 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
         for (auto clade : node.GetClades()) {
           std::vector<const CompactGenome*> clade_leafs;
           clade_leafs.reserve(clade.size());
-          for (Node child : clade | ranges::views::transform(Transform::GetChild)) {
+          for (Node child : clade | Transform::GetChild()) {
             const LeafSet& child_leaf_set = computed_leafsets.at(child.GetId().value);
             if (child.IsLeaf()) {
               clade_leafs.push_back(labels.at(child.GetId().value).compact_genome);
@@ -225,15 +225,14 @@ void Merge::MergeTrees() {
   tree_idxs.resize(trees_.size());
   std::iota(tree_idxs.begin(), tree_idxs.end(), 0);
 
-  size_t node_id = 0;
+  NodeId node_id{0};
   std::mutex mtx;
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     for (auto label : labels) {
       std::unique_lock<std::mutex> lock{mtx};
-      auto i = result_nodes_.find(label);
-      if (i == result_nodes_.end()) {
-        result_nodes_.insert({label, {node_id++}});
+      if (result_nodes_.try_emplace(label, node_id).second) {
+        ++node_id.value;
       }
     }
   });
@@ -241,8 +240,8 @@ void Merge::MergeTrees() {
     const HistoryDAG& tree = trees_.at(tree_idx);
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     for (Edge edge : tree.GetEdges()) {
-      auto& parent_label = labels.at(edge.GetParent().GetId().value);
-      auto& child_label = labels.at(edge.GetChild().GetId().value);
+      auto& parent_label = labels.at(edge.GetParentId().value);
+      auto& child_label = labels.at(edge.GetChildId().value);
       result_edges_.insert({parent_label.compact_genome, parent_label.leaf_set,
                             child_label.compact_genome, child_label.leaf_set});
     }
@@ -267,10 +266,10 @@ std::vector<CompactGenome> Merge::ComputeCompactGenomes(
     std::string_view reference_sequence) {
   std::vector<CompactGenome> result;
   result.resize(tree.GetNodes().size());
-  for (auto iter : tree.TraversePreOrder()) {
-    const Mutations& mutations = edge_mutations.at(iter.GetEdge().GetId().value);
-    const CompactGenome& parent = result.at(iter.GetEdge().GetParent().GetId().value);
-    CompactGenome& compact_genome = result.at(iter.GetNode().GetId().value);
+  for (auto [node, edge] : tree.TraversePreOrder()) {
+    const Mutations& mutations = edge_mutations.at(edge.GetId().value);
+    const CompactGenome& parent = result.at(edge.GetParentId().value);
+    CompactGenome& compact_genome = result.at(node.GetId().value);
     compact_genome = CompactGenome{mutations, parent, reference_sequence};
   }
   return result;

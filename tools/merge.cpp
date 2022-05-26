@@ -12,10 +12,9 @@
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
-  std::cout << "merge [-z,--gzip] [-r,--refseq file] -i,--input file1 file2 ... "
+  std::cout << "merge [-r,--refseq file] -i,--input file1 file2 ... "
                "[-o,--output filename]\n";
   std::cout << "  -i,--input     List of input files\n";
-  std::cout << "  -z,--gzip      Input files are gzip compressed\n";
   std::cout << "  -o,--output    Save the output to filename (default is merged.pb)\n";
   std::cout << "  -r,--refseq    Read reference sequence from Json file\n";
 
@@ -58,13 +57,13 @@ static HistoryDAG MergeTrees(const std::vector<std::string_view>& paths,
   merge.Run();
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
+
   return std::move(merge.GetResult());
 }
 
 int main(int argc, char** argv) {
   Arguments args = GetArguments(argc, argv);
 
-  //   bool gzip = false;
   std::vector<std::string_view> input_filenames;
   std::string result_filename = "merged.pb";
   std::string refseq_filename;
@@ -74,8 +73,6 @@ int main(int argc, char** argv) {
       Usage();
     } else if (name == "-i" or name == "--input") {
       ranges::action::push_back(input_filenames, params);
-    } else if (name == "-z" or name == "--gzip") {
-      //   gzip = true;
     } else if (name == "-o" or name == "--output") {
       if (params.empty()) {
         std::cerr << "Specify result file name.\n";

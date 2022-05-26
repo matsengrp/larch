@@ -10,9 +10,7 @@ typename PreOrderIterator<NodeType>::value_type PreOrderIterator<NodeType>::oper
     const {
   assert(not stack_.empty());
   EdgeType top = stack_.top();
-  return {top.GetDAG(),
-          root_visited_ ? top.GetChild().GetId() : top.GetParent().GetId(),
-          top.GetId()};
+  return {top.GetDAG(), root_visited_ ? top.GetChild() : top.GetParent(), top};
 }
 
 template <typename NodeType>

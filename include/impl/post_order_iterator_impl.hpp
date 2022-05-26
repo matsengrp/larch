@@ -11,8 +11,7 @@ typename PostOrderIterator<NodeType>::value_type
 PostOrderIterator<NodeType>::operator*() const {
   assert(not stack_.empty());
   EdgeType top = stack_.top();
-  return {top.GetDAG(), visit_root_ ? top.GetParent().GetId() : top.GetChild().GetId(),
-          top.GetId()};
+  return {top.GetDAG(), visit_root_ ? top.GetParent() : top.GetChild(), top};
 }
 
 template <typename NodeType>

@@ -13,6 +13,11 @@ NodeView<T>::operator Node() const {
 }
 
 template <typename T>
+NodeView<T>::operator NodeId() const {
+  return id_;
+}
+
+template <typename T>
 T NodeView<T>::GetDAG() const {
   return dag_;
 }
