@@ -11,7 +11,7 @@
 #include <range/v3/view/reverse.hpp>
 #include <range/v3/view/ref.hpp>
 
-static constexpr size_t NoId = std::numeric_limits<size_t>::max();
+static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
 
 struct NodeId {
   size_t value = NoId;

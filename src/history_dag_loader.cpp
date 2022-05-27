@@ -237,7 +237,7 @@ static CompactGenome GetCompactGenome(const nlohmann::json& json,
 // }
 
 void StoreDAGToProtobuf(const HistoryDAG& dag, std::string_view reference_sequence,
-                        const ConcurrentUnorderedMap<NodeLabel, NodeId>& labels,
+                        const std::vector<Mutations>& edge_parent_mutations,
                         std::string_view path) {
   DAG::data data;
 
@@ -249,6 +249,24 @@ void StoreDAGToProtobuf(const HistoryDAG& dag, std::string_view reference_sequen
     proto_edge->set_parent_node(edge.GetParentId().value);
     proto_edge->set_parent_clade(edge.GetChildId().value);
     proto_edge->set_child_node(edge.GetClade().value);
+    for (auto [pos, base] : edge_parent_mutations.at(edge.GetId().value)) {
+      auto* mut = proto_edge->add_edge_mutations();
+      mut->set_position(pos.value);
+      switch (base) {
+        case 'A':
+          mut->set_mut_nuc(0, 0);
+          break;
+        case 'C':
+          mut->set_mut_nuc(0, 1);
+          break;
+        case 'G':
+          mut->set_mut_nuc(0, 2);
+          break;
+        case 'T':
+          mut->set_mut_nuc(0, 3);
+          break;
+      };
+    }
   }
 
   std::ofstream file{std::string{path}};

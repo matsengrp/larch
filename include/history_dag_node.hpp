@@ -24,7 +24,6 @@ class NodeView {
   auto GetClades() const;
   auto GetChildren() const;
   EdgeType GetSingleParent() const;
-  EdgeType GetFirstParent() const;
   bool IsRoot() const;
   bool IsLeaf() const;
   void AddParentEdge(Edge edge);

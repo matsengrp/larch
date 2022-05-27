@@ -27,8 +27,8 @@
   std::exit(EXIT_FAILURE);
 }
 
-static HistoryDAG MergeTrees(const std::vector<std::string_view>& paths,
-                             std::string_view refseq_json_path) {
+static int MergeTrees(const std::vector<std::string_view>& paths,
+                      std::string_view refseq_json_path, std::string_view out_path) {
   std::vector<std::vector<Mutations>> mutations;
   std::vector<HistoryDAG> trees;
   std::string reference_sequence;
@@ -58,7 +58,13 @@ static HistoryDAG MergeTrees(const std::vector<std::string_view>& paths,
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
 
-  return std::move(merge.GetResult());
+  std::cout << "DAG nodes: " << merge.GetResult().GetNodes().size() << "\n";
+  std::cout << "DAG edges: " << merge.GetResult().GetEdges().size() << "\n";
+
+  StoreDAGToProtobuf(merge.GetResult(), reference_sequence,
+                     merge.CalculateResultEdgeMutations(), out_path);
+
+  return EXIT_SUCCESS;
 }
 
 int main(int argc, char** argv) {
@@ -93,10 +99,5 @@ int main(int argc, char** argv) {
     Fail();
   }
 
-  HistoryDAG result = MergeTrees(input_filenames, refseq_filename);
-
-  std::cout << "DAG nodes: " << result.GetNodes().size() << "\n";
-  std::cout << "DAG edges: " << result.GetEdges().size() << "\n";
-
-  return EXIT_SUCCESS;
+  return MergeTrees(input_filenames, refseq_filename, result_filename);
 }

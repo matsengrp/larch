@@ -56,19 +56,14 @@ typename NodeView<T>::EdgeType NodeView<T>::GetSingleParent() const {
 }
 
 template <typename T>
-typename NodeView<T>::EdgeType NodeView<T>::GetFirstParent() const {
-  assert(GetParents().size() > 0);
-  return *GetParents().begin();
-}
-
-template <typename T>
 bool NodeView<T>::IsRoot() const {
-  return GetParents().empty();
+  return GetStorage().parents_.empty();
 }
 
 template <typename T>
 bool NodeView<T>::IsLeaf() const {
-  return GetChildren().begin() == GetChildren().end();
+  auto children = GetChildren();
+  return children.begin() == children.end();
 }
 
 template <typename T>

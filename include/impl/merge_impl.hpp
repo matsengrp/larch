@@ -78,7 +78,7 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
           clade_leafs |= ranges::actions::sort | ranges::actions::unique;
           clades.emplace_back(std::move(clade_leafs));
         }
-        clades |= ranges::actions::sort | ranges::actions::unique;
+        clades |= ranges::actions::sort;
         return clades;
       }()},
       hash_{ComputeHash(clades_)} {}
@@ -87,7 +87,6 @@ LeafSet::LeafSet(std::vector<std::vector<const CompactGenome*>>&& clades)
     : clades_{clades}, hash_{ComputeHash(clades_)} {}
 
 bool LeafSet::operator==(const LeafSet& rhs) const noexcept {
-  if (hash_ != rhs.hash_) return false;
   return clades_ == rhs.clades_;
 }
 
@@ -97,7 +96,7 @@ size_t LeafSet::ComputeHash(
     const std::vector<std::vector<const CompactGenome*>>& clades) {
   size_t hash = 0;
   for (auto& clade : clades) {
-    for (auto& leaf : clade) {
+    for (auto leaf : clade) {
       hash = HashCombine(hash, leaf->Hash());
     }
   }
@@ -127,8 +126,7 @@ bool EdgeLabel::operator==(const EdgeLabel& rhs) const noexcept {
 }
 
 size_t EdgeLabel::Hash() const noexcept {
-  size_t hash = 0;
-  hash = HashCombine(hash, reinterpret_cast<std::uintptr_t>(parent_compact_genome));
+  size_t hash = reinterpret_cast<std::uintptr_t>(parent_compact_genome);
   hash = HashCombine(hash, reinterpret_cast<std::uintptr_t>(parent_leaf_set));
   hash = HashCombine(hash, reinterpret_cast<std::uintptr_t>(child_compact_genome));
   hash = HashCombine(hash, reinterpret_cast<std::uintptr_t>(child_leaf_set));
@@ -155,16 +153,10 @@ HistoryDAG& Merge::GetResult() { return result_; }
 
 const HistoryDAG& Merge::GetResult() const { return result_; }
 
-const std::vector<std::vector<NodeLabel>>& Merge::GetTreeLabels() const {
-  return tree_labels_;
-}
-
-const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
-  return result_nodes_;
-}
-
-const ConcurrentUnorderedSet<EdgeLabel>& Merge::GetResultEdges() const {
-  return result_edges_;
+std::vector<Mutations> Merge::CalculateResultEdgeMutations() const {
+  std::vector<Mutations> result;
+  result.resize(result_.GetEdges().size());
+  return result;
 }
 
 void Merge::ComputeCompactGenomes() {

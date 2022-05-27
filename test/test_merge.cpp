@@ -8,6 +8,8 @@
 #include "history_dag_loader.hpp"
 #include "benchmark.hpp"
 
+#include <valgrind/callgrind.h>  //XXX
+
 static void test_protobuf(const std::string& correct_path,
                           const std::vector<std::string>& paths) {
   std::vector<std::vector<Mutations>> mutations;
@@ -99,6 +101,7 @@ static void test_case_20d() {
   Benchmark merge_time;
   Merge merge(reference_sequence, trees, mutations, true);
   merge_time.start();
+  CALLGRIND_START_INSTRUMENTATION;
   merge.Run();
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";

@@ -158,13 +158,16 @@ class Merge {
                const std::vector<std::vector<Mutations>>& mutations,
                bool show_progress = false);
 
+  Merge(Merge&&) = delete;
+  Merge(const Merge&) = delete;
+  Merge& operator=(Merge&&) = delete;
+  Merge& operator=(const Merge&) = delete;
+
   inline void Run();
 
   inline HistoryDAG& GetResult();
   inline const HistoryDAG& GetResult() const;
-  inline const std::vector<std::vector<NodeLabel>>& GetTreeLabels() const;
-  inline const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
-  inline const ConcurrentUnorderedSet<EdgeLabel>& GetResultEdges() const;
+  inline std::vector<Mutations> CalculateResultEdgeMutations() const;
 
  private:
   inline void ComputeCompactGenomes();

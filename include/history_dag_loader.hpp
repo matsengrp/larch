@@ -19,5 +19,5 @@
 [[nodiscard]] std::vector<NodeLabel> LoadLabelsJsonGZ(std::string_view path);
 
 void StoreDAGToProtobuf(const HistoryDAG& dag, std::string_view reference_sequence,
-                        const ConcurrentUnorderedMap<NodeLabel, NodeId>& labels,
+                        const std::vector<Mutations>& edge_parent_mutations,
                         std::string_view path);
