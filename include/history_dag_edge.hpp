@@ -27,6 +27,7 @@ class EdgeView {
   CladeIdx GetClade() const;
   NodeId GetParentId() const;
   NodeId GetChildId() const;
+  std::pair<NodeId, NodeId> GetNodeIds() const;
   bool IsRoot() const;
   bool IsLeaf() const;
   double GetProbability() const;

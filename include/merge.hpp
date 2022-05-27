@@ -36,6 +36,11 @@ class CompactGenome {
 
   inline size_t Hash() const noexcept;
 
+  inline std::optional<char> operator[](MutationPosition pos) const;
+
+  inline auto begin() const;
+  inline auto end() const;
+
  private:
   static inline size_t ComputeHash(
       const std::vector<std::pair<MutationPosition, char>>& mutations);
@@ -193,8 +198,8 @@ class Merge {
   std::vector<std::vector<NodeLabel>> tree_labels_;
 
   std::unordered_map<NodeLabel, NodeId> result_nodes_;
-  ConcurrentUnorderedSet<EdgeLabel> result_edges_;
-  HistoryDAG result_;
+  ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;
+  HistoryDAG result_dag_;
 };
 
 #include "impl/merge_impl.hpp"

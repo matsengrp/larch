@@ -254,16 +254,16 @@ void StoreDAGToProtobuf(const HistoryDAG& dag, std::string_view reference_sequen
       mut->set_position(pos.value);
       switch (base) {
         case 'A':
-          mut->set_mut_nuc(0, 0);
+          mut->add_mut_nuc(0);
           break;
         case 'C':
-          mut->set_mut_nuc(0, 1);
+          mut->add_mut_nuc(1);
           break;
         case 'G':
-          mut->set_mut_nuc(0, 2);
+          mut->add_mut_nuc(2);
           break;
         case 'T':
-          mut->set_mut_nuc(0, 3);
+          mut->add_mut_nuc(3);
           break;
       };
     }

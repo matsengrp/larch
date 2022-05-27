@@ -40,6 +40,21 @@ bool CompactGenome::operator==(const CompactGenome& rhs) const noexcept {
 
 size_t CompactGenome::Hash() const noexcept { return hash_; }
 
+std::optional<char> CompactGenome::operator[](MutationPosition pos) const {
+  auto it = std::lower_bound(mutations_.begin(), mutations_.end(), pos,
+                             [](std::pair<MutationPosition, char> lhs,
+                                MutationPosition rhs) { return lhs.first < rhs; });
+  if (it != mutations_.end() and it->first == pos) {
+    return it->second;
+  } else {
+    return std::nullopt;
+  }
+}
+
+auto CompactGenome::begin() const { return mutations_.begin(); }
+
+auto CompactGenome::end() const { return mutations_.end(); }
+
 size_t CompactGenome::ComputeHash(
     const std::vector<std::pair<MutationPosition, char>>& mutations) {
   size_t result = 0;
@@ -146,16 +161,31 @@ void Merge::Run() {
   ComputeCompactGenomes();
   ComputeLeafSets();
   MergeTrees();
-  result_.BuildConnections();
+  result_dag_.BuildConnections();
 }
 
-HistoryDAG& Merge::GetResult() { return result_; }
+HistoryDAG& Merge::GetResult() { return result_dag_; }
 
-const HistoryDAG& Merge::GetResult() const { return result_; }
+const HistoryDAG& Merge::GetResult() const { return result_dag_; }
 
 std::vector<Mutations> Merge::CalculateResultEdgeMutations() const {
   std::vector<Mutations> result;
-  result.resize(result_.GetEdges().size());
+  result.resize(result_dag_.GetEdges().size());
+  for (auto& [label, edge_id] : result_edges_) {
+    Mutations& muts = result.at(edge_id.value);
+    assert(label.parent_compact_genome);
+    assert(label.child_compact_genome);
+    const CompactGenome& parent = *label.parent_compact_genome;
+    const CompactGenome& child = *label.child_compact_genome;
+    for (auto [pos, base] : child) {
+      auto parent_base = parent[pos];
+      if (not parent_base.has_value()) {
+        muts[pos] = base;
+      } else if (parent_base.value() != base) {
+        muts[pos] = base;
+      }
+    }
+  }
   return result;
 }
 
@@ -231,16 +261,18 @@ void Merge::MergeTrees() {
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
     const HistoryDAG& tree = trees_.at(tree_idx);
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
+    std::atomic<size_t> node_id{0};
     for (Edge edge : tree.GetEdges()) {
       auto& parent_label = labels.at(edge.GetParentId().value);
       auto& child_label = labels.at(edge.GetChildId().value);
-      result_edges_.insert({parent_label.compact_genome, parent_label.leaf_set,
-                            child_label.compact_genome, child_label.leaf_set});
+      result_edges_.insert({{parent_label.compact_genome, parent_label.leaf_set,
+                             child_label.compact_genome, child_label.leaf_set},
+                            {}});
     }
   });
-  result_.InitializeComponents(result_nodes_.size(), result_edges_.size());
-  size_t edge_id = 0;
-  for (auto& edge : result_edges_) {
+  result_dag_.InitializeComponents(result_nodes_.size(), result_edges_.size());
+  EdgeId edge_id{0};
+  for (auto& [edge, id] : result_edges_) {
     auto parent =
         result_nodes_.find(NodeLabel{edge.parent_compact_genome, edge.parent_leaf_set});
     auto child =
@@ -249,7 +281,9 @@ void Merge::MergeTrees() {
     Assert(child != result_nodes_.end());
     Assert(parent->second.value != NoId);
     Assert(child->second.value != NoId);
-    result_.AddEdge({edge_id++}, parent->second, child->second, {0});
+    id = edge_id;
+    result_dag_.AddEdge(edge_id, parent->second, child->second, {0});
+    edge_id.value++;
   }
 }
 

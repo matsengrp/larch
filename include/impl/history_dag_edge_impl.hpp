@@ -59,6 +59,11 @@ NodeId EdgeView<T>::GetChildId() const {
 }
 
 template <typename T>
+std::pair<NodeId, NodeId> EdgeView<T>::GetNodeIds() const {
+  return {GetParentId(), GetChildId()};
+}
+
+template <typename T>
 bool EdgeView<T>::IsRoot() const {
   return GetParent().IsRoot();
 }
