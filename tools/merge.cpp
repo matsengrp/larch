@@ -52,9 +52,11 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
             << "\n";
 
   Benchmark merge_time;
-  Merge merge(reference_sequence, trees, mutations);
+  Merge merge(reference_sequence);
+  std::vector<std::reference_wrapper<const HistoryDAG>> tree_refs{trees.begin(),
+                                                                  trees.end()};
   merge_time.start();
-  merge.Run();
+  merge.AddTrees(tree_refs, mutations, true);
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
 

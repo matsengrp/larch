@@ -8,8 +8,6 @@
 #include "history_dag_loader.hpp"
 #include "benchmark.hpp"
 
-#include <valgrind/callgrind.h>  //XXX
-
 static void test_protobuf(const std::string& correct_path,
                           const std::vector<std::string>& paths) {
   std::vector<std::vector<Mutations>> mutations;
@@ -24,8 +22,10 @@ static void test_protobuf(const std::string& correct_path,
   HistoryDAG correct_result =
       LoadHistoryDAGFromJsonGZ(correct_path, reference_sequence);
 
-  Merge merge(reference_sequence, trees, mutations);
-  merge.Run();
+  Merge merge(reference_sequence);
+  std::vector<std::reference_wrapper<const HistoryDAG>> tree_refs{trees.begin(),
+                                                                  trees.end()};
+  merge.AddTrees(tree_refs, mutations);
 
   assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
                "Nodes count");
@@ -99,10 +99,11 @@ static void test_case_20d() {
             << "\n";
 
   Benchmark merge_time;
-  Merge merge(reference_sequence, trees, mutations, true);
+  Merge merge(reference_sequence);
+  std::vector<std::reference_wrapper<const HistoryDAG>> tree_refs{trees.begin(),
+                                                                  trees.end()};
   merge_time.start();
-  CALLGRIND_START_INSTRUMENTATION;
-  merge.Run();
+  merge.AddTrees(tree_refs, mutations, true);
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
 
