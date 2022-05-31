@@ -44,6 +44,10 @@ class CompactGenome {
 
   inline bool empty() const;
 
+  static inline Mutations ToEdgeMutations(std::string_view reference_sequence,
+                                          const CompactGenome& parent,
+                                          const CompactGenome& child);
+
  private:
   static inline size_t ComputeHash(
       const std::vector<std::pair<MutationPosition, char>>& mutations);
@@ -71,6 +75,8 @@ class LeafSet {
 
   inline size_t Hash() const noexcept;
 
+  inline auto begin() const;
+  inline auto end() const;
   inline bool empty() const;
 
  private:
@@ -174,9 +180,14 @@ class Merge {
       const std::vector<std::reference_wrapper<const HistoryDAG>>& trees,
       const std::vector<std::vector<Mutations>>& mutations, bool show_progress = false);
 
+  inline void AddDAGs(const std::vector<std::reference_wrapper<const HistoryDAG>>& dags,
+                      std::vector<std::vector<CompactGenome>>&& compact_genomes,
+                      bool show_progress = false);
+
   inline HistoryDAG& GetResult();
   inline const HistoryDAG& GetResult() const;
-  inline std::vector<Mutations> CalculateResultEdgeMutations() const;
+  inline const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
+  inline std::vector<Mutations> ComputeResultEdgeMutations() const;
 
  private:
   inline void ComputeCompactGenomes(const std::vector<size_t>& tree_idxs,

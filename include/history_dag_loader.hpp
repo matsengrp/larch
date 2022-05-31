@@ -16,7 +16,8 @@
 [[nodiscard]] HistoryDAG LoadHistoryDAGFromJsonGZ(std::string_view path,
                                                   std::string& refseq);
 
-[[nodiscard]] std::vector<NodeLabel> LoadLabelsJsonGZ(std::string_view path);
+[[nodiscard]] std::vector<CompactGenome> LoadCompactGenomesJsonGZ(
+    std::string_view path);
 
 void StoreDAGToProtobuf(const HistoryDAG& dag, std::string_view reference_sequence,
                         const std::vector<Mutations>& edge_parent_mutations,

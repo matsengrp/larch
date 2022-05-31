@@ -205,36 +205,27 @@ static CompactGenome GetCompactGenome(const nlohmann::json& json,
   return result;
 }
 
-// static LeafSet GetLeafSet(const nlohmann::json& json, size_t node_index) {
-//   std::vector<std::vector<const CompactGenome*>> result;
-//   for (auto& clade : json["nodes"][node_index][1]) {
-//     std::vector<const CompactGenome*> leafs;
-//     for (size_t leaf : clade) {
-//       leafs.insert(GetCompactGenome(json, leaf));
-//     }
-//     result.insert(leafs);
-//   }
-//   return result;
-// }
+std::vector<CompactGenome> LoadCompactGenomesJsonGZ(std::string_view path) {
+  nlohmann::json json;
+  if (IsGzipped(path)) {
+    std::ifstream in_compressed{std::string{path}};
+    Assert(in_compressed);
+    zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
+    std::istream in{&zbuf};
+    in >> json;
+  } else {
+    std::ifstream in{std::string{path}};
+    Assert(in);
+    in >> json;
+  }
 
-// std::vector<NodeLabel> LoadLabelsJsonGZ(std::string_view path) {
-//   std::ifstream in_compressed{std::string{path}};
-//   Assert(in_compressed);
-//   zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
-//   std::istream in{&zbuf};
-//   nlohmann::json json;
-//   in >> json;
-
-//   std::vector<NodeLabel> result;
-//   size_t node_index = 0;
-//   for (auto& node : json["nodes"]) {
-//     size_t compact_genome_index = node[0];
-//     result.push_back(
-//         {GetCompactGenome(json, compact_genome_index), GetLeafSet(json,
-//         node_index++)});
-//   }
-//   return result;
-// }
+  std::vector<CompactGenome> result;
+  for (auto& node : json["nodes"]) {
+    size_t compact_genome_index = node[0];
+    result.push_back(GetCompactGenome(json, compact_genome_index));
+  }
+  return result;
+}
 
 void StoreDAGToProtobuf(const HistoryDAG& dag, std::string_view reference_sequence,
                         const std::vector<Mutations>& edge_parent_mutations,

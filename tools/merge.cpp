@@ -64,7 +64,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   std::cout << "DAG edges: " << merge.GetResult().GetEdges().size() << "\n";
 
   StoreDAGToProtobuf(merge.GetResult(), reference_sequence,
-                     merge.CalculateResultEdgeMutations(), out_path);
+                     merge.ComputeResultEdgeMutations(), out_path);
 
   return EXIT_SUCCESS;
 }

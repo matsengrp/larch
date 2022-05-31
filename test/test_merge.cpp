@@ -110,6 +110,38 @@ static void test_case_20d() {
   std::cout << "Nodes: " << merge.GetResult().GetNodes().size() << "\n";
   std::cout << "Edges: " << merge.GetResult().GetEdges().size() << "\n";
 
+  {
+    std::string rhs_reference_sequence;
+    std::vector<std::vector<CompactGenome>> rhs_compact_genomes;
+    std::vector<HistoryDAG> rhs_trees;
+    rhs_trees.push_back(LoadHistoryDAGFromJsonGZ(
+        "data/20D_from_fasta/20D_full_dag.json.gz", rhs_reference_sequence));
+    rhs_compact_genomes.push_back(
+        LoadCompactGenomesJsonGZ("data/20D_from_fasta/20D_full_dag.json.gz"));
+    Merge rhs_merge{rhs_reference_sequence};
+    std::vector<std::reference_wrapper<const HistoryDAG>> rhs_tree_refs{
+        rhs_trees.begin(), rhs_trees.end()};
+    rhs_merge.AddDAGs(rhs_tree_refs, std::move(rhs_compact_genomes), true);
+
+    size_t not_found_in_lhs = 0, not_found_in_rhs = 0;
+
+    for (auto lhs : merge.GetResultNodes()) {
+      if (rhs_merge.GetResultNodes().find(lhs.first) ==
+          rhs_merge.GetResultNodes().end()) {
+        ++not_found_in_rhs;
+      }
+    }
+
+    for (auto rhs : rhs_merge.GetResultNodes()) {
+      if (merge.GetResultNodes().find(rhs.first) == merge.GetResultNodes().end()) {
+        ++not_found_in_lhs;
+      }
+    }
+
+    std::cout << "Not found in rhs: " << not_found_in_rhs << "\n";
+    std::cout << "Not found in lhs: " << not_found_in_lhs << "\n";
+  }
+
   assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
                "Nodes count");
 
