@@ -25,13 +25,14 @@ static int TakeDiff(std::string_view proto_filename, std::string_view json_filen
   std::string lhs_reference_sequence;
   std::vector<std::vector<Mutations>> lhs_mutations;
   std::vector<HistoryDAG> lhs_trees;
-  
+
   lhs_mutations.push_back({});
-  lhs_trees.push_back(LoadHistoryDAGFromProtobufGZ(proto_filename, lhs_reference_sequence, lhs_mutations.at(0)));
+  lhs_trees.push_back(LoadHistoryDAGFromProtobufGZ(
+      proto_filename, lhs_reference_sequence, lhs_mutations.at(0)));
   Merge lhs_merge{lhs_reference_sequence};
   std::vector<std::reference_wrapper<const HistoryDAG>> lhs_tree_refs{lhs_trees.begin(),
-                                                                  lhs_trees.end()};
-  lhs_merge.AddTrees(lhs_tree_refs, lhs_mutations);
+                                                                      lhs_trees.end()};
+  lhs_merge.AddTrees(lhs_tree_refs, lhs_mutations, true);
 
   return EXIT_SUCCESS;
 }

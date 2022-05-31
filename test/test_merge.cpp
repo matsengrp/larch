@@ -117,6 +117,47 @@ static void test_case_20d() {
                "Edges count");
 }
 
+static void test_add_trees() {
+  std::string_view correct_path = "data/test_5_trees/full_dag.json.gz";
+  std::vector<std::string> paths1 = {"data/test_5_trees/tree_0.pb.gz",
+                                     "data/test_5_trees/tree_1.pb.gz"};
+  std::vector<std::string> paths2 = {"data/test_5_trees/tree_2.pb.gz",
+                                     "data/test_5_trees/tree_3.pb.gz",
+                                     "data/test_5_trees/tree_4.pb.gz"};
+
+  std::vector<std::vector<Mutations>> mutations1, mutations2;
+  std::vector<HistoryDAG> trees1, trees2;
+  for (auto& path : paths1) {
+    std::vector<Mutations> tree_mutations;
+    std::string ref_seq;
+    trees1.emplace_back(LoadHistoryDAGFromProtobufGZ(path, ref_seq, tree_mutations));
+    mutations1.emplace_back(std::move(tree_mutations));
+  }
+  for (auto& path : paths2) {
+    std::vector<Mutations> tree_mutations;
+    std::string ref_seq;
+    trees2.emplace_back(LoadHistoryDAGFromProtobufGZ(path, ref_seq, tree_mutations));
+    mutations2.emplace_back(std::move(tree_mutations));
+  }
+  std::string reference_sequence;
+  HistoryDAG correct_result =
+      LoadHistoryDAGFromJsonGZ(correct_path, reference_sequence);
+
+  Merge merge(reference_sequence);
+  std::vector<std::reference_wrapper<const HistoryDAG>> tree_refs1{trees1.begin(),
+                                                                   trees1.end()};
+  merge.AddTrees(tree_refs1, mutations1);
+  std::vector<std::reference_wrapper<const HistoryDAG>> tree_refs2{trees2.begin(),
+                                                                   trees2.end()};
+  merge.AddTrees(tree_refs2, mutations2);
+
+  assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
+               "Nodes count");
+
+  assert_equal(correct_result.GetEdges().size(), merge.GetResult().GetEdges().size(),
+               "Edges count");
+}
+
 [[maybe_unused]] static const auto test0_added = add_test({test_case_2, "Test case 2"});
 
 [[maybe_unused]] static const auto test1_added =
@@ -126,3 +167,6 @@ static void test_case_20d() {
     add_test({test_case_ref, "Tree with different ref"});
 
 [[maybe_unused]] static const auto test3_added = add_test({test_case_20d, "800 trees"});
+
+[[maybe_unused]] static const auto test4_added =
+    add_test({test_add_trees, "Add trees"});

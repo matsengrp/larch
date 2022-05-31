@@ -42,6 +42,8 @@ class CompactGenome {
   inline auto begin() const;
   inline auto end() const;
 
+  inline bool empty() const;
+
  private:
   static inline size_t ComputeHash(
       const std::vector<std::pair<MutationPosition, char>>& mutations);
@@ -68,6 +70,8 @@ class LeafSet {
   inline bool operator==(const LeafSet& rhs) const noexcept;
 
   inline size_t Hash() const noexcept;
+
+  inline bool empty() const;
 
  private:
   static inline size_t ComputeHash(
@@ -186,7 +190,14 @@ class Merge {
       const HistoryDAG& tree, const std::vector<Mutations>& edge_mutations,
       std::string_view reference_sequence);
 
+  static inline std::vector<CompactGenome> ComputeCompactGenomesDAG(
+      const HistoryDAG& tree, const std::vector<Mutations>& edge_mutations,
+      std::string_view reference_sequence);
+
   static inline std::vector<LeafSet> ComputeLeafSets(
+      const HistoryDAG& tree, const std::vector<NodeLabel>& labels);
+
+  static inline std::vector<LeafSet> ComputeLeafSetsDAG(
       const HistoryDAG& tree, const std::vector<NodeLabel>& labels);
 
   std::string_view reference_sequence_;
