@@ -165,6 +165,8 @@ void Merge::AddTrees(const std::vector<std::reference_wrapper<const HistoryDAG>>
   ComputeCompactGenomes(tree_idxs, show_progress);
   ComputeLeafSets(tree_idxs, show_progress);
   MergeTrees(tree_idxs);
+  Assert(result_nodes_.size() == result_dag_.GetNodes().size());
+  Assert(result_edges_.size() == result_dag_.GetEdges().size());
   result_dag_.BuildConnections();
 }
 
@@ -177,8 +179,8 @@ std::vector<Mutations> Merge::CalculateResultEdgeMutations() const {
   result.resize(result_dag_.GetEdges().size());
   for (auto& [label, edge_id] : result_edges_) {
     Mutations& muts = result.at(edge_id.value);
-    assert(label.parent_compact_genome);
-    assert(label.child_compact_genome);
+    Assert(label.parent_compact_genome);
+    Assert(label.child_compact_genome);
     const CompactGenome& parent = *label.parent_compact_genome;
     const CompactGenome& child = *label.child_compact_genome;
     for (auto [pos, base] : child) {
@@ -251,28 +253,36 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
       }
     }
   });
+  tbb::concurrent_vector<std::pair<EdgeLabel, EdgeId>> added_edges;
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
     const HistoryDAG& tree = trees_.at(tree_idx).get();
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
+    EdgeId edge_id{result_dag_.GetEdges().size()};
     for (Edge edge : tree.GetEdges()) {
       auto& parent_label = labels.at(edge.GetParentId().value);
       auto& child_label = labels.at(edge.GetChildId().value);
-      result_edges_.insert({{parent_label.compact_genome, parent_label.leaf_set,
-                             child_label.compact_genome, child_label.leaf_set},
-                            {}});
+      auto ins =
+          result_edges_.insert({{parent_label.compact_genome, parent_label.leaf_set,
+                                 child_label.compact_genome, child_label.leaf_set},
+                                {}});
+      if (ins.second) {
+        ins.first->second = edge_id;
+        edge_id.value++;
+        added_edges.push_back(*ins.first);
+      }
     }
   });
-  result_dag_.InitializeComponents(result_nodes_.size(), result_edges_.size());
+  result_dag_.InitializeNodes(result_nodes_.size());
   EdgeId edge_id{result_dag_.GetEdges().size()};
-  for (auto& [edge, id] : result_edges_) {
+  for (auto& [edge, id] : added_edges) {
     auto parent =
         result_nodes_.find(NodeLabel{edge.parent_compact_genome, edge.parent_leaf_set});
     auto child =
         result_nodes_.find(NodeLabel{edge.child_compact_genome, edge.child_leaf_set});
     Assert(parent != result_nodes_.end());
     Assert(child != result_nodes_.end());
-    Assert(parent->second.value != NoId);
-    Assert(child->second.value != NoId);
+    Assert(parent->second.value < result_dag_.GetNodes().size());
+    Assert(child->second.value < result_dag_.GetNodes().size());
     id = edge_id;
     result_dag_.AddEdge(edge_id, parent->second, child->second, {0});
     edge_id.value++;

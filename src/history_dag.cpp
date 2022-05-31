@@ -1,14 +1,17 @@
 #include "history_dag.hpp"
 
 MutableNode HistoryDAG::AddNode(NodeId id) {
-  assert(id.value != NoId);
+  Assert(id.value != NoId);
   [[maybe_unused]] auto& storage = GetOrInsert(nodes_, id);
   return {*this, id};
 }
 
 MutableEdge HistoryDAG::AddEdge(EdgeId id, NodeId parent, NodeId child,
                                 CladeIdx clade) {
-  assert(id.value != NoId);
+  Assert(id.value != NoId);
+  Assert(parent.value != NoId);
+  Assert(child.value != NoId);
+  Assert(clade.value != NoId);
   auto& storage = GetOrInsert(edges_, id);
   storage.parent_ = parent;
   storage.child_ = child;
@@ -16,9 +19,8 @@ MutableEdge HistoryDAG::AddEdge(EdgeId id, NodeId parent, NodeId child,
   return {*this, id};
 }
 
-void HistoryDAG::InitializeComponents(size_t nodes_count, size_t edges_count) {
+void HistoryDAG::InitializeNodes(size_t nodes_count) {
   nodes_.resize(nodes_count);
-  edges_.resize(edges_count);
 }
 
 void HistoryDAG::BuildConnections() {
@@ -29,6 +31,8 @@ void HistoryDAG::BuildConnections() {
   }
   EdgeId edge_id = {0};
   for (auto& edge : edges_) {
+    Assert(edge.parent_.value != NoId);
+    Assert(edge.child_.value != NoId);
     auto& parent = nodes_.at(edge.parent_.value);
     auto& child = nodes_.at(edge.child_.value);
     parent.AddEdge(edge.clade_, edge_id, true);

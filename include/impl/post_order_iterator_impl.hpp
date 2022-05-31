@@ -1,5 +1,3 @@
-#include <cassert>
-
 template <typename NodeType>
 PostOrderIterator<NodeType>::PostOrderIterator(NodeType node) {
   stack_.push(*node.GetChildren().begin());
@@ -9,15 +7,15 @@ PostOrderIterator<NodeType>::PostOrderIterator(NodeType node) {
 template <typename NodeType>
 typename PostOrderIterator<NodeType>::value_type
 PostOrderIterator<NodeType>::operator*() const {
-  assert(not stack_.empty());
+  Assert(not stack_.empty());
   EdgeType top = stack_.top();
   return {top.GetDAG(), visit_root_ ? top.GetParent() : top.GetChild(), top};
 }
 
 template <typename NodeType>
 PostOrderIterator<NodeType>& PostOrderIterator<NodeType>::operator++() {
-  assert(not end_sentinel_);
-  assert(not stack_.empty());
+  Assert(not end_sentinel_);
+  Assert(not stack_.empty());
 
   if (visit_root_) {
     end_sentinel_ = true;

@@ -3,8 +3,8 @@
 template <typename T>
 NodeView<T>::NodeView(T dag, NodeId id) : dag_{dag}, id_{id} {
   static_assert(std::is_same_v<T, HistoryDAG&> or std::is_same_v<T, const HistoryDAG&>);
-  assert(id.value != NoId);
-  assert(id.value < dag_.nodes_.size());
+  Assert(id.value != NoId);
+  Assert(id.value < dag_.nodes_.size());
 }
 
 template <typename T>
@@ -51,7 +51,7 @@ auto NodeView<T>::GetChildren() const {
 
 template <typename T>
 typename NodeView<T>::EdgeType NodeView<T>::GetSingleParent() const {
-  assert(GetParents().size() == 1);
+  Assert(GetParents().size() == 1);
   return *GetParents().begin();
 }
 

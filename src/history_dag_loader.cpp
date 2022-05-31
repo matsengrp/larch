@@ -22,7 +22,7 @@
 template <typename T>
 static void Parse(T& data, std::string_view path) {
   std::ifstream in{std::string{path}};
-  assert(in);
+  Assert(in);
   unsigned char header[2];
   in >> header[0] >> header[1];
   if (header[0] == 0x1f and header[1] == 0x8b) {
@@ -39,7 +39,7 @@ static void Parse(T& data, std::string_view path) {
 
 static bool IsGzipped(std::string_view path) {
   std::ifstream in{std::string{path}};
-  assert(in);
+  Assert(in);
   unsigned char header[2];
   in >> header[0] >> header[1];
   return header[0] == 0x1f and header[1] == 0x8b;
@@ -72,7 +72,7 @@ HistoryDAG LoadHistoryDAGFromProtobufGZ(std::string_view path, std::string& ref_
     Mutations& cg = mutations.at(edge_id++);
     for (auto& mut : i.edge_mutations()) {
       static const char decode[] = {'A', 'C', 'G', 'T'};
-      assert(mut.mut_nuc().size() == 1);
+      Assert(mut.mut_nuc().size() == 1);
       cg[{static_cast<size_t>(mut.position())}] = decode[mut.mut_nuc().Get(0)];
     }
   }
@@ -114,7 +114,7 @@ HistoryDAG LoadTreeFromProtobufGZ(std::string_view path,
          pb_muts | ranges::view::transform([](auto& mut)
                                                -> std::pair<MutationPosition, char> {
            static const char decode[] = {'A', 'C', 'G', 'T'};
-           assert(mut.mut_nuc().size() == 1);
+           Assert(mut.mut_nuc().size() == 1);
            return {{static_cast<size_t>(mut.position())}, decode[mut.mut_nuc().Get(0)]};
          })) {
       edge_muts.insert(i);
@@ -128,13 +128,13 @@ HistoryDAG LoadTreeFromProtobufGZ(std::string_view path,
   nlohmann::json json;
   if (IsGzipped(path)) {
     std::ifstream in_compressed{std::string{path}};
-    assert(in_compressed);
+    Assert(in_compressed);
     zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
     std::istream in{&zbuf};
     in >> json;
   } else {
     std::ifstream in{std::string{path}};
-    assert(in);
+    Assert(in);
     in >> json;
   }
   return json["refseq"][1];
@@ -162,13 +162,13 @@ HistoryDAG LoadHistoryDAGFromJsonGZ(std::string_view path, std::string& refseq) 
   nlohmann::json json;
   if (IsGzipped(path)) {
     std::ifstream in_compressed{std::string{path}};
-    assert(in_compressed);
+    Assert(in_compressed);
     zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
     std::istream in{&zbuf};
     in >> json;
   } else {
     std::ifstream in{std::string{path}};
-    assert(in);
+    Assert(in);
     in >> json;
   }
   HistoryDAG result;
@@ -219,7 +219,7 @@ static CompactGenome GetCompactGenome(const nlohmann::json& json,
 
 // std::vector<NodeLabel> LoadLabelsJsonGZ(std::string_view path) {
 //   std::ifstream in_compressed{std::string{path}};
-//   assert(in_compressed);
+//   Assert(in_compressed);
 //   zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
 //   std::istream in{&zbuf};
 //   nlohmann::json json;
@@ -242,6 +242,11 @@ void StoreDAGToProtobuf(const HistoryDAG& dag, std::string_view reference_sequen
   DAG::data data;
 
   data.set_reference_seq(std::string{reference_sequence});
+
+  for (size_t i = 0; i < dag.GetNodes().size(); ++i) {
+    auto* proto_node = data.add_node_names();
+    proto_node->set_node_id(i);
+  }
 
   for (Edge edge : dag.GetEdges()) {
     auto* proto_edge = data.add_edges();

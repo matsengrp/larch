@@ -1,5 +1,3 @@
-#include <cassert>
-
 template <typename NodeType>
 PreOrderIterator<NodeType>::PreOrderIterator(NodeType node) {
   stack_.push(*node.GetChildren().begin());
@@ -8,14 +6,14 @@ PreOrderIterator<NodeType>::PreOrderIterator(NodeType node) {
 template <typename NodeType>
 typename PreOrderIterator<NodeType>::value_type PreOrderIterator<NodeType>::operator*()
     const {
-  assert(not stack_.empty());
+  Assert(not stack_.empty());
   EdgeType top = stack_.top();
   return {top.GetDAG(), root_visited_ ? top.GetChild() : top.GetParent(), top};
 }
 
 template <typename NodeType>
 PreOrderIterator<NodeType>& PreOrderIterator<NodeType>::operator++() {
-  assert(not stack_.empty());
+  Assert(not stack_.empty());
   auto top = stack_.top();
   if (not root_visited_) {
     root_visited_ = true;

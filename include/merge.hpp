@@ -11,6 +11,7 @@
 
 #include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_unordered_map.h>
+#include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for_each.h>
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/action/sort.hpp>

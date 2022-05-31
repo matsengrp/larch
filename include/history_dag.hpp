@@ -21,7 +21,6 @@
 #include <limits>
 #include <iterator>
 #include <algorithm>
-#include <cassert>
 #include <vector>
 #include <string_view>
 
@@ -43,7 +42,7 @@ class HistoryDAG {
 
   MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
 
-  void InitializeComponents(size_t nodes_count, size_t edges_count);
+  void InitializeNodes(size_t nodes_count);
 
   void BuildConnections();
 

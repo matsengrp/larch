@@ -95,7 +95,12 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   return lhs;
 };
 
-#define Assert(x)                                          \
-  {                                                        \
-    if (not(x)) throw std::runtime_error("Assert failed"); \
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+#define Assert(x)                                                       \
+  {                                                                     \
+    if (not(x))                                                         \
+      throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
+                               ":" TOSTRING(__LINE__));                 \
   }
