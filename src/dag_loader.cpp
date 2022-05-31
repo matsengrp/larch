@@ -13,7 +13,7 @@
 
 #include "nlohmann/json.hpp"
 
-#include "history_dag_loader.hpp"
+#include "dag_loader.hpp"
 #include "zlib_stream.hpp"
 #include "dag.pb.h"
 #include "parsimony.pb.h"
@@ -45,13 +45,13 @@ static bool IsGzipped(std::string_view path) {
   return header[0] == 0x1f and header[1] == 0x8b;
 }
 
-HistoryDAG LoadHistoryDAGFromProtobufGZ(std::string_view path, std::string& ref_seq,
-                                        std::vector<Mutations>& mutations) {
-  DAG::data data;
+DAG LoadDAGFromProtobufGZ(std::string_view path, std::string& ref_seq,
+                          std::vector<Mutations>& mutations) {
+  ProtoDAG::data data;
   Parse(data, path);
 
   ref_seq = data.reference_seq();
-  HistoryDAG dag;
+  DAG dag;
 
   for (auto& i : data.node_names()) {
     dag.AddNode({static_cast<size_t>(i.node_id())});
@@ -80,12 +80,11 @@ HistoryDAG LoadHistoryDAGFromProtobufGZ(std::string_view path, std::string& ref_
   return dag;
 }
 
-HistoryDAG LoadTreeFromProtobufGZ(std::string_view path,
-                                  std::vector<Mutations>& mutations) {
+DAG LoadTreeFromProtobufGZ(std::string_view path, std::vector<Mutations>& mutations) {
   Parsimony::data data;
   Parse(data, path);
 
-  HistoryDAG dag;
+  DAG dag;
 
   size_t edge_id = 0;
   std::unordered_map<size_t, size_t> num_children;
@@ -158,7 +157,7 @@ the clade in the parent node's clade_list from which this edge descends.
 
 */
 
-HistoryDAG LoadHistoryDAGFromJsonGZ(std::string_view path, std::string& refseq) {
+DAG LoadDAGFromJsonGZ(std::string_view path, std::string& refseq) {
   nlohmann::json json;
   if (IsGzipped(path)) {
     std::ifstream in_compressed{std::string{path}};
@@ -171,7 +170,7 @@ HistoryDAG LoadHistoryDAGFromJsonGZ(std::string_view path, std::string& refseq) 
     Assert(in);
     in >> json;
   }
-  HistoryDAG result;
+  DAG result;
 
   refseq = json["refseq"][1];
 
@@ -227,10 +226,10 @@ std::vector<CompactGenome> LoadCompactGenomesJsonGZ(std::string_view path) {
   return result;
 }
 
-void StoreDAGToProtobuf(const HistoryDAG& dag, std::string_view reference_sequence,
+void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
                         const std::vector<Mutations>& edge_parent_mutations,
                         std::string_view path) {
-  DAG::data data;
+  ProtoDAG::data data;
 
   data.set_reference_seq(std::string{reference_sequence});
 

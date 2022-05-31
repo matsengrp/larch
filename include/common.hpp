@@ -67,16 +67,16 @@ template <typename T, typename Id>
   }
 }
 
-class HistoryDAG;
+class DAG;
 
 template <typename T>
 class NodeView;
-using Node = NodeView<const HistoryDAG&>;
-using MutableNode = NodeView<HistoryDAG&>;
+using Node = NodeView<const DAG&>;
+using MutableNode = NodeView<DAG&>;
 template <typename T>
 class EdgeView;
-using Edge = EdgeView<const HistoryDAG&>;
-using MutableEdge = EdgeView<HistoryDAG&>;
+using Edge = EdgeView<const DAG&>;
+using MutableEdge = EdgeView<DAG&>;
 
 namespace Transform {
 inline auto GetParent() {

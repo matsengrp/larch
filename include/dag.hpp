@@ -1,5 +1,5 @@
 /*
-  HistoryDAG is the main structure that owns node and edge data, and provides
+  DAG is the main structure that owns node and edge data, and provides
   various queries.
 
   Populating with data should be performed by first adding all nodes by the
@@ -24,16 +24,17 @@
 #include <vector>
 #include <string_view>
 
-#include "history_dag_node_storage.hpp"
-#include "history_dag_edge_storage.hpp"
+#include "common.hpp"
+#include "node_storage.hpp"
+#include "edge_storage.hpp"
 #include "traverse_value.hpp"
 #include "counter_map.hpp"
 
-class HistoryDAG {
+class DAG {
  public:
-  HistoryDAG() = default;
-  HistoryDAG(HistoryDAG&&) = default;
-  HistoryDAG& operator=(HistoryDAG&&) = default;
+  DAG() = default;
+  DAG(DAG&&) = default;
+  DAG& operator=(DAG&&) = default;
 
   using Weight = double;
   using ArbitraryPrecisionInteger = long;
@@ -69,8 +70,8 @@ class HistoryDAG {
 
   ArbitraryPrecisionInteger CountHistories() const;
   void WriteProtobuf(std::string_view filename) const;
-  HistoryDAG SampleHistory() const;
-  HistoryDAG FindHistoryByIndex(ArbitraryPrecisionInteger) const;
+  DAG SampleHistory() const;
+  DAG FindHistoryByIndex(ArbitraryPrecisionInteger) const;
   bool IsCladeTree() const;
   void AddAllAllowedEdges();
 
@@ -88,13 +89,13 @@ class HistoryDAG {
   std::vector<NodeId> leafs_;
 };
 
-#include "history_dag_node.hpp"
-#include "history_dag_edge.hpp"
+#include "node.hpp"
+#include "edge.hpp"
 #include "pre_order_iterator.hpp"
 #include "post_order_iterator.hpp"
-#include "impl/history_dag_node_impl.hpp"
-#include "impl/history_dag_edge_impl.hpp"
-#include "impl/history_dag_impl.hpp"
+#include "impl/node_impl.hpp"
+#include "impl/edge_impl.hpp"
+#include "impl/dag_impl.hpp"
 #include "impl/pre_order_iterator_impl.hpp"
 #include "impl/post_order_iterator_impl.hpp"
 #include "impl/traverse_value_impl.hpp"

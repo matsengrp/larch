@@ -1,7 +1,5 @@
 #pragma once
 
-#include "history_dag_common.hpp"
-
 template <typename T>
 class TraverseValue {
  public:

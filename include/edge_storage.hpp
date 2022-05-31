@@ -1,12 +1,10 @@
 #pragma once
 
-#include "history_dag_common.hpp"
-
 template <typename Weight>
 class EdgeStorage {
   template <typename>
   friend class EdgeView;
-  friend class HistoryDAG;
+  friend class DAG;
 
   NodeId parent_;
   NodeId child_;

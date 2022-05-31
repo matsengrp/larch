@@ -4,7 +4,7 @@ Requirements
 ------------
 
 * GCC 7.5
-* cmake 3.11
+* cmake 3.16
 * clang-tidy
 * protobuf libraries and compiler
 * zlib
@@ -28,6 +28,10 @@ Building
 `cmake ..`
 
 `make -j16`
+
+Optionally add -DCMAKE_CXX_CLANG_TIDY="clang-tidy" to enable clang-tidy, note it will disable precompiled headers.
+
+Optionally add -DUSE_ASAN=yes to enable asan and ubsan.
 
 Running
 -------

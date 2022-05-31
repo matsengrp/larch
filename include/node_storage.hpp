@@ -1,13 +1,9 @@
 #pragma once
 
-#include <vector>
-
-#include "history_dag_common.hpp"
-
 class NodeStorage {
   template <typename>
   friend class NodeView;
-  friend class HistoryDAG;
+  friend class DAG;
 
   void ClearConnections();
   void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent);

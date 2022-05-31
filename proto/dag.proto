@@ -1,5 +1,5 @@
 syntax = "proto3";                                                                                                                                                                                              
-package DAG;
+package ProtoDAG;
 
 /// I think you can basically leave this as it is for now. 
 /// You might kill the "ref_nuc" since you really only care about the parent and child and you can traverse to the root to find the ancestral state if needed.  

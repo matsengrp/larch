@@ -187,7 +187,7 @@ size_t EdgeLabel::Hash() const noexcept {
 Merge::Merge(std::string_view reference_sequence)
     : reference_sequence_{reference_sequence} {}
 
-void Merge::AddTrees(const std::vector<std::reference_wrapper<const HistoryDAG>>& trees,
+void Merge::AddTrees(const std::vector<std::reference_wrapper<const DAG>>& trees,
                      const std::vector<std::vector<Mutations>>& mutations,
                      bool show_progress) {
   std::vector<size_t> tree_idxs;
@@ -206,7 +206,7 @@ void Merge::AddTrees(const std::vector<std::reference_wrapper<const HistoryDAG>>
   result_dag_.BuildConnections();
 }
 
-void Merge::AddDAGs(const std::vector<std::reference_wrapper<const HistoryDAG>>& dags,
+void Merge::AddDAGs(const std::vector<std::reference_wrapper<const DAG>>& dags,
                     std::vector<std::vector<CompactGenome>>&& compact_genomes,
                     bool show_progress) {
   std::vector<size_t> tree_idxs;
@@ -217,7 +217,7 @@ void Merge::AddDAGs(const std::vector<std::reference_wrapper<const HistoryDAG>>&
   tree_labels_.resize(trees_.size());
 
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const HistoryDAG& tree = trees_.at(tree_idx).get();
+    const DAG& tree = trees_.at(tree_idx).get();
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     labels.resize(tree.GetNodes().size());
     for (size_t node_idx = 0; node_idx < tree.GetNodes().size(); ++node_idx) {
@@ -234,9 +234,9 @@ void Merge::AddDAGs(const std::vector<std::reference_wrapper<const HistoryDAG>>&
   result_dag_.BuildConnections();
 }
 
-HistoryDAG& Merge::GetResult() { return result_dag_; }
+DAG& Merge::GetResult() { return result_dag_; }
 
-const HistoryDAG& Merge::GetResult() const { return result_dag_; }
+const DAG& Merge::GetResult() const { return result_dag_; }
 
 const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
   return result_nodes_;
@@ -262,7 +262,7 @@ void Merge::ComputeCompactGenomes(const std::vector<size_t>& tree_idxs,
     std::cout << "Computing compact genomes " << std::flush;
   }
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const HistoryDAG& tree = trees_.at(tree_idx).get();
+    const DAG& tree = trees_.at(tree_idx).get();
     const std::vector<Mutations>& edge_mutations = mutations_.at(tree_idx);
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     labels.resize(tree.GetNodes().size());
@@ -296,7 +296,7 @@ void Merge::ComputeLeafSets(const std::vector<size_t>& tree_idxs, bool show_prog
     std::cout << "Computing leaf sets " << std::flush;
   }
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const HistoryDAG& tree = trees_.at(tree_idx).get();
+    const DAG& tree = trees_.at(tree_idx).get();
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     std::vector<LeafSet> computed_ls = ComputeLeafSetsDAG(tree, labels);
     for (size_t node_idx = 0; node_idx < tree.GetNodes().size(); ++node_idx) {
@@ -326,7 +326,7 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
   });
   tbb::concurrent_vector<std::pair<EdgeLabel, EdgeId>> added_edges;
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const HistoryDAG& tree = trees_.at(tree_idx).get();
+    const DAG& tree = trees_.at(tree_idx).get();
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     EdgeId edge_id{result_dag_.GetEdges().size()};
     for (Edge edge : tree.GetEdges()) {
@@ -361,7 +361,7 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
 }
 
 std::vector<CompactGenome> Merge::ComputeCompactGenomes(
-    const HistoryDAG& tree, const std::vector<Mutations>& edge_mutations,
+    const DAG& tree, const std::vector<Mutations>& edge_mutations,
     std::string_view reference_sequence) {
   std::vector<CompactGenome> result;
   result.resize(tree.GetNodes().size());
@@ -375,7 +375,7 @@ std::vector<CompactGenome> Merge::ComputeCompactGenomes(
 }
 
 std::vector<CompactGenome> Merge::ComputeCompactGenomesDAG(
-    const HistoryDAG& tree, const std::vector<Mutations>& edge_mutations,
+    const DAG& tree, const std::vector<Mutations>& edge_mutations,
     std::string_view reference_sequence) {
   std::vector<CompactGenome> result;
   result.resize(tree.GetNodes().size());
@@ -399,7 +399,7 @@ std::vector<CompactGenome> Merge::ComputeCompactGenomesDAG(
   return result;
 }
 
-std::vector<LeafSet> Merge::ComputeLeafSets(const HistoryDAG& tree,
+std::vector<LeafSet> Merge::ComputeLeafSets(const DAG& tree,
                                             const std::vector<NodeLabel>& labels) {
   std::vector<LeafSet> result;
   result.resize(tree.GetNodes().size());
@@ -409,7 +409,7 @@ std::vector<LeafSet> Merge::ComputeLeafSets(const HistoryDAG& tree,
   return result;
 }
 
-std::vector<LeafSet> Merge::ComputeLeafSetsDAG(const HistoryDAG& tree,
+std::vector<LeafSet> Merge::ComputeLeafSetsDAG(const DAG& tree,
                                                const std::vector<NodeLabel>& labels) {
   std::vector<LeafSet> result;
   result.resize(tree.GetNodes().size());

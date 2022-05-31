@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.16)
 project (larch)
 
 find_package(Protobuf REQUIRED)
@@ -29,11 +29,9 @@ set_target_properties(larch_autogen
     PROPERTIES CXX_CLANG_TIDY ""
 )
 
-set(CMAKE_CXX_CLANG_TIDY clang-tidy)
-
 function(larch_compile_opts PRODUCT)
     target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -Werror -Wall -Wextra -pedantic -pedantic-errors -Wno-unused)
-    if (${CMAKE_BUILD_TYPE} STREQUAL "San")
+    if (${USE_ASAN})
         target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined)
     endif()
     target_include_directories(${PRODUCT} PUBLIC include tools test)
@@ -44,7 +42,7 @@ function(larch_compile_opts PRODUCT)
 endfunction()
 
 function(larch_link_opts PRODUCT)
-    if (${CMAKE_BUILD_TYPE} STREQUAL "San")
+    if (${USE_ASAN})
         target_link_libraries(${PRODUCT} PUBLIC -lasan -lubsan)
     endif()
     target_link_libraries(${PRODUCT} PUBLIC -lz)
@@ -58,15 +56,24 @@ function(larch_executable PRODUCT)
     larch_compile_opts(${PRODUCT})
     larch_link_opts(${PRODUCT})
     target_link_libraries(${PRODUCT} PUBLIC larch)
+    if (DEFINED CMAKE_CXX_CLANG_TIDY)
+        target_precompile_headers(${PRODUCT} REUSE_FROM larch)
+    endif()
 endfunction()
 
 add_library(larch
-    src/history_dag.cpp
-    src/history_dag_loader.cpp
-    src/history_dag_node_storage.cpp
+    src/dag.cpp
+    src/dag_loader.cpp
+    src/node_storage.cpp
     src/zlib_stream.cpp)
 larch_compile_opts(larch)
 larch_link_opts(larch)
+
+if (DEFINED CMAKE_CXX_CLANG_TIDY)
+target_precompile_headers(larch PUBLIC
+    include/merge.hpp
+)
+endif()
 
 larch_executable(larch-test
     test/main.cpp

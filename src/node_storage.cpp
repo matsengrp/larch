@@ -1,4 +1,4 @@
-#include "history_dag.hpp"
+#include "dag.hpp"
 
 void NodeStorage::ClearConnections() {
   parents_.clear();

@@ -7,7 +7,7 @@
 
 #include "arguments.hpp"
 #include "merge.hpp"
-#include "history_dag_loader.hpp"
+#include "dag_loader.hpp"
 #include "benchmark.hpp"
 
 [[noreturn]] static void Usage() {
@@ -30,7 +30,7 @@
 static int MergeTrees(const std::vector<std::string_view>& paths,
                       std::string_view refseq_json_path, std::string_view out_path) {
   std::vector<std::vector<Mutations>> mutations;
-  std::vector<HistoryDAG> trees;
+  std::vector<DAG> trees;
   std::string reference_sequence;
 
   reference_sequence = LoadRefseqFromJsonGZ(refseq_json_path);
@@ -53,8 +53,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
 
   Benchmark merge_time;
   Merge merge(reference_sequence);
-  std::vector<std::reference_wrapper<const HistoryDAG>> tree_refs{trees.begin(),
-                                                                  trees.end()};
+  std::vector<std::reference_wrapper<const DAG>> tree_refs{trees.begin(), trees.end()};
   merge_time.start();
   merge.AddTrees(tree_refs, mutations, true);
   merge_time.stop();

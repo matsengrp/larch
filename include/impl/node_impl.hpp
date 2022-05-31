@@ -1,8 +1,6 @@
-#include "history_dag_node_storage.hpp"
-
 template <typename T>
 NodeView<T>::NodeView(T dag, NodeId id) : dag_{dag}, id_{id} {
-  static_assert(std::is_same_v<T, HistoryDAG&> or std::is_same_v<T, const HistoryDAG&>);
+  static_assert(std::is_same_v<T, DAG&> or std::is_same_v<T, const DAG&>);
   Assert(id.value != NoId);
   Assert(id.value < dag_.nodes_.size());
 }

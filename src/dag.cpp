@@ -1,13 +1,12 @@
-#include "history_dag.hpp"
+#include "dag.hpp"
 
-MutableNode HistoryDAG::AddNode(NodeId id) {
+MutableNode DAG::AddNode(NodeId id) {
   Assert(id.value != NoId);
   [[maybe_unused]] auto& storage = GetOrInsert(nodes_, id);
   return {*this, id};
 }
 
-MutableEdge HistoryDAG::AddEdge(EdgeId id, NodeId parent, NodeId child,
-                                CladeIdx clade) {
+MutableEdge DAG::AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade) {
   Assert(id.value != NoId);
   Assert(parent.value != NoId);
   Assert(child.value != NoId);
@@ -19,9 +18,9 @@ MutableEdge HistoryDAG::AddEdge(EdgeId id, NodeId parent, NodeId child,
   return {*this, id};
 }
 
-void HistoryDAG::InitializeNodes(size_t nodes_count) { nodes_.resize(nodes_count); }
+void DAG::InitializeNodes(size_t nodes_count) { nodes_.resize(nodes_count); }
 
-void HistoryDAG::BuildConnections() {
+void DAG::BuildConnections() {
   root_ = {NoId};
   leafs_ = {};
   for (auto& node : nodes_) {
@@ -47,12 +46,12 @@ void HistoryDAG::BuildConnections() {
   }
 }
 
-Node HistoryDAG::Get(NodeId id) const { return {*this, id}; }
-MutableNode HistoryDAG::Get(NodeId id) { return {*this, id}; }
+Node DAG::Get(NodeId id) const { return {*this, id}; }
+MutableNode DAG::Get(NodeId id) { return {*this, id}; }
 
-Edge HistoryDAG::Get(EdgeId id) const { return {*this, id}; }
-MutableEdge HistoryDAG::Get(EdgeId id) { return {*this, id}; }
+Edge DAG::Get(EdgeId id) const { return {*this, id}; }
+MutableEdge DAG::Get(EdgeId id) { return {*this, id}; }
 
-Node HistoryDAG::GetRoot() const { return {*this, root_}; }
+Node DAG::GetRoot() const { return {*this, root_}; }
 
-MutableNode HistoryDAG::GetRoot() { return {*this, root_}; }
+MutableNode DAG::GetRoot() { return {*this, root_}; }

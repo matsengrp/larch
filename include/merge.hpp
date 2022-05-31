@@ -17,7 +17,7 @@
 #include <range/v3/action/sort.hpp>
 #include <range/v3/action/unique.hpp>
 
-#include "history_dag.hpp"
+#include "dag.hpp"
 
 class CompactGenome {
  public:
@@ -176,16 +176,16 @@ class Merge {
   Merge& operator=(Merge&&) = delete;
   Merge& operator=(const Merge&) = delete;
 
-  inline void AddTrees(
-      const std::vector<std::reference_wrapper<const HistoryDAG>>& trees,
-      const std::vector<std::vector<Mutations>>& mutations, bool show_progress = false);
+  inline void AddTrees(const std::vector<std::reference_wrapper<const DAG>>& trees,
+                       const std::vector<std::vector<Mutations>>& mutations,
+                       bool show_progress = false);
 
-  inline void AddDAGs(const std::vector<std::reference_wrapper<const HistoryDAG>>& dags,
+  inline void AddDAGs(const std::vector<std::reference_wrapper<const DAG>>& dags,
                       std::vector<std::vector<CompactGenome>>&& compact_genomes,
                       bool show_progress = false);
 
-  inline HistoryDAG& GetResult();
-  inline const HistoryDAG& GetResult() const;
+  inline DAG& GetResult();
+  inline const DAG& GetResult() const;
   inline const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
   inline std::vector<Mutations> ComputeResultEdgeMutations() const;
 
@@ -198,21 +198,21 @@ class Merge {
   inline void MergeTrees(const std::vector<size_t>& tree_idxs);
 
   static inline std::vector<CompactGenome> ComputeCompactGenomes(
-      const HistoryDAG& tree, const std::vector<Mutations>& edge_mutations,
+      const DAG& tree, const std::vector<Mutations>& edge_mutations,
       std::string_view reference_sequence);
 
   static inline std::vector<CompactGenome> ComputeCompactGenomesDAG(
-      const HistoryDAG& tree, const std::vector<Mutations>& edge_mutations,
+      const DAG& tree, const std::vector<Mutations>& edge_mutations,
       std::string_view reference_sequence);
 
   static inline std::vector<LeafSet> ComputeLeafSets(
-      const HistoryDAG& tree, const std::vector<NodeLabel>& labels);
+      const DAG& tree, const std::vector<NodeLabel>& labels);
 
   static inline std::vector<LeafSet> ComputeLeafSetsDAG(
-      const HistoryDAG& tree, const std::vector<NodeLabel>& labels);
+      const DAG& tree, const std::vector<NodeLabel>& labels);
 
   std::string_view reference_sequence_;
-  std::vector<std::reference_wrapper<const HistoryDAG>> trees_;
+  std::vector<std::reference_wrapper<const DAG>> trees_;
   std::vector<std::vector<Mutations>> mutations_;
 
   ConcurrentUnorderedSet<CompactGenome> all_compact_genomes_;
@@ -221,7 +221,7 @@ class Merge {
 
   std::unordered_map<NodeLabel, NodeId> result_nodes_;
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;
-  HistoryDAG result_dag_;
+  DAG result_dag_;
 };
 
 #include "impl/merge_impl.hpp"
