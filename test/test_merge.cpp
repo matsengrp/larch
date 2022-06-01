@@ -14,12 +14,12 @@ static void test_protobuf(const std::string& correct_path,
   std::vector<DAG> trees;
   for (auto& path : paths) {
     std::vector<Mutations> tree_mutations;
-    std::string ref_seq;
-    trees.emplace_back(LoadDAGFromProtobufGZ(path, ref_seq, tree_mutations));
+    std::string reference_sequence;
+    trees.emplace_back(LoadDAGFromProtobuf(path, reference_sequence, tree_mutations));
     mutations.emplace_back(std::move(tree_mutations));
   }
   std::string reference_sequence;
-  DAG correct_result = LoadDAGFromJsonGZ(correct_path, reference_sequence);
+  DAG correct_result = LoadDAGFromJson(correct_path, reference_sequence);
 
   Merge merge(reference_sequence);
   std::vector<std::reference_wrapper<const DAG>> tree_refs{trees.begin(), trees.end()};
@@ -79,7 +79,7 @@ static void test_case_20d() {
   std::string reference_sequence;
 
   DAG correct_result =
-      LoadDAGFromJsonGZ("data/20D_from_fasta/20D_full_dag.json.gz", reference_sequence);
+      LoadDAGFromJson("data/20D_from_fasta/20D_full_dag.json.gz", reference_sequence);
 
   trees.resize(paths.size());
   mutations.resize(paths.size());
@@ -87,58 +87,25 @@ static void test_case_20d() {
   for (size_t i = 0; i < paths.size(); ++i) {
     paths_idx.push_back({i, paths.at(i)});
   }
-  std::cout << "Loading trees ";
+  // std::cout << "Loading trees ";
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
     std::vector<Mutations> tree_mutations;
-    std::cout << "." << std::flush;
-    trees.at(path_idx.first) = LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
+    // std::cout << "." << std::flush;
+    trees.at(path_idx.first) = LoadTreeFromProtobuf(path_idx.second, tree_mutations);
     mutations.at(path_idx.first) = std::move(tree_mutations);
   });
-  std::cout << " done."
-            << "\n";
+  // std::cout << " done.\n";
 
   Benchmark merge_time;
   Merge merge(reference_sequence);
   std::vector<std::reference_wrapper<const DAG>> tree_refs{trees.begin(), trees.end()};
   merge_time.start();
-  merge.AddTrees(tree_refs, mutations, true);
+  merge.AddTrees(tree_refs, mutations, false);
   merge_time.stop();
-  std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
+  std::cout << " DAGs merged in " << merge_time.durationMs() << " ms. ";
 
-  std::cout << "Nodes: " << merge.GetResult().GetNodes().size() << "\n";
-  std::cout << "Edges: " << merge.GetResult().GetEdges().size() << "\n";
-
-  {
-    std::string rhs_reference_sequence;
-    std::vector<std::vector<CompactGenome>> rhs_compact_genomes;
-    std::vector<DAG> rhs_trees;
-    rhs_trees.push_back(LoadDAGFromJsonGZ("data/20D_from_fasta/20D_full_dag.json.gz",
-                                          rhs_reference_sequence));
-    rhs_compact_genomes.push_back(
-        LoadCompactGenomesJsonGZ("data/20D_from_fasta/20D_full_dag.json.gz"));
-    Merge rhs_merge{rhs_reference_sequence};
-    std::vector<std::reference_wrapper<const DAG>> rhs_tree_refs{rhs_trees.begin(),
-                                                                 rhs_trees.end()};
-    rhs_merge.AddDAGs(rhs_tree_refs, std::move(rhs_compact_genomes), true);
-
-    size_t not_found_in_lhs = 0, not_found_in_rhs = 0;
-
-    for (auto lhs : merge.GetResultNodes()) {
-      if (rhs_merge.GetResultNodes().find(lhs.first) ==
-          rhs_merge.GetResultNodes().end()) {
-        ++not_found_in_rhs;
-      }
-    }
-
-    for (auto rhs : rhs_merge.GetResultNodes()) {
-      if (merge.GetResultNodes().find(rhs.first) == merge.GetResultNodes().end()) {
-        ++not_found_in_lhs;
-      }
-    }
-
-    std::cout << "Not found in rhs: " << not_found_in_rhs << "\n";
-    std::cout << "Not found in lhs: " << not_found_in_lhs << "\n";
-  }
+  // std::cout << "Nodes: " << merge.GetResult().GetNodes().size() << "\n";
+  // std::cout << "Edges: " << merge.GetResult().GetEdges().size() << "\n";
 
   assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
                "Nodes count");
@@ -159,18 +126,18 @@ static void test_add_trees() {
   std::vector<DAG> trees1, trees2;
   for (auto& path : paths1) {
     std::vector<Mutations> tree_mutations;
-    std::string ref_seq;
-    trees1.emplace_back(LoadDAGFromProtobufGZ(path, ref_seq, tree_mutations));
+    std::string reference_sequence;
+    trees1.emplace_back(LoadDAGFromProtobuf(path, reference_sequence, tree_mutations));
     mutations1.emplace_back(std::move(tree_mutations));
   }
   for (auto& path : paths2) {
     std::vector<Mutations> tree_mutations;
-    std::string ref_seq;
-    trees2.emplace_back(LoadDAGFromProtobufGZ(path, ref_seq, tree_mutations));
+    std::string reference_sequence;
+    trees2.emplace_back(LoadDAGFromProtobuf(path, reference_sequence, tree_mutations));
     mutations2.emplace_back(std::move(tree_mutations));
   }
   std::string reference_sequence;
-  DAG correct_result = LoadDAGFromJsonGZ(correct_path, reference_sequence);
+  DAG correct_result = LoadDAGFromJson(correct_path, reference_sequence);
 
   Merge merge(reference_sequence);
   std::vector<std::reference_wrapper<const DAG>> tree_refs1{trees1.begin(),

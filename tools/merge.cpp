@@ -35,7 +35,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   std::vector<DAG> trees;
   std::string reference_sequence;
 
-  reference_sequence = LoadRefseqFromJsonGZ(refseq_json_path);
+  reference_sequence = LoadRefseqFromJson(refseq_json_path);
 
   trees.resize(paths.size());
   mutations.resize(paths.size());
@@ -49,8 +49,8 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
     std::string refseq;
     std::cout << "." << std::flush;
     trees.at(path_idx.first) =
-        dags ? LoadDAGFromProtobufGZ(path_idx.second, refseq, tree_mutations)
-             : LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
+        dags ? LoadDAGFromProtobuf(path_idx.second, refseq, tree_mutations)
+             : LoadTreeFromProtobuf(path_idx.second, tree_mutations);
     mutations.at(path_idx.first) = std::move(tree_mutations);
   });
   std::cout << " done."

@@ -81,6 +81,7 @@ endif()
 
 larch_executable(larch-test
     test/main.cpp
+    test/test_compact_genome.cpp
     test/test_merge.cpp)
 
 larch_executable(merge

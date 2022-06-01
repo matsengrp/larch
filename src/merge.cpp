@@ -85,28 +85,6 @@ void Merge::ComputeCompactGenomes(const std::vector<size_t>& tree_idxs,
     labels.resize(tree.GetNodes().size());
     std::vector<CompactGenome> computed_cgs =
         ComputeCompactGenomesDAG(tree, edge_mutations, reference_sequence_);
-
-    // TODO move to a test case
-    for (Edge edge : tree.GetEdges()) {
-      const CompactGenome& parent = computed_cgs.at(edge.GetParentId().value);
-      const CompactGenome& child = computed_cgs.at(edge.GetChildId().value);
-      Mutations mutations =
-          CompactGenome::ToEdgeMutations(reference_sequence_, parent, child);
-      if (mutations != edge_mutations.at(edge.GetId().value)) {
-        std::cout << "\nLhs: ";
-        for (auto [pos, base] : mutations) std::cout << pos.value << base << " ";
-        std::cout << "\nRhs: ";
-        for (auto [pos, base] : edge_mutations.at(edge.GetId().value))
-          std::cout << pos.value << base << " ";
-        std::cout << "\nParent: ";
-        for (auto [pos, base] : parent) std::cout << pos.value << base << " ";
-        std::cout << "\nChild: ";
-        for (auto [pos, base] : child) std::cout << pos.value << base << " ";
-        std::cout << "\n";
-      }
-      Assert(mutations == edge_mutations.at(edge.GetId().value));
-    }
-
     for (size_t node_idx = 0; node_idx < tree.GetNodes().size(); ++node_idx) {
       auto cg_iter = all_compact_genomes_.insert(std::move(computed_cgs.at(node_idx)));
       labels.at(node_idx).compact_genome = std::addressof(*cg_iter.first);

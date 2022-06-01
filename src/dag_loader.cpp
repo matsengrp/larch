@@ -42,12 +42,12 @@ static void Parse(T& data, std::string_view path) {
   }
 }
 
-DAG LoadDAGFromProtobufGZ(std::string_view path, std::string& ref_seq,
-                          std::vector<Mutations>& mutations) {
+DAG LoadDAGFromProtobuf(std::string_view path, std::string& reference_sequence,
+                        std::vector<Mutations>& mutations) {
   ProtoDAG::data data;
   Parse(data, path);
 
-  ref_seq = data.reference_seq();
+  reference_sequence = data.reference_seq();
   DAG dag;
 
   for (auto& i : data.node_names()) {
@@ -77,7 +77,7 @@ DAG LoadDAGFromProtobufGZ(std::string_view path, std::string& ref_seq,
   return dag;
 }
 
-DAG LoadTreeFromProtobufGZ(std::string_view path, std::vector<Mutations>& mutations) {
+DAG LoadTreeFromProtobuf(std::string_view path, std::vector<Mutations>& mutations) {
   Parsimony::data data;
   Parse(data, path);
 
@@ -143,7 +143,7 @@ DAG LoadTreeFromProtobufGZ(std::string_view path, std::vector<Mutations>& mutati
   }
 }
 
-[[nodiscard]] std::string LoadRefseqFromJsonGZ(std::string_view path) {
+[[nodiscard]] std::string LoadRefseqFromJson(std::string_view path) {
   return LoadJson(path)["refseq"][1];
 }
 
@@ -165,7 +165,7 @@ the clade in the parent node's clade_list from which this edge descends.
 
 */
 
-DAG LoadDAGFromJsonGZ(std::string_view path, std::string& refseq) {
+DAG LoadDAGFromJson(std::string_view path, std::string& refseq) {
   nlohmann::json json = LoadJson(path);
   DAG result;
 
@@ -201,7 +201,7 @@ static CompactGenome GetCompactGenome(const nlohmann::json& json,
   return result;
 }
 
-std::vector<CompactGenome> LoadCompactGenomesJsonGZ(std::string_view path) {
+std::vector<CompactGenome> LoadCompactGenomesJson(std::string_view path) {
   nlohmann::json json = LoadJson(path);
 
   std::vector<CompactGenome> result;
