@@ -55,6 +55,8 @@ auto LeafSet::end() const -> decltype(clades_.end()) { return clades_.end(); }
 
 bool LeafSet::empty() const { return clades_.empty(); }
 
+size_t LeafSet::size() const { return clades_.size(); }
+
 size_t LeafSet::ComputeHash(
     const std::vector<std::vector<const CompactGenome*>>& clades) {
   size_t hash = 0;

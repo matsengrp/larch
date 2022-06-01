@@ -12,11 +12,12 @@
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
-  std::cout << "merge [-r,--refseq file] -i,--input file1 file2 ... "
+  std::cout << "merge [-r,--refseq file] [-d,--dag] -i,--input file1 file2 ... "
                "[-o,--output filename]\n";
   std::cout << "  -i,--input     List of input files\n";
   std::cout << "  -o,--output    Save the output to filename (default is merged.pb)\n";
   std::cout << "  -r,--refseq    Read reference sequence from Json file\n";
+  std::cout << "  -d,--dag       Input files are DAGs\n";
 
   std::exit(EXIT_SUCCESS);
 }
@@ -28,7 +29,8 @@
 }
 
 static int MergeTrees(const std::vector<std::string_view>& paths,
-                      std::string_view refseq_json_path, std::string_view out_path) {
+                      std::string_view refseq_json_path, std::string_view out_path,
+                      bool dags) {
   std::vector<std::vector<Mutations>> mutations;
   std::vector<DAG> trees;
   std::string reference_sequence;
@@ -44,8 +46,11 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   std::cout << "Loading trees ";
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
     std::vector<Mutations> tree_mutations;
+    std::string refseq;
     std::cout << "." << std::flush;
-    trees.at(path_idx.first) = LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
+    trees.at(path_idx.first) =
+        dags ? LoadDAGFromProtobufGZ(path_idx.second, refseq, tree_mutations)
+             : LoadTreeFromProtobufGZ(path_idx.second, tree_mutations);
     mutations.at(path_idx.first) = std::move(tree_mutations);
   });
   std::cout << " done."
@@ -74,6 +79,7 @@ int main(int argc, char** argv) {
   std::vector<std::string_view> input_filenames;
   std::string result_filename = "merged.pb";
   std::string refseq_filename;
+  bool dags = false;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -92,6 +98,8 @@ int main(int argc, char** argv) {
         Fail();
       }
       refseq_filename = *params.begin();
+    } else if (name == "-d" or name == "--dag") {
+      dags = true;
     }
   }
 
@@ -100,5 +108,5 @@ int main(int argc, char** argv) {
     Fail();
   }
 
-  return MergeTrees(input_filenames, refseq_filename, result_filename);
+  return MergeTrees(input_filenames, refseq_filename, result_filename, dags);
 }

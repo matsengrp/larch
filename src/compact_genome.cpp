@@ -40,6 +40,10 @@ bool CompactGenome::operator==(const CompactGenome& rhs) const noexcept {
   return mutations_ == rhs.mutations_;
 }
 
+bool CompactGenome::operator<(const CompactGenome& rhs) const noexcept {
+  return mutations_ < rhs.mutations_;
+}
+
 size_t CompactGenome::Hash() const noexcept { return hash_; }
 
 std::optional<char> CompactGenome::operator[](MutationPosition pos) const {
@@ -62,6 +66,13 @@ auto CompactGenome::end() const -> decltype(mutations_.end()) {
 }
 
 bool CompactGenome::empty() const { return mutations_.empty(); }
+
+CompactGenome CompactGenome::Copy() const {
+  CompactGenome result;
+  result.mutations_ = mutations_;
+  result.hash_ = hash_;
+  return result;
+}
 
 Mutations CompactGenome::ToEdgeMutations(std::string_view reference_sequence,
                                          const CompactGenome& parent,

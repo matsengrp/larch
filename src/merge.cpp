@@ -92,6 +92,18 @@ void Merge::ComputeCompactGenomes(const std::vector<size_t>& tree_idxs,
       const CompactGenome& child = computed_cgs.at(edge.GetChildId().value);
       Mutations mutations =
           CompactGenome::ToEdgeMutations(reference_sequence_, parent, child);
+      if (mutations != edge_mutations.at(edge.GetId().value)) {
+        std::cout << "\nLhs: ";
+        for (auto [pos, base] : mutations) std::cout << pos.value << base << " ";
+        std::cout << "\nRhs: ";
+        for (auto [pos, base] : edge_mutations.at(edge.GetId().value))
+          std::cout << pos.value << base << " ";
+        std::cout << "\nParent: ";
+        for (auto [pos, base] : parent) std::cout << pos.value << base << " ";
+        std::cout << "\nChild: ";
+        for (auto [pos, base] : child) std::cout << pos.value << base << " ";
+        std::cout << "\n";
+      }
       Assert(mutations == edge_mutations.at(edge.GetId().value));
     }
 

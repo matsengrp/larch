@@ -22,6 +22,7 @@ class CompactGenome {
   CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations);
 
   bool operator==(const CompactGenome& rhs) const noexcept;
+  bool operator<(const CompactGenome& rhs) const noexcept;
 
   size_t Hash() const noexcept;
 
@@ -31,6 +32,8 @@ class CompactGenome {
   auto end() const -> decltype(mutations_.end());
 
   bool empty() const;
+
+  CompactGenome Copy() const;
 
   static Mutations ToEdgeMutations(std::string_view reference_sequence,
                                    const CompactGenome& parent,

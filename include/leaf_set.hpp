@@ -29,6 +29,7 @@ class LeafSet {
   auto begin() const -> decltype(clades_.begin());
   auto end() const -> decltype(clades_.end());
   bool empty() const;
+  size_t size() const;
 
  private:
   static size_t ComputeHash(
