@@ -1,6 +1,6 @@
 #pragma once
 
-#include <functional>
+#include <cstddef>
 
 class CompactGenome;
 class LeafSet;
@@ -16,6 +16,13 @@ class EdgeLabel {
   const CompactGenome* child_compact_genome = nullptr;
   const LeafSet* child_leaf_set = nullptr;
 };
+
+namespace std {
+template <typename>
+struct hash;
+template <typename>
+struct equal_to;
+}  // namespace std
 
 template <>
 struct std::hash<EdgeLabel> {

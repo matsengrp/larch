@@ -52,15 +52,26 @@ static int TakeDiff(std::string_view proto_filename, std::string_view json_filen
                                                                lhs_trees.end()};
   lhs_merge.AddTrees(lhs_tree_refs, lhs_mutations, true);
 
+  // std::string rhs_reference_sequence;
+  // std::vector<std::vector<CompactGenome>> rhs_compact_genomes;
+  // std::vector<DAG> rhs_trees;
+  // rhs_trees.push_back(LoadDAGFromJsonGZ(json_filename, rhs_reference_sequence));
+  // rhs_compact_genomes.push_back(LoadCompactGenomesJsonGZ(json_filename));
+  // Merge rhs_merge{rhs_reference_sequence};
+  // std::vector<std::reference_wrapper<const DAG>> rhs_tree_refs{rhs_trees.begin(),
+  //                                                              rhs_trees.end()};
+  // rhs_merge.AddDAGs(rhs_tree_refs, std::move(rhs_compact_genomes), true);
+
   std::string rhs_reference_sequence;
-  std::vector<std::vector<CompactGenome>> rhs_compact_genomes;
+  std::vector<std::vector<Mutations>> rhs_mutations;
   std::vector<DAG> rhs_trees;
-  rhs_trees.push_back(LoadDAGFromJsonGZ(json_filename, rhs_reference_sequence));
-  rhs_compact_genomes.push_back(LoadCompactGenomesJsonGZ(json_filename));
+  rhs_mutations.push_back({});
+  rhs_trees.push_back(LoadDAGFromProtobufGZ(json_filename, rhs_reference_sequence,
+                                            rhs_mutations.at(0)));
   Merge rhs_merge{rhs_reference_sequence};
   std::vector<std::reference_wrapper<const DAG>> rhs_tree_refs{rhs_trees.begin(),
                                                                rhs_trees.end()};
-  rhs_merge.AddDAGs(rhs_tree_refs, std::move(rhs_compact_genomes), true);
+  rhs_merge.AddTrees(rhs_tree_refs, rhs_mutations, true);
 
   size_t not_found_in_lhs = 0, not_found_in_rhs = 0;
 

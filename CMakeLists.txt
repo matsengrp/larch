@@ -69,8 +69,7 @@ add_library(larch
     src/leaf_set.cpp
     src/merge.cpp
     src/node_label.cpp
-    src/node_storage.cpp
-    src/zlib_stream.cpp)
+    src/node_storage.cpp)
 larch_compile_opts(larch)
 larch_link_opts(larch)
 

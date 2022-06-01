@@ -14,28 +14,9 @@
 #include "nlohmann/json.hpp"
 
 #include "dag_loader.hpp"
-#include "zlib_stream.hpp"
 #include "dag.pb.h"
 #include "parsimony.pb.h"
 #include "newick.hpp"
-
-template <typename T>
-static void Parse(T& data, std::string_view path) {
-  std::ifstream in{std::string{path}};
-  Assert(in);
-  unsigned char header[2];
-  in >> header[0] >> header[1];
-  if (header[0] == 0x1f and header[1] == 0x8b) {
-    google::protobuf::io::FileInputStream in_compressed{
-        open(std::string{path}.c_str(), O_RDONLY)};
-    in_compressed.SetCloseOnDelete(true);
-    google::protobuf::io::GzipInputStream in{&in_compressed};
-    data.ParseFromZeroCopyStream(&in);
-  } else {
-    std::ifstream in_raw{std::string{path}};
-    data.ParseFromIstream(&in_raw);
-  }
-}
 
 static bool IsGzipped(std::string_view path) {
   std::ifstream in{std::string{path}};
@@ -43,6 +24,22 @@ static bool IsGzipped(std::string_view path) {
   unsigned char header[2];
   in >> header[0] >> header[1];
   return header[0] == 0x1f and header[1] == 0x8b;
+}
+
+template <typename T>
+static void Parse(T& data, std::string_view path) {
+  if (IsGzipped(path)) {
+    google::protobuf::io::FileInputStream in_compressed{
+        open(std::string{path}.c_str(), O_RDONLY)};
+    in_compressed.SetCloseOnDelete(true);
+    google::protobuf::io::GzipInputStream in{&in_compressed};
+    bool parsed = data.ParseFromZeroCopyStream(&in);
+    Assert(parsed);
+  } else {
+    std::ifstream in{std::string{path}};
+    bool parsed = data.ParseFromIstream(&in);
+    Assert(parsed);
+  }
 }
 
 DAG LoadDAGFromProtobufGZ(std::string_view path, std::string& ref_seq,
@@ -123,20 +120,31 @@ DAG LoadTreeFromProtobufGZ(std::string_view path, std::vector<Mutations>& mutati
   return dag;
 }
 
-[[nodiscard]] std::string LoadRefseqFromJsonGZ(std::string_view path) {
-  nlohmann::json json;
+[[nodiscard]] nlohmann::json LoadJson(std::string_view path) {
   if (IsGzipped(path)) {
-    std::ifstream in_compressed{std::string{path}};
-    Assert(in_compressed);
-    zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
-    std::istream in{&zbuf};
-    in >> json;
+    google::protobuf::io::FileInputStream in_compressed{
+        open(std::string{path}.c_str(), O_RDONLY)};
+    in_compressed.SetCloseOnDelete(true);
+    google::protobuf::io::GzipInputStream in{&in_compressed};
+    std::vector<char> bytes;
+    const void* data;
+    int size;
+    while (in.Next(&data, &size)) {
+      bytes.insert(bytes.end(), static_cast<const char*>(data),
+                   static_cast<const char*>(data) + size);
+    }
+    return nlohmann::json::parse(bytes);
   } else {
+    nlohmann::json result;
     std::ifstream in{std::string{path}};
     Assert(in);
-    in >> json;
+    in >> result;
+    return result;
   }
-  return json["refseq"][1];
+}
+
+[[nodiscard]] std::string LoadRefseqFromJsonGZ(std::string_view path) {
+  return LoadJson(path)["refseq"][1];
 }
 
 /*
@@ -158,18 +166,7 @@ the clade in the parent node's clade_list from which this edge descends.
 */
 
 DAG LoadDAGFromJsonGZ(std::string_view path, std::string& refseq) {
-  nlohmann::json json;
-  if (IsGzipped(path)) {
-    std::ifstream in_compressed{std::string{path}};
-    Assert(in_compressed);
-    zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
-    std::istream in{&zbuf};
-    in >> json;
-  } else {
-    std::ifstream in{std::string{path}};
-    Assert(in);
-    in >> json;
-  }
+  nlohmann::json json = LoadJson(path);
   DAG result;
 
   refseq = json["refseq"][1];
@@ -205,18 +202,7 @@ static CompactGenome GetCompactGenome(const nlohmann::json& json,
 }
 
 std::vector<CompactGenome> LoadCompactGenomesJsonGZ(std::string_view path) {
-  nlohmann::json json;
-  if (IsGzipped(path)) {
-    std::ifstream in_compressed{std::string{path}};
-    Assert(in_compressed);
-    zlib::ZStringBuf zbuf{in_compressed, 1, 128 * 1024 * 1024};
-    std::istream in{&zbuf};
-    in >> json;
-  } else {
-    std::ifstream in{std::string{path}};
-    Assert(in);
-    in >> json;
-  }
+  nlohmann::json json = LoadJson(path);
 
   std::vector<CompactGenome> result;
   for (auto& node : json["nodes"]) {
