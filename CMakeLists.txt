@@ -62,8 +62,13 @@ function(larch_executable PRODUCT)
 endfunction()
 
 add_library(larch
+    src/compact_genome.cpp
     src/dag.cpp
     src/dag_loader.cpp
+    src/edge_label.cpp
+    src/leaf_set.cpp
+    src/merge.cpp
+    src/node_label.cpp
     src/node_storage.cpp
     src/zlib_stream.cpp)
 larch_compile_opts(larch)
@@ -71,7 +76,7 @@ larch_link_opts(larch)
 
 if (DEFINED CMAKE_CXX_CLANG_TIDY)
 target_precompile_headers(larch PUBLIC
-    include/merge.hpp
+    include/dag.hpp
 )
 endif()
 

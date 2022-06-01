@@ -28,7 +28,6 @@
 #include "node_storage.hpp"
 #include "edge_storage.hpp"
 #include "traverse_value.hpp"
-#include "counter_map.hpp"
 
 class DAG {
  public:
