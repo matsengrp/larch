@@ -187,10 +187,11 @@ std::vector<CompactGenome> Merge::ComputeCompactGenomesDAG(
   std::vector<CompactGenome> result;
   result.resize(tree.GetNodes().size());
   auto ComputeCG = [&](auto& self, Node node) {
+    CompactGenome& compact_genome = result.at(node.GetId().value);
     if (node.IsRoot()) {
+      compact_genome = CompactGenome(node, edge_mutations, reference_sequence);
       return;
     }
-    CompactGenome& compact_genome = result.at(node.GetId().value);
     if (not compact_genome.empty()) {
       return;
     }

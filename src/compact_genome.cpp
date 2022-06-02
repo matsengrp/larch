@@ -1,8 +1,32 @@
 #include "compact_genome.hpp"
 
+#include "dag.hpp"
+
 const CompactGenome* CompactGenome::Empty() {
   static CompactGenome empty = {};
   return &empty;
+}
+
+static void ComputeMutations(const Mutations& mutations,
+                             std::string_view reference_sequence,
+                             std::vector<std::pair<MutationPosition, char>>& result) {
+  for (auto [pos, nucs] : mutations) {
+    const bool is_valid = nucs.second != reference_sequence.at(pos.value - 1);
+    auto it = std::lower_bound(result.begin(), result.end(), pos,
+                               [](std::pair<MutationPosition, char> lhs,
+                                  MutationPosition rhs) { return lhs.first < rhs; });
+    if (it != result.end() and it->first == pos) {
+      if (is_valid) {
+        it->second = nucs.second;
+      } else {
+        result.erase(it);
+      }
+    } else {
+      if (is_valid) {
+        result.insert(it, {pos, nucs.second});
+      }
+    }
+  }
 }
 
 CompactGenome::CompactGenome(const Mutations& mutations, const CompactGenome& parent,
@@ -10,23 +34,18 @@ CompactGenome::CompactGenome(const Mutations& mutations, const CompactGenome& pa
     : mutations_{[&] {
         std::vector<std::pair<MutationPosition, char>> result{parent.mutations_.begin(),
                                                               parent.mutations_.end()};
-        for (auto [pos, base] : mutations) {
-          const bool is_valid = base != reference_sequence.at(pos.value - 1);
-          auto it =
-              std::lower_bound(result.begin(), result.end(), pos,
-                               [](std::pair<MutationPosition, char> lhs,
-                                  MutationPosition rhs) { return lhs.first < rhs; });
-          if (it != result.end() and it->first == pos) {
-            if (is_valid) {
-              it->second = base;
-            } else {
-              result.erase(it);
-            }
-          } else {
-            if (is_valid) {
-              result.insert(it, {pos, base});
-            }
-          }
+        ComputeMutations(mutations, reference_sequence, result);
+        return result;
+      }()},
+      hash_{ComputeHash(mutations_)} {}
+
+CompactGenome::CompactGenome(Node root, const std::vector<Mutations>& edge_mutations,
+                             std::string_view reference_sequence)
+    : mutations_{[&] {
+        std::vector<std::pair<MutationPosition, char>> result;
+        for (EdgeId child_edge : root.GetChildren()) {
+          const Mutations& mutations = edge_mutations.at(child_edge.value);
+          ComputeMutations(mutations, reference_sequence, result);
         }
         return result;
       }()},
@@ -85,7 +104,7 @@ Mutations CompactGenome::ToEdgeMutations(std::string_view reference_sequence,
       parent_base = opt_parent_base.value();
     }
     if (parent_base != child_base) {
-      result[pos] = child_base;
+      result[pos] = {parent_base, child_base};
     }
   }
 
@@ -96,7 +115,7 @@ Mutations CompactGenome::ToEdgeMutations(std::string_view reference_sequence,
       child_base = opt_child_base.value();
     }
     if (child_base != parent_base) {
-      result[pos] = child_base;
+      result[pos] = {parent_base, child_base};
     }
   }
   return result;

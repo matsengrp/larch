@@ -29,7 +29,7 @@ struct MutationPosition {
   size_t value = NoId;
 };
 
-using Mutations = std::map<MutationPosition, char>;
+using Mutations = std::map<MutationPosition, std::pair<char, char>>;
 
 inline bool operator==(NodeId lhs, NodeId rhs) { return lhs.value == rhs.value; }
 

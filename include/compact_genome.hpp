@@ -19,6 +19,9 @@ class CompactGenome {
   CompactGenome(const Mutations& mutations, const CompactGenome& parent,
                 std::string_view reference_sequence);
 
+  CompactGenome(Node root, const std::vector<Mutations>& edge_mutations,
+                std::string_view reference_sequence);
+
   CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations);
 
   bool operator==(const CompactGenome& rhs) const noexcept;

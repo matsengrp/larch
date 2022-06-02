@@ -66,11 +66,12 @@ DAG LoadDAGFromProtobuf(std::string_view path, std::string& reference_sequence,
   mutations.resize(dag.GetEdges().size());
   edge_id = 0;
   for (auto& i : data.edges()) {
-    Mutations& cg = mutations.at(edge_id++);
+    Mutations& muts = mutations.at(edge_id++);
     for (auto& mut : i.edge_mutations()) {
       static const char decode[] = {'A', 'C', 'G', 'T'};
       Assert(mut.mut_nuc().size() == 1);
-      cg[{static_cast<size_t>(mut.position())}] = decode[mut.mut_nuc().Get(0)];
+      muts[{static_cast<size_t>(mut.position())}] = {decode[mut.par_nuc()],
+                                                     decode[mut.mut_nuc().Get(0)]};
     }
   }
 
@@ -100,19 +101,21 @@ DAG LoadTreeFromProtobuf(std::string_view path, std::vector<Mutations>& mutation
   mutations.resize(dag.GetEdges().size());
 
   size_t muts_idx = 0;
-  for (MutableNode node : dag.TraversePreOrder()) {
+  for (Node node : dag.TraversePreOrder()) {
     const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
     if (node.IsRoot()) {
       continue;
     }
     auto& edge_muts = mutations.at(node.GetSingleParent().GetId().value);
     for (auto i :
-         pb_muts | ranges::view::transform([](auto& mut)
-                                               -> std::pair<MutationPosition, char> {
-           static const char decode[] = {'A', 'C', 'G', 'T'};
-           Assert(mut.mut_nuc().size() == 1);
-           return {{static_cast<size_t>(mut.position())}, decode[mut.mut_nuc().Get(0)]};
-         })) {
+         pb_muts |
+             ranges::view::transform(
+                 [](auto& mut) -> std::pair<MutationPosition, std::pair<char, char>> {
+                   static const char decode[] = {'A', 'C', 'G', 'T'};
+                   Assert(mut.mut_nuc().size() == 1);
+                   return {{static_cast<size_t>(mut.position())},
+                           {decode[mut.par_nuc()], decode[mut.mut_nuc().Get(0)]}};
+                 })) {
       edge_muts.insert(i);
     }
   }
@@ -187,11 +190,13 @@ static CompactGenome GetCompactGenome(const nlohmann::json& json,
                                       size_t compact_genome_index) {
   std::vector<std::pair<MutationPosition, char>> result;
   result.reserve(json["compact_genomes"][compact_genome_index].size());
-  std::string new_base;
   for (auto& mutation : json["compact_genomes"][compact_genome_index]) {
     MutationPosition position = {mutation[0]};
-    new_base = mutation[1][1].get<std::string>();
-    result.emplace_back(position, new_base.at(0));
+    // std::string par_nuc = mutation[1][0].get<std::string>();
+    std::string mut_nuc = mutation[1][1].get<std::string>();
+    // Assert(par_nuc.size() == 1);
+    Assert(mut_nuc.size() == 1);
+    result.emplace_back(position, mut_nuc.at(0));
   }
   std::sort(result.begin(), result.end(),
             [](auto lhs, auto rhs) { return lhs.first < rhs.first; });
@@ -230,10 +235,24 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
     proto_edge->set_parent_node(edge.GetParentId().value);
     proto_edge->set_parent_clade(edge.GetChildId().value);
     proto_edge->set_child_node(edge.GetClade().value);
-    for (auto [pos, base] : edge_parent_mutations.at(edge.GetId().value)) {
+    for (auto [pos, nucs] : edge_parent_mutations.at(edge.GetId().value)) {
       auto* mut = proto_edge->add_edge_mutations();
       mut->set_position(pos.value);
-      switch (base) {
+      switch (nucs.first) {
+        case 'A':
+          mut->set_par_nuc(0);
+          break;
+        case 'C':
+          mut->set_par_nuc(1);
+          break;
+        case 'G':
+          mut->set_par_nuc(2);
+          break;
+        case 'T':
+          mut->set_par_nuc(3);
+          break;
+      };
+      switch (nucs.second) {
         case 'A':
           mut->add_mut_nuc(0);
           break;
