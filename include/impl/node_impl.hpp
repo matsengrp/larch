@@ -1,3 +1,5 @@
+#include <range/v3/view/join.hpp>
+
 template <typename T>
 NodeView<T>::NodeView(T dag, NodeId id) : dag_{dag}, id_{id} {
   static_assert(std::is_same_v<T, DAG&> or std::is_same_v<T, const DAG&>);
@@ -27,18 +29,14 @@ NodeId NodeView<T>::GetId() const {
 
 template <typename T>
 auto NodeView<T>::GetParents() const {
-  return GetStorage().parents_ | ranges::views::transform([this](EdgeId idx) {
-           return EdgeType{dag_, idx};
-         });
+  return GetStorage().parents_ | Transform::ToEdges(dag_);
 }
 
 template <typename T>
 auto NodeView<T>::GetClades() const {
   return GetStorage().clades_ |
          ranges::views::transform([this](const std::vector<EdgeId>& clade) {
-           return clade | ranges::views::transform([this](EdgeId idx) {
-                    return EdgeType{dag_, idx};
-                  });
+           return clade | Transform::ToEdges(dag_);
          });
 }
 

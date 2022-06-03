@@ -30,6 +30,12 @@ template <typename K, typename V>
 using ConcurrentUnorderedMap =
     tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
+struct MADAG {
+  DAG dag;
+  std::string reference_sequence;
+  std::vector<EdgeMutations> edge_mutations;
+};
+
 class Merge {
  public:
   Merge(std::string_view reference_sequence);
@@ -39,18 +45,17 @@ class Merge {
   Merge& operator=(Merge&&) = delete;
   Merge& operator=(const Merge&) = delete;
 
-  void AddTrees(const std::vector<std::reference_wrapper<const DAG>>& trees,
-                const std::vector<std::vector<Mutations>>& mutations,
+  void AddTrees(const std::vector<std::reference_wrapper<const MADAG>>& trees,
                 bool show_progress = false);
 
-  void AddDAGs(const std::vector<std::reference_wrapper<const DAG>>& dags,
+  void AddDAGs(const std::vector<std::reference_wrapper<const MADAG>>& dags,
                std::vector<std::vector<CompactGenome>>&& compact_genomes,
                bool show_progress = false);
 
   DAG& GetResult();
   const DAG& GetResult() const;
   const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
-  std::vector<Mutations> ComputeResultEdgeMutations() const;
+  std::vector<EdgeMutations> ComputeResultEdgeMutations() const;
 
  private:
   void ComputeCompactGenomes(const std::vector<size_t>& tree_idxs, bool show_progress);
@@ -60,22 +65,19 @@ class Merge {
   void MergeTrees(const std::vector<size_t>& tree_idxs);
 
   static std::vector<CompactGenome> ComputeCompactGenomes(
-      const DAG& tree, const std::vector<Mutations>& edge_mutations,
-      std::string_view reference_sequence);
+      const MADAG& tree, std::string_view reference_sequence);
 
   static std::vector<CompactGenome> ComputeCompactGenomesDAG(
-      const DAG& tree, const std::vector<Mutations>& edge_mutations,
-      std::string_view reference_sequence);
+      const MADAG& dag, std::string_view reference_sequence);
 
-  static std::vector<LeafSet> ComputeLeafSets(const DAG& tree,
+  static std::vector<LeafSet> ComputeLeafSets(const MADAG& tree,
                                               const std::vector<NodeLabel>& labels);
 
-  static std::vector<LeafSet> ComputeLeafSetsDAG(const DAG& tree,
+  static std::vector<LeafSet> ComputeLeafSetsDAG(const MADAG& dag,
                                                  const std::vector<NodeLabel>& labels);
 
   std::string_view reference_sequence_;
-  std::vector<std::reference_wrapper<const DAG>> trees_;
-  std::vector<std::vector<Mutations>> mutations_;
+  std::vector<std::reference_wrapper<const MADAG>> trees_;
 
   ConcurrentUnorderedSet<CompactGenome> all_compact_genomes_;
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;

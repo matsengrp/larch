@@ -42,31 +42,30 @@ static void Parse(T& data, std::string_view path) {
   }
 }
 
-DAG LoadDAGFromProtobuf(std::string_view path, std::string& reference_sequence,
-                        std::vector<Mutations>& mutations) {
+MADAG LoadDAGFromProtobuf(std::string_view path) {
   ProtoDAG::data data;
   Parse(data, path);
 
-  reference_sequence = data.reference_seq();
-  DAG dag;
+  MADAG result;
+  result.reference_sequence = data.reference_seq();
 
   for (auto& i : data.node_names()) {
-    dag.AddNode({static_cast<size_t>(i.node_id())});
+    result.dag.AddNode({static_cast<size_t>(i.node_id())});
   }
 
   size_t edge_id = 0;
   for (auto& i : data.edges()) {
-    dag.AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
-                {static_cast<size_t>(i.child_node())},
-                {static_cast<size_t>(i.parent_clade())});
+    result.dag.AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
+                       {static_cast<size_t>(i.child_node())},
+                       {static_cast<size_t>(i.parent_clade())});
   }
 
-  dag.BuildConnections();
+  result.dag.BuildConnections();
 
-  mutations.resize(dag.GetEdges().size());
+  result.edge_mutations.resize(result.dag.GetEdges().size());
   edge_id = 0;
   for (auto& i : data.edges()) {
-    Mutations& muts = mutations.at(edge_id++);
+    EdgeMutations& muts = result.edge_mutations.at(edge_id++);
     for (auto& mut : i.edge_mutations()) {
       static const char decode[] = {'A', 'C', 'G', 'T'};
       Assert(mut.mut_nuc().size() == 1);
@@ -75,38 +74,38 @@ DAG LoadDAGFromProtobuf(std::string_view path, std::string& reference_sequence,
     }
   }
 
-  return dag;
+  return result;
 }
 
-DAG LoadTreeFromProtobuf(std::string_view path, std::vector<Mutations>& mutations) {
+MADAG LoadTreeFromProtobuf(std::string_view path) {
   Parsimony::data data;
   Parse(data, path);
 
-  DAG dag;
+  MADAG result;
 
   size_t edge_id = 0;
   std::unordered_map<size_t, size_t> num_children;
   ParseNewick(
       data.newick(),
-      [&dag](size_t id, std::string label, std::optional<double> branch_length) {
-        dag.AddNode({id});
+      [&result](size_t id, std::string label, std::optional<double> branch_length) {
+        result.dag.AddNode({id});
         std::ignore = label;
         std::ignore = branch_length;
       },
-      [&dag, &edge_id, &num_children](size_t parent, size_t child) {
-        dag.AddEdge({edge_id++}, {parent}, {child}, {num_children[parent]++});
+      [&result, &edge_id, &num_children](size_t parent, size_t child) {
+        result.dag.AddEdge({edge_id++}, {parent}, {child}, {num_children[parent]++});
       });
-  dag.BuildConnections();
+  result.dag.BuildConnections();
 
-  mutations.resize(dag.GetEdges().size());
+  result.edge_mutations.resize(result.dag.GetEdges().size());
 
   size_t muts_idx = 0;
-  for (Node node : dag.TraversePreOrder()) {
+  for (Node node : result.dag.TraversePreOrder()) {
     const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
     if (node.IsRoot()) {
       continue;
     }
-    auto& edge_muts = mutations.at(node.GetSingleParent().GetId().value);
+    auto& edge_muts = result.edge_mutations.at(node.GetSingleParent().GetId().value);
     for (auto i :
          pb_muts |
              ranges::view::transform(
@@ -120,7 +119,7 @@ DAG LoadTreeFromProtobuf(std::string_view path, std::vector<Mutations>& mutation
     }
   }
 
-  return dag;
+  return result;
 }
 
 [[nodiscard]] nlohmann::json LoadJson(std::string_view path) {
@@ -146,10 +145,6 @@ DAG LoadTreeFromProtobuf(std::string_view path, std::vector<Mutations>& mutation
   }
 }
 
-[[nodiscard]] std::string LoadRefseqFromJson(std::string_view path) {
-  return LoadJson(path)["refseq"][1];
-}
-
 /*
 
 compact_genome_list is a sorted list of compact genomes, where each compact
@@ -168,21 +163,21 @@ the clade in the parent node's clade_list from which this edge descends.
 
 */
 
-DAG LoadDAGFromJson(std::string_view path, std::string& refseq) {
+MADAG LoadDAGFromJson(std::string_view path) {
   nlohmann::json json = LoadJson(path);
-  DAG result;
+  MADAG result;
 
-  refseq = json["refseq"][1];
+  result.reference_sequence = json["refseq"][1];
 
   size_t id = 0;
   for ([[maybe_unused]] auto& i : json["nodes"]) {
-    result.AddNode({id++});
+    result.dag.AddNode({id++});
   }
   id = 0;
   for (auto& i : json["edges"]) {
-    result.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
+    result.dag.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
   }
-  result.BuildConnections();
+  result.dag.BuildConnections();
   return result;
 }
 
@@ -218,7 +213,7 @@ std::vector<CompactGenome> LoadCompactGenomesJson(std::string_view path) {
 }
 
 void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
-                        const std::vector<Mutations>& edge_parent_mutations,
+                        const std::vector<EdgeMutations>& edge_parent_mutations,
                         std::string_view path) {
   ProtoDAG::data data;
 

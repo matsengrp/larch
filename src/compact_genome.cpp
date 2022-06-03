@@ -1,5 +1,8 @@
 #include "compact_genome.hpp"
 
+#include <range/v3/action/sort.hpp>
+#include <range/v3/action/unique.hpp>
+
 #include "dag.hpp"
 
 const CompactGenome* CompactGenome::Empty() {
@@ -7,10 +10,10 @@ const CompactGenome* CompactGenome::Empty() {
   return &empty;
 }
 
-static void ComputeMutations(const Mutations& mutations,
+static void ComputeMutations(const EdgeMutations& edge_mutations,
                              std::string_view reference_sequence,
                              std::vector<std::pair<MutationPosition, char>>& result) {
-  for (auto [pos, nucs] : mutations) {
+  for (auto [pos, nucs] : edge_mutations) {
     const bool is_valid = nucs.second != reference_sequence.at(pos.value - 1);
     auto it = std::lower_bound(result.begin(), result.end(), pos,
                                [](std::pair<MutationPosition, char> lhs,
@@ -29,23 +32,37 @@ static void ComputeMutations(const Mutations& mutations,
   }
 }
 
-CompactGenome::CompactGenome(const Mutations& mutations, const CompactGenome& parent,
+CompactGenome::CompactGenome(const EdgeMutations& edge_mutations,
+                             const CompactGenome& parent,
                              std::string_view reference_sequence)
     : mutations_{[&] {
         std::vector<std::pair<MutationPosition, char>> result{parent.mutations_.begin(),
                                                               parent.mutations_.end()};
-        ComputeMutations(mutations, reference_sequence, result);
+        ComputeMutations(edge_mutations, reference_sequence, result);
         return result;
       }()},
       hash_{ComputeHash(mutations_)} {}
 
-CompactGenome::CompactGenome(Node root, const std::vector<Mutations>& edge_mutations,
+CompactGenome::CompactGenome(Node root,
+                             const std::vector<EdgeMutations>& edge_mutations,
                              std::string_view reference_sequence)
     : mutations_{[&] {
         std::vector<std::pair<MutationPosition, char>> result;
         for (EdgeId child_edge : root.GetChildren()) {
-          const Mutations& mutations = edge_mutations.at(child_edge.value);
-          ComputeMutations(mutations, reference_sequence, result);
+          const EdgeMutations& child_edge_mutations =
+              edge_mutations.at(child_edge.value);
+          for (auto [pos, nucs] : child_edge_mutations) {
+            char ref = reference_sequence.at(pos.value - 1);
+            if (nucs.first != ref) {
+              result.push_back({pos, nucs.first});
+            }
+          }
+        }
+        result |= ranges::actions::sort | ranges::actions::unique;
+        for (EdgeId child_edge : root.GetChildren()) {
+          const EdgeMutations& child_edge_mutations =
+              edge_mutations.at(child_edge.value);
+          ComputeMutations(child_edge_mutations, reference_sequence, result);
         }
         return result;
       }()},
@@ -93,10 +110,10 @@ CompactGenome CompactGenome::Copy() const {
   return result;
 }
 
-Mutations CompactGenome::ToEdgeMutations(std::string_view reference_sequence,
-                                         const CompactGenome& parent,
-                                         const CompactGenome& child) {
-  Mutations result;
+EdgeMutations CompactGenome::ToEdgeMutations(std::string_view reference_sequence,
+                                             const CompactGenome& parent,
+                                             const CompactGenome& child) {
+  EdgeMutations result;
   for (auto [pos, child_base] : child) {
     char parent_base = reference_sequence.at(pos.value - 1);
     auto opt_parent_base = parent[pos];

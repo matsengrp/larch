@@ -5,6 +5,8 @@
 #include <string>
 #include <optional>
 
+#include <range/v3/view/reverse.hpp>
+
 template <typename T, typename N, typename E>
 void ParseNewick(const T& source, N&& on_node, E&& on_edge) {
   struct Node {

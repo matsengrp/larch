@@ -31,36 +31,29 @@
 static int MergeTrees(const std::vector<std::string_view>& paths,
                       std::string_view refseq_json_path, std::string_view out_path,
                       bool dags) {
-  std::vector<std::vector<Mutations>> mutations;
-  std::vector<DAG> trees;
-  std::string reference_sequence;
-
-  reference_sequence = LoadRefseqFromJson(refseq_json_path);
+  std::vector<MADAG> trees;
+  std::string reference_sequence = LoadDAGFromJson(refseq_json_path).reference_sequence;
 
   trees.resize(paths.size());
-  mutations.resize(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;
   for (size_t i = 0; i < paths.size(); ++i) {
     paths_idx.push_back({i, paths.at(i)});
   }
   std::cout << "Loading trees ";
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
-    std::vector<Mutations> tree_mutations;
-    std::string refseq;
     std::cout << "." << std::flush;
-    trees.at(path_idx.first) =
-        dags ? LoadDAGFromProtobuf(path_idx.second, refseq, tree_mutations)
-             : LoadTreeFromProtobuf(path_idx.second, tree_mutations);
-    mutations.at(path_idx.first) = std::move(tree_mutations);
+    trees.at(path_idx.first) = dags ? LoadDAGFromProtobuf(path_idx.second)
+                                    : LoadTreeFromProtobuf(path_idx.second);
   });
   std::cout << " done."
             << "\n";
 
   Benchmark merge_time;
   Merge merge(reference_sequence);
-  std::vector<std::reference_wrapper<const DAG>> tree_refs{trees.begin(), trees.end()};
+  std::vector<std::reference_wrapper<const MADAG>> tree_refs{trees.begin(),
+                                                             trees.end()};
   merge_time.start();
-  merge.AddTrees(tree_refs, mutations, true);
+  merge.AddTrees(tree_refs, true);
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
 

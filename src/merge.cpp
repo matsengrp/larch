@@ -3,15 +3,13 @@
 Merge::Merge(std::string_view reference_sequence)
     : reference_sequence_{reference_sequence} {}
 
-void Merge::AddTrees(const std::vector<std::reference_wrapper<const DAG>>& trees,
-                     const std::vector<std::vector<Mutations>>& mutations,
+void Merge::AddTrees(const std::vector<std::reference_wrapper<const MADAG>>& trees,
                      bool show_progress) {
   std::vector<size_t> tree_idxs;
   tree_idxs.resize(trees.size());
   std::iota(tree_idxs.begin(), tree_idxs.end(), trees_.size());
 
   trees_.insert(trees_.end(), trees.begin(), trees.end());
-  mutations_.insert(mutations_.end(), mutations.begin(), mutations.end());
   tree_labels_.resize(trees_.size());
 
   ComputeCompactGenomes(tree_idxs, show_progress);
@@ -22,7 +20,7 @@ void Merge::AddTrees(const std::vector<std::reference_wrapper<const DAG>>& trees
   result_dag_.BuildConnections();
 }
 
-void Merge::AddDAGs(const std::vector<std::reference_wrapper<const DAG>>& dags,
+void Merge::AddDAGs(const std::vector<std::reference_wrapper<const MADAG>>& dags,
                     std::vector<std::vector<CompactGenome>>&& compact_genomes,
                     bool show_progress) {
   std::vector<size_t> tree_idxs;
@@ -33,10 +31,10 @@ void Merge::AddDAGs(const std::vector<std::reference_wrapper<const DAG>>& dags,
   tree_labels_.resize(trees_.size());
 
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const DAG& tree = trees_.at(tree_idx).get();
+    const MADAG& tree = trees_.at(tree_idx).get();
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-    labels.resize(tree.GetNodes().size());
-    for (size_t node_idx = 0; node_idx < tree.GetNodes().size(); ++node_idx) {
+    labels.resize(tree.dag.GetNodes().size());
+    for (size_t node_idx = 0; node_idx < tree.dag.GetNodes().size(); ++node_idx) {
       auto cg_iter = all_compact_genomes_.insert(
           std::move(compact_genomes.at(tree_idx).at(node_idx)));
       labels.at(node_idx).compact_genome = std::addressof(*cg_iter.first);
@@ -58,8 +56,8 @@ const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
   return result_nodes_;
 }
 
-std::vector<Mutations> Merge::ComputeResultEdgeMutations() const {
-  std::vector<Mutations> result;
+std::vector<EdgeMutations> Merge::ComputeResultEdgeMutations() const {
+  std::vector<EdgeMutations> result;
   result.resize(result_dag_.GetEdges().size());
   Assert(result_edges_.size() == result.size());
   for (auto& [label, edge_id] : result_edges_) {
@@ -67,7 +65,7 @@ std::vector<Mutations> Merge::ComputeResultEdgeMutations() const {
     Assert(label.child_compact_genome);
     const CompactGenome& parent = *label.parent_compact_genome;
     const CompactGenome& child = *label.child_compact_genome;
-    Mutations& muts = result.at(edge_id.value);
+    EdgeMutations& muts = result.at(edge_id.value);
     muts = CompactGenome::ToEdgeMutations(reference_sequence_, parent, child);
   }
   return result;
@@ -79,13 +77,12 @@ void Merge::ComputeCompactGenomes(const std::vector<size_t>& tree_idxs,
     std::cout << "Computing compact genomes " << std::flush;
   }
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const DAG& tree = trees_.at(tree_idx).get();
-    const std::vector<Mutations>& edge_mutations = mutations_.at(tree_idx);
+    const MADAG& tree = trees_.at(tree_idx).get();
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-    labels.resize(tree.GetNodes().size());
+    labels.resize(tree.dag.GetNodes().size());
     std::vector<CompactGenome> computed_cgs =
-        ComputeCompactGenomesDAG(tree, edge_mutations, reference_sequence_);
-    for (size_t node_idx = 0; node_idx < tree.GetNodes().size(); ++node_idx) {
+        ComputeCompactGenomesDAG(tree, reference_sequence_);
+    for (size_t node_idx = 0; node_idx < tree.dag.GetNodes().size(); ++node_idx) {
       auto cg_iter = all_compact_genomes_.insert(std::move(computed_cgs.at(node_idx)));
       labels.at(node_idx).compact_genome = std::addressof(*cg_iter.first);
     }
@@ -103,10 +100,10 @@ void Merge::ComputeLeafSets(const std::vector<size_t>& tree_idxs, bool show_prog
     std::cout << "Computing leaf sets " << std::flush;
   }
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const DAG& tree = trees_.at(tree_idx).get();
+    const MADAG& tree = trees_.at(tree_idx).get();
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     std::vector<LeafSet> computed_ls = ComputeLeafSetsDAG(tree, labels);
-    for (size_t node_idx = 0; node_idx < tree.GetNodes().size(); ++node_idx) {
+    for (size_t node_idx = 0; node_idx < tree.dag.GetNodes().size(); ++node_idx) {
       auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node_idx)));
       labels.at(node_idx).leaf_set = std::addressof(*ls_iter.first);
     }
@@ -133,10 +130,10 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
   });
   tbb::concurrent_vector<std::pair<EdgeLabel, EdgeId>> added_edges;
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const DAG& tree = trees_.at(tree_idx).get();
+    const MADAG& tree = trees_.at(tree_idx).get();
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     EdgeId edge_id{result_dag_.GetEdges().size()};
-    for (Edge edge : tree.GetEdges()) {
+    for (Edge edge : tree.dag.GetEdges()) {
       auto& parent_label = labels.at(edge.GetParentId().value);
       auto& child_label = labels.at(edge.GetChildId().value);
       auto ins =
@@ -168,12 +165,11 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
 }
 
 std::vector<CompactGenome> Merge::ComputeCompactGenomes(
-    const DAG& tree, const std::vector<Mutations>& edge_mutations,
-    std::string_view reference_sequence) {
+    const MADAG& tree, std::string_view reference_sequence) {
   std::vector<CompactGenome> result;
-  result.resize(tree.GetNodes().size());
-  for (auto [node, edge] : tree.TraversePreOrder()) {
-    const Mutations& mutations = edge_mutations.at(edge.GetId().value);
+  result.resize(tree.dag.GetNodes().size());
+  for (auto [node, edge] : tree.dag.TraversePreOrder()) {
+    const EdgeMutations& mutations = tree.edge_mutations.at(edge.GetId().value);
     const CompactGenome& parent = result.at(edge.GetParentId().value);
     CompactGenome& compact_genome = result.at(node.GetId().value);
     compact_genome = CompactGenome{mutations, parent, reference_sequence};
@@ -182,14 +178,13 @@ std::vector<CompactGenome> Merge::ComputeCompactGenomes(
 }
 
 std::vector<CompactGenome> Merge::ComputeCompactGenomesDAG(
-    const DAG& tree, const std::vector<Mutations>& edge_mutations,
-    std::string_view reference_sequence) {
+    const MADAG& dag, std::string_view reference_sequence) {
   std::vector<CompactGenome> result;
-  result.resize(tree.GetNodes().size());
+  result.resize(dag.dag.GetNodes().size());
   auto ComputeCG = [&](auto& self, Node node) {
     CompactGenome& compact_genome = result.at(node.GetId().value);
     if (node.IsRoot()) {
-      compact_genome = CompactGenome(node, edge_mutations, reference_sequence);
+      compact_genome = CompactGenome(node, dag.edge_mutations, reference_sequence);
       return;
     }
     if (not compact_genome.empty()) {
@@ -197,30 +192,30 @@ std::vector<CompactGenome> Merge::ComputeCompactGenomesDAG(
     }
     Edge edge = *node.GetParents().begin();
     self(self, edge.GetParent());
-    const Mutations& mutations = edge_mutations.at(edge.GetId().value);
+    const EdgeMutations& mutations = dag.edge_mutations.at(edge.GetId().value);
     const CompactGenome& parent = result.at(edge.GetParentId().value);
     compact_genome = CompactGenome{mutations, parent, reference_sequence};
   };
-  for (Node node : tree.GetNodes()) {
+  for (Node node : dag.dag.GetNodes()) {
     ComputeCG(ComputeCG, node);
   }
   return result;
 }
 
-std::vector<LeafSet> Merge::ComputeLeafSets(const DAG& tree,
+std::vector<LeafSet> Merge::ComputeLeafSets(const MADAG& tree,
                                             const std::vector<NodeLabel>& labels) {
   std::vector<LeafSet> result;
-  result.resize(tree.GetNodes().size());
-  for (Node node : tree.TraversePostOrder()) {
+  result.resize(tree.dag.GetNodes().size());
+  for (Node node : tree.dag.TraversePostOrder()) {
     result.at(node.GetId().value) = LeafSet{node, labels, result};
   }
   return result;
 }
 
-std::vector<LeafSet> Merge::ComputeLeafSetsDAG(const DAG& tree,
+std::vector<LeafSet> Merge::ComputeLeafSetsDAG(const MADAG& dag,
                                                const std::vector<NodeLabel>& labels) {
   std::vector<LeafSet> result;
-  result.resize(tree.GetNodes().size());
+  result.resize(dag.dag.GetNodes().size());
   auto ComputeLS = [&](auto& self, Node node) {
     LeafSet& leaf_set = result.at(node.GetId().value);
     if (not leaf_set.empty()) {
@@ -231,7 +226,7 @@ std::vector<LeafSet> Merge::ComputeLeafSetsDAG(const DAG& tree,
     }
     result.at(node.GetId().value) = LeafSet{node, labels, result};
   };
-  for (Node node : tree.GetNodes()) {
+  for (Node node : dag.dag.GetNodes()) {
     ComputeLS(ComputeLS, node);
   }
   return result;

@@ -66,6 +66,7 @@ add_library(larch
     src/dag.cpp
     src/dag_loader.cpp
     src/edge_label.cpp
+    src/edge_mutations.cpp
     src/leaf_set.cpp
     src/merge.cpp
     src/node_label.cpp

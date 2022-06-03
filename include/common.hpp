@@ -3,58 +3,19 @@
 #include <cstddef>
 #include <limits>
 #include <vector>
-#include <map>
 #include <range/v3/view/transform.hpp>
-#include <range/v3/view/subrange.hpp>
-#include <range/v3/view/join.hpp>
-#include <range/v3/view/all.hpp>
-#include <range/v3/view/reverse.hpp>
-#include <range/v3/view/ref.hpp>
+
+class DAG;
+template <typename>
+class NodeView;
+using Node = NodeView<const DAG&>;
+using MutableNode = NodeView<DAG&>;
+template <typename>
+class EdgeView;
+using Edge = EdgeView<const DAG&>;
+using MutableEdge = EdgeView<DAG&>;
 
 static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
-
-struct NodeId {
-  size_t value = NoId;
-};
-
-struct EdgeId {
-  size_t value = NoId;
-};
-
-struct CladeIdx {
-  size_t value = NoId;
-};
-
-struct MutationPosition {
-  size_t value = NoId;
-};
-
-using Mutations = std::map<MutationPosition, std::pair<char, char>>;
-
-inline bool operator==(NodeId lhs, NodeId rhs) { return lhs.value == rhs.value; }
-
-inline bool operator<(NodeId lhs, NodeId rhs) { return lhs.value < rhs.value; }
-
-inline bool operator==(EdgeId lhs, EdgeId rhs) { return lhs.value == rhs.value; }
-
-inline bool operator<(EdgeId lhs, EdgeId rhs) { return lhs.value < rhs.value; }
-
-inline bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs.value == rhs.value; }
-
-inline bool operator<(CladeIdx lhs, CladeIdx rhs) { return lhs.value < rhs.value; }
-
-inline bool operator==(MutationPosition lhs, MutationPosition rhs) {
-  return lhs.value == rhs.value;
-}
-
-inline bool operator<(MutationPosition lhs, MutationPosition rhs) {
-  return lhs.value < rhs.value;
-}
-
-template <>
-struct std::hash<NodeId> {
-  size_t operator()(NodeId id) const noexcept { return id.value; }
-};
 
 template <typename T, typename Id>
 [[nodiscard]] static T& GetOrInsert(std::vector<T>& data, Id id) {
@@ -67,17 +28,6 @@ template <typename T, typename Id>
   }
 }
 
-class DAG;
-
-template <typename T>
-class NodeView;
-using Node = NodeView<const DAG&>;
-using MutableNode = NodeView<DAG&>;
-template <typename T>
-class EdgeView;
-using Edge = EdgeView<const DAG&>;
-using MutableEdge = EdgeView<DAG&>;
-
 namespace Transform {
 inline auto GetParent() {
   return ranges::views::transform([](auto&& i) { return i.GetParent(); });
@@ -87,6 +37,22 @@ inline auto GetChild() {
 }
 inline auto GetId() {
   return ranges::views::transform([](auto&& i) { return i.GetId(); });
+}
+inline auto ToNodes(const DAG& dag) {
+  return ranges::views::transform([&](auto&& i) { return Node{dag, i}; });
+}
+inline auto ToNodes(DAG& dag) {
+  return ranges::views::transform([&](auto&& i) { return MutableNode{dag, i}; });
+}
+inline auto ToEdges(const DAG& dag) {
+  return ranges::views::transform([&](auto&& i) { return Edge{dag, i}; });
+}
+inline auto ToEdges(DAG& dag) {
+  return ranges::views::transform([&](auto&& i) { return MutableEdge{dag, i}; });
+}
+template <typename T>
+inline auto To() {
+  return ranges::views::transform([&](auto&& i) { return T{i}; });
 }
 }  // namespace Transform
 

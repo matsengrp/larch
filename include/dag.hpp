@@ -25,6 +25,8 @@
 #include <string_view>
 
 #include "common.hpp"
+#include "node.hpp"
+#include "edge.hpp"
 #include "node_storage.hpp"
 #include "edge_storage.hpp"
 #include "traverse_value.hpp"
@@ -34,6 +36,8 @@ class DAG {
   DAG() = default;
   DAG(DAG&&) = default;
   DAG& operator=(DAG&&) = default;
+  DAG(const DAG&) = delete;
+  DAG& operator=(const DAG&) = delete;
 
   using Weight = double;
   using ArbitraryPrecisionInteger = long;
@@ -88,8 +92,6 @@ class DAG {
   std::vector<NodeId> leafs_;
 };
 
-#include "node.hpp"
-#include "edge.hpp"
 #include "pre_order_iterator.hpp"
 #include "post_order_iterator.hpp"
 #include "impl/node_impl.hpp"

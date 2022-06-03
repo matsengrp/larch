@@ -1,6 +1,8 @@
 #include <unordered_map>
 #include <numeric>
 
+#include <range/v3/view/subrange.hpp>
+
 auto DAG::GetNodes() const {
   return nodes_ |
          ranges::views::transform([this, idx = size_t{}](const NodeStorage&) mutable {
@@ -29,17 +31,9 @@ auto DAG::GetEdges() {
          });
 }
 
-auto DAG::GetLeafs() const {
-  return leafs_ | ranges::views::transform([this](NodeId node_id) {
-           return Node{*this, node_id};
-         });
-}
+auto DAG::GetLeafs() const { return leafs_ | Transform::ToNodes(*this); }
 
-auto DAG::GetLeafs() {
-  return leafs_ | ranges::views::transform([this](NodeId node_id) {
-           return MutableNode{*this, node_id};
-         });
-}
+auto DAG::GetLeafs() { return leafs_ | Transform::ToNodes(*this); }
 
 auto DAG::TraversePreOrder() const {
   return ranges::subrange(PreOrderIterator{GetRoot()}, PreOrderIterator<Node>{});

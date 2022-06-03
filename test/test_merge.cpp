@@ -10,26 +10,23 @@
 
 static void test_protobuf(const std::string& correct_path,
                           const std::vector<std::string>& paths) {
-  std::vector<std::vector<Mutations>> mutations;
-  std::vector<DAG> trees;
+  std::vector<MADAG> trees;
   for (auto& path : paths) {
-    std::vector<Mutations> tree_mutations;
-    std::string reference_sequence;
-    trees.emplace_back(LoadDAGFromProtobuf(path, reference_sequence, tree_mutations));
-    mutations.emplace_back(std::move(tree_mutations));
+    trees.emplace_back(LoadDAGFromProtobuf(path));
   }
-  std::string reference_sequence;
-  DAG correct_result = LoadDAGFromJson(correct_path, reference_sequence);
 
-  Merge merge(reference_sequence);
-  std::vector<std::reference_wrapper<const DAG>> tree_refs{trees.begin(), trees.end()};
-  merge.AddTrees(tree_refs, mutations);
+  MADAG correct_result = LoadDAGFromJson(correct_path);
 
-  assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
-               "Nodes count");
+  Merge merge(correct_result.reference_sequence);
+  std::vector<std::reference_wrapper<const MADAG>> tree_refs{trees.begin(),
+                                                             trees.end()};
+  merge.AddTrees(tree_refs);
 
-  assert_equal(correct_result.GetEdges().size(), merge.GetResult().GetEdges().size(),
-               "Edges count");
+  assert_equal(correct_result.dag.GetNodes().size(),
+               merge.GetResult().GetNodes().size(), "Nodes count");
+
+  assert_equal(correct_result.dag.GetEdges().size(),
+               merge.GetResult().GetEdges().size(), "Edges count");
 }
 
 static void test_five_trees() {
@@ -74,44 +71,39 @@ static void test_case_20d() {
     }
   }
 
-  std::vector<std::vector<Mutations>> mutations;
-  std::vector<DAG> trees;
-  std::string reference_sequence;
+  std::vector<MADAG> trees;
 
-  DAG correct_result =
-      LoadDAGFromJson("data/20D_from_fasta/20D_full_dag.json.gz", reference_sequence);
+  MADAG correct_result = LoadDAGFromJson("data/20D_from_fasta/20D_full_dag.json.gz");
 
   trees.resize(paths.size());
-  mutations.resize(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;
   for (size_t i = 0; i < paths.size(); ++i) {
     paths_idx.push_back({i, paths.at(i)});
   }
   // std::cout << "Loading trees ";
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
-    std::vector<Mutations> tree_mutations;
     // std::cout << "." << std::flush;
-    trees.at(path_idx.first) = LoadTreeFromProtobuf(path_idx.second, tree_mutations);
-    mutations.at(path_idx.first) = std::move(tree_mutations);
+    trees.at(path_idx.first) = LoadTreeFromProtobuf(path_idx.second);
   });
   // std::cout << " done.\n";
 
   Benchmark merge_time;
-  Merge merge(reference_sequence);
-  std::vector<std::reference_wrapper<const DAG>> tree_refs{trees.begin(), trees.end()};
+  Merge merge(correct_result.reference_sequence);
+  std::vector<std::reference_wrapper<const MADAG>> tree_refs{trees.begin(),
+                                                             trees.end()};
   merge_time.start();
-  merge.AddTrees(tree_refs, mutations, false);
+  merge.AddTrees(tree_refs, false);
   merge_time.stop();
   std::cout << " DAGs merged in " << merge_time.durationMs() << " ms. ";
 
   // std::cout << "Nodes: " << merge.GetResult().GetNodes().size() << "\n";
   // std::cout << "Edges: " << merge.GetResult().GetEdges().size() << "\n";
 
-  assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
-               "Nodes count");
+  assert_equal(correct_result.dag.GetNodes().size(),
+               merge.GetResult().GetNodes().size(), "Nodes count");
 
-  assert_equal(correct_result.GetEdges().size(), merge.GetResult().GetEdges().size(),
-               "Edges count");
+  assert_equal(correct_result.dag.GetEdges().size(),
+               merge.GetResult().GetEdges().size(), "Edges count");
 }
 
 static void test_add_trees() {
@@ -122,36 +114,29 @@ static void test_add_trees() {
                                      "data/test_5_trees/tree_3.pb.gz",
                                      "data/test_5_trees/tree_4.pb.gz"};
 
-  std::vector<std::vector<Mutations>> mutations1, mutations2;
-  std::vector<DAG> trees1, trees2;
+  std::vector<MADAG> trees1, trees2;
   for (auto& path : paths1) {
-    std::vector<Mutations> tree_mutations;
-    std::string reference_sequence;
-    trees1.emplace_back(LoadDAGFromProtobuf(path, reference_sequence, tree_mutations));
-    mutations1.emplace_back(std::move(tree_mutations));
+    trees1.emplace_back(LoadDAGFromProtobuf(path));
   }
   for (auto& path : paths2) {
-    std::vector<Mutations> tree_mutations;
-    std::string reference_sequence;
-    trees2.emplace_back(LoadDAGFromProtobuf(path, reference_sequence, tree_mutations));
-    mutations2.emplace_back(std::move(tree_mutations));
+    trees2.emplace_back(LoadDAGFromProtobuf(path));
   }
-  std::string reference_sequence;
-  DAG correct_result = LoadDAGFromJson(correct_path, reference_sequence);
 
-  Merge merge(reference_sequence);
-  std::vector<std::reference_wrapper<const DAG>> tree_refs1{trees1.begin(),
-                                                            trees1.end()};
-  merge.AddTrees(tree_refs1, mutations1);
-  std::vector<std::reference_wrapper<const DAG>> tree_refs2{trees2.begin(),
-                                                            trees2.end()};
-  merge.AddTrees(tree_refs2, mutations2);
+  MADAG correct_result = LoadDAGFromJson(correct_path);
 
-  assert_equal(correct_result.GetNodes().size(), merge.GetResult().GetNodes().size(),
-               "Nodes count");
+  Merge merge(correct_result.reference_sequence);
+  std::vector<std::reference_wrapper<const MADAG>> tree_refs1{trees1.begin(),
+                                                              trees1.end()};
+  merge.AddTrees(tree_refs1);
+  std::vector<std::reference_wrapper<const MADAG>> tree_refs2{trees2.begin(),
+                                                              trees2.end()};
+  merge.AddTrees(tree_refs2);
 
-  assert_equal(correct_result.GetEdges().size(), merge.GetResult().GetEdges().size(),
-               "Edges count");
+  assert_equal(correct_result.dag.GetNodes().size(),
+               merge.GetResult().GetNodes().size(), "Nodes count");
+
+  assert_equal(correct_result.dag.GetEdges().size(),
+               merge.GetResult().GetEdges().size(), "Edges count");
 }
 
 [[maybe_unused]] static const auto test0_added = add_test({test_case_2, "Test case 2"});

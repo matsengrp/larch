@@ -5,7 +5,18 @@
 */
 #pragma once
 
-class NodeStorage;
+struct NodeId {
+  size_t value = NoId;
+};
+
+inline bool operator==(NodeId lhs, NodeId rhs) { return lhs.value == rhs.value; }
+
+inline bool operator<(NodeId lhs, NodeId rhs) { return lhs.value < rhs.value; }
+
+template <>
+struct std::hash<NodeId> {
+  size_t operator()(NodeId id) const noexcept { return id.value; }
+};
 
 template <typename T>
 class NodeView {

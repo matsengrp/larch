@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "common.hpp"
+#include "edge_mutations.hpp"
 
 class CompactGenome {
   std::vector<std::pair<MutationPosition, char>> mutations_ = {};
@@ -16,10 +16,10 @@ class CompactGenome {
   CompactGenome& operator=(CompactGenome&&) = default;
   CompactGenome& operator=(const CompactGenome&) = delete;
 
-  CompactGenome(const Mutations& mutations, const CompactGenome& parent,
+  CompactGenome(const EdgeMutations& mutations, const CompactGenome& parent,
                 std::string_view reference_sequence);
 
-  CompactGenome(Node root, const std::vector<Mutations>& edge_mutations,
+  CompactGenome(Node root, const std::vector<EdgeMutations>& edge_mutations,
                 std::string_view reference_sequence);
 
   CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations);
@@ -38,9 +38,9 @@ class CompactGenome {
 
   CompactGenome Copy() const;
 
-  static Mutations ToEdgeMutations(std::string_view reference_sequence,
-                                   const CompactGenome& parent,
-                                   const CompactGenome& child);
+  static EdgeMutations ToEdgeMutations(std::string_view reference_sequence,
+                                       const CompactGenome& parent,
+                                       const CompactGenome& child);
 
  private:
   static size_t ComputeHash(

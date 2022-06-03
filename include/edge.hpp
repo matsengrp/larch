@@ -7,6 +7,22 @@
 
 #include <optional>
 
+struct EdgeId {
+  size_t value = NoId;
+};
+
+inline bool operator==(EdgeId lhs, EdgeId rhs) { return lhs.value == rhs.value; }
+
+inline bool operator<(EdgeId lhs, EdgeId rhs) { return lhs.value < rhs.value; }
+
+struct CladeIdx {
+  size_t value = NoId;
+};
+
+inline bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs.value == rhs.value; }
+
+inline bool operator<(CladeIdx lhs, CladeIdx rhs) { return lhs.value < rhs.value; }
+
 template <typename T>
 class EdgeView {
  public:
