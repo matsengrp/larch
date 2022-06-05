@@ -67,10 +67,15 @@ add_library(larch
     src/dag_loader.cpp
     src/edge_label.cpp
     src/edge_mutations.cpp
+    src/edge.cpp
     src/leaf_set.cpp
     src/merge.cpp
+    src/mutation_annotated_dag.cpp
     src/node_label.cpp
-    src/node_storage.cpp)
+    src/node_storage.cpp
+    src/node.cpp
+    src/post_order_iterator.cpp
+    src/pre_order_iterator.cpp)
 larch_compile_opts(larch)
 larch_link_opts(larch)
 

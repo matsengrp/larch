@@ -17,8 +17,7 @@
 #include <range/v3/action/sort.hpp>
 #include <range/v3/action/unique.hpp>
 
-#include "dag.hpp"
-#include "compact_genome.hpp"
+#include "mutation_annotated_dag.hpp"
 #include "leaf_set.hpp"
 #include "node_label.hpp"
 #include "edge_label.hpp"
@@ -29,12 +28,6 @@ using ConcurrentUnorderedSet =
 template <typename K, typename V>
 using ConcurrentUnorderedMap =
     tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
-
-struct MADAG {
-  DAG dag;
-  std::string reference_sequence;
-  std::vector<EdgeMutations> edge_mutations;
-};
 
 class Merge {
  public:
@@ -63,12 +56,6 @@ class Merge {
   void ComputeLeafSets(const std::vector<size_t>& tree_idxs, bool show_progress);
 
   void MergeTrees(const std::vector<size_t>& tree_idxs);
-
-  static std::vector<CompactGenome> ComputeCompactGenomes(
-      const MADAG& tree, std::string_view reference_sequence);
-
-  static std::vector<CompactGenome> ComputeCompactGenomesDAG(
-      const MADAG& dag, std::string_view reference_sequence);
 
   static std::vector<LeafSet> ComputeLeafSets(const MADAG& tree,
                                               const std::vector<NodeLabel>& labels);

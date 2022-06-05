@@ -1,3 +1,7 @@
+#include "pre_order_iterator.hpp"
+
+#include "dag.hpp"
+
 template <typename NodeType>
 PreOrderIterator<NodeType>::PreOrderIterator(NodeType node) {
   stack_.push(*node.GetChildren().begin());
@@ -70,3 +74,6 @@ PreOrderIterator<NodeType>::GetFirstChild(EdgeType edge) {
   if (edge.IsLeaf()) return std::nullopt;
   return *edge.GetChild().GetChildren().begin();
 }
+
+template class PreOrderIterator<Node>;
+template class PreOrderIterator<MutableNode>;

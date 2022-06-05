@@ -5,6 +5,10 @@
 #include <vector>
 #include <range/v3/view/transform.hpp>
 
+struct NodeId;
+struct EdgeId;
+struct CladeIdx;
+
 class DAG;
 template <typename>
 class NodeView;

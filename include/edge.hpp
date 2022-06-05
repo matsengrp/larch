@@ -7,6 +7,8 @@
 
 #include <optional>
 
+#include "common.hpp"
+
 struct EdgeId {
   size_t value = NoId;
 };
@@ -55,3 +57,23 @@ class EdgeView {
   T dag_;
   const EdgeId id_;
 };
+
+template <typename T>
+inline bool operator==(EdgeView<T> lhs, EdgeView<T> rhs) {
+  return std::addressof(lhs.dag_) == std::addressof(rhs.dag_) && lhs.id_ == rhs.id_;
+}
+
+namespace std {
+template <typename T>
+struct tuple_size<::EdgeView<T>> : integral_constant<size_t, 2> {};
+
+template <size_t Index, typename T>
+struct tuple_element<Index, ::EdgeView<T>>
+    : tuple_element<Index, tuple<NodeView<T>, NodeView<T>>> {};
+}  // namespace std
+
+template <std::size_t Index, typename T>
+std::tuple_element_t<Index, EdgeView<T>> get(EdgeView<T> edge) {
+  if constexpr (Index == 0) return edge.GetParent();
+  if constexpr (Index == 1) return edge.GetChild();
+}

@@ -81,7 +81,7 @@ void Merge::ComputeCompactGenomes(const std::vector<size_t>& tree_idxs,
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     labels.resize(tree.dag.GetNodes().size());
     std::vector<CompactGenome> computed_cgs =
-        ComputeCompactGenomesDAG(tree, reference_sequence_);
+        tree.ComputeCompactGenomesDAG(reference_sequence_);
     for (size_t node_idx = 0; node_idx < tree.dag.GetNodes().size(); ++node_idx) {
       auto cg_iter = all_compact_genomes_.insert(std::move(computed_cgs.at(node_idx)));
       labels.at(node_idx).compact_genome = std::addressof(*cg_iter.first);
@@ -162,44 +162,6 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
     result_dag_.AddEdge(edge_id, parent->second, child->second, {0});
     edge_id.value++;
   }
-}
-
-std::vector<CompactGenome> Merge::ComputeCompactGenomes(
-    const MADAG& tree, std::string_view reference_sequence) {
-  std::vector<CompactGenome> result;
-  result.resize(tree.dag.GetNodes().size());
-  for (auto [node, edge] : tree.dag.TraversePreOrder()) {
-    const EdgeMutations& mutations = tree.edge_mutations.at(edge.GetId().value);
-    const CompactGenome& parent = result.at(edge.GetParentId().value);
-    CompactGenome& compact_genome = result.at(node.GetId().value);
-    compact_genome = CompactGenome{mutations, parent, reference_sequence};
-  }
-  return result;
-}
-
-std::vector<CompactGenome> Merge::ComputeCompactGenomesDAG(
-    const MADAG& dag, std::string_view reference_sequence) {
-  std::vector<CompactGenome> result;
-  result.resize(dag.dag.GetNodes().size());
-  auto ComputeCG = [&](auto& self, Node node) {
-    CompactGenome& compact_genome = result.at(node.GetId().value);
-    if (node.IsRoot()) {
-      compact_genome = CompactGenome(node, dag.edge_mutations, reference_sequence);
-      return;
-    }
-    if (not compact_genome.empty()) {
-      return;
-    }
-    Edge edge = *node.GetParents().begin();
-    self(self, edge.GetParent());
-    const EdgeMutations& mutations = dag.edge_mutations.at(edge.GetId().value);
-    const CompactGenome& parent = result.at(edge.GetParentId().value);
-    compact_genome = CompactGenome{mutations, parent, reference_sequence};
-  };
-  for (Node node : dag.dag.GetNodes()) {
-    ComputeCG(ComputeCG, node);
-  }
-  return result;
 }
 
 std::vector<LeafSet> Merge::ComputeLeafSets(const MADAG& tree,

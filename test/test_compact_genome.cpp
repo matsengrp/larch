@@ -4,7 +4,7 @@
 #include "dag_loader.hpp"
 #include "merge.hpp"
 
-static void do_test(std::string_view path) {
+static void test_edge_mutations(std::string_view path) {
   MADAG tree = LoadDAGFromProtobuf(path);
   Merge merge{tree.reference_sequence};
   std::vector<std::reference_wrapper<const MADAG>> tree_refs;
@@ -27,12 +27,19 @@ static void do_test(std::string_view path) {
   Assert(failed == 0);
 }
 
-static void test_5_trees() { do_test("data/test_5_trees/tree_0.pb.gz"); }
-
-static void test_800_trees() { do_test("data/20D_from_fasta/20D_full_dag.pb.gz"); }
-
 [[maybe_unused]] static const auto test_added0 =
-    add_test({test_5_trees, "Compact genome: 5 trees"});
+    add_test({[] { test_edge_mutations("data/test_5_trees/tree_0.pb.gz"); },
+              "Edge mutations: test_5_trees"});
 
-[[maybe_unused]] static const auto test_added2 =
-    add_test({test_800_trees, "Compact genome: 800 trees"});
+[[maybe_unused]] static const auto test_added1 =
+    add_test({[] { test_edge_mutations("data/testcase2/full_dag.pb.gz"); },
+              "Edge mutations: testcase2"});
+
+// [[maybe_unused]] static const auto test_added2 =
+//     add_test({[] {
+//       test_edge_mutations("data/testcaseref/tree_1_newref.pb.gz");
+//     }, "Edge mutations: testcaseref"});
+
+[[maybe_unused]] static const auto test_added3 =
+    add_test({[] { test_edge_mutations("data/20D_from_fasta/20D_full_dag.pb.gz"); },
+              "Edge mutations: 20D_from_fasta"});

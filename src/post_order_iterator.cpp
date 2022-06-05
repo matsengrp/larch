@@ -1,3 +1,7 @@
+#include "post_order_iterator.hpp"
+
+#include "dag.hpp"
+
 template <typename NodeType>
 PostOrderIterator<NodeType>::PostOrderIterator(NodeType node) {
   stack_.push(*node.GetChildren().begin());
@@ -63,3 +67,6 @@ void PostOrderIterator<NodeType>::PushToNextLeaf() {
     stack_.push(*stack_.top().GetChild().GetChildren().begin());
   }
 }
+
+template class PostOrderIterator<Node>;
+template class PostOrderIterator<MutableNode>;

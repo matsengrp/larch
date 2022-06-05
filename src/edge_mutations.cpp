@@ -9,11 +9,13 @@ auto EdgeMutations::end() const -> decltype(mutations_.end()) {
 }
 
 auto EdgeMutations::operator[](MutationPosition pos) -> decltype(mutations_[pos]) {
+  Assert(pos.value != NoId);
   return mutations_[pos];
 }
 
 auto EdgeMutations::insert(std::pair<MutationPosition, std::pair<char, char>> mut)
     -> decltype(mutations_.insert(mut)) {
+  Assert(mut.first.value != NoId);
   return mutations_.insert(mut);
 }
 

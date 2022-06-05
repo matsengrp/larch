@@ -94,9 +94,7 @@ class DAG {
 
 #include "pre_order_iterator.hpp"
 #include "post_order_iterator.hpp"
+
 #include "impl/node_impl.hpp"
-#include "impl/edge_impl.hpp"
 #include "impl/dag_impl.hpp"
-#include "impl/pre_order_iterator_impl.hpp"
-#include "impl/post_order_iterator_impl.hpp"
 #include "impl/traverse_value_impl.hpp"

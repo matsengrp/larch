@@ -5,6 +5,8 @@
 */
 #pragma once
 
+#include "common.hpp"
+
 struct NodeId {
   size_t value = NoId;
 };
@@ -35,9 +37,9 @@ class NodeView {
   EdgeType GetSingleParent() const;
   bool IsRoot() const;
   bool IsLeaf() const;
-  void AddParentEdge(Edge edge);
-  void AddChildEdge(Edge edge);
-  void RemoveParentEdge(Edge edge);
+  void AddParentEdge(Edge edge) const;
+  void AddChildEdge(Edge edge) const;
+  void RemoveParentEdge(Edge edge) const;
 
  private:
   template <typename U>
@@ -48,3 +50,8 @@ class NodeView {
   T dag_;
   const NodeId id_;
 };
+
+template <typename T>
+inline bool operator==(NodeView<T> lhs, NodeView<T> rhs) {
+  return std::addressof(lhs.dag_) == std::addressof(rhs.dag_) && lhs.id_ == rhs.id_;
+}

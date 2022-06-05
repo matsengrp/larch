@@ -1,5 +1,8 @@
 #pragma once
 
+#include "node.hpp"
+#include "edge.hpp"
+
 template <typename T>
 class TraverseValue {
  public:
