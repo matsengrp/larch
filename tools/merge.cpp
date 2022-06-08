@@ -50,8 +50,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
 
   Benchmark merge_time;
   Merge merge(reference_sequence);
-  std::vector<std::reference_wrapper<const MADAG>> tree_refs{trees.begin(),
-                                                             trees.end()};
+  std::vector<std::reference_wrapper<MADAG>> tree_refs{trees.begin(), trees.end()};
   merge_time.start();
   merge.AddTrees(tree_refs, true);
   merge_time.stop();

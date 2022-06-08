@@ -95,17 +95,15 @@ static void Print(const DeepNodeLabel& label) {
 static int TakeDiff(std::string_view proto_filename, std::string_view json_filename) {
   MADAG lhs = LoadDAGFromProtobuf(proto_filename);
   Merge lhs_merge{lhs.reference_sequence};
-  std::vector<std::reference_wrapper<const MADAG>> lhs_tree_refs;
+  std::vector<std::reference_wrapper<MADAG>> lhs_tree_refs;
   lhs_tree_refs.push_back(lhs);
   lhs_merge.AddTrees(lhs_tree_refs, true);
 
-  std::vector<std::vector<CompactGenome>> rhs_compact_genomes;
   MADAG rhs = LoadDAGFromJson(json_filename);
-  rhs_compact_genomes.push_back(LoadCompactGenomesJson(json_filename));
   Merge rhs_merge{rhs.reference_sequence};
-  std::vector<std::reference_wrapper<const MADAG>> rhs_tree_refs;
+  std::vector<std::reference_wrapper<MADAG>> rhs_tree_refs;
   rhs_tree_refs.push_back(rhs);
-  rhs_merge.AddDAGs(rhs_tree_refs, std::move(rhs_compact_genomes), true);
+  rhs_merge.AddDAGs(rhs_tree_refs, true);
 
   size_t not_found_in_lhs = 0, not_found_in_rhs = 0;
 

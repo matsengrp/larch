@@ -145,6 +145,26 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
   }
 }
 
+static CompactGenome GetCompactGenome(const nlohmann::json& json,
+                                      size_t compact_genome_index) {
+  std::vector<std::pair<MutationPosition, char>> result;
+  result.reserve(json["compact_genomes"][compact_genome_index].size());
+  for (auto& mutation : json["compact_genomes"][compact_genome_index]) {
+    MutationPosition position = {mutation[0]};
+    // std::string par_nuc = mutation[1][0].get<std::string>();
+    // Assert(par_nuc.size() == 1);
+    std::string mut_nuc = mutation[1][1].get<std::string>();
+    Assert(mut_nuc.size() == 1);
+    result.emplace_back(position, mut_nuc.at(0));
+  }
+  std::sort(result.begin(), result.end(),
+            [](auto lhs, auto rhs) { return lhs.first < rhs.first; });
+  result.erase(std::unique(result.begin(), result.end(),
+                           [](auto lhs, auto rhs) { return lhs.first == rhs.first; }),
+               result.end());
+  return result;
+}
+
 /*
 
 compact_genome_list is a sorted list of compact genomes, where each compact
@@ -172,43 +192,14 @@ MADAG LoadDAGFromJson(std::string_view path) {
   size_t id = 0;
   for ([[maybe_unused]] auto& i : json["nodes"]) {
     result.dag.AddNode({id++});
+    size_t compact_genome_index = i[0];
+    result.compact_genomes.push_back(GetCompactGenome(json, compact_genome_index));
   }
   id = 0;
   for (auto& i : json["edges"]) {
     result.dag.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
   }
   result.dag.BuildConnections();
-  return result;
-}
-
-static CompactGenome GetCompactGenome(const nlohmann::json& json,
-                                      size_t compact_genome_index) {
-  std::vector<std::pair<MutationPosition, char>> result;
-  result.reserve(json["compact_genomes"][compact_genome_index].size());
-  for (auto& mutation : json["compact_genomes"][compact_genome_index]) {
-    MutationPosition position = {mutation[0]};
-    // std::string par_nuc = mutation[1][0].get<std::string>();
-    // Assert(par_nuc.size() == 1);
-    std::string mut_nuc = mutation[1][1].get<std::string>();
-    Assert(mut_nuc.size() == 1);
-    result.emplace_back(position, mut_nuc.at(0));
-  }
-  std::sort(result.begin(), result.end(),
-            [](auto lhs, auto rhs) { return lhs.first < rhs.first; });
-  result.erase(std::unique(result.begin(), result.end(),
-                           [](auto lhs, auto rhs) { return lhs.first == rhs.first; }),
-               result.end());
-  return result;
-}
-
-std::vector<CompactGenome> LoadCompactGenomesJson(std::string_view path) {
-  nlohmann::json json = LoadJson(path);
-
-  std::vector<CompactGenome> result;
-  for (auto& node : json["nodes"]) {
-    size_t compact_genome_index = node[0];
-    result.push_back(GetCompactGenome(json, compact_genome_index++));
-  }
   return result;
 }
 
@@ -277,6 +268,7 @@ static std::string EdgeMutationsToString(Node node, const MADAG& dag) {
   size_t count = 0;
   for (auto [pos, muts] :
        dag.edge_mutations.at((*node.GetParents().begin()).GetId().value)) {
+    result += muts.first;
     result += std::to_string(pos.value);
     result += muts.second;
     result += ++count % 3 == 0 ? "\\n" : " ";

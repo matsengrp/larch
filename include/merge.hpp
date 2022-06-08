@@ -38,11 +38,10 @@ class Merge {
   Merge& operator=(Merge&&) = delete;
   Merge& operator=(const Merge&) = delete;
 
-  void AddTrees(const std::vector<std::reference_wrapper<const MADAG>>& trees,
+  void AddTrees(const std::vector<std::reference_wrapper<MADAG>>& trees,
                 bool show_progress = false);
 
-  void AddDAGs(const std::vector<std::reference_wrapper<const MADAG>>& dags,
-               std::vector<std::vector<CompactGenome>>&& compact_genomes,
+  void AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& dags,
                bool show_progress = false);
 
   DAG& GetResult();
@@ -64,7 +63,7 @@ class Merge {
                                                  const std::vector<NodeLabel>& labels);
 
   std::string_view reference_sequence_;
-  std::vector<std::reference_wrapper<const MADAG>> trees_;
+  std::vector<std::reference_wrapper<MADAG>> trees_;
 
   ConcurrentUnorderedSet<CompactGenome> all_compact_genomes_;
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;

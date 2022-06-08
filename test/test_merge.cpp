@@ -18,8 +18,7 @@ static void test_protobuf(const std::string& correct_path,
   MADAG correct_result = LoadDAGFromJson(correct_path);
 
   Merge merge(correct_result.reference_sequence);
-  std::vector<std::reference_wrapper<const MADAG>> tree_refs{trees.begin(),
-                                                             trees.end()};
+  std::vector<std::reference_wrapper<MADAG>> tree_refs{trees.begin(), trees.end()};
   merge.AddTrees(tree_refs);
 
   assert_equal(correct_result.dag.GetNodes().size(),
@@ -89,8 +88,7 @@ static void test_case_20d() {
 
   Benchmark merge_time;
   Merge merge(correct_result.reference_sequence);
-  std::vector<std::reference_wrapper<const MADAG>> tree_refs{trees.begin(),
-                                                             trees.end()};
+  std::vector<std::reference_wrapper<MADAG>> tree_refs{trees.begin(), trees.end()};
   merge_time.start();
   merge.AddTrees(tree_refs, false);
   merge_time.stop();
@@ -125,11 +123,9 @@ static void test_add_trees() {
   MADAG correct_result = LoadDAGFromJson(correct_path);
 
   Merge merge(correct_result.reference_sequence);
-  std::vector<std::reference_wrapper<const MADAG>> tree_refs1{trees1.begin(),
-                                                              trees1.end()};
+  std::vector<std::reference_wrapper<MADAG>> tree_refs1{trees1.begin(), trees1.end()};
   merge.AddTrees(tree_refs1);
-  std::vector<std::reference_wrapper<const MADAG>> tree_refs2{trees2.begin(),
-                                                              trees2.end()};
+  std::vector<std::reference_wrapper<MADAG>> tree_refs2{trees2.begin(), trees2.end()};
   merge.AddTrees(tree_refs2);
 
   assert_equal(correct_result.dag.GetNodes().size(),

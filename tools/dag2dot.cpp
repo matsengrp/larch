@@ -94,26 +94,25 @@ int main(int argc, char** argv) {
     case InputType::DagJson:
       dag = LoadDAGFromJson(path);
       std::map<NodeId, NodeId> index = dag.dag.ReindexPreOrder();
-      std::vector<CompactGenome> compact_genomes = LoadCompactGenomesJson(path);
       {
         std::vector<CompactGenome> reindexed_cgs;
-        reindexed_cgs.reserve(compact_genomes.size());
+        reindexed_cgs.reserve(dag.compact_genomes.size());
         for (auto [prev, curr] : index) {
-          reindexed_cgs.emplace_back(std::move(compact_genomes.at(curr.value)));
+          reindexed_cgs.emplace_back(std::move(dag.compact_genomes.at(curr.value)));
         }
-        compact_genomes = std::move(reindexed_cgs);
+        dag.compact_genomes = std::move(reindexed_cgs);
       }
       if (muts) {
         dag.edge_mutations.resize(dag.dag.GetEdges().size());
         for (Edge edge : dag.dag.GetEdges()) {
           auto [parent, child] = edge.GetNodeIds();
           dag.edge_mutations.at(edge.GetId().value) = CompactGenome::ToEdgeMutations(
-              dag.reference_sequence, compact_genomes.at(parent.value),
-              compact_genomes.at(child.value));
+              dag.reference_sequence, dag.compact_genomes.at(parent.value),
+              dag.compact_genomes.at(child.value));
         }
         EdgeMutationsDAGToDOT(dag, std::cout);
       } else {
-        CompactGenomeDAGToDOT(dag, compact_genomes, std::cout);
+        CompactGenomeDAGToDOT(dag, dag.compact_genomes, std::cout);
       }
       break;
   }

@@ -10,6 +10,7 @@ struct MADAG {
   DAG dag;
   std::string reference_sequence;
   std::vector<EdgeMutations> edge_mutations;
+  std::vector<CompactGenome> compact_genomes;
 
   std::vector<CompactGenome> ComputeCompactGenomes(
       std::string_view reference_sequence) const;

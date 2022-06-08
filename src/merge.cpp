@@ -3,7 +3,7 @@
 Merge::Merge(std::string_view reference_sequence)
     : reference_sequence_{reference_sequence} {}
 
-void Merge::AddTrees(const std::vector<std::reference_wrapper<const MADAG>>& trees,
+void Merge::AddTrees(const std::vector<std::reference_wrapper<MADAG>>& trees,
                      bool show_progress) {
   std::vector<size_t> tree_idxs;
   tree_idxs.resize(trees.size());
@@ -20,8 +20,7 @@ void Merge::AddTrees(const std::vector<std::reference_wrapper<const MADAG>>& tre
   result_dag_.BuildConnections();
 }
 
-void Merge::AddDAGs(const std::vector<std::reference_wrapper<const MADAG>>& dags,
-                    std::vector<std::vector<CompactGenome>>&& compact_genomes,
+void Merge::AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& dags,
                     bool show_progress) {
   std::vector<size_t> tree_idxs;
   tree_idxs.resize(dags.size());
@@ -31,14 +30,15 @@ void Merge::AddDAGs(const std::vector<std::reference_wrapper<const MADAG>>& dags
   tree_labels_.resize(trees_.size());
 
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const MADAG& tree = trees_.at(tree_idx).get();
+    MADAG& tree = trees_.at(tree_idx).get();
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     labels.resize(tree.dag.GetNodes().size());
     for (size_t node_idx = 0; node_idx < tree.dag.GetNodes().size(); ++node_idx) {
-      auto cg_iter = all_compact_genomes_.insert(
-          std::move(compact_genomes.at(tree_idx).at(node_idx)));
+      auto cg_iter =
+          all_compact_genomes_.insert(std::move(tree.compact_genomes.at(node_idx)));
       labels.at(node_idx).compact_genome = std::addressof(*cg_iter.first);
     }
+    tree.compact_genomes.resize(0);
   });
 
   ComputeLeafSets(tree_idxs, show_progress);
