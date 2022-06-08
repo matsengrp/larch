@@ -77,16 +77,12 @@ int main(int argc, char** argv) {
   switch (type) {
     case InputType::TreePB:
       dag = LoadTreeFromProtobuf(path);
-      EdgeMutationsDAGToDOT(dag, std::cout);
       break;
     case InputType::DagPB:
       dag = LoadDAGFromProtobuf(path);
       if (cgs) {
         Assert(not dag.reference_sequence.empty());
-        CompactGenomeDAGToDOT(dag, dag.ComputeCompactGenomesDAG(dag.reference_sequence),
-                              std::cout);
-      } else {
-        EdgeMutationsDAGToDOT(dag, std::cout);
+        dag.compact_genomes = dag.ComputeCompactGenomesDAG(dag.reference_sequence);
       }
       break;
     case InputType::DagJson:
@@ -99,12 +95,10 @@ int main(int argc, char** argv) {
               dag.reference_sequence, dag.compact_genomes.at(parent.value),
               dag.compact_genomes.at(child.value));
         }
-        EdgeMutationsDAGToDOT(dag, std::cout);
-      } else {
-        CompactGenomeDAGToDOT(dag, dag.compact_genomes, std::cout);
       }
       break;
   }
+  MADAGToDOT(dag, std::cout);
 
   return EXIT_SUCCESS;
 }

@@ -270,30 +270,16 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
   data.SerializeToOstream(&file);
 }
 
-static std::string EdgeMutationsToString(Node node, const MADAG& dag) {
-  if (node.IsRoot()) {
-    return "p";
-  }
-  std::string result = std::to_string(node.GetId().value);
-  result += "\\n";
+static std::string EdgeMutationsToString(Edge edge, const MADAG& dag) {
+  std::string result;
   size_t count = 0;
-  for (auto [pos, muts] :
-       dag.edge_mutations.at((*node.GetParents().begin()).GetId().value)) {
+  for (auto [pos, muts] : dag.edge_mutations.at(edge.GetId().value)) {
     result += muts.first;
     result += std::to_string(pos.value);
     result += muts.second;
     result += ++count % 3 == 0 ? "\\n" : " ";
   }
   return result;
-}
-
-void EdgeMutationsDAGToDOT(const MADAG& dag, std::ostream& out) {
-  out << "digraph {\n";
-  for (auto [parent, child] : dag.dag.GetEdges()) {
-    out << "  \"" << EdgeMutationsToString(parent, dag) << "\" -> \""
-        << EdgeMutationsToString(child, dag) << "\"\n";
-  }
-  out << "}\n";
 }
 
 static std::string CompactGenomeToString(
@@ -312,13 +298,24 @@ static std::string CompactGenomeToString(
   return result;
 }
 
-void CompactGenomeDAGToDOT(const MADAG& dag,
-                           const std::vector<CompactGenome>& compact_genomes,
-                           std::ostream& out) {
+void MADAGToDOT(const MADAG& dag, std::ostream& out) {
   out << "digraph {\n";
-  for (auto [parent, child] : dag.dag.GetEdges()) {
-    out << "  \"" << CompactGenomeToString(parent, compact_genomes) << "\" -> \""
-        << CompactGenomeToString(child, compact_genomes) << "\"\n";
+  out << "  forcelabels=true\n";
+  out << "  nodesep=5.0\n";
+  for (Edge edge : dag.dag.GetEdges()) {
+    auto [parent, child] = edge;
+    if (dag.compact_genomes.empty()) {
+      out << parent.GetId().value << " -> " << child.GetId().value;
+    } else {
+      out << "  \"" << CompactGenomeToString(parent, dag.compact_genomes) << "\" -> \""
+          << CompactGenomeToString(child, dag.compact_genomes) << "\"";
+    }
+    if (not dag.edge_mutations.empty()) {
+      out << "[ xlabel=\"";
+      out << EdgeMutationsToString(edge, dag);
+      out << "\" ]";
+    }
+    out << "\n";
   }
   out << "}\n";
 }
