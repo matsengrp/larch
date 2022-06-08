@@ -6,9 +6,9 @@
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
-  std::cout << "dag2dot -t,--tree-pb file";
-  std::cout << "dag2dot [-c,--cgs] -d,--dag-pb file";
-  std::cout << "dag2dot [-m,--muts] -j,--dag-json file";
+  std::cout << "dag2dot -t,--tree-pb file\n";
+  std::cout << "dag2dot [-c,--cgs] -d,--dag-pb file\n";
+  std::cout << "dag2dot [-m,--muts] -j,--dag-json file\n";
   std::cout << "  -t,--tree-pb   Input protobuf tree filename\n";
   std::cout << "  -d,--dag-pb    Input protobuf DAG filename\n";
   std::cout << "  -j,--dag-json  Input json DAG filename\n";
@@ -77,11 +77,14 @@ int main(int argc, char** argv) {
   switch (type) {
     case InputType::TreePB:
       dag = LoadTreeFromProtobuf(path);
+      dag.dag.ReindexPreOrder();
       EdgeMutationsDAGToDOT(dag, std::cout);
       break;
     case InputType::DagPB:
       dag = LoadDAGFromProtobuf(path);
+      dag.dag.ReindexPreOrder();
       if (cgs) {
+        Assert(not dag.reference_sequence.empty());
         CompactGenomeDAGToDOT(dag, dag.ComputeCompactGenomesDAG(dag.reference_sequence),
                               std::cout);
       } else {
@@ -90,7 +93,16 @@ int main(int argc, char** argv) {
       break;
     case InputType::DagJson:
       dag = LoadDAGFromJson(path);
+      std::map<NodeId, NodeId> index = dag.dag.ReindexPreOrder();
       std::vector<CompactGenome> compact_genomes = LoadCompactGenomesJson(path);
+      {
+        std::vector<CompactGenome> reindexed_cgs;
+        reindexed_cgs.reserve(compact_genomes.size());
+        for (auto [prev, curr] : index) {
+          reindexed_cgs.emplace_back(std::move(compact_genomes.at(curr.value)));
+        }
+        compact_genomes = std::move(reindexed_cgs);
+      }
       if (muts) {
         dag.edge_mutations.resize(dag.dag.GetEdges().size());
         for (Edge edge : dag.dag.GetEdges()) {

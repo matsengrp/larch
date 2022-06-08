@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <vector>
 #include <string_view>
+#include <map>
 
 #include "common.hpp"
 #include "node.hpp"
@@ -70,6 +71,8 @@ class DAG {
   inline auto TraversePreOrder();
   inline auto TraversePostOrder() const;
   inline auto TraversePostOrder();
+
+  std::map<NodeId, NodeId> ReindexPreOrder();
 
   ArbitraryPrecisionInteger CountHistories() const;
   void WriteProtobuf(std::string_view filename) const;

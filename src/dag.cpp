@@ -55,3 +55,25 @@ MutableEdge DAG::Get(EdgeId id) { return {*this, id}; }
 Node DAG::GetRoot() const { return {*this, root_}; }
 
 MutableNode DAG::GetRoot() { return {*this, root_}; }
+
+std::map<NodeId, NodeId> DAG::ReindexPreOrder() {
+  std::map<NodeId, NodeId> index;
+  NodeId id = {0};
+  auto Reindex = [&](auto& self, Node node) -> void {
+    if (index.find(node.GetId()) != index.end()) {
+      return;
+    }
+    index[node.GetId()] = id;
+    ++id.value;
+    for (Node child : node.GetChildren() | Transform::GetChild()) {
+      self(self, child);
+    }
+  };
+  Reindex(Reindex, GetRoot());
+  for (auto& edge : edges_) {
+    edge.parent_ = index.at(edge.parent_);
+    edge.child_ = index.at(edge.child_);
+  }
+  BuildConnections();
+  return index;
+}

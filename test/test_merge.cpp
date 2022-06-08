@@ -139,15 +139,17 @@ static void test_add_trees() {
                merge.GetResult().GetEdges().size(), "Edges count");
 }
 
-[[maybe_unused]] static const auto test0_added = add_test({test_case_2, "Test case 2"});
+[[maybe_unused]] static const auto test0_added =
+    add_test({test_case_2, "Merge: Test case 2"});
 
 [[maybe_unused]] static const auto test1_added =
-    add_test({test_five_trees, "Merge 5 trees"});
+    add_test({test_five_trees, "Merge: 5 trees"});
 
 [[maybe_unused]] static const auto test2_added =
-    add_test({test_case_ref, "Tree with different ref"});
+    add_test({test_case_ref, "Merge: Tree with different ref"});
 
-[[maybe_unused]] static const auto test3_added = add_test({test_case_20d, "800 trees"});
+[[maybe_unused]] static const auto test3_added =
+    add_test({test_case_20d, "Merge: 800 trees"});
 
 [[maybe_unused]] static const auto test4_added =
-    add_test({test_add_trees, "Add trees"});
+    add_test({test_add_trees, "Merge: Add trees"});
