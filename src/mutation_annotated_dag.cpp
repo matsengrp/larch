@@ -26,11 +26,12 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomesDAG(
     if (not compact_genome.empty()) {
       return;
     }
-    Edge edge = *node.GetParents().begin();
-    self(self, edge.GetParent());
-    const EdgeMutations& mutations = edge_mutations.at(edge.GetId().value);
-    const CompactGenome& parent = result.at(edge.GetParentId().value);
-    compact_genome = CompactGenome{mutations, parent, reference_sequence};
+    for (Edge edge : node.GetParents()) {
+      self(self, edge.GetParent());
+      const EdgeMutations& mutations = edge_mutations.at(edge.GetId().value);
+      const CompactGenome& parent = result.at(edge.GetParentId().value);
+      compact_genome.AddParentEdge(mutations, parent, reference_sequence);
+    }
   };
   for (Node node : dag.GetNodes()) {
     ComputeCG(ComputeCG, node);

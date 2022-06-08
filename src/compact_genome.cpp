@@ -71,6 +71,18 @@ CompactGenome::CompactGenome(Node root,
 CompactGenome::CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations)
     : mutations_{mutations}, hash_{ComputeHash(mutations_)} {}
 
+void CompactGenome::AddParentEdge(const EdgeMutations& mutations,
+                                  const CompactGenome& parent,
+                                  std::string_view reference_sequence) {
+  std::vector<std::pair<MutationPosition, char>> mutations_copy = mutations_;
+  mutations_.clear();
+  std::set_union(mutations_copy.begin(), mutations_copy.end(),
+                 parent.mutations_.begin(), parent.mutations_.end(),
+                 std::back_inserter(mutations_));
+  ComputeMutations(mutations, reference_sequence, mutations_);
+  hash_ = ComputeHash(mutations_);
+}
+
 bool CompactGenome::operator==(const CompactGenome& rhs) const noexcept {
   if (hash_ != rhs.hash_) return false;
   return mutations_ == rhs.mutations_;

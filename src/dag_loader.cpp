@@ -188,8 +188,8 @@ static CompactGenome GetCompactGenome(const nlohmann::json& json,
   for (auto& mutation : json["compact_genomes"][compact_genome_index]) {
     MutationPosition position = {mutation[0]};
     // std::string par_nuc = mutation[1][0].get<std::string>();
-    std::string mut_nuc = mutation[1][1].get<std::string>();
     // Assert(par_nuc.size() == 1);
+    std::string mut_nuc = mutation[1][1].get<std::string>();
     Assert(mut_nuc.size() == 1);
     result.emplace_back(position, mut_nuc.at(0));
   }
@@ -207,7 +207,7 @@ std::vector<CompactGenome> LoadCompactGenomesJson(std::string_view path) {
   std::vector<CompactGenome> result;
   for (auto& node : json["nodes"]) {
     size_t compact_genome_index = node[0];
-    result.push_back(GetCompactGenome(json, compact_genome_index));
+    result.push_back(GetCompactGenome(json, compact_genome_index++));
   }
   return result;
 }
@@ -266,4 +266,56 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
 
   std::ofstream file{std::string{path}};
   data.SerializeToOstream(&file);
+}
+
+static std::string EdgeMutationsToString(Node node, const MADAG& dag) {
+  if (node.IsRoot()) {
+    return "p";
+  }
+  std::string result = std::to_string(node.GetId().value);
+  result += "\\n";
+  size_t count = 0;
+  for (auto [pos, muts] :
+       dag.edge_mutations.at((*node.GetParents().begin()).GetId().value)) {
+    result += std::to_string(pos.value);
+    result += muts.second;
+    result += ++count % 3 == 0 ? "\\n" : " ";
+  }
+  return result;
+}
+
+void EdgeMutationsDAGToDOT(const MADAG& dag, std::ostream& out) {
+  out << "digraph {\n";
+  for (auto [parent, child] : dag.dag.GetEdges()) {
+    out << "  \"" << EdgeMutationsToString(parent, dag) << "\" -> \""
+        << EdgeMutationsToString(child, dag) << "\"\n";
+  }
+  out << "}\n";
+}
+
+static std::string CompactGenomeToString(
+    Node node, const std::vector<CompactGenome>& compact_genomes) {
+  if (node.IsRoot()) {
+    return "p";
+  }
+  std::string result = std::to_string(node.GetId().value);
+  result += "\\n";
+  size_t count = 0;
+  for (auto [pos, base] : compact_genomes.at(node.GetId().value)) {
+    result += std::to_string(pos.value);
+    result += base;
+    result += ++count % 3 == 0 ? "\\n" : " ";
+  }
+  return result;
+}
+
+void CompactGenomeDAGToDOT(const MADAG& dag,
+                           const std::vector<CompactGenome>& compact_genomes,
+                           std::ostream& out) {
+  out << "digraph {\n";
+  for (auto [parent, child] : dag.dag.GetEdges()) {
+    out << "  \"" << CompactGenomeToString(parent, compact_genomes) << "\" -> \""
+        << CompactGenomeToString(child, compact_genomes) << "\"\n";
+  }
+  out << "}\n";
 }
