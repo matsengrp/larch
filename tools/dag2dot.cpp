@@ -77,12 +77,10 @@ int main(int argc, char** argv) {
   switch (type) {
     case InputType::TreePB:
       dag = LoadTreeFromProtobuf(path);
-      dag.dag.ReindexPreOrder();
       EdgeMutationsDAGToDOT(dag, std::cout);
       break;
     case InputType::DagPB:
       dag = LoadDAGFromProtobuf(path);
-      dag.dag.ReindexPreOrder();
       if (cgs) {
         Assert(not dag.reference_sequence.empty());
         CompactGenomeDAGToDOT(dag, dag.ComputeCompactGenomesDAG(dag.reference_sequence),
@@ -93,15 +91,6 @@ int main(int argc, char** argv) {
       break;
     case InputType::DagJson:
       dag = LoadDAGFromJson(path);
-      std::map<NodeId, NodeId> index = dag.dag.ReindexPreOrder();
-      {
-        std::vector<CompactGenome> reindexed_cgs;
-        reindexed_cgs.reserve(dag.compact_genomes.size());
-        for (auto [prev, curr] : index) {
-          reindexed_cgs.emplace_back(std::move(dag.compact_genomes.at(curr.value)));
-        }
-        dag.compact_genomes = std::move(reindexed_cgs);
-      }
       if (muts) {
         dag.edge_mutations.resize(dag.dag.GetEdges().size());
         for (Edge edge : dag.dag.GetEdges()) {

@@ -15,6 +15,8 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
 
 std::vector<CompactGenome> MADAG::ComputeCompactGenomesDAG(
     std::string_view reference_sequence) const {
+  Assert(not reference_sequence.empty());
+  Assert(not edge_mutations.empty());
   std::vector<CompactGenome> result;
   result.resize(dag.GetNodes().size());
   auto ComputeCG = [&](auto& self, Node node) {
@@ -35,6 +37,19 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomesDAG(
   };
   for (Node node : dag.GetNodes()) {
     ComputeCG(ComputeCG, node);
+  }
+  return result;
+}
+
+std::vector<EdgeMutations> MADAG::ComputeEdgeMutations(
+    std::string_view reference_sequence) const {
+  Assert(not reference_sequence.empty());
+  Assert(not compact_genomes.empty());
+  std::vector<EdgeMutations> result;
+  for (auto [parent, child] : dag.GetEdges()) {
+    result.emplace_back(CompactGenome::ToEdgeMutations(
+        reference_sequence, compact_genomes.at(parent.GetId().value),
+        compact_genomes.at(child.GetId().value)));
   }
   return result;
 }

@@ -68,12 +68,14 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
     EdgeMutations& muts = result.edge_mutations.at(edge_id++);
     for (auto& mut : i.edge_mutations()) {
       static const char decode[] = {'A', 'C', 'G', 'T'};
+      Assert(mut.position() > 0);
       Assert(mut.mut_nuc().size() == 1);
       muts[{static_cast<size_t>(mut.position())}] = {decode[mut.par_nuc()],
                                                      decode[mut.mut_nuc().Get(0)]};
     }
   }
 
+  result.dag.ReindexPreOrder();
   return result;
 }
 
@@ -118,7 +120,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
       edge_muts.insert(i);
     }
   }
-
+  result.dag.ReindexPreOrder();
   return result;
 }
 
@@ -200,6 +202,15 @@ MADAG LoadDAGFromJson(std::string_view path) {
     result.dag.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
   }
   result.dag.BuildConnections();
+  std::map<NodeId, NodeId> index = result.dag.ReindexPreOrder();
+  {
+    std::vector<CompactGenome> reindexed_cgs;
+    reindexed_cgs.reserve(result.compact_genomes.size());
+    for (auto [prev, curr] : index) {
+      reindexed_cgs.emplace_back(std::move(result.compact_genomes.at(curr.value)));
+    }
+    result.compact_genomes = std::move(reindexed_cgs);
+  }
   return result;
 }
 
