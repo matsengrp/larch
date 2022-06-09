@@ -44,13 +44,9 @@ class EdgeView {
   std::pair<NodeId, NodeId> GetNodeIds() const;
   bool IsRoot() const;
   bool IsLeaf() const;
-  double GetProbability() const;
-  const auto& GetWeight() const;
   std::optional<EdgeView> FindNextSibling() const;
 
  private:
-  template <typename U>
-  friend bool operator==(EdgeView<U>, EdgeView<U>);
   const auto& GetStorage() const;
   auto& GetStorage();
 
@@ -60,7 +56,8 @@ class EdgeView {
 
 template <typename T>
 inline bool operator==(EdgeView<T> lhs, EdgeView<T> rhs) {
-  return std::addressof(lhs.dag_) == std::addressof(rhs.dag_) && lhs.id_ == rhs.id_;
+  return std::addressof(lhs.GetDAG()) == std::addressof(rhs.GetDAG()) &&
+         lhs.GetId() == rhs.GetId();
 }
 
 namespace std {

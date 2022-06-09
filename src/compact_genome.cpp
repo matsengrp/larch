@@ -84,7 +84,9 @@ void CompactGenome::AddParentEdge(const EdgeMutations& mutations,
 }
 
 bool CompactGenome::operator==(const CompactGenome& rhs) const noexcept {
-  if (hash_ != rhs.hash_) return false;
+  if (hash_ != rhs.hash_) {
+    return false;
+  }
   return mutations_ == rhs.mutations_;
 }
 

@@ -1,5 +1,11 @@
 #include "dag.hpp"
 
+const std::vector<EdgeId>& NodeStorage::GetParents() const { return parents_; }
+
+const std::vector<std::vector<EdgeId>>& NodeStorage::GetClades() const {
+  return clades_;
+}
+
 void NodeStorage::ClearConnections() {
   parents_.clear();
   clades_.clear();

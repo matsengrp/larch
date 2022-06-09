@@ -12,10 +12,12 @@ MutableEdge DAG::AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade)
   Assert(child.value != NoId);
   Assert(clade.value != NoId);
   auto& storage = GetOrInsert(edges_, id);
-  storage.parent_ = parent;
-  storage.child_ = child;
-  storage.clade_ = clade;
+  storage.Set(parent, child, clade);
   return {*this, id};
+}
+
+MutableEdge DAG::AppendEdge(NodeId parent, NodeId child, CladeIdx clade) {
+  return AddEdge({GetEdgesCount()}, parent, child, clade);
 }
 
 void DAG::InitializeNodes(size_t nodes_count) { nodes_.resize(nodes_count); }
@@ -28,12 +30,12 @@ void DAG::BuildConnections() {
   }
   EdgeId edge_id = {0};
   for (auto& edge : edges_) {
-    Assert(edge.parent_.value != NoId);
-    Assert(edge.child_.value != NoId);
-    auto& parent = nodes_.at(edge.parent_.value);
-    auto& child = nodes_.at(edge.child_.value);
-    parent.AddEdge(edge.clade_, edge_id, true);
-    child.AddEdge(edge.clade_, edge_id, false);
+    Assert(edge.GetParent().value != NoId);
+    Assert(edge.GetChild().value != NoId);
+    auto& parent = nodes_.at(edge.GetParent().value);
+    auto& child = nodes_.at(edge.GetChild().value);
+    parent.AddEdge(edge.GetClade(), edge_id, true);
+    child.AddEdge(edge.GetClade(), edge_id, false);
     ++edge_id.value;
   }
   for (auto node : GetNodes()) {
@@ -51,6 +53,9 @@ MutableNode DAG::Get(NodeId id) { return {*this, id}; }
 
 Edge DAG::Get(EdgeId id) const { return {*this, id}; }
 MutableEdge DAG::Get(EdgeId id) { return {*this, id}; }
+
+size_t DAG::GetNodesCount() const { return nodes_.size(); }
+size_t DAG::GetEdgesCount() const { return edges_.size(); }
 
 Node DAG::GetRoot() const { return {*this, root_}; }
 
@@ -71,8 +76,7 @@ std::map<NodeId, NodeId> DAG::ReindexPreOrder() {
   };
   Reindex(Reindex, GetRoot());
   for (auto& edge : edges_) {
-    edge.parent_ = index.at(edge.parent_);
-    edge.child_ = index.at(edge.child_);
+    edge.Set(index.at(edge.GetParent()), index.at(edge.GetChild()));
   }
   BuildConnections();
   return index;

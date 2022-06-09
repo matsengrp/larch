@@ -78,8 +78,8 @@ static void Print(const DeepNodeLabel& label) {
   std::cout << "{";
   Print(label.compact_genome);
   std::cout << "} [";
-  for (auto i : label.leaf_set | ranges::view::enumerate) {
-    for (auto j : i.second | ranges::view::enumerate) {
+  for (auto i : label.leaf_set | ranges::views::enumerate) {
+    for (auto j : i.second | ranges::views::enumerate) {
       Print(j.second);
       if (j.first + 1 < i.second.size()) {
         std::cout << ", ";

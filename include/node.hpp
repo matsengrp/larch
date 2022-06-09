@@ -42,10 +42,6 @@ class NodeView {
   void RemoveParentEdge(Edge edge) const;
 
  private:
-  template <typename U>
-  friend bool operator==(NodeView<U>, NodeView<U>);
-  template <typename>
-  friend class NodeView;
   auto& GetStorage() const;
   T dag_;
   const NodeId id_;
@@ -53,5 +49,6 @@ class NodeView {
 
 template <typename T>
 inline bool operator==(NodeView<T> lhs, NodeView<T> rhs) {
-  return std::addressof(lhs.dag_) == std::addressof(rhs.dag_) && lhs.id_ == rhs.id_;
+  return std::addressof(lhs.GetDAG()) == std::addressof(rhs.GetDAG) &&
+         lhs.GetId() == rhs.GetId();
 }

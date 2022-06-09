@@ -21,11 +21,11 @@ static void test_protobuf(const std::string& correct_path,
   std::vector<std::reference_wrapper<MADAG>> tree_refs{trees.begin(), trees.end()};
   merge.AddTrees(tree_refs);
 
-  assert_equal(correct_result.dag.GetNodes().size(),
-               merge.GetResult().GetNodes().size(), "Nodes count");
+  assert_equal(correct_result.dag.GetNodesCount(), merge.GetResult().GetNodesCount(),
+               "Nodes count");
 
-  assert_equal(correct_result.dag.GetEdges().size(),
-               merge.GetResult().GetEdges().size(), "Edges count");
+  assert_equal(correct_result.dag.GetEdgesCount(), merge.GetResult().GetEdgesCount(),
+               "Edges count");
 }
 
 static void test_five_trees() {
@@ -79,12 +79,9 @@ static void test_case_20d() {
   for (size_t i = 0; i < paths.size(); ++i) {
     paths_idx.push_back({i, paths.at(i)});
   }
-  // std::cout << "Loading trees ";
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
-    // std::cout << "." << std::flush;
     trees.at(path_idx.first) = LoadTreeFromProtobuf(path_idx.second);
   });
-  // std::cout << " done.\n";
 
   Benchmark merge_time;
   Merge merge(correct_result.reference_sequence);
@@ -94,14 +91,11 @@ static void test_case_20d() {
   merge_time.stop();
   std::cout << " DAGs merged in " << merge_time.durationMs() << " ms. ";
 
-  // std::cout << "Nodes: " << merge.GetResult().GetNodes().size() << "\n";
-  // std::cout << "Edges: " << merge.GetResult().GetEdges().size() << "\n";
+  assert_equal(correct_result.dag.GetNodesCount(), merge.GetResult().GetNodesCount(),
+               "Nodes count");
 
-  assert_equal(correct_result.dag.GetNodes().size(),
-               merge.GetResult().GetNodes().size(), "Nodes count");
-
-  assert_equal(correct_result.dag.GetEdges().size(),
-               merge.GetResult().GetEdges().size(), "Edges count");
+  assert_equal(correct_result.dag.GetEdgesCount(), merge.GetResult().GetEdgesCount(),
+               "Edges count");
 }
 
 static void test_add_trees() {
@@ -128,11 +122,11 @@ static void test_add_trees() {
   std::vector<std::reference_wrapper<MADAG>> tree_refs2{trees2.begin(), trees2.end()};
   merge.AddTrees(tree_refs2);
 
-  assert_equal(correct_result.dag.GetNodes().size(),
-               merge.GetResult().GetNodes().size(), "Nodes count");
+  assert_equal(correct_result.dag.GetNodesCount(), merge.GetResult().GetNodesCount(),
+               "Nodes count");
 
-  assert_equal(correct_result.dag.GetEdges().size(),
-               merge.GetResult().GetEdges().size(), "Edges count");
+  assert_equal(correct_result.dag.GetEdgesCount(), merge.GetResult().GetEdgesCount(),
+               "Edges count");
 }
 
 [[maybe_unused]] static const auto test0_added =

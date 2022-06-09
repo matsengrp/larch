@@ -18,15 +18,15 @@ auto DAG::GetNodes() {
 }
 
 auto DAG::GetEdges() const {
-  return edges_ | ranges::views::transform(
-                      [this, idx = size_t{}](const EdgeStorage<Weight>&) mutable {
-                        return Edge{*this, {idx++}};
-                      });
+  return edges_ |
+         ranges::views::transform([this, idx = size_t{}](const EdgeStorage&) mutable {
+           return Edge{*this, {idx++}};
+         });
 }
 
 auto DAG::GetEdges() {
   return edges_ |
-         ranges::views::transform([this, idx = size_t{}](EdgeStorage<Weight>&) mutable {
+         ranges::views::transform([this, idx = size_t{}](EdgeStorage&) mutable {
            return MutableEdge{*this, {idx++}};
          });
 }

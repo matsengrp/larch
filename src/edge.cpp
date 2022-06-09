@@ -36,17 +36,17 @@ EdgeId EdgeView<T>::GetId() const {
 
 template <typename T>
 typename EdgeView<T>::NodeType EdgeView<T>::GetParent() const {
-  return {dag_, GetStorage().parent_};
+  return {dag_, GetStorage().GetParent()};
 }
 
 template <typename T>
 typename EdgeView<T>::NodeType EdgeView<T>::GetChild() const {
-  return {dag_, GetStorage().child_};
+  return {dag_, GetStorage().GetChild()};
 }
 
 template <typename T>
 CladeIdx EdgeView<T>::GetClade() const {
-  return GetStorage().clade_;
+  return GetStorage().GetClade();
 }
 
 template <typename T>
@@ -72,16 +72,6 @@ bool EdgeView<T>::IsRoot() const {
 template <typename T>
 bool EdgeView<T>::IsLeaf() const {
   return GetChild().IsLeaf();
-}
-
-template <typename T>
-double EdgeView<T>::GetProbability() const {
-  return GetStorage().probability_;
-}
-
-template <typename T>
-const auto& EdgeView<T>::GetWeight() const {
-  return GetStorage().weight_;
 }
 
 template <typename T>

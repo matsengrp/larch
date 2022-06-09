@@ -37,7 +37,7 @@ typename NodeView<T>::EdgeType NodeView<T>::GetSingleParent() const {
 
 template <typename T>
 bool NodeView<T>::IsRoot() const {
-  return GetStorage().parents_.empty();
+  return GetStorage().GetParents().empty();
 }
 
 template <typename T>

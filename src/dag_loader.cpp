@@ -62,7 +62,7 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
 
   result.dag.BuildConnections();
 
-  result.edge_mutations.resize(result.dag.GetEdges().size());
+  result.edge_mutations.resize(result.dag.GetEdgesCount());
   edge_id = 0;
   for (auto& i : data.edges()) {
     EdgeMutations& muts = result.edge_mutations.at(edge_id++);
@@ -99,7 +99,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
       });
   result.dag.BuildConnections();
 
-  result.edge_mutations.resize(result.dag.GetEdges().size());
+  result.edge_mutations.resize(result.dag.GetEdgesCount());
 
   size_t muts_idx = 0;
   for (Node node : result.dag.TraversePreOrder()) {
@@ -110,7 +110,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
     auto& edge_muts = result.edge_mutations.at(node.GetSingleParent().GetId().value);
     for (auto i :
          pb_muts |
-             ranges::view::transform(
+             ranges::views::transform(
                  [](auto& mut) -> std::pair<MutationPosition, std::pair<char, char>> {
                    static const char decode[] = {'A', 'C', 'G', 'T'};
                    Assert(mut.mut_nuc().size() == 1);
@@ -221,7 +221,7 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
 
   data.set_reference_seq(std::string{reference_sequence});
 
-  for (size_t i = 0; i < dag.GetNodes().size(); ++i) {
+  for (size_t i = 0; i < dag.GetNodesCount(); ++i) {
     auto* proto_node = data.add_node_names();
     proto_node->set_node_id(i);
   }
@@ -301,7 +301,9 @@ static std::string CompactGenomeToString(
 void MADAGToDOT(const MADAG& dag, std::ostream& out) {
   out << "digraph {\n";
   out << "  forcelabels=true\n";
-  out << "  nodesep=5.0\n";
+  out << "  nodesep=1.0\n";
+  out << "  ranksep=2.0\n";
+  out << "  ratio=1.0\n";
   for (Edge edge : dag.dag.GetEdges()) {
     auto [parent, child] = edge;
     if (dag.compact_genomes.empty()) {

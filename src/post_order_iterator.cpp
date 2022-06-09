@@ -52,7 +52,9 @@ PostOrderIterator<NodeType> PostOrderIterator<NodeType>::operator++(int) {
 
 template <typename NodeType>
 bool PostOrderIterator<NodeType>::operator==(const PostOrderIterator& other) const {
-  if (other.stack_.empty() && end_sentinel_) return true;
+  if (other.stack_.empty() && end_sentinel_) {
+    return true;
+  }
   return stack_ == other.stack_;
 }
 

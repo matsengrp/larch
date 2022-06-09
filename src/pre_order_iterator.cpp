@@ -41,7 +41,9 @@ PreOrderIterator<NodeType>& PreOrderIterator<NodeType>::operator++() {
         }
         return false;
       };
-      while (not stack_.empty() and not NextFound()) stack_.pop();
+      while (not stack_.empty() and not NextFound()) {
+        stack_.pop();
+      }
       if (not stack_.empty()) {
         stack_.pop();
         stack_.push(*next);
@@ -71,7 +73,9 @@ bool PreOrderIterator<NodeType>::operator!=(const PreOrderIterator& other) const
 template <typename NodeType>
 std::optional<typename PreOrderIterator<NodeType>::EdgeType>
 PreOrderIterator<NodeType>::GetFirstChild(EdgeType edge) {
-  if (edge.IsLeaf()) return std::nullopt;
+  if (edge.IsLeaf()) {
+    return std::nullopt;
+  }
   return *edge.GetChild().GetChildren().begin();
 }
 

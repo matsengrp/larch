@@ -56,8 +56,8 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
 
-  std::cout << "DAG nodes: " << merge.GetResult().GetNodes().size() << "\n";
-  std::cout << "DAG edges: " << merge.GetResult().GetEdges().size() << "\n";
+  std::cout << "DAG nodes: " << merge.GetResult().GetNodesCount() << "\n";
+  std::cout << "DAG edges: " << merge.GetResult().GetEdgesCount() << "\n";
 
   StoreDAGToProtobuf(merge.GetResult(), reference_sequence,
                      merge.ComputeResultEdgeMutations(), out_path);
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
     if (name == "-h" or name == "--help") {
       Usage();
     } else if (name == "-i" or name == "--input") {
-      ranges::action::push_back(input_filenames, params);
+      ranges::actions::push_back(input_filenames, params);
     } else if (name == "-o" or name == "--output") {
       if (params.empty()) {
         std::cerr << "Specify result file name.\n";

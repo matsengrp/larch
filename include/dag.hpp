@@ -40,12 +40,10 @@ class DAG {
   DAG(const DAG&) = delete;
   DAG& operator=(const DAG&) = delete;
 
-  using Weight = double;
-  using ArbitraryPrecisionInteger = long;
-
   MutableNode AddNode(NodeId id);
 
   MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
+  MutableEdge AppendEdge(NodeId parent, NodeId child, CladeIdx clade);
 
   void InitializeNodes(size_t nodes_count);
 
@@ -61,6 +59,9 @@ class DAG {
   Edge Get(EdgeId id) const;
   MutableEdge Get(EdgeId id);
 
+  size_t GetNodesCount() const;
+  size_t GetEdgesCount() const;
+
   Node GetRoot() const;
   MutableNode GetRoot();
 
@@ -74,13 +75,6 @@ class DAG {
 
   std::map<NodeId, NodeId> ReindexPreOrder();
 
-  ArbitraryPrecisionInteger CountHistories() const;
-  void WriteProtobuf(std::string_view filename) const;
-  DAG SampleHistory() const;
-  DAG FindHistoryByIndex(ArbitraryPrecisionInteger) const;
-  bool IsCladeTree() const;
-  void AddAllAllowedEdges();
-
  private:
   template <typename>
   friend class NodeView;
@@ -88,8 +82,7 @@ class DAG {
   friend class EdgeView;
 
   std::vector<NodeStorage> nodes_;
-
-  std::vector<EdgeStorage<Weight>> edges_;
+  std::vector<EdgeStorage> edges_;
 
   NodeId root_ = {NoId};
   std::vector<NodeId> leafs_;

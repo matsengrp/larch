@@ -82,13 +82,13 @@ int main(int argc, char** argv) {
       dag = LoadDAGFromProtobuf(path);
       if (cgs) {
         Assert(not dag.reference_sequence.empty());
-        dag.compact_genomes = dag.ComputeCompactGenomesDAG(dag.reference_sequence);
+        dag.compact_genomes = dag.ComputeCompactGenomes(dag.reference_sequence);
       }
       break;
     case InputType::DagJson:
       dag = LoadDAGFromJson(path);
       if (muts) {
-        dag.edge_mutations.resize(dag.dag.GetEdges().size());
+        dag.edge_mutations.resize(dag.dag.GetEdgesCount());
         for (Edge edge : dag.dag.GetEdges()) {
           auto [parent, child] = edge.GetNodeIds();
           dag.edge_mutations.at(edge.GetId().value) = CompactGenome::ToEdgeMutations(

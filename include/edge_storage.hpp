@@ -1,14 +1,18 @@
 #pragma once
 
-template <typename Weight>
-class EdgeStorage {
-  template <typename>
-  friend class EdgeView;
-  friend class DAG;
+#include "node.hpp"
+#include "edge.hpp"
 
+class EdgeStorage {
+ public:
+  NodeId GetParent() const;
+  NodeId GetChild() const;
+  CladeIdx GetClade() const;
+  void Set(NodeId parent, NodeId child, CladeIdx clade);
+  void Set(NodeId parent, NodeId child);
+
+ private:
   NodeId parent_;
   NodeId child_;
   CladeIdx clade_;
-  double probability_ = 0.0;
-  Weight weight_ = {};
 };

@@ -2,12 +2,12 @@
 
 template <typename T>
 auto NodeView<T>::GetParents() const {
-  return GetStorage().parents_ | Transform::ToEdges(dag_);
+  return GetStorage().GetParents() | Transform::ToEdges(dag_);
 }
 
 template <typename T>
 auto NodeView<T>::GetClades() const {
-  return GetStorage().clades_ |
+  return GetStorage().GetClades() |
          ranges::views::transform([this](const std::vector<EdgeId>& clade) {
            return clade | Transform::ToEdges(dag_);
          });

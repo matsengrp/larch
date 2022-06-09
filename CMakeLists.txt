@@ -56,9 +56,6 @@ function(larch_executable PRODUCT)
     larch_compile_opts(${PRODUCT})
     larch_link_opts(${PRODUCT})
     target_link_libraries(${PRODUCT} PUBLIC larch)
-    if (DEFINED CMAKE_CXX_CLANG_TIDY)
-        target_precompile_headers(${PRODUCT} REUSE_FROM larch)
-    endif()
 endfunction()
 
 add_library(larch
@@ -67,6 +64,7 @@ add_library(larch
     src/dag_loader.cpp
     src/edge_label.cpp
     src/edge_mutations.cpp
+    src/edge_storage.cpp
     src/edge.cpp
     src/leaf_set.cpp
     src/merge.cpp
@@ -79,16 +77,12 @@ add_library(larch
 larch_compile_opts(larch)
 larch_link_opts(larch)
 
-if (DEFINED CMAKE_CXX_CLANG_TIDY)
-target_precompile_headers(larch PUBLIC
-    include/dag.hpp
-)
-endif()
-
 larch_executable(larch-test
     test/main.cpp
+    test/synthetic_dags.cpp
     test/test_compact_genome.cpp
-    test/test_merge.cpp)
+    test/test_merge.cpp
+    test/test_synthetic.cpp)
 
 larch_executable(merge
     tools/merge.cpp)
