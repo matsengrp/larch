@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <limits>
 #include <vector>
+
 #include <range/v3/view/transform.hpp>
 
 struct NodeId;
@@ -74,3 +75,5 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
       throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
                                ":" TOSTRING(__LINE__));                 \
   }
+
+[[noreturn]] inline void Fail(const char* msg) { throw std::runtime_error(msg); }

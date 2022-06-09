@@ -47,7 +47,7 @@ class Merge {
   DAG& GetResult();
   const DAG& GetResult() const;
   const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
-  std::vector<EdgeMutations> ComputeResultEdgeMutations() const;
+  [[nodiscard]] std::vector<EdgeMutations> ComputeResultEdgeMutations() const;
 
  private:
   void ComputeCompactGenomes(const std::vector<size_t>& tree_idxs, bool show_progress);

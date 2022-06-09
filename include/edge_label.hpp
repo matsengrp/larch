@@ -1,20 +1,22 @@
 #pragma once
 
-#include <cstddef>
-
-class CompactGenome;
-class LeafSet;
+#include "node_label.hpp"
 
 class EdgeLabel {
  public:
+  EdgeLabel() = default;
+  EdgeLabel(NodeLabel parent, NodeLabel child);
+
+  NodeLabel GetParent() const;
+  NodeLabel GetChild() const;
+
   bool operator==(const EdgeLabel& rhs) const noexcept;
 
   size_t Hash() const noexcept;
 
-  const CompactGenome* parent_compact_genome = nullptr;
-  const LeafSet* parent_leaf_set = nullptr;
-  const CompactGenome* child_compact_genome = nullptr;
-  const LeafSet* child_leaf_set = nullptr;
+ private:
+  NodeLabel parent_;
+  NodeLabel child_;
 };
 
 namespace std {

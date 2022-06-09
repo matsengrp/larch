@@ -44,7 +44,7 @@ class EdgeView {
   std::pair<NodeId, NodeId> GetNodeIds() const;
   bool IsRoot() const;
   bool IsLeaf() const;
-  std::optional<EdgeView> FindNextSibling() const;
+  [[nodiscard]] std::optional<EdgeView> FindNextSibling() const;
 
  private:
   const auto& GetStorage() const;

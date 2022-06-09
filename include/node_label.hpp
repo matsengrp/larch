@@ -10,12 +10,19 @@ class NodeLabel {
   NodeLabel();
   NodeLabel(const CompactGenome* cg, const LeafSet* ls);
 
+  const CompactGenome* GetCompactGenome() const;
+  const LeafSet* GetLeafSet() const;
+
+  void SetCompactGenome(const CompactGenome* cg);
+  void SetLeafSet(const LeafSet* ls);
+
   bool operator==(const NodeLabel& rhs) const noexcept;
 
   size_t Hash() const noexcept;
 
-  const CompactGenome* compact_genome;
-  const LeafSet* leaf_set;
+ private:
+  const CompactGenome* compact_genome_;
+  const LeafSet* leaf_set_;
 };
 
 namespace std {

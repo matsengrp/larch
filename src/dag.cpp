@@ -75,6 +75,7 @@ std::map<NodeId, NodeId> DAG::ReindexPreOrder() {
     }
   };
   Reindex(Reindex, GetRoot());
+  Assert(index.size() == GetNodesCount());
   for (auto& edge : edges_) {
     edge.Set(index.at(edge.GetParent()), index.at(edge.GetChild()));
   }

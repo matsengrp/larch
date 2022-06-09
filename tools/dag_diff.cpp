@@ -28,9 +28,9 @@
 class DeepNodeLabel {
  public:
   explicit DeepNodeLabel(const NodeLabel& label)
-      : compact_genome{label.compact_genome->Copy()}, leaf_set{[&] {
+      : compact_genome{label.GetCompactGenome()->Copy()}, leaf_set{[&] {
           std::set<std::set<CompactGenome>> result;
-          for (auto& clade : *label.leaf_set) {
+          for (auto& clade : *label.GetLeafSet()) {
             std::set<CompactGenome> leafs;
             for (auto* leaf : clade) {
               leafs.insert(leaf->Copy());

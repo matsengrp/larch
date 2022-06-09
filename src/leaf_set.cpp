@@ -23,7 +23,7 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
           for (Node child : clade | Transform::GetChild()) {
             const LeafSet& child_leaf_set = computed_leafsets.at(child.GetId().value);
             if (child.IsLeaf()) {
-              clade_leafs.push_back(labels.at(child.GetId().value).compact_genome);
+              clade_leafs.push_back(labels.at(child.GetId().value).GetCompactGenome());
             } else {
               for (auto& child_leafs :
                    computed_leafsets.at(child.GetId().value).clades_) {

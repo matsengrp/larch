@@ -32,17 +32,6 @@ static void ComputeMutations(const EdgeMutations& edge_mutations,
   }
 }
 
-CompactGenome::CompactGenome(const EdgeMutations& edge_mutations,
-                             const CompactGenome& parent,
-                             std::string_view reference_sequence)
-    : mutations_{[&] {
-        std::vector<std::pair<MutationPosition, char>> result{parent.mutations_.begin(),
-                                                              parent.mutations_.end()};
-        ComputeMutations(edge_mutations, reference_sequence, result);
-        return result;
-      }()},
-      hash_{ComputeHash(mutations_)} {}
-
 CompactGenome::CompactGenome(Node root,
                              const std::vector<EdgeMutations>& edge_mutations,
                              std::string_view reference_sequence)

@@ -16,9 +16,6 @@ class CompactGenome {
   CompactGenome& operator=(CompactGenome&&) = default;
   CompactGenome& operator=(const CompactGenome&) = delete;
 
-  CompactGenome(const EdgeMutations& mutations, const CompactGenome& parent,
-                std::string_view reference_sequence);
-
   CompactGenome(Node root, const std::vector<EdgeMutations>& edge_mutations,
                 std::string_view reference_sequence);
 
@@ -39,11 +36,11 @@ class CompactGenome {
 
   bool empty() const;
 
-  CompactGenome Copy() const;
+  [[nodiscard]] CompactGenome Copy() const;
 
-  static EdgeMutations ToEdgeMutations(std::string_view reference_sequence,
-                                       const CompactGenome& parent,
-                                       const CompactGenome& child);
+  [[nodiscard]] static EdgeMutations ToEdgeMutations(
+      std::string_view reference_sequence, const CompactGenome& parent,
+      const CompactGenome& child);
 
  private:
   static size_t ComputeHash(

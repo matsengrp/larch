@@ -248,6 +248,8 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
         case 'T':
           mut->set_par_nuc(3);
           break;
+        default:
+          Fail("Invalid base");
       };
       switch (nucs.second) {
         case 'A':
@@ -262,6 +264,8 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
         case 'T':
           mut->add_mut_nuc(3);
           break;
+        default:
+          Fail("Invalid base");
       };
     }
   }
