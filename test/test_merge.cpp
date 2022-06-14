@@ -72,7 +72,7 @@ static void test_case_20d() {
 
   std::vector<MADAG> trees;
 
-  MADAG correct_result = LoadDAGFromJson("data/20D_from_fasta/20D_full_dag.json.gz");
+  MADAG correct_result = LoadDAGFromJson("data/20D_from_fasta/full_dag.json.gz");
 
   trees.resize(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;

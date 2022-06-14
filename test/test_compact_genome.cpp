@@ -18,6 +18,9 @@
       dag.ComputeCompactGenomes(dag.reference_sequence);
 
   assert_equal(computed_cgs, dag.compact_genomes, "Compact genomes");
+
+  assert_equal(dag.ComputeEdgeMutations(dag.reference_sequence), dag.edge_mutations,
+               "Edge mutations");
 }
 
 [[maybe_unused]] static const auto test_added0 =
@@ -29,9 +32,9 @@
               "Compact genomes: testcase2"});
 
 [[maybe_unused]] static const auto test_added2 =
-    add_test({[] { test_edge_mutations("data/testcaseref/tree_1_newref.pb.gz"); },
+    add_test({[] { test_edge_mutations("data/testcaseref/tree_0_newref.pb.gz"); },
               "Compact genomes: testcaseref"});
 
 [[maybe_unused]] static const auto test_added3 =
-    add_test({[] { test_edge_mutations("data/20D_from_fasta/20D_full_dag.pb.gz"); },
+    add_test({[] { test_edge_mutations("data/20D_from_fasta/full_dag.pb.gz"); },
               "Compact genomes: 20D_from_fasta"});

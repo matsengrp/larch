@@ -11,8 +11,7 @@
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
-  std::cout << "dag_diff -p,--proto file -j,--json file"
-               "[-o,--output filename]\n";
+  std::cout << "dag_diff -p,--proto file -j,--json file\n";
   std::cout << "  -p,--proto     Input protobuf DAG filename\n";
   std::cout << "  -j,--json      Input json DAG filename\n";
 

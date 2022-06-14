@@ -1,4 +1,4 @@
-# History DAG scratchpad
+# Getting started
 
 Requirements
 ------------
@@ -29,7 +29,7 @@ Building
 
 `make -j16`
 
-Optionally add -DCMAKE_CXX_CLANG_TIDY="clang-tidy" to enable clang-tidy, note it will disable precompiled headers.
+Optionally add -DCMAKE_CXX_CLANG_TIDY="clang-tidy" to enable clang-tidy.
 
 Optionally add -DUSE_ASAN=yes to enable asan and ubsan.
 

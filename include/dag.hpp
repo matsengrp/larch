@@ -1,4 +1,4 @@
-/*
+/**
   DAG is the main structure that owns node and edge data, and provides
   various queries.
 
@@ -15,6 +15,7 @@
   TraversePreOrder() returns a view into Nodes in pre-order traversal order.
 
 */
+
 #pragma once
 
 #include <type_traits>

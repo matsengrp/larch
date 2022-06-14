@@ -1,0 +1,6 @@
+#!/bin/sh
+sed -i 's/color="midnightblue"/color="#AAAAAA"/g' $1
+sed -i 's/fillcolor="white"/fillcolor="#222222"/g' $1
+sed -i 's/fillcolor="grey75"/fillcolor="#333333"/g' $1
+sed -i 's/color="black"/color="#AAAAAA"/g' $1
+dot -Gcolor="#AAAAAA" -Gbgcolor="#222222" -Nfontcolor="#AAAAAA" "$@"

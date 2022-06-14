@@ -128,33 +128,32 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
       }
     }
   });
-  tbb::concurrent_vector<std::pair<EdgeLabel, EdgeId>> added_edges;
+  tbb::concurrent_vector<EdgeLabel> added_edges;
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
     const MADAG& tree = trees_.at(tree_idx).get();
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-    EdgeId edge_id{result_dag_.GetEdgesCount()};
     for (Edge edge : tree.dag.GetEdges()) {
       auto& parent_label = labels.at(edge.GetParentId().value);
       auto& child_label = labels.at(edge.GetChildId().value);
       auto ins = result_edges_.insert({{parent_label, child_label}, {}});
       if (ins.second) {
-        ins.first->second = edge_id;
-        edge_id.value++;
-        added_edges.push_back(*ins.first);
+        added_edges.push_back({parent_label, child_label});
       }
     }
   });
   result_dag_.InitializeNodes(result_nodes_.size());
   EdgeId edge_id{result_dag_.GetEdgesCount()};
-  for (auto& [edge, id] : added_edges) {
+  for (auto edge : added_edges) {
     auto parent = result_nodes_.find(edge.GetParent());
     auto child = result_nodes_.find(edge.GetChild());
     Assert(parent != result_nodes_.end());
     Assert(child != result_nodes_.end());
     Assert(parent->second.value < result_dag_.GetNodesCount());
     Assert(child->second.value < result_dag_.GetNodesCount());
-    id = edge_id;
     result_dag_.AddEdge(edge_id, parent->second, child->second, {0});
+    auto result_edge_it = result_edges_.find(edge);
+    Assert(result_edge_it != result_edges_.end());
+    result_edge_it->second = edge_id;
     edge_id.value++;
   }
 }

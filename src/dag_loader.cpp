@@ -75,7 +75,7 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
     }
   }
 
-  result.dag.ReindexPreOrder();
+  // result.dag.ReindexPreOrder();
   return result;
 }
 
@@ -120,7 +120,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
       edge_muts.insert(i);
     }
   }
-  result.dag.ReindexPreOrder();
+  // result.dag.ReindexPreOrder();
   return result;
 }
 
@@ -202,15 +202,15 @@ MADAG LoadDAGFromJson(std::string_view path) {
     result.dag.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
   }
   result.dag.BuildConnections();
-  std::map<NodeId, NodeId> index = result.dag.ReindexPreOrder();
-  {
-    std::vector<CompactGenome> reindexed_cgs;
-    reindexed_cgs.reserve(result.compact_genomes.size());
-    for (auto [prev, curr] : index) {
-      reindexed_cgs.emplace_back(std::move(result.compact_genomes.at(curr.value)));
-    }
-    result.compact_genomes = std::move(reindexed_cgs);
-  }
+  // std::map<NodeId, NodeId> index = result.dag.ReindexPreOrder();
+  // {
+  //   std::vector<CompactGenome> reindexed_cgs;
+  //   reindexed_cgs.reserve(result.compact_genomes.size());
+  //   for (auto [prev, curr] : index) {
+  //     reindexed_cgs.emplace_back(std::move(result.compact_genomes.at(curr.value)));
+  //   }
+  //   result.compact_genomes = std::move(reindexed_cgs);
+  // }
   return result;
 }
 
@@ -230,8 +230,8 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
     auto* proto_edge = data.add_edges();
     proto_edge->set_edge_id(edge.GetId().value);
     proto_edge->set_parent_node(edge.GetParentId().value);
-    proto_edge->set_parent_clade(edge.GetChildId().value);
-    proto_edge->set_child_node(edge.GetClade().value);
+    proto_edge->set_child_node(edge.GetChildId().value);
+    proto_edge->set_parent_clade(edge.GetClade().value);
     for (auto [pos, nucs] : edge_parent_mutations.at(edge.GetId().value)) {
       auto* mut = proto_edge->add_edge_mutations();
       mut->set_position(pos.value);
