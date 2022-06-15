@@ -119,18 +119,12 @@ static int TakeDiff(std::string_view proto_filename, std::string_view json_filen
 
   for (auto& lhs : lhs_nodes) {
     if (rhs_nodes.find(lhs) == rhs_nodes.end()) {
-      // std::cout << "Not found in rhs: ";
-      // Print(lhs);
-      // std::cout << "\n";
       ++not_found_in_rhs;
     }
   }
 
   for (auto& rhs : rhs_nodes) {
     if (lhs_nodes.find(rhs) == lhs_nodes.end()) {
-      // std::cout << "Not found in lhs: ";
-      // Print(rhs.first);
-      // std::cout << "\n";
       ++not_found_in_lhs;
     }
   }
