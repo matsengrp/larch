@@ -47,25 +47,25 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
   Parse(data, path);
 
   MADAG result;
-  result.reference_sequence = data.reference_seq();
+  result.GetReferenceSequence() = data.reference_seq();
 
   for (auto& i : data.node_names()) {
-    result.dag.AddNode({static_cast<size_t>(i.node_id())});
+    result.GetDAG().AddNode({static_cast<size_t>(i.node_id())});
   }
 
   size_t edge_id = 0;
   for (auto& i : data.edges()) {
-    result.dag.AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
-                       {static_cast<size_t>(i.child_node())},
-                       {static_cast<size_t>(i.parent_clade())});
+    result.GetDAG().AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
+                            {static_cast<size_t>(i.child_node())},
+                            {static_cast<size_t>(i.parent_clade())});
   }
 
-  result.dag.BuildConnections();
+  result.GetDAG().BuildConnections();
 
-  result.edge_mutations.resize(result.dag.GetEdgesCount());
+  result.GetEdgeMutations().resize(result.GetDAG().GetEdgesCount());
   edge_id = 0;
   for (auto& i : data.edges()) {
-    EdgeMutations& muts = result.edge_mutations.at(edge_id++);
+    EdgeMutations& muts = result.GetEdgeMutations().at(edge_id++);
     for (auto& mut : i.edge_mutations()) {
       static const char decode[] = {'A', 'C', 'G', 'T'};
       Assert(mut.position() > 0);
@@ -75,7 +75,7 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
     }
   }
 
-  // result.dag.ReindexPreOrder();
+  // result.GetDAG().ReindexPreOrder();
   return result;
 }
 
@@ -90,24 +90,26 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
   ParseNewick(
       data.newick(),
       [&result](size_t id, std::string label, std::optional<double> branch_length) {
-        result.dag.AddNode({id});
+        result.GetDAG().AddNode({id});
         std::ignore = label;
         std::ignore = branch_length;
       },
       [&result, &edge_id, &num_children](size_t parent, size_t child) {
-        result.dag.AddEdge({edge_id++}, {parent}, {child}, {num_children[parent]++});
+        result.GetDAG().AddEdge({edge_id++}, {parent}, {child},
+                                {num_children[parent]++});
       });
-  result.dag.BuildConnections();
+  result.GetDAG().BuildConnections();
 
-  result.edge_mutations.resize(result.dag.GetEdgesCount());
+  result.GetEdgeMutations().resize(result.GetDAG().GetEdgesCount());
 
   size_t muts_idx = 0;
-  for (Node node : result.dag.TraversePreOrder()) {
+  for (Node node : result.GetDAG().TraversePreOrder()) {
     const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
     if (node.IsRoot()) {
       continue;
     }
-    auto& edge_muts = result.edge_mutations.at(node.GetSingleParent().GetId().value);
+    auto& edge_muts =
+        result.GetEdgeMutations().at(node.GetSingleParent().GetId().value);
     for (auto i :
          pb_muts |
              ranges::views::transform(
@@ -120,7 +122,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
       edge_muts.insert(i);
     }
   }
-  // result.dag.ReindexPreOrder();
+  // result.GetDAG().ReindexPreOrder();
   return result;
 }
 
@@ -189,27 +191,27 @@ MADAG LoadDAGFromJson(std::string_view path) {
   nlohmann::json json = LoadJson(path);
   MADAG result;
 
-  result.reference_sequence = json["refseq"][1];
+  result.GetReferenceSequence() = json["refseq"][1];
 
   size_t id = 0;
   for ([[maybe_unused]] auto& i : json["nodes"]) {
-    result.dag.AddNode({id++});
+    result.GetDAG().AddNode({id++});
     size_t compact_genome_index = i[0];
-    result.compact_genomes.push_back(GetCompactGenome(json, compact_genome_index));
+    result.GetCompactGenomes().push_back(GetCompactGenome(json, compact_genome_index));
   }
   id = 0;
   for (auto& i : json["edges"]) {
-    result.dag.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
+    result.GetDAG().AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
   }
-  result.dag.BuildConnections();
-  // std::map<NodeId, NodeId> index = result.dag.ReindexPreOrder();
+  result.GetDAG().BuildConnections();
+  // std::map<NodeId, NodeId> index = result.GetDAG().ReindexPreOrder();
   // {
   //   std::vector<CompactGenome> reindexed_cgs;
-  //   reindexed_cgs.reserve(result.compact_genomes.size());
+  //   reindexed_cgs.reserve(result.GetCompactGenomes().size());
   //   for (auto [prev, curr] : index) {
-  //     reindexed_cgs.emplace_back(std::move(result.compact_genomes.at(curr.value)));
+  //     reindexed_cgs.emplace_back(std::move(result.GetCompactGenomes().at(curr.value)));
   //   }
-  //   result.compact_genomes = std::move(reindexed_cgs);
+  //   result.GetCompactGenomes() = std::move(reindexed_cgs);
   // }
   return result;
 }
@@ -277,7 +279,7 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
 static std::string EdgeMutationsToString(Edge edge, const MADAG& dag) {
   std::string result;
   size_t count = 0;
-  for (auto [pos, muts] : dag.edge_mutations.at(edge.GetId().value)) {
+  for (auto [pos, muts] : dag.GetEdgeMutations().at(edge.GetId().value)) {
     result += muts.first;
     result += std::to_string(pos.value);
     result += muts.second;
@@ -308,15 +310,16 @@ void MADAGToDOT(const MADAG& dag, std::ostream& out) {
   out << "  nodesep=1.0\n";
   out << "  ranksep=2.0\n";
   out << "  ratio=1.0\n";
-  for (Edge edge : dag.dag.GetEdges()) {
+  for (Edge edge : dag.GetDAG().GetEdges()) {
     auto [parent, child] = edge;
-    if (dag.compact_genomes.empty()) {
+    if (dag.GetCompactGenomes().empty()) {
       out << parent.GetId().value << " -> " << child.GetId().value;
     } else {
-      out << "  \"" << CompactGenomeToString(parent, dag.compact_genomes) << "\" -> \""
-          << CompactGenomeToString(child, dag.compact_genomes) << "\"";
+      out << "  \"" << CompactGenomeToString(parent, dag.GetCompactGenomes())
+          << "\" -> \"" << CompactGenomeToString(child, dag.GetCompactGenomes())
+          << "\"";
     }
-    if (not dag.edge_mutations.empty()) {
+    if (not dag.GetEdgeMutations().empty()) {
       out << "[ xlabel=\"";
       out << EdgeMutationsToString(edge, dag);
       out << "\" ]";

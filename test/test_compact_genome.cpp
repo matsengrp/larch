@@ -6,21 +6,21 @@
 
 [[maybe_unused]] static void test_edge_mutations(std::string_view path) {
   MADAG dag = LoadDAGFromProtobuf(path);
-  dag.compact_genomes = dag.ComputeCompactGenomes(dag.reference_sequence);
+  dag.GetCompactGenomes() = dag.ComputeCompactGenomes(dag.GetReferenceSequence());
 
   std::vector<EdgeMutations> computed_mutations =
-      dag.ComputeEdgeMutations(dag.reference_sequence);
+      dag.ComputeEdgeMutations(dag.GetReferenceSequence());
 
-  Assert(dag.compact_genomes.size() == dag.dag.GetNodesCount());
-  Assert(computed_mutations.size() == dag.dag.GetEdgesCount());
+  Assert(dag.GetCompactGenomes().size() == dag.GetDAG().GetNodesCount());
+  Assert(computed_mutations.size() == dag.GetDAG().GetEdgesCount());
 
   std::vector<CompactGenome> computed_cgs =
-      dag.ComputeCompactGenomes(dag.reference_sequence);
+      dag.ComputeCompactGenomes(dag.GetReferenceSequence());
 
-  assert_equal(computed_cgs, dag.compact_genomes, "Compact genomes");
+  assert_equal(computed_cgs, dag.GetCompactGenomes(), "Compact genomes");
 
-  assert_equal(dag.ComputeEdgeMutations(dag.reference_sequence), dag.edge_mutations,
-               "Edge mutations");
+  assert_equal(dag.ComputeEdgeMutations(dag.GetReferenceSequence()),
+               dag.GetEdgeMutations(), "Edge mutations");
 }
 
 [[maybe_unused]] static const auto test_added0 =

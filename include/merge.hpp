@@ -38,11 +38,8 @@ class Merge {
   Merge& operator=(Merge&&) = delete;
   Merge& operator=(const Merge&) = delete;
 
-  void AddTrees(const std::vector<std::reference_wrapper<MADAG>>& trees,
-                bool show_progress = false);
-
   void AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& dags,
-               bool show_progress = false);
+               bool have_compact_genomes = false);
 
   DAG& GetResult();
   const DAG& GetResult() const;
@@ -50,17 +47,14 @@ class Merge {
   [[nodiscard]] std::vector<EdgeMutations> ComputeResultEdgeMutations() const;
 
  private:
-  void ComputeCompactGenomes(const std::vector<size_t>& tree_idxs, bool show_progress);
+  void ComputeCompactGenomes(const std::vector<size_t>& tree_idxs);
 
-  void ComputeLeafSets(const std::vector<size_t>& tree_idxs, bool show_progress);
+  void ComputeLeafSets(const std::vector<size_t>& tree_idxs);
 
   void MergeTrees(const std::vector<size_t>& tree_idxs);
 
-  static std::vector<LeafSet> ComputeLeafSets(const MADAG& tree,
+  static std::vector<LeafSet> ComputeLeafSets(const MADAG& dag,
                                               const std::vector<NodeLabel>& labels);
-
-  static std::vector<LeafSet> ComputeLeafSetsDAG(const MADAG& dag,
-                                                 const std::vector<NodeLabel>& labels);
 
   std::string_view reference_sequence_;
   std::vector<std::reference_wrapper<MADAG>> trees_;
