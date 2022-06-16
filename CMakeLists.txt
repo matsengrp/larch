@@ -1,16 +1,19 @@
 cmake_minimum_required(VERSION 3.16)
 project (larch)
 
+include(FetchContent)
+include(ExternalProject)
+
 find_package(Protobuf REQUIRED)
 protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS
     proto/dag.proto
     proto/parsimony.proto)
 
-include(FetchContent)
-FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
+FetchContent_Declare(json
+	URL					https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz
+)
 FetchContent_MakeAvailable(json)
 
-include(ExternalProject)
 ExternalProject_Add(range-v3
     GIT_REPOSITORY      https://github.com/ericniebler/range-v3.git
     GIT_TAG             0.11.0
@@ -21,6 +24,44 @@ ExternalProject_Add(range-v3
     PREFIX              range-v3
     INSTALL_DIR         range-v3/install
 )
+
+ExternalProject_Add(isa-l
+    GIT_REPOSITORY      https://github.com/intel/isa-l.git
+    GIT_TAG             v2.30.0
+    GIT_SHALLOW         true
+    GIT_PROGRESS        true
+    UPDATE_DISCONNECTED true
+    PREFIX				isa-l
+    CONFIGURE_COMMAND	""
+    BUILD_COMMAND		make -C ${PROJECT_BINARY_DIR}/isa-l/src/isa-l -f Makefile.unx prefix=${PROJECT_BINARY_DIR}/isa-l/install install
+	INSTALL_COMMAND		""
+)
+
+ExternalProject_Add(oneTBB
+    GIT_REPOSITORY      https://github.com/oneapi-src/oneTBB
+	GIT_TAG             cc2c04e2f5363fb8b34c10718ce406814810d1e6
+    GIT_SHALLOW         true
+    GIT_PROGRESS        true
+    UPDATE_DISCONNECTED true
+    PREFIX				oneTBB
+    CONFIGURE_COMMAND	""
+    BUILD_COMMAND		""
+	INSTALL_COMMAND		""
+)
+
+ExternalProject_Add(usher
+    GIT_REPOSITORY      https://github.com/matsengrp/usher.git
+    #GIT_TAG             1-initial-DAG
+    GIT_SHALLOW         true
+    GIT_PROGRESS        true
+    UPDATE_DISCONNECTED true
+    CMAKE_CACHE_ARGS    -DCMAKE_INSTALL_PREFIX:STRING=${PROJECT_BINARY_DIR}/usher/install -DCMAKE_PREFIX_PATH:STRING=${PROJECT_BINARY_DIR}/oneTBB/src/oneTBB/cmake;${PROJECT_BINARY_DIR}/isa-l/install -DCMAKE_CXX_FLAGS:STRING=-I${PROJECT_BINARY_DIR}/isa-l/install/include
+    CMAKE_ARGS			-DTBB_DIR=${PROJECT_BINARY_DIR}/oneTBB/src/oneTBB
+    PREFIX              usher
+    INSTALL_DIR         usher/install
+)
+
+add_dependencies(usher isa-l oneTBB)
 
 add_library(larch_autogen OBJECT
     ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -38,17 +79,19 @@ function(larch_compile_opts PRODUCT)
     target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
     target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
     target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
-    add_dependencies(${PRODUCT} range-v3)
+    target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/oneTBB/src/oneTBB/include)
+    add_dependencies(${PRODUCT} range-v3 usher)
 endfunction()
 
 function(larch_link_opts PRODUCT)
+	target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/usher/src/usher-build/tbb_cmake_build/tbb_cmake_build_subdir_release)
     if (${USE_ASAN})
         target_link_libraries(${PRODUCT} PUBLIC -lasan -lubsan)
     endif()
     target_link_libraries(${PRODUCT} PUBLIC -lz)
     target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
     target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
-    target_link_libraries(${PRODUCT} PUBLIC tbb -lstdc++fs)
+    target_link_libraries(${PRODUCT} PUBLIC tbb_preview -lstdc++fs)
 endfunction()
 
 function(larch_executable PRODUCT)

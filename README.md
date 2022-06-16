@@ -5,14 +5,14 @@ Requirements
 
 * GCC 7.5
 * cmake 3.16
-* clang-tidy
 * protobuf libraries and compiler
-* zlib
-* TBB
+* OpenMPI libraries and tools
+* Boost: filesystem, program_options, iostreams, date_time
+* nasm
 
 For Ubuntu 18.04 LTS the following commands installs the requirements:
 
-`sudo apt get install make g++ protobuf-compiler libprotobuf-dev zlib1g-dev libtbb-dev clang-tidy`
+`sudo apt get install --no-install-recommends g++ make libprotoc-dev protobuf-compiler libopenmpi-dev openmpi-bin libboost-filesystem-dev libboost-program-options-dev libboost-iostreams-dev libboost-date-time-dev nasm`
 
 To get a recent cmake, download from `https://cmake.org/download/`, for example:
 
@@ -48,4 +48,7 @@ Third-party
 -----------
 
 * Lohmann, N. (2022). JSON for Modern C++ (Version 3.10.5) [Computer software]. https://github.com/nlohmann
-* Eric Niebler. Range library for C++14/17/20. https://github.com/ericniebler/range-v3
+* Eric Niebler. range-v3: Range library for C++14/17/20. https://github.com/ericniebler/range-v3
+* Intel. ISA-L: Intelligent Storage Acceleration Library. https://github.com/intel/isa-l
+* Intel. oneTBB: oneAPI Threading Building Blocks. https://github.com/oneapi-src/oneTBB
+* Yatish Turakhia. UShER: Ultrafast Sample Placement on Existing Trees. https://github.com/yatisht/usher
