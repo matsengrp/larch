@@ -9,10 +9,13 @@
 #include <thread>
 #include <atomic>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
 #include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for_each.h>
+#pragma GCC diagnostic pop
 
 #include <range/v3/action/sort.hpp>
 #include <range/v3/action/unique.hpp>
