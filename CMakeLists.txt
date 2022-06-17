@@ -55,7 +55,7 @@ ExternalProject_Add(usher
     GIT_SHALLOW         true
     GIT_PROGRESS        true
     UPDATE_DISCONNECTED true
-    PATCH_COMMAND       sed -i "s@oneTBB-2019_U9/include/@@g" ${PROJECT_BINARY_DIR}/usher/src/usher/src/check_samples_place/import_vcf.cpp && cat ${PROJECT_SOURCE_DIR}/add_usher_lib.cmake >> ${PROJECT_BINARY_DIR}/usher/src/usher/CMakeLists.txt
+    PATCH_COMMAND       sed -i "s@oneTBB-2019_U9/include/@@g" ${PROJECT_BINARY_DIR}/usher/src/usher/src/check_samples_place/import_vcf.cpp && cat ${PROJECT_SOURCE_DIR}/add_usher_libs.cmake >> ${PROJECT_BINARY_DIR}/usher/src/usher/CMakeLists.txt
     CMAKE_CACHE_ARGS    -DCMAKE_INSTALL_PREFIX:STRING=${PROJECT_BINARY_DIR}/usher/install -DCMAKE_PREFIX_PATH:STRING=${PROJECT_BINARY_DIR}/oneTBB/src/oneTBB/cmake;${PROJECT_BINARY_DIR}/isa-l/install -DCMAKE_CXX_FLAGS:STRING=-I${PROJECT_BINARY_DIR}/isa-l/install/include
     CMAKE_ARGS			-DTBB_DIR=${PROJECT_BINARY_DIR}/oneTBB/src/oneTBB
     PREFIX              usher
@@ -71,6 +71,9 @@ set_target_properties(larch_autogen
     PROPERTIES CXX_CLANG_TIDY ""
 )
 
+find_package(MPI REQUIRED)
+find_package(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
+
 function(larch_compile_opts PRODUCT)
     target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -Werror -Wall -Wextra -pedantic -pedantic-errors -Wno-unused)
     if (${USE_ASAN})
@@ -81,20 +84,21 @@ function(larch_compile_opts PRODUCT)
     target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
     target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
     target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/oneTBB/src/oneTBB/include)
-    target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/usher/src)
+    target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/usher/src/usher)
     add_dependencies(${PRODUCT} range-v3 usher)
 endfunction()
 
 function(larch_link_opts PRODUCT)
 	target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/usher/src/usher-build/tbb_cmake_build/tbb_cmake_build_subdir_release)
     target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/usher/src/usher-build)
+    target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/isa-l/install/lib)
     if (${USE_ASAN})
         target_link_libraries(${PRODUCT} PUBLIC -lasan -lubsan)
     endif()
     target_link_libraries(${PRODUCT} PUBLIC -lz)
     target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
     target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
-    target_link_libraries(${PRODUCT} PUBLIC tbb_preview -lstdc++fs usher-lib)
+    target_link_libraries(${PRODUCT} PUBLIC tbb_preview -lstdc++fs usher-sampled-lib ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} isal)
 endfunction()
 
 function(larch_executable PRODUCT)
@@ -138,3 +142,6 @@ larch_executable(dag_diff
 
 larch_executable(dag2dot
     tools/dag2dot.cpp)
+
+larch_executable(sampled
+    tools/sampled.cpp)
