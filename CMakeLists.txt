@@ -55,7 +55,7 @@ ExternalProject_Add(usher
     GIT_SHALLOW         true
     GIT_PROGRESS        true
     UPDATE_DISCONNECTED true
-    PATCH_COMMAND       sed -i "s@oneTBB-2019_U9/include/@@g" ${PROJECT_BINARY_DIR}/usher/src/usher/src/check_samples_place/import_vcf.cpp && cat ${PROJECT_SOURCE_DIR}/add_usher_libs.cmake >> ${PROJECT_BINARY_DIR}/usher/src/usher/CMakeLists.txt
+    PATCH_COMMAND       sed -i "s@oneTBB-2019_U9/include/@@g" ${PROJECT_BINARY_DIR}/usher/src/usher/src/check_samples_place/import_vcf.cpp && cp ${PROJECT_SOURCE_DIR}/usher-workarounds/matOptimize-main.cpp ${PROJECT_BINARY_DIR}/usher/src/usher/src/matOptimize/ && cat ${PROJECT_SOURCE_DIR}/usher-workarounds/add_usher_libs.cmake >> ${PROJECT_BINARY_DIR}/usher/src/usher/CMakeLists.txt
     CMAKE_CACHE_ARGS    -DCMAKE_INSTALL_PREFIX:STRING=${PROJECT_BINARY_DIR}/usher/install -DCMAKE_PREFIX_PATH:STRING=${PROJECT_BINARY_DIR}/oneTBB/src/oneTBB/cmake;${PROJECT_BINARY_DIR}/isa-l/install -DCMAKE_CXX_FLAGS:STRING=-I${PROJECT_BINARY_DIR}/isa-l/install/include
     CMAKE_ARGS			-DTBB_DIR=${PROJECT_BINARY_DIR}/oneTBB/src/oneTBB
     PREFIX              usher
@@ -98,7 +98,7 @@ function(larch_link_opts PRODUCT)
     target_link_libraries(${PRODUCT} PUBLIC -lz)
     target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
     target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
-    target_link_libraries(${PRODUCT} PUBLIC tbb_preview -lstdc++fs usher-sampled-lib ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} isal)
+    target_link_libraries(${PRODUCT} PUBLIC tbb_preview -lstdc++fs usher-sampled-lib matOptimize-lib ${Boost_LIBRARIES} ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} isal)
 endfunction()
 
 function(larch_executable PRODUCT)
@@ -145,3 +145,6 @@ larch_executable(dag2dot
 
 larch_executable(sampled
     tools/sampled.cpp)
+
+larch_executable(matOptimize
+    tools/matOptimize.cpp)

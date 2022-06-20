@@ -60,3 +60,35 @@ add_dependencies(usher-sampled-lib usher-sampled)
 target_include_directories(usher-sampled-lib PUBLIC "${PROJECT_BINARY_DIR}")
 target_compile_options(usher-sampled-lib PRIVATE -DTBB_SUPPRESS_DEPRECATED_MESSAGES)
 target_link_libraries(usher-sampled-lib PRIVATE stdc++  ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} ${Protobuf_LIBRARIES} ZLIB::ZLIB  ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${ISAL_LIB})
+
+add_library(matOptimize-lib
+src/matOptimize/matOptimize-main.cpp
+src/matOptimize/mutation_annotated_tree.cpp
+src/matOptimize/mutation_annotated_tree_node.cpp
+src/matOptimize/mutation_annotated_tree_load_store.cpp
+src/matOptimize/detailed_mutations_store.cpp
+src/matOptimize/detailed_mutations_load.cpp
+src/matOptimize/mutation_annotated_tree_nuc_util.cpp
+src/matOptimize/optimize_tree.cpp
+src/matOptimize/import_vcf_fast.cpp
+src/matOptimize/condense.cpp
+src/matOptimize/VCF_load_tree.cpp
+src/matOptimize/main_load_tree.cpp
+src/matOptimize/main_helper.cpp
+src/matOptimize/Mutation_Collection.cpp
+src/matOptimize/Fitch_Sankoff.cpp
+src/matOptimize/check_samples.cpp
+src/matOptimize/priority_conflict_resolver.cpp
+src/matOptimize/transpose_vcf/transposed_vcf_patch.cpp
+${patch_tree}
+${New_Profitable_Moves_Enumerators}
+${PROTO_SRCS}
+${PROTO_HDRS}
+${DETAILED_MUTATIONS_PROTO_SRCS}
+${DETAILED_MUTATIONS_PROTO_HDRS}
+)
+
+add_dependencies(matOptimize-lib matOptimize)
+target_include_directories(matOptimize-lib PUBLIC "${PROJECT_BINARY_DIR}")
+target_compile_options(matOptimize-lib PRIVATE -DTBB_SUPPRESS_DEPRECATED_MESSAGES)
+target_link_libraries(matOptimize-lib PRIVATE stdc++  ${Boost_LIBRARIES} ${TBB_IMPORTED_TARGETS} ${Protobuf_LIBRARIES} ZLIB::ZLIB  ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} ${ISAL_LIB})
