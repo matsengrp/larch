@@ -148,3 +148,6 @@ larch_executable(sampled
 
 larch_executable(matOptimize
     tools/matOptimize.cpp)
+
+larch_executable(optimize
+    tools/optimize.cpp)

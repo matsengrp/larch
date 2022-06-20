@@ -2,7 +2,7 @@
 #include <atomic>
 
 std::atomic_bool interrupted(false);
-bool use_bound;
-int process_count;
-int this_rank;
-uint32_t num_threads;
+bool use_bound = false;
+int process_count = 0;
+int this_rank = 0;
+uint32_t num_threads = 0;
