@@ -133,7 +133,8 @@ larch_executable(larch-test
     test/synthetic_dags.cpp
     test/test_compact_genome.cpp
     test/test_merge.cpp
-    test/test_synthetic.cpp)
+    test/test_synthetic.cpp
+    test/test_usher_optimize.cpp)
 
 larch_executable(merge
     tools/merge.cpp)

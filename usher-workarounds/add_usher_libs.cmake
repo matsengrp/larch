@@ -14,6 +14,7 @@ src/usher-sampled/testers.cpp
 src/usher-sampled/utils.cpp
 src/usher-sampled/place_sample_shared.cpp
 src/usher-sampled/multiple_placement.cpp
+src/usher-sampled/usher_only_utils.cpp
 src/usher-sampled/static_tree_mapper/build_idx.cpp
 src/usher-sampled/static_tree_mapper/search.cpp
 src/matOptimize/main_helper.cpp

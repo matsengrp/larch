@@ -8,7 +8,7 @@
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
   std::cout << "optimize -i,--input file\n";
-  std::cout << "  -i,--input     Input file\n";
+  std::cout << "  -i,--input     Input tree file\n";
   std::exit(EXIT_SUCCESS);
 }
 
@@ -21,10 +21,8 @@
 static int Optimize(std::string_view input_path) {
   std::cout << "Optimizing: " << input_path << "\n";
 
-  Mutation_Annotated_Tree::Tree tree =
-      MAT::load_mutation_annotated_tree(std::string{input_path});
-  tree.uncondense_leaves();
-  tree.populate_ignored_range();
+  Mutation_Annotated_Tree::Tree tree;
+  Mutation_Annotated_Tree::load_mutation_annotated_tree(std::string{input_path}, tree);
 
   UsherOptimize(tree);
 
@@ -32,14 +30,7 @@ static int Optimize(std::string_view input_path) {
 }
 
 int main(int argc, char **argv) {
-  int ignored;
-  auto init_result = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
-  if (init_result != MPI_SUCCESS) {
-    fprintf(stderr, "MPI init failed\n");
-  }
-  MPI_Comm_rank(MPI_COMM_WORLD, &this_rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &process_count);
-  fprintf(stderr, "Running with %d processes\n", process_count);
+  InitUsherMPI(argc, argv);
 
   Arguments args = GetArguments(argc, argv);
 

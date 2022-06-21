@@ -1,11 +1,44 @@
 #include "usher_optimize.hpp"
 
+namespace MAT = Mutation_Annotated_Tree;
+
+extern std::atomic_bool interrupted;
+extern bool use_bound;
+extern int process_count;
+extern int this_rank;
+extern uint32_t num_threads;
+
+#define DRIFT_MASK 0x80000000
+#define ALL_DIR_MASK 0x40000000
+
+int count_back_mutation(const MAT::Tree &tree);
+void get_pos_samples_old_tree(MAT::Tree &tree, std::vector<mutated_t> &output);
+void min_back_reassign_state_local(MAT::Tree &tree,
+                                   const std::vector<mutated_t> &mutations);
+void MPI_min_back_reassign_states(MAT::Tree &tree,
+                                  const std::vector<mutated_t> &mutations,
+                                  int start_position);
+
 static void make_output_path(std::string &path_template) {
   auto fd = mkstemps(const_cast<char *>(path_template.c_str()), 3);
   close(fd);
 }
 
+void InitUsherMPI(int argc, char **argv) {
+  int ignored;
+  auto init_result = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
+  if (init_result != MPI_SUCCESS) {
+    fprintf(stderr, "MPI init failed\n");
+  }
+  MPI_Comm_rank(MPI_COMM_WORLD, &this_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &process_count);
+  fprintf(stderr, "Running with %d processes\n", process_count);
+}
+
 void UsherOptimize(Mutation_Annotated_Tree::Tree &t) {
+  t.uncondense_leaves();
+  t.populate_ignored_range();
+
   int drift_iterations = 0;
   int radius = -1;
   float search_proportion = 2;

@@ -321,7 +321,7 @@ int main(int argc, char** argv) {
             t = Mutation_Annotated_Tree::create_tree_from_newick(input_nh_path);
             // fprintf(stderr, "Input tree have %zu nodes\n",t.all_nodes.size());
           } else {
-            t = MAT::load_mutation_annotated_tree(input_pb_path);
+            Mutation_Annotated_Tree::load_mutation_annotated_tree(input_pb_path, t);
             t.uncondense_leaves();
           }
           fputs(
@@ -329,7 +329,7 @@ int main(int argc, char** argv) {
               stderr);
           load_vcf_nh_directly(t, input_vcf_path, origin_states);
         } else if (transposed_vcf_path != "") {
-          t = MAT::load_mutation_annotated_tree(input_pb_path);
+          Mutation_Annotated_Tree::load_mutation_annotated_tree(input_pb_path, t);
 #ifdef PROFILE_HEAP
           raise(SIGUSR1);
 #endif
