@@ -314,3 +314,39 @@ void MADAGToDOT(const MADAG& dag, std::ostream& out) {
   }
   out << "}\n";
 }
+
+[[nodiscard]] MADAG LoadDAGFromUsher(const Mutation_Annotated_Tree::Tree& tree,
+                                     std::string_view reference_sequence) {
+  MADAG result;
+  result.GetReferenceSequence() = reference_sequence;
+  DAG& dag = result.GetDAG();
+  std::vector<EdgeMutations>& mutations = result.GetEdgeMutations();
+  dag.InitializeNodes(tree.get_size_upper());
+  mutations.resize(tree.get_size_upper());
+
+  auto AddNode = [&](auto& self, const Mutation_Annotated_Tree::Node& node) -> void {
+    static const char decode[] = {'A', 'C', 'G', 'T'};
+    size_t clade = 0;
+    for (auto* child : node.children) {
+      dag.AppendEdge({node.node_id}, {child->node_id}, {clade++});
+      self(self, *child);
+    }
+    EdgeMutations& edge_muts = mutations.at(node.node_id);
+    for (auto& mut : node.mutations) {
+      edge_muts.insert({{static_cast<size_t>(mut.get_position())},
+                        {decode[one_hot_to_two_bit(mut.get_par_one_hot())],
+                         decode[one_hot_to_two_bit(mut.get_mut_one_hot())]}});
+    }
+  };
+
+  AddNode(AddNode, *tree.root);
+
+  dag.BuildConnections();
+
+  return result;
+}
+
+Mutation_Annotated_Tree::Tree StoreDAGToUsher(const MADAG& dag) {
+  Mutation_Annotated_Tree::Tree result;
+  return result;
+}

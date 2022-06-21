@@ -123,7 +123,8 @@ add_library(larch
     src/node_storage.cpp
     src/node.cpp
     src/post_order_iterator.cpp
-    src/pre_order_iterator.cpp)
+    src/pre_order_iterator.cpp
+    src/usher_optimize.cpp)
 larch_compile_opts(larch)
 larch_link_opts(larch)
 
