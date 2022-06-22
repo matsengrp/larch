@@ -9,6 +9,9 @@
   NodeId and EdgeId are strongly typed wrappers around size_t, and data is
   stored internally by the order of its IDs.
 
+  Additional node and edge data may be stored in classes which extend DAG.
+  See for example the class MADAG in `mutation_annotated_dag.hpp`.
+
   GetNodes() and GetEdges() returns a view into the corresponding elements,
   ordered by id.
 
@@ -48,15 +51,22 @@ class DAG {
 
   void InitializeNodes(size_t nodes_count);
 
+  // Properly reference added edges' IDs in node objects, and find root and
+  // leaf nodes
   void BuildConnections();
 
+  // Return a range containing NodeId's for each node in the DAG
   inline auto GetNodes() const;
   inline auto GetNodes();
+  inline auto GetNodes() const;
+  // Return a range containing EdgeId's for each edge in the DAG
   inline auto GetEdges() const;
   inline auto GetEdges();
 
+  // Get a Node object by its NodeId
   Node Get(NodeId id) const;
   MutableNode Get(NodeId id);
+  // Get an Edge object by its EdgeId
   Edge Get(EdgeId id) const;
   MutableEdge Get(EdgeId id);
 
@@ -66,14 +76,19 @@ class DAG {
   Node GetRoot() const;
   MutableNode GetRoot();
 
+  // Return a range containing leaf Nodes in the DAG
   inline auto GetLeafs() const;
   inline auto GetLeafs();
 
+  // Return a range containing a preordering of Nodes in the DAG
   inline auto TraversePreOrder() const;
   inline auto TraversePreOrder();
+  // Return a range containing a postordering of Nodes in the DAG
   inline auto TraversePostOrder() const;
   inline auto TraversePostOrder();
 
+  // Change node IDs so that they are pre-ordered, and return a
+  // map from old NodeIds to new NodeIds.
   std::map<NodeId, NodeId> ReindexPreOrder();
 
  private:

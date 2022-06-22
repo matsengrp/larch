@@ -4,6 +4,9 @@
 
 #include "common.hpp"
 
+/**
+ * A wrapper for size_t, storing a 1-based index on the reference sequence.
+ */
 struct MutationPosition {
   size_t value = NoId;
 };
@@ -16,6 +19,12 @@ inline bool operator<(MutationPosition lhs, MutationPosition rhs) {
   return lhs.value < rhs.value;
 }
 
+/**
+ * A container for mutations along an edge, implemented as a map from
+ * MutationPositions to (char, char) pairs in which the first char is the
+ * site's state on the parent node, and the second is the site's state on the
+ * child.
+ */
 class EdgeMutations {
   std::map<MutationPosition, std::pair<char, char>> mutations_;
 
