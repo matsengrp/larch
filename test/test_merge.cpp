@@ -2,135 +2,30 @@
 
 #include <iostream>
 #include <fstream>
+#include <experimental/filesystem>
 
 #include "test_common.hpp"
-#include "history_dag_loader.hpp"
+#include "dag_loader.hpp"
 #include "benchmark.hpp"
-
-void GetLabels(const HistoryDAG& tree, std::vector<NodeLabel>& labels,
-               const std::string& refseq, const std::vector<CompactGenome>& mutations) {
-  labels.resize(tree.GetNodes().size());
-  for (auto iter : tree.TraversePreOrder()) {
-    if (iter.IsRoot()) {
-      continue;
-    }
-    const CompactGenome& muts = mutations.at(iter.GetEdge().GetId().value);
-    NodeLabel& label = labels.at(iter.GetNode().GetId().value);
-    const CompactGenome& parent_cgs =
-        labels.at(iter.GetEdge().GetParent().GetId().value).first;
-    label.first = parent_cgs;
-    for (auto [pos, base] : muts) {
-      if (base != refseq.at(pos - 1)) {
-        label.first[pos] = base;
-      } else {
-        label.first.erase(pos);
-      }
-    }
-  }
-
-  for (Node node : tree.TraversePostOrder()) {
-    if (node.IsLeaf()) {
-      continue;
-    }
-    LeafSet& leaf_set = labels.at(node.GetId().value).second;
-    for (auto clade : node.GetClades()) {
-      std::set<CompactGenome> clade_leafs;
-      for (Node child : clade | ranges::views::transform(Transform::GetChild)) {
-        if (child.IsLeaf()) {
-          clade_leafs.insert(labels.at(child.GetId().value).first);
-        } else {
-          for (auto& child_leafs : labels.at(child.GetId().value).second) {
-            clade_leafs.insert(child_leafs.begin(), child_leafs.end());
-          }
-        }
-      }
-      leaf_set.insert(clade_leafs);
-    }
-  }
-}
-
-[[maybe_unused]] std::string ToString(const NodeLabel& label) {
-  std::string result;
-  for (auto [pos, mut] : label.first) {
-    result += std::to_string(pos);
-    result += mut;
-    result += " ";
-  }
-  result += "[";
-  for (auto& clade : label.second) {
-    result += "(";
-    for (auto& leaf : clade) {
-      for (auto [pos, mut] : leaf) {
-        result += std::to_string(pos);
-        result += mut;
-        result += " ";
-      }
-    }
-    result += ") ";
-  }
-  result += "]";
-  return result;
-}
-
-std::string ToDOT(Node node, const NodeLabel& label) {
-  std::string result;
-  size_t count = 0;
-  for (auto [pos, mut] : label.first) {
-    result += std::to_string(pos);
-    result += mut;
-    result += ++count % 3 == 0 ? "\\n" : " ";
-  }
-  result += "\\n[";
-  result += std::to_string(node.GetId().value);
-  result += "]";
-  return result;
-}
-
-std::string ToDOT(const HistoryDAG& tree, const std::vector<NodeLabel>& labels) {
-  std::string result;
-  result += "digraph {\n";
-  for (auto i : tree.GetEdges()) {
-    std::string parent = ToDOT(i.GetParent(), labels.at(i.GetParent().GetId().value));
-    std::string child = ToDOT(i.GetChild(), labels.at(i.GetChild().GetId().value));
-    result += "  \"";
-    result += parent;
-    result += "\" -> \"";
-    result += child;
-    result += "\"\n";
-  }
-  result += "}";
-  return result;
-}
 
 static void test_protobuf(const std::string& correct_path,
                           const std::vector<std::string>& paths) {
-  std::vector<std::vector<CompactGenome>> mutations;
-  std::vector<HistoryDAG> trees;
+  std::vector<MADAG> trees;
   for (auto& path : paths) {
-    std::vector<CompactGenome> tree_mutations;
-    trees.emplace_back(LoadHistoryDAGFromProtobufGZ(path, tree_mutations));
-    mutations.emplace_back(std::move(tree_mutations));
-  }
-  std::string refseq;
-  HistoryDAG correct_result = LoadHistoryDAGFromJsonGZ(correct_path, refseq);
-
-  std::vector<std::vector<NodeLabel>> labels;
-  std::vector<std::reference_wrapper<const HistoryDAG>> tree_refs;
-  for (size_t i = 0; i < trees.size(); ++i) {
-    std::vector<NodeLabel> tree_labels;
-    GetLabels(trees.at(i), tree_labels, refseq, mutations.at(i));
-    labels.emplace_back(std::move(tree_labels));
-    tree_refs.push_back(trees.at(i));
+    trees.emplace_back(LoadDAGFromProtobuf(path));
   }
 
-  Merge merged(refseq, std::move(tree_refs), labels);
-  merged.Run();
+  MADAG correct_result = LoadDAGFromJson(correct_path);
 
-  assert_equal(correct_result.GetNodes().size(), merged.GetResult().GetNodes().size(),
-               "Nodes count");
+  Merge merge(correct_result.GetReferenceSequence());
+  std::vector<std::reference_wrapper<MADAG>> tree_refs{trees.begin(), trees.end()};
+  merge.AddDAGs(tree_refs);
 
-  assert_equal(correct_result.GetEdges().size(), merged.GetResult().GetEdges().size(),
-               "Edges count");
+  assert_equal(correct_result.GetDAG().GetNodesCount(),
+               merge.GetResult().GetNodesCount(), "Nodes count");
+
+  assert_equal(correct_result.GetDAG().GetEdgesCount(),
+               merge.GetResult().GetEdgesCount(), "Edges count");
 }
 
 static void test_five_trees() {
@@ -165,10 +60,86 @@ static void test_case_ref() {
                 });
 }
 
-[[maybe_unused]] static const auto test0_added = add_test({test_case_2, "Test case 2"});
+static void test_case_20d() {
+  std::vector<std::string> paths;
+  const std::experimental::filesystem::path dir{"data/20D_from_fasta"};
+  for (auto& file : std::experimental::filesystem::directory_iterator{dir}) {
+    std::string name = file.path().filename().string();
+    if (name.find("1final-tree-") == 0) {
+      paths.push_back(file.path().string());
+    }
+  }
+
+  std::vector<MADAG> trees;
+
+  MADAG correct_result = LoadDAGFromJson("data/20D_from_fasta/full_dag.json.gz");
+
+  trees.resize(paths.size());
+  std::vector<std::pair<size_t, std::string_view>> paths_idx;
+  for (size_t i = 0; i < paths.size(); ++i) {
+    paths_idx.push_back({i, paths.at(i)});
+  }
+  tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
+    trees.at(path_idx.first) = LoadTreeFromProtobuf(path_idx.second);
+  });
+
+  Benchmark merge_time;
+  Merge merge(correct_result.GetReferenceSequence());
+  std::vector<std::reference_wrapper<MADAG>> tree_refs{trees.begin(), trees.end()};
+  merge_time.start();
+  merge.AddDAGs(tree_refs);
+  merge_time.stop();
+  std::cout << " DAGs merged in " << merge_time.durationMs() << " ms. ";
+
+  assert_equal(correct_result.GetDAG().GetNodesCount(),
+               merge.GetResult().GetNodesCount(), "Nodes count");
+
+  assert_equal(correct_result.GetDAG().GetEdgesCount(),
+               merge.GetResult().GetEdgesCount(), "Edges count");
+}
+
+static void test_add_trees() {
+  std::string_view correct_path = "data/test_5_trees/full_dag.json.gz";
+  std::vector<std::string> paths1 = {"data/test_5_trees/tree_0.pb.gz",
+                                     "data/test_5_trees/tree_1.pb.gz"};
+  std::vector<std::string> paths2 = {"data/test_5_trees/tree_2.pb.gz",
+                                     "data/test_5_trees/tree_3.pb.gz",
+                                     "data/test_5_trees/tree_4.pb.gz"};
+
+  std::vector<MADAG> trees1, trees2;
+  for (auto& path : paths1) {
+    trees1.emplace_back(LoadDAGFromProtobuf(path));
+  }
+  for (auto& path : paths2) {
+    trees2.emplace_back(LoadDAGFromProtobuf(path));
+  }
+
+  MADAG correct_result = LoadDAGFromJson(correct_path);
+
+  Merge merge(correct_result.GetReferenceSequence());
+  std::vector<std::reference_wrapper<MADAG>> tree_refs1{trees1.begin(), trees1.end()};
+  merge.AddDAGs(tree_refs1);
+  std::vector<std::reference_wrapper<MADAG>> tree_refs2{trees2.begin(), trees2.end()};
+  merge.AddDAGs(tree_refs2);
+
+  assert_equal(correct_result.GetDAG().GetNodesCount(),
+               merge.GetResult().GetNodesCount(), "Nodes count");
+
+  assert_equal(correct_result.GetDAG().GetEdgesCount(),
+               merge.GetResult().GetEdgesCount(), "Edges count");
+}
+
+[[maybe_unused]] static const auto test0_added =
+    add_test({test_case_2, "Merge: Test case 2"});
 
 [[maybe_unused]] static const auto test1_added =
-    add_test({test_five_trees, "Merge 5 trees"});
+    add_test({test_five_trees, "Merge: 5 trees"});
 
 [[maybe_unused]] static const auto test2_added =
-    add_test({test_case_ref, "Tree with different ref"});
+    add_test({test_case_ref, "Merge: Tree with different ref"});
+
+[[maybe_unused]] static const auto test3_added =
+    add_test({test_case_20d, "Merge: 800 trees"});
+
+[[maybe_unused]] static const auto test4_added =
+    add_test({test_add_trees, "Merge: Add trees"});

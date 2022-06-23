@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <regex>
 
 #include "test_common.hpp"
 
@@ -15,14 +16,27 @@ bool add_test(const Test& test) noexcept {
 
 int main(int argc, const char* argv[]) {
   bool no_catch = false;
-  if (argc > 1 && std::string("nocatch") == argv[1]) {
-    no_catch = true;
+  std::regex regex{".*"};
+  for (int i = 1; i < argc; ++i) {
+    if (std::string("nocatch") == argv[i]) {
+      no_catch = true;
+    } else {
+      regex = argv[i];
+    }
+  }
+
+  std::vector<Test> tests;
+  for (auto& test : get_all_tests()) {
+    std::smatch match;
+    if (std::regex_match(test.name, match, regex)) {
+      tests.push_back(test);
+    }
   }
 
   size_t failed = 0, ran = 0;
-  const auto num_tests = get_all_tests().size();
+  const auto num_tests = tests.size();
   std::cout << "Running " << num_tests << " tests" << std::endl;
-  for (auto&& test : get_all_tests()) {
+  for (auto& test : tests) {
     ++ran;
     std::cout << "Running test: " << test.name << " (" << ran << "/" << num_tests
               << ") ..." << std::flush;
@@ -44,8 +58,7 @@ int main(int argc, const char* argv[]) {
     }
   }
   if (failed) {
-    std::cerr << "Failed tests: " << failed << "/" << get_all_tests().size()
-              << std::endl;
+    std::cerr << "Failed tests: " << failed << "/" << num_tests << std::endl;
     return EXIT_FAILURE;
   } else {
     std::cout << "All tests passed" << std::endl;

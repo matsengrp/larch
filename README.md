@@ -1,16 +1,18 @@
-# History DAG scratchpad
+# Getting started
 
 Requirements
 ------------
 
 * GCC 7.5
-* cmake 3.11
+* cmake 3.16
+* clang-tidy
 * protobuf libraries and compiler
 * zlib
+* TBB
 
 For Ubuntu 18.04 LTS the following commands installs the requirements:
 
-`sudo apt get install make g++ protobuf-compiler libprotobuf-dev zlib1g-dev`
+`sudo apt get install make g++ protobuf-compiler libprotobuf-dev zlib1g-dev libtbb-dev clang-tidy`
 
 To get a recent cmake, download from `https://cmake.org/download/`, for example:
 
@@ -27,6 +29,10 @@ Building
 
 `make -j16`
 
+Optionally add -DCMAKE_CXX_CLANG_TIDY="clang-tidy" to enable clang-tidy.
+
+Optionally add -DUSE_ASAN=yes to enable asan and ubsan.
+
 Running
 -------
 
@@ -34,9 +40,9 @@ From the build directory:
 
 `ln -s ../data`
 
-`./larch`
+`./larch-test`
 
-Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch nocatch`.
+Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
 
 Third-party 
 -----------

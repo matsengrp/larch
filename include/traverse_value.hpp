@@ -1,6 +1,7 @@
 #pragma once
 
-#include "history_dag_common.hpp"
+#include "node.hpp"
+#include "edge.hpp"
 
 template <typename T>
 class TraverseValue {
