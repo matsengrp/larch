@@ -44,7 +44,9 @@ class EdgeView {
   std::pair<NodeId, NodeId> GetNodeIds() const;
   bool IsRoot() const;
   bool IsLeaf() const;
-  // Find the next child edge descending from this edge's parent node
+  /**
+   * Find the next child edge descending from this edge's parent node
+   */
   [[nodiscard]] std::optional<EdgeView> FindNextSibling() const;
 
  private:

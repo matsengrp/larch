@@ -9,17 +9,27 @@
 
 class NodeStorage {
  public:
-  // Get vector of parent edges
+ /**
+  * Get vector of parent edges
+  */
   const std::vector<EdgeId>& GetParents() const;
-  // Get vectors of child edges corresponding to child clades
+  /**
+   * Get vectors of child edges corresponding to child clades
+   */
   const std::vector<std::vector<EdgeId>>& GetClades() const;
 
-  // Remove all parent and child edges
+  /**
+   * Remove all parent and child edges
+   */
   void ClearConnections();
-  // Add a parent or child edge with EdgeId id. If this_node_is_parent is
-  // False, clade is ignored.
+  /**
+   * Add a parent or child edge with EdgeId id. If this_node_is_parent is
+   * False, clade is ignored.
+   */
   void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent);
-  // Remove a parent or child edge.
+  /**
+   * Remove a parent or child edge.
+   */
   void RemoveEdge(Edge edge, bool this_node_is_parent);
 
  private:

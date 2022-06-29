@@ -29,20 +29,32 @@ class NodeView {
   NodeView(T dag, NodeId id);
   operator Node() const;
   operator NodeId() const;
-  // Return DAG-like object containing this node
+  /**
+   * Return DAG-like object containing this node
+   */
   T GetDAG() const;
   NodeId GetId() const;
-  // Return a range containing parent Edge objects
+  /**
+   * Return a range containing parent Edge objects
+   */
   auto GetParents() const;
-  // Return a range containing clades. A clade is a range containing child
-  // Edges.
+  /**
+   * Return a range containing clades. A clade is a range containing child
+   * Edges
+   */
   auto GetClades() const;
-  // Return a range containing child Edges
+  /**
+   * Return a range containing child Edges
+   */
   auto GetChildren() const;
   EdgeType GetSingleParent() const;
-  // Checks if node has no parents
+  /**
+   * Checks if node has no parents
+   */
   bool IsRoot() const;
-  // Checks if node has no children
+  /**
+   * Checks if node has no children
+   */
   bool IsLeaf() const;
   void AddParentEdge(Edge edge) const;
   void AddChildEdge(Edge edge) const;

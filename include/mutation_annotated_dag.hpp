@@ -26,11 +26,17 @@
 class MADAG {
  public:
   const DAG& GetDAG() const;
-  // Get UA node sequence
+  /**
+   * Get UA node sequence
+   */
   std::string_view GetReferenceSequence() const;
-  // Edge mutations are ordered by edge ID
+  /**
+   * Edge mutations are ordered by edge ID
+   */
   const std::vector<EdgeMutations>& GetEdgeMutations() const;
-  // Compact genomes are ordered by node ID
+  /**
+   * Compact genomes are ordered by node ID
+   */
   const std::vector<CompactGenome>& GetCompactGenomes() const;
 
   DAG& GetDAG();
@@ -38,11 +44,15 @@ class MADAG {
   std::vector<EdgeMutations>& GetEdgeMutations();
   std::vector<CompactGenome>& GetCompactGenomes();
 
-  // Compute compact genomes, ordered by node ID, from edge mutations
+  /**
+   * Compute compact genomes, ordered by node ID, from edge mutations
+   */
   [[nodiscard]] std::vector<CompactGenome> ComputeCompactGenomes(
       std::string_view reference_sequence) const;
 
-  // Compute edge mutations, ordered by edge ID, from compact genomes
+  /**
+   * Compute edge mutations, ordered by edge ID, from compact genomes
+   */
   [[nodiscard]] std::vector<EdgeMutations> ComputeEdgeMutations(
       std::string_view reference_sequence) const;
 
