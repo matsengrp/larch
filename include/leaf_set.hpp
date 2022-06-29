@@ -5,6 +5,13 @@
 class CompactGenome;
 class NodeLabel;
 
+/**
+ * LeafSet provides a container which keeps track of a node's child clades.
+ * A node's child clades are the sets of leaves reachable from children of
+ * that node.
+ * Child clades are stored in a LeafSet as a vector of vectors of leaf node
+ * CompactGenomes.
+ */
 class LeafSet {
   std::vector<std::vector<const CompactGenome*>> clades_ = {};
   size_t hash_ = {};

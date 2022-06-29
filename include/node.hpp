@@ -1,8 +1,3 @@
-/*
-  Node is a lightweight view object into the internal node storage of a
-  DAG. It is meant to be cheaply passed by value, and behaves as a
-  reference into raw storage that conveniently enriches it's API.
-*/
 #pragma once
 
 #include "common.hpp"
@@ -20,6 +15,11 @@ struct std::hash<NodeId> {
   size_t operator()(NodeId id) const noexcept { return id.value; }
 };
 
+/*
+  NodeView is a lightweight view object into the internal node storage of a
+  DAG. It is meant to be cheaply passed by value, and behaves as a
+  reference into raw storage that conveniently enriches its API.
+*/
 template <typename T>
 class NodeView {
  public:

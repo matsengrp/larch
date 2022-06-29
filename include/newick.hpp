@@ -1,3 +1,7 @@
+/**
+ * Infrastructure for parsing newick trees
+ */
+
 #pragma once
 
 #include <stack>

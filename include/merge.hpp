@@ -38,9 +38,11 @@ class Merge {
   Merge& operator=(Merge&&) = delete;
   Merge& operator=(const Merge&) = delete;
 
+  // Add DAGs to be merged
   void AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& dags,
                bool have_compact_genomes = false);
 
+  // Get the DAG resulting from merge
   DAG& GetResult();
   const DAG& GetResult() const;
   const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;

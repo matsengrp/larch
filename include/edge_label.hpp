@@ -1,3 +1,7 @@
+/**
+ * An EdgeLabel stores an edge's parent and child NodeLabel objects
+ */
+
 #pragma once
 
 #include "node_label.hpp"

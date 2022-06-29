@@ -59,7 +59,7 @@ class DAG {
   inline auto GetNodes() const;
   inline auto GetNodes();
   inline auto GetNodes() const;
-  // Return a range containing EdgeId's for each node in the DAG
+  // Return a range containing EdgeId's for each edge in the DAG
   inline auto GetEdges() const;
   inline auto GetEdges();
 

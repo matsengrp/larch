@@ -3,6 +3,7 @@
 
 #include <range/v3/view/subrange.hpp>
 
+// Return a range containing this DAG's Nodes
 auto DAG::GetNodes() const {
   return nodes_ |
          ranges::views::transform([this, idx = size_t{}](const NodeStorage&) mutable {
@@ -17,6 +18,7 @@ auto DAG::GetNodes() {
          });
 }
 
+// Return a range containing this DAG's Edges
 auto DAG::GetEdges() const {
   return edges_ |
          ranges::views::transform([this, idx = size_t{}](const EdgeStorage&) mutable {
@@ -31,10 +33,12 @@ auto DAG::GetEdges() {
          });
 }
 
+// Return a range containing this DAG's leaf Nodes
 auto DAG::GetLeafs() const { return leafs_ | Transform::ToNodes(*this); }
 
 auto DAG::GetLeafs() { return leafs_ | Transform::ToNodes(*this); }
 
+// Return a range containing this DAG's Nodes, in pre-order
 auto DAG::TraversePreOrder() const {
   return ranges::subrange(PreOrderIterator{GetRoot()}, PreOrderIterator<Node>{});
 }
@@ -43,6 +47,7 @@ auto DAG::TraversePreOrder() {
   return ranges::subrange(PreOrderIterator{GetRoot()}, PreOrderIterator<MutableNode>{});
 }
 
+// Return a range containing this DAG's Nodes, in post-order
 auto DAG::TraversePostOrder() const {
   return ranges::subrange(PostOrderIterator{GetRoot()}, PostOrderIterator<Node>{});
 }
