@@ -46,9 +46,12 @@ class Merge {
 
   /**
    * Get the DAG resulting from merge
+   * @{
    */
   DAG& GetResult();
   const DAG& GetResult() const;
+  /** @} */
+
   const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
   [[nodiscard]] std::vector<EdgeMutations> ComputeResultEdgeMutations() const;
 

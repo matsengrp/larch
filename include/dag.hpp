@@ -59,26 +59,36 @@ class DAG {
 
   /**
    * Return a range containing NodeId's for each node in the DAG
+   * @{
    */
   inline auto GetNodes() const;
   inline auto GetNodes();
   inline auto GetNodes() const;
+  /** @} */
+
   /**
    * Return a range containing EdgeId's for each edge in the DAG
+   * @{
    */
   inline auto GetEdges() const;
   inline auto GetEdges();
+  /** @} */
 
   /**
    * Get a Node object by its NodeId
+   * @{
    */
   Node Get(NodeId id) const;
   MutableNode Get(NodeId id);
+  /** @} */
+  
   /**
    * Get an Edge object by its EdgeId
+   * @{
    */
   Edge Get(EdgeId id) const;
   MutableEdge Get(EdgeId id);
+  /** @} */
 
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
@@ -88,20 +98,27 @@ class DAG {
 
   /**
    * Return a range containing leaf Nodes in the DAG
+   * @{
    */
   inline auto GetLeafs() const;
   inline auto GetLeafs();
+  /** @} */
 
   /**
    * Return a range containing a preordering of Nodes in the DAG
+   * @{
    */
   inline auto TraversePreOrder() const;
   inline auto TraversePreOrder();
+  /** @} */
+
   /**
    * Return a range containing a postordering of Nodes in the DAG
+   * @{
    */
   inline auto TraversePostOrder() const;
   inline auto TraversePostOrder();
+  /** @} */
 
   /**
    * Change node IDs so that they are pre-ordered, and return a

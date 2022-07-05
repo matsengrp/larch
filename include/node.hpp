@@ -47,6 +47,9 @@ class NodeView {
    * Return a range containing child Edges
    */
   auto GetChildren() const;
+  /**
+   * Return a single parent edge of this node
+   */
   EdgeType GetSingleParent() const;
   /**
    * Checks if node has no parents
