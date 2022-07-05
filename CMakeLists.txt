@@ -92,3 +92,10 @@ larch_executable(dag_diff
 
 larch_executable(dag2dot
     tools/dag2dot.cpp)
+
+install(TARGETS larch EXPORT larch DESTINATION lib)
+install(DIRECTORY include/ DESTINATION include/larch)
+install(FILES
+   ${CMAKE_CURRENT_BINARY_DIR}/parsimony.pb.h
+	 ${CMAKE_CURRENT_BINARY_DIR}/dag.pb.h
+	 DESTINATION include/larch)
