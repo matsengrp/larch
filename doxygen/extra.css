@@ -1,3 +1,11 @@
+code {
+    font-weight: bold !important;
+}
+
+code:not(.fragment *) {
+    font-weight: bold !important;
+}
+
 *:not(.fragment *) {
 	background-color: #FEFBFB !important;
 	color: #525252 !important;
