@@ -1,12 +1,11 @@
+// Functions defined here are documented where declared in `include/node.hpp`
 #include <range/v3/view/join.hpp>
 
-// Return a range containing this node's parent Edges
 template <typename T>
 auto NodeView<T>::GetParents() const {
   return GetStorage().GetParents() | Transform::ToEdges(dag_);
 }
 
-// Return a range containing this node's child Edges, grouped in sub-ranges by clade
 template <typename T>
 auto NodeView<T>::GetClades() const {
   return GetStorage().GetClades() |
@@ -15,7 +14,6 @@ auto NodeView<T>::GetClades() const {
          });
 }
 
-// Return a range containing this node's child Edges
 template <typename T>
 auto NodeView<T>::GetChildren() const {
   return GetClades() | ranges::views::join;
