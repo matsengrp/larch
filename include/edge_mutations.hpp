@@ -37,6 +37,7 @@ class EdgeMutations {
 
   auto begin() const -> decltype(mutations_.begin());
   auto end() const -> decltype(mutations_.end());
+  size_t size() const;
   auto operator[](MutationPosition pos) -> decltype(mutations_[pos]);
   auto insert(std::pair<MutationPosition, std::pair<char, char>> mut)
       -> decltype(mutations_.insert(mut));

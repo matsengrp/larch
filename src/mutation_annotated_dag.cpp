@@ -60,3 +60,11 @@ std::vector<EdgeMutations> MADAG::ComputeEdgeMutations(
   }
   return result;
 }
+
+const EdgeMutations& MADAG::GetEdgeMutations(EdgeId edge_id) const {
+  return edge_mutations_.at(edge_id.value);
+}
+
+EdgeMutations& MADAG::GetEdgeMutations(EdgeId edge_id) {
+  return edge_mutations_.at(edge_id.value);
+}

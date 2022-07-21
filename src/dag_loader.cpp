@@ -106,8 +106,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
     if (node.IsRoot()) {
       continue;
     }
-    auto& edge_muts =
-        result.GetEdgeMutations().at(node.GetSingleParent().GetId().value);
+    auto& edge_muts = result.GetEdgeMutations(node.GetSingleParent());
     for (auto i :
          pb_muts |
              ranges::views::transform(
@@ -265,7 +264,7 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
 static std::string EdgeMutationsToString(Edge edge, const MADAG& dag) {
   std::string result;
   size_t count = 0;
-  for (auto [pos, muts] : dag.GetEdgeMutations().at(edge.GetId().value)) {
+  for (auto [pos, muts] : dag.GetEdgeMutations(edge)) {
     result += muts.first;
     result += std::to_string(pos.value);
     result += muts.second;
