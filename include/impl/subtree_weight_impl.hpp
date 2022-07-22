@@ -1,15 +1,19 @@
 #include <algorithm>
 
-template <typename T>
-SubtreeWeight<T>::SubtreeWeight(const MADAG& dag) : dag_{dag} {
-  weights_below_node_.resize(dag_.GetDAG().GetNodesCount());
-}
+template <typename T, typename WeightOps>
+SubtreeWeight<T, WeightOps>::SubtreeWeight(const MADAG& dag)
+    : dag_{dag},
+      weights_below_node_(dag_.GetDAG().GetNodesCount(), WeightOps::Identity) {}
 
-template <typename T>
-template <typename WeightOps>
-T SubtreeWeight<T>::ComputeWeightBelow(Node node, WeightOps&& weight_ops) {
+template <typename T, typename WeightOps>
+T SubtreeWeight<T, WeightOps>::ComputeWeightBelow(Node node, WeightOps&& weight_ops) {
+  auto& cached = weights_below_node_.at(node.GetId().value);
+  if (cached != WeightOps::Identity) {
+    return cached;
+  }
   if (node.IsLeaf()) {
-    return weight_ops.ComputeLeaf(dag_, node);
+    cached = weight_ops.ComputeLeaf(dag_, node);
+    return cached;
   }
   typename WeightOps::Weight result = WeightOps::Identity;
   for (auto clade : node.GetClades()) {
@@ -25,5 +29,6 @@ T SubtreeWeight<T>::ComputeWeightBelow(Node node, WeightOps&& weight_ops) {
     }
     result = weight_ops.Combine(result, clade_min_weight);
   }
-  return result;
+  cached = result;
+  return cached;
 }

@@ -1,3 +1,10 @@
+/**
+  Representation of edge mutations parsimony-based weight scoring for MADAG.
+
+  This type is meant to be used as a parameter to SubtreeWeight.
+
+ */
+
 #pragma once
 
 #include "mutation_annotated_dag.hpp"
