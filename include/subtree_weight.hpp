@@ -11,17 +11,16 @@
 
 #include <functional>
 
-#include "mutation_annotated_dag.hpp"
+#include "dag.hpp"
 
 template <typename T, typename WeightOps>
 class SubtreeWeight {
  public:
-  explicit SubtreeWeight(const MADAG& dag);
+  SubtreeWeight(const DAG& dag);
 
   T ComputeWeightBelow(Node node, WeightOps&& weight_ops);
 
  private:
-  const MADAG& dag_;
   std::vector<T> weights_below_node_;
 };
 
