@@ -1,3 +1,10 @@
+/**
+ * A CompactGenome stores a sequence as a diff relative to a reference
+ * sequence. This is implemented as a sorted vector of position, character
+ * pairs. The position is a 1-based index on the reference sequence at which
+ * the CompactGenome differs from that reference, and the character describes
+ * that differing state.
+ */
 #pragma once
 
 #include <optional>
@@ -21,6 +28,10 @@ class CompactGenome {
 
   CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations);
 
+  /**
+   * Apply mutations from `mutations` to the compact genome `parent` to compute
+   * the mutations in this compact genome.
+   */
   void AddParentEdge(const EdgeMutations& mutations, const CompactGenome& parent,
                      std::string_view reference_sequence);
 

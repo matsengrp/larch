@@ -8,6 +8,9 @@
 
 #include "traverse_value.hpp"
 
+/*
+ * PostOrderIterator provides a post order node iterator, given a DAG node.
+ */
 template <typename NodeType>
 class PostOrderIterator {
  public:

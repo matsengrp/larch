@@ -5,6 +5,11 @@
 class CompactGenome;
 class LeafSet;
 
+/*
+ * NodeLabel stores the data which formally defines a node: a CompactGenome,
+ * and a set of child clades, stored in a LeafSet. This allows appropriate
+ * equality testing between node objects during MAD operations, like merging.
+ */
 class NodeLabel {
  public:
   NodeLabel();

@@ -1,25 +1,33 @@
+code {
+    font-weight: bold !important;
+}
+
+code:not(.fragment *) {
+    font-weight: bold !important;
+}
+
 *:not(.fragment *) {
-	background-color: #222 !important;
-	color: #CCC !important;
+	background-color: #FEFBFB !important;
+	color: #525252 !important;
 	font-family: "DejaVu Sans Mono", monospace !important;
 	background-image: none !important;
 	text-shadow: none !important;
-	border-color: #CCC !important;
+	border-color: #525252 !important;
 	border-width: 1px !important;
 	border-radius: 0px !important;
 	font-size: 100% !important;
 }
 
 .code {
-	color: #CCC !important;
+	color: #525252 !important;
 }
 
 .lineno {
-	background-color: #222 !important;
+	background-color: #FEFBFB !important;
 }
 
 .lineno > * {
-	background-color: #222 !important;
-	color: #CCC !important;
+	background-color: #FEFBFB !important;
+	color: #525252 !important;
 	font-weight: bold !important;
 }

@@ -1,3 +1,4 @@
+// The functions in this file are documented where declared in `include/dag.hpp`
 #include <unordered_map>
 #include <numeric>
 

@@ -7,6 +7,9 @@
 
 #include "traverse_value.hpp"
 
+/*
+ * PreOrderIterator provides a pre-order node iterator, given a DAG node.
+ */
 template <typename NodeType>
 class PreOrderIterator {
  public:
