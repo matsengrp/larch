@@ -63,7 +63,6 @@ class DAG {
    */
   inline auto GetNodes() const;
   inline auto GetNodes();
-  inline auto GetNodes() const;
   /** @} */
 
   /**
