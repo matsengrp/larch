@@ -1,6 +1,7 @@
 #include "edge_label.hpp"
 
-#include "common.hpp"
+#include "dag.hpp"
+#include "leaf_set.hpp"
 
 EdgeLabel::EdgeLabel(NodeLabel parent, NodeLabel child)
     : parent_{parent}, child_{child} {}
@@ -15,4 +16,14 @@ bool EdgeLabel::operator==(const EdgeLabel& rhs) const noexcept {
 
 size_t EdgeLabel::Hash() const noexcept {
   return HashCombine(parent_.Hash(), child_.Hash());
+}
+
+CladeIdx EdgeLabel::ComputeCladeIdx() const {
+  const auto parent_clade = child_.GetLeafSet()->ToParentClade();
+  CladeIdx result{0};
+  for (const auto& clade : *parent_.GetLeafSet()) {
+    if (clade == parent_clade) break;
+    ++result.value;
+  }
+  return result;
 }

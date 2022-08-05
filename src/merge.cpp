@@ -118,7 +118,7 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
     Assert(child != result_nodes_.end());
     Assert(parent->second.value < result_dag_.GetNodesCount());
     Assert(child->second.value < result_dag_.GetNodesCount());
-    result_dag_.AddEdge(edge_id, parent->second, child->second, {0});
+    result_dag_.AddEdge(edge_id, parent->second, child->second, edge.ComputeCladeIdx());
     auto result_edge_it = result_edges_.find(edge);
     Assert(result_edge_it != result_edges_.end());
     result_edge_it->second = edge_id;

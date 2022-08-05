@@ -2,6 +2,8 @@
 
 #include <range/v3/action/sort.hpp>
 #include <range/v3/action/unique.hpp>
+#include <range/v3/view/join.hpp>
+#include <range/v3/range/conversion.hpp>
 
 #include "dag.hpp"
 #include "compact_genome.hpp"
@@ -56,6 +58,13 @@ auto LeafSet::end() const -> decltype(clades_.end()) { return clades_.end(); }
 bool LeafSet::empty() const { return clades_.empty(); }
 
 size_t LeafSet::size() const { return clades_.size(); }
+
+std::vector<const CompactGenome*> LeafSet::ToParentClade() const {
+  std::vector<const CompactGenome*> result =
+      ranges::to_vector(clades_ | ranges::views::join);
+  result |= ranges::actions::sort;
+  return result;
+}
 
 size_t LeafSet::ComputeHash(
     const std::vector<std::vector<const CompactGenome*>>& clades) {
