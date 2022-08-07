@@ -28,6 +28,7 @@
 #include <vector>
 #include <string_view>
 #include <map>
+#include <queue>
 
 #include "common.hpp"
 #include "node.hpp"
@@ -42,7 +43,7 @@ class DAG {
   DAG(DAG&&) = default;
   DAG& operator=(DAG&&) = default;
   DAG(const DAG&) = delete;
-  DAG& operator=(const DAG&) = delete;
+  //DAG& operator=(const DAG&) = delete;
 
   MutableNode AddNode(NodeId id);
 
@@ -124,6 +125,8 @@ class DAG {
    * map from old NodeIds to new NodeIds.
    */
   std::map<NodeId, NodeId> ReindexPreOrder();
+
+  DAG GetSample();
 
  private:
   template <typename>
