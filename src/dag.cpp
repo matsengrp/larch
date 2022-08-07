@@ -82,3 +82,29 @@ std::map<NodeId, NodeId> DAG::ReindexPreOrder() {
   BuildConnections();
   return index;
 }
+
+DAG DAG::GetSample() {
+  DAG sample_tree;
+  std::queue<Node> nodes_to_add;
+  std::queue<Edge> edges_to_add;
+  nodes_to_add.push(DAG::GetRoot());
+  while (!nodes_to_add.empty()) {
+    Node current_node = nodes_to_add.front();
+    nodes_to_add.pop();
+    sample_tree.AddNode(current_node.GetId());
+    for (auto clade : current_node.GetClades()) {
+      int i = rand() % clade.size();
+      Edge edge = clade[i];
+      nodes_to_add.push(edge.GetChild());
+      edges_to_add.push(edge);
+    }
+  }
+  while (!edges_to_add.empty()) {
+    Edge edge = edges_to_add.front();
+    edges_to_add.pop();
+    sample_tree.AppendEdge(edge.GetParent(), edge.GetChild(), edge.GetClade());
+  }
+  sample_tree.DAG::BuildConnections();
+
+  return sample_tree;
+}

@@ -19,6 +19,7 @@
 
 #include <string_view>
 #include <vector>
+#include <queue>
 
 #include "dag.hpp"
 #include "compact_genome.hpp"
@@ -44,6 +45,7 @@ class MADAG {
   std::vector<EdgeMutations>& GetEdgeMutations();
   std::vector<CompactGenome>& GetCompactGenomes();
 
+  MADAG GetSample();
   /**
    * Compute compact genomes, ordered by node ID, from edge mutations
    */

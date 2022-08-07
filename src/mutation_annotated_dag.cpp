@@ -60,3 +60,30 @@ std::vector<EdgeMutations> MADAG::ComputeEdgeMutations(
   }
   return result;
 }
+
+MADAG MADAG::GetSample() {
+  MADAG sample_tree;
+  sample_tree.GetReferenceSequence() = reference_sequence_;
+  sample_tree.GetDAG().InitializeNodes(dag_.GetNodesCount());
+  std::queue<Node> nodes_to_add;
+  std::queue<Edge> edges_to_add;
+  nodes_to_add.push(dag_.GetRoot());
+  while (!nodes_to_add.empty()) {
+    Node current_node = nodes_to_add.front();
+    nodes_to_add.pop();
+    sample_tree.GetDAG().AddNode(current_node.GetId());
+    for (auto clade : current_node.GetClades()) {
+      int i = rand() % clade.size();
+      Edge edge = clade[i];
+      nodes_to_add.push(edge.GetChild());
+      edges_to_add.push(edge);
+    }
+  }
+  while (!edges_to_add.empty()) {
+    Edge edge = edges_to_add.front();
+    edges_to_add.pop();
+    sample_tree.GetDAG().AppendEdge(edge.GetParent(), edge.GetChild(), edge.GetClade());
+  }
+  sample_tree.GetDAG().BuildConnections();
+  return sample_tree;
+}
