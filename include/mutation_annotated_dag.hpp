@@ -13,7 +13,7 @@
  * CompactGenome objects, which may be computed from edge mutations using
  * GetCompactGenomes().
  *
-*/
+ */
 
 #pragma once
 

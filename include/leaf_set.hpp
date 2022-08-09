@@ -31,7 +31,7 @@ class LeafSet {
 
   bool operator==(const LeafSet& rhs) const noexcept;
 
-  size_t Hash() const noexcept;
+  [[nodiscard]] size_t Hash() const noexcept;
 
   auto begin() const -> decltype(clades_.begin());
   auto end() const -> decltype(clades_.end());
