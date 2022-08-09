@@ -20,18 +20,12 @@ size_t EdgeLabel::Hash() const noexcept {
 }
 
 CladeIdx EdgeLabel::ComputeCladeIdx() const {
-  const auto* child_leaf_set = child_.GetLeafSet();
-  Assert(child_leaf_set);
-  auto parent_clade = child_leaf_set->ToParentClade();
+  auto parent_clade = child_.GetLeafSet()->ToParentClade();
   if (parent_clade.empty()) {
-    const auto* child_compact_genome = child_.GetCompactGenome();
-    Assert(child_compact_genome);
-    parent_clade.push_back(child_compact_genome);
+    parent_clade.push_back(child_.GetCompactGenome());
   }
   CladeIdx result{0};
-  const auto* parent_leaf_set = parent_.GetLeafSet();
-  Assert(parent_leaf_set);
-  for (const auto& clade : *parent_leaf_set) {
+  for (const auto& clade : *parent_.GetLeafSet()) {
     if (clade == parent_clade) {
       return result;
     }
