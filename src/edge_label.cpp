@@ -2,6 +2,7 @@
 
 #include "dag.hpp"
 #include "leaf_set.hpp"
+#include "compact_genome.hpp"
 
 EdgeLabel::EdgeLabel(NodeLabel parent, NodeLabel child)
     : parent_{parent}, child_{child} {}
@@ -19,11 +20,22 @@ size_t EdgeLabel::Hash() const noexcept {
 }
 
 CladeIdx EdgeLabel::ComputeCladeIdx() const {
-  const auto parent_clade = child_.GetLeafSet()->ToParentClade();
+  const auto* child_leaf_set = child_.GetLeafSet();
+  Assert(child_leaf_set);
+  auto parent_clade = child_leaf_set->ToParentClade();
+  if (parent_clade.empty()) {
+    const auto* child_compact_genome = child_.GetCompactGenome();
+    Assert(child_compact_genome);
+    parent_clade.push_back(child_compact_genome);
+  }
   CladeIdx result{0};
-  for (const auto& clade : *parent_.GetLeafSet()) {
-    if (clade == parent_clade) break;
+  const auto* parent_leaf_set = parent_.GetLeafSet();
+  Assert(parent_leaf_set);
+  for (const auto& clade : *parent_leaf_set) {
+    if (clade == parent_clade) {
+      return result;
+    }
     ++result.value;
   }
-  return result;
+  return {};
 }

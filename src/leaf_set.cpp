@@ -62,7 +62,7 @@ size_t LeafSet::size() const { return clades_.size(); }
 std::vector<const CompactGenome*> LeafSet::ToParentClade() const {
   std::vector<const CompactGenome*> result =
       ranges::to_vector(clades_ | ranges::views::join);
-  result |= ranges::actions::sort;
+  result |= ranges::actions::sort | ranges::actions::unique;
   return result;
 }
 
