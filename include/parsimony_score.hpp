@@ -9,20 +9,28 @@
 
 #include "mutation_annotated_dag.hpp"
 
+struct NOP {
+  template <typename... Args>
+  void operator()(Args&&...) {}
+};
+
+template <typename MinWeightEdgeCallback = NOP, typename VisitNodeCallback = NOP>
 struct ParsimonyScore {
   using Weight = size_t;
   constexpr static Weight MaxWeight = std::numeric_limits<size_t>::max();
   constexpr static Weight Identity = 0;
-  inline Weight ComputeLeaf(Node node);
-  inline Weight ComputeEdge(Edge edge);
-  inline bool Compare(Weight lhs, Weight rhs);
-  inline Weight Combine(Weight lhs, Weight rhs);
+  Weight ComputeLeaf(Node node);
+  Weight ComputeEdge(Edge edge);
+  bool Compare(Weight lhs, Weight rhs);
+  Weight Combine(Weight lhs, Weight rhs);
 
   // Callbacks
-  inline void MinWeightEdge(Edge edge);
-  inline void VisitNode(Node node, Weight&& weight);
+  void MinWeightEdge(Edge edge);
+  void VisitNode(Node node, Weight&& weight);
 
   MADAG& dag_;
+  MinWeightEdgeCallback min_weight_edge_callback_ = {};
+  VisitNodeCallback visit_node_callback_ = {};
 };
 
 #include "impl/parsimony_score_impl.hpp"

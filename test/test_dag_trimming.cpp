@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string_view>
+#include <vector>
 
 #include "test_common.hpp"
 
@@ -13,9 +14,13 @@ static void test_dag_trimming(MADAG& dag, size_t expected_score) {
     dag.GetEdgeMutations() = dag.ComputeEdgeMutations(dag.GetReferenceSequence());
   }
 
-  SubtreeWeight<ParsimonyScore> weight(dag.GetDAG());
+  std::vector<EdgeId> min_weight_edges;
+  auto trim_fn = [&](Edge edge) { min_weight_edges.push_back(edge); };
 
-  size_t score = weight.ComputeWeightBelow(dag.GetDAG().GetRoot(), ParsimonyScore{dag});
+  SubtreeWeight<ParsimonyScore<decltype(trim_fn)>> weight(dag.GetDAG());
+
+  size_t score = weight.ComputeWeightBelow(
+      dag.GetDAG().GetRoot(), ParsimonyScore<decltype(trim_fn)>{dag, trim_fn});
 
   assert_equal(score, expected_score, "Parsimony score");
 }
