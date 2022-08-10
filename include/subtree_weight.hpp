@@ -13,15 +13,15 @@
 
 #include "dag.hpp"
 
-template <typename T, typename WeightOps>
+template <typename WeightOps>
 class SubtreeWeight {
  public:
   SubtreeWeight(const DAG& dag);
 
-  T ComputeWeightBelow(Node node, WeightOps&& weight_ops);
+  typename WeightOps::Weight ComputeWeightBelow(Node node, WeightOps&& weight_ops);
 
  private:
-  std::vector<T> weights_below_node_;
+  std::vector<typename WeightOps::Weight> weights_below_node_;
 };
 
 #include "impl/subtree_weight_impl.hpp"

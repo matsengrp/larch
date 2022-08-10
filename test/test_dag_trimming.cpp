@@ -6,10 +6,9 @@
 
 #include "test_common.hpp"
 
-#include "synthetic_dags.hpp"
 #include "dag_loader.hpp"
 
-static void test_subtree_weight(MADAG& dag, size_t expected_score) {
+static void test_dag_trimming(MADAG& dag, size_t expected_score) {
   if (dag.GetEdgeMutations().empty()) {
     dag.GetEdgeMutations() = dag.ComputeEdgeMutations(dag.GetReferenceSequence());
   }
@@ -21,20 +20,15 @@ static void test_subtree_weight(MADAG& dag, size_t expected_score) {
   assert_equal(score, expected_score, "Parsimony score");
 }
 
-static void test_subtree_weight(size_t expected_score) {
-  MADAG dag = MakeSyntheticDAG();
-  test_subtree_weight(dag, expected_score);
-}
-
-static void test_subtree_weight(std::string_view path, size_t expected_score) {
+static void test_dag_trimming(std::string_view path, size_t expected_score) {
   MADAG dag = LoadDAGFromProtobuf(path);
-  test_subtree_weight(dag, expected_score);
+  test_dag_trimming(dag, expected_score);
 }
 
 [[maybe_unused]] static const auto test_added0 =
-    add_test({[] { test_subtree_weight("data/testcase/full_dag.pb.gz", 75); },
-              "Subtree weight: testcase"});
+    add_test({[] { test_dag_trimming("data/testcase/full_dag.pb.gz", 75); },
+              "DAG trimming: testcase"});
 
 [[maybe_unused]] static const auto test_added1 =
-    add_test({[] { test_subtree_weight("data/testcase1/full_dag.pb.gz", 75); },
-              "Subtree weight: testcase1"});
+    add_test({[] { test_dag_trimming("data/testcase1/full_dag.pb.gz", 75); },
+              "DAG trimming: testcase1"});

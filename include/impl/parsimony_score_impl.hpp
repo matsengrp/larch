@@ -12,4 +12,6 @@ ParsimonyScore::Weight ParsimonyScore::Combine(Weight lhs, Weight rhs) {
   return lhs + rhs;
 }
 
+void ParsimonyScore::MinWeightEdge(Edge edge) {}
+
 void ParsimonyScore::VisitNode(Node node, Weight&& weight) {}

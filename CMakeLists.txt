@@ -82,6 +82,7 @@ larch_executable(larch-test
     test/synthetic_dags.cpp
     test/test_clade_idx.cpp
     test/test_compact_genome.cpp
+    test/test_dag_trimming.cpp
     test/test_merge.cpp
     test/test_subtree_weight.cpp
     test/test_synthetic.cpp)
