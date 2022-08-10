@@ -31,12 +31,14 @@ class LeafSet {
 
   bool operator==(const LeafSet& rhs) const noexcept;
 
-  size_t Hash() const noexcept;
+  [[nodiscard]] size_t Hash() const noexcept;
 
   auto begin() const -> decltype(clades_.begin());
   auto end() const -> decltype(clades_.end());
   bool empty() const;
   size_t size() const;
+
+  [[nodiscard]] std::vector<const CompactGenome*> ToParentClade() const;
 
  private:
   static size_t ComputeHash(

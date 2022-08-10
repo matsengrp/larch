@@ -38,7 +38,7 @@ class CompactGenome {
   bool operator==(const CompactGenome& rhs) const noexcept;
   bool operator<(const CompactGenome& rhs) const noexcept;
 
-  size_t Hash() const noexcept;
+  [[nodiscard]] size_t Hash() const noexcept;
 
   std::optional<char> operator[](MutationPosition pos) const;
 

@@ -31,7 +31,12 @@ using ConcurrentUnorderedMap =
 
 class Merge {
  public:
-  Merge(std::string_view reference_sequence);
+  /**
+   * Construct a new Merge object, with the common reference sequence for all input
+   * DAGs that will be merged later via the AddDAGs() method. The reference sequence is
+   * externally owned, and should outlive the Merge object.
+   */
+  explicit Merge(std::string_view reference_sequence);
 
   Merge(Merge&&) = delete;
   Merge(const Merge&) = delete;
@@ -39,7 +44,11 @@ class Merge {
   Merge& operator=(const Merge&) = delete;
 
   /**
-   * Add DAGs to be merged
+   * Add DAGs to be merged. The input DAGs are externally owned, and should outlive the
+   * Merge object. If the have_compact_genomes parameter is false, the per-node compact
+   * genomes of the input trees will be computed in parallel during the call to AddDAGs.
+   * Otherwise the compact genomes stored in the DAGs will be used, and will be moved
+   * into the Merge object storage to avoid duplication.
    */
   void AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& dags,
                bool have_compact_genomes = false);
@@ -52,7 +61,15 @@ class Merge {
   const DAG& GetResult() const;
   /** @} */
 
+  /**
+   * Access the labels of the resulting DAG's nodes.
+   */
   const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
+
+  /**
+   * Compute the mutations on the resulting DAG's edges. Can be used to build a MADAG
+   * from the result.
+   */
   [[nodiscard]] std::vector<EdgeMutations> ComputeResultEdgeMutations() const;
 
  private:
@@ -65,14 +82,28 @@ class Merge {
   static std::vector<LeafSet> ComputeLeafSets(const MADAG& dag,
                                               const std::vector<NodeLabel>& labels);
 
+  // Externally owned reference sequence.
   std::string_view reference_sequence_;
+
+  // Vector of externally owned input DAGs.
   std::vector<std::reference_wrapper<MADAG>> trees_;
 
+  // Every unique node compact genome, found among all input DAGs.
   ConcurrentUnorderedSet<CompactGenome> all_compact_genomes_;
+
+  // Every unique node leaf set, found among all input DAGs.
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
+
+  // Node labels for all input DAGs. Outer vector is indexed by input tree idx, inner
+  // vector is indexed by node id.
   std::vector<std::vector<NodeLabel>> tree_labels_;
 
+  // Node ids of the resulting DAG's nodes.
   std::unordered_map<NodeLabel, NodeId> result_nodes_;
+
+  // Edge ids of the resulting DAG's edges.
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;
+
+  // Resulting DAG from merging the input DAGs.
   DAG result_dag_;
 };

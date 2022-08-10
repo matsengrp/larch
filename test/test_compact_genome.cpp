@@ -26,15 +26,3 @@
 [[maybe_unused]] static const auto test_added0 =
     add_test({[] { test_edge_mutations("data/test_5_trees/tree_0.pb.gz"); },
               "Compact genomes: test_5_trees"});
-
-[[maybe_unused]] static const auto test_added1 =
-    add_test({[] { test_edge_mutations("data/testcase2/full_dag.pb.gz"); },
-              "Compact genomes: testcase2"});
-
-[[maybe_unused]] static const auto test_added2 =
-    add_test({[] { test_edge_mutations("data/testcaseref/tree_0_newref.pb.gz"); },
-              "Compact genomes: testcaseref"});
-
-[[maybe_unused]] static const auto test_added3 =
-    add_test({[] { test_edge_mutations("data/20D_from_fasta/full_dag.pb.gz"); },
-              "Compact genomes: 20D_from_fasta"});

@@ -32,20 +32,9 @@ static void test_subtree_weight(std::string_view path, size_t expected_score) {
 }
 
 [[maybe_unused]] static const auto test_added0 =
-    add_test({[] { test_subtree_weight(34); }, "Subtree weight: synthetic"});
+    add_test({[] { test_subtree_weight("data/testcase/full_dag.pb.gz", 75); },
+              "Subtree weight: testcase"});
 
 [[maybe_unused]] static const auto test_added1 =
-    add_test({[] { test_subtree_weight("data/test_5_trees/tree_0.pb.gz", 174); },
-              "Subtree weight: test_5_trees"});
-
-[[maybe_unused]] static const auto test_added2 =
-    add_test({[] { test_subtree_weight("data/testcase2/full_dag.pb.gz", 174); },
-              "Subtree weight: testcase2"});
-
-[[maybe_unused]] static const auto test_added3 =
-    add_test({[] { test_subtree_weight("data/testcaseref/tree_0_newref.pb.gz", 650); },
-              "Subtree weight: testcaseref"});
-
-[[maybe_unused]] static const auto test_added4 =
-    add_test({[] { test_subtree_weight("data/20D_from_fasta/full_dag.pb.gz", 11149); },
-              "Subtree weight: 20D_from_fasta"});
+    add_test({[] { test_subtree_weight("data/testcase1/full_dag.pb.gz", 75); },
+              "Subtree weight: testcase1"});

@@ -4,14 +4,14 @@
  * they descend from the same child clade.
  *
  * Edges are referenced by their EdgeId, which is their index in DAG.edges_.
-*/
+ */
 #pragma once
 
 class NodeStorage {
  public:
- /**
-  * Get vector of parent edges
-  */
+  /**
+   * Get vector of parent edges
+   */
   const std::vector<EdgeId>& GetParents() const;
   /**
    * Get vectors of child edges corresponding to child clades
