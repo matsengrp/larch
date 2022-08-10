@@ -80,7 +80,7 @@ class DAG {
   Node Get(NodeId id) const;
   MutableNode Get(NodeId id);
   /** @} */
-  
+
   /**
    * Get an Edge object by its EdgeId
    * @{
