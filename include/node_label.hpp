@@ -23,7 +23,7 @@ class NodeLabel {
 
   bool operator==(const NodeLabel& rhs) const noexcept;
 
-  size_t Hash() const noexcept;
+  [[nodiscard]] size_t Hash() const noexcept;
 
  private:
   const CompactGenome* compact_genome_;

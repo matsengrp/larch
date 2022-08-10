@@ -6,6 +6,8 @@
 
 #include "node_label.hpp"
 
+#include "common.hpp"
+
 class EdgeLabel {
  public:
   EdgeLabel() = default;
@@ -16,7 +18,9 @@ class EdgeLabel {
 
   bool operator==(const EdgeLabel& rhs) const noexcept;
 
-  size_t Hash() const noexcept;
+  [[nodiscard]] size_t Hash() const noexcept;
+
+  [[nodiscard]] CladeIdx ComputeCladeIdx() const;
 
  private:
   NodeLabel parent_;
