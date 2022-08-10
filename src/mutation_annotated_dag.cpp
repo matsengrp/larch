@@ -64,14 +64,17 @@ std::vector<EdgeMutations> MADAG::ComputeEdgeMutations(
 MADAG MADAG::GetSample() {
   MADAG sample_tree;
   sample_tree.GetReferenceSequence() = reference_sequence_;
-  sample_tree.GetDAG().InitializeNodes(dag_.GetNodesCount());
   std::queue<Node> nodes_to_add;
   std::queue<Edge> edges_to_add;
+  std::vector<NodeId> added_nodes;
+  std::map<NodeId, size_t> new_node_idx;
+  std::vector<EdgeId> old_edge_idx;
+  size_t edge_ctr = 0;
   nodes_to_add.push(dag_.GetRoot());
   while (!nodes_to_add.empty()) {
     Node current_node = nodes_to_add.front();
     nodes_to_add.pop();
-    sample_tree.GetDAG().AddNode(current_node.GetId());
+    added_nodes.emplace_back(current_node.GetId());
     for (auto clade : current_node.GetClades()) {
       int i = rand() % clade.size();
       Edge edge = clade[i];
@@ -79,11 +82,23 @@ MADAG MADAG::GetSample() {
       edges_to_add.push(edge);
     }
   }
+  std::sort(added_nodes.begin(), added_nodes.end());
+  for (size_t i = 0; i < added_nodes.size(); i++) {
+    new_node_idx[added_nodes[i]] = i;
+  }
+  sample_tree.GetDAG().InitializeNodes(new_node_idx.size());
   while (!edges_to_add.empty()) {
     Edge edge = edges_to_add.front();
     edges_to_add.pop();
-    sample_tree.GetDAG().AppendEdge(edge.GetParent(), edge.GetChild(), edge.GetClade());
+    sample_tree.GetDAG().AppendEdge({new_node_idx[edge.GetParent().GetId()]}, {new_node_idx[edge.GetChild().GetId()]}, edge.GetClade());
+    old_edge_idx.emplace_back(edge.GetId());
   }
   sample_tree.GetDAG().BuildConnections();
+  sample_tree.GetEdgeMutations().resize(old_edge_idx.size());
+  for (size_t edge = 0; edge < old_edge_idx.size(); edge++) {
+    for (auto mutation : MADAG::GetEdgeMutations().at(old_edge_idx[edge].value)) {
+      sample_tree.GetEdgeMutations().at(edge)[mutation.first] = mutation.second;
+    }
+  }
   return sample_tree;
 }

@@ -87,11 +87,13 @@ DAG DAG::GetSample() {
   DAG sample_tree;
   std::queue<Node> nodes_to_add;
   std::queue<Edge> edges_to_add;
+  std::vector<NodeId> added_nodes;
+  std::map<NodeId, size_t> new_node_idx;
   nodes_to_add.push(DAG::GetRoot());
   while (!nodes_to_add.empty()) {
     Node current_node = nodes_to_add.front();
     nodes_to_add.pop();
-    sample_tree.AddNode(current_node.GetId());
+    added_nodes.emplace_back(current_node.GetId());
     for (auto clade : current_node.GetClades()) {
       int i = rand() % clade.size();
       Edge edge = clade[i];
@@ -99,10 +101,15 @@ DAG DAG::GetSample() {
       edges_to_add.push(edge);
     }
   }
+  std::sort(added_nodes.begin(), added_nodes.end());
+  for (size_t i = 0; i < added_nodes.size(); i++) {
+    new_node_idx[added_nodes[i]] = i;
+  }
+  sample_tree.InitializeNodes(added_nodes.size());
   while (!edges_to_add.empty()) {
     Edge edge = edges_to_add.front();
     edges_to_add.pop();
-    sample_tree.AppendEdge(edge.GetParent(), edge.GetChild(), edge.GetClade());
+    sample_tree.AppendEdge({new_node_idx[edge.GetParent().GetId()]}, {new_node_idx[edge.GetChild().GetId()]}, edge.GetClade());
   }
   sample_tree.DAG::BuildConnections();
 
