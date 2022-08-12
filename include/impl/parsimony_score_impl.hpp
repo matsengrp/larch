@@ -8,9 +8,9 @@ ParsimonyScore::Weight ParsimonyScore::ComputeEdge(const MADAG& dag, EdgeId edge
   return dag.GetEdgeMutations(edge_id).size();
 }
 
-bool ParsimonyScore::Compare(Weight lhs, Weight rhs) {
-  return lhs < rhs;
-}
+bool ParsimonyScore::Compare(Weight lhs, Weight rhs) { return lhs < rhs; }
+
+inline bool ParsimonyScore::IsIdentity(Weight weight) { return weight == Identity; }
 
 ParsimonyScore::Weight ParsimonyScore::Combine(Weight lhs, Weight rhs) {
   return lhs + rhs;

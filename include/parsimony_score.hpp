@@ -16,6 +16,7 @@ struct ParsimonyScore {
   inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);
   inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);
   inline bool Compare(Weight lhs, Weight rhs);
+  inline bool IsIdentity(Weight weight);
   inline Weight Combine(Weight lhs, Weight rhs);
 };
 

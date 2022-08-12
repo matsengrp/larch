@@ -13,12 +13,21 @@
 
 #include "mutation_annotated_dag.hpp"
 
+struct NOP {
+  template <typename... Args>
+  constexpr void operator()(Args&&...) noexcept {}
+};
+
 template <typename WeightOps>
 class SubtreeWeight {
  public:
   explicit SubtreeWeight(const MADAG& dag);
 
-  typename WeightOps::Weight ComputeWeightBelow(Node node, WeightOps&& weight_ops);
+  template <typename MinEdgeCallback = NOP>
+  typename WeightOps::Weight ComputeWeightBelow(
+      Node node, WeightOps&& weight_ops, MinEdgeCallback&& min_edge_callback = {});
+  
+  [[nodiscard]] MADAG TrimToMinWeight(WeightOps&& weight_ops);
 
  private:
   const MADAG& dag_;
