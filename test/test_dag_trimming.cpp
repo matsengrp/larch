@@ -14,13 +14,13 @@ static void test_dag_trimming(MADAG& dag, size_t expected_score) {
     dag.GetEdgeMutations() = dag.ComputeEdgeMutations(dag.GetReferenceSequence());
   }
 
-  std::vector<EdgeId> min_weight_edges;
-  auto trim_fn = [&](Edge edge) { min_weight_edges.push_back(edge); };
+  // std::vector<EdgeId> min_weight_edges;
+  // auto trim_fn = [&](Edge edge) { min_weight_edges.push_back(edge); };
 
-  SubtreeWeight<ParsimonyScore<decltype(trim_fn)>> weight(dag.GetDAG());
+  SubtreeWeight<ParsimonyScore> weight(dag);
 
   size_t score = weight.ComputeWeightBelow(
-      dag.GetDAG().GetRoot(), ParsimonyScore<decltype(trim_fn)>{dag, trim_fn});
+      dag.GetDAG().GetRoot(), {});
 
   assert_equal(score, expected_score, "Parsimony score");
 }

@@ -1,38 +1,17 @@
 #include <algorithm>
 
-template <typename MinWeightEdgeCallback, typename VisitNodeCallback>
-typename ParsimonyScore<MinWeightEdgeCallback, VisitNodeCallback>::Weight
-ParsimonyScore<MinWeightEdgeCallback, VisitNodeCallback>::ComputeLeaf(Node node) {
+ParsimonyScore::Weight ParsimonyScore::ComputeLeaf(const MADAG& dag, NodeId node_id) {
   return 0;
 }
 
-template <typename MinWeightEdgeCallback, typename VisitNodeCallback>
-typename ParsimonyScore<MinWeightEdgeCallback, VisitNodeCallback>::Weight
-ParsimonyScore<MinWeightEdgeCallback, VisitNodeCallback>::ComputeEdge(Edge edge) {
-  return dag_.GetEdgeMutations(edge).size();
+ParsimonyScore::Weight ParsimonyScore::ComputeEdge(const MADAG& dag, EdgeId edge_id) {
+  return dag.GetEdgeMutations(edge_id).size();
 }
 
-template <typename MinWeightEdgeCallback, typename VisitNodeCallback>
-bool ParsimonyScore<MinWeightEdgeCallback, VisitNodeCallback>::Compare(Weight lhs,
-                                                                       Weight rhs) {
+bool ParsimonyScore::Compare(Weight lhs, Weight rhs) {
   return lhs < rhs;
 }
 
-template <typename MinWeightEdgeCallback, typename VisitNodeCallback>
-typename ParsimonyScore<MinWeightEdgeCallback, VisitNodeCallback>::Weight
-ParsimonyScore<MinWeightEdgeCallback, VisitNodeCallback>::Combine(Weight lhs,
-                                                                  Weight rhs) {
+ParsimonyScore::Weight ParsimonyScore::Combine(Weight lhs, Weight rhs) {
   return lhs + rhs;
-}
-
-template <typename MinWeightEdgeCallback, typename VisitNodeCallback>
-void ParsimonyScore<MinWeightEdgeCallback, VisitNodeCallback>::MinWeightEdge(
-    Edge edge) {
-  min_weight_edge_callback_(edge);
-}
-
-template <typename MinWeightEdgeCallback, typename VisitNodeCallback>
-void ParsimonyScore<MinWeightEdgeCallback, VisitNodeCallback>::VisitNode(
-    Node node, Weight&& weight) {
-  visit_node_callback_(node, std::forward<Weight>(weight));
 }
