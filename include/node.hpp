@@ -44,6 +44,10 @@ class NodeView {
    */
   auto GetClades() const;
   /**
+   * Return a clade by it's index. A clade is a range containing child Edges
+   */
+  auto GetClade(CladeIdx clade) const;
+  /**
    * Return a range containing child Edges
    */
   auto GetChildren() const;

@@ -91,10 +91,9 @@ int main(int argc, char** argv) {
         dag.GetEdgeMutations().resize(dag.GetDAG().GetEdgesCount());
         for (Edge edge : dag.GetDAG().GetEdges()) {
           auto [parent, child] = edge.GetNodeIds();
-          dag.GetEdgeMutations().at(edge.GetId().value) =
-              CompactGenome::ToEdgeMutations(dag.GetReferenceSequence(),
-                                             dag.GetCompactGenomes().at(parent.value),
-                                             dag.GetCompactGenomes().at(child.value));
+          dag.GetEdgeMutations(edge) = CompactGenome::ToEdgeMutations(
+              dag.GetReferenceSequence(), dag.GetCompactGenomes().at(parent.value),
+              dag.GetCompactGenomes().at(child.value));
         }
       }
       break;

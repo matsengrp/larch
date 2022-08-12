@@ -15,6 +15,11 @@ auto NodeView<T>::GetClades() const {
 }
 
 template <typename T>
+auto NodeView<T>::GetClade(CladeIdx clade) const {
+  return GetStorage().GetClades().at(clade.value) | Transform::ToEdges(dag_);
+}
+
+template <typename T>
 auto NodeView<T>::GetChildren() const {
   return GetClades() | ranges::views::join;
 }

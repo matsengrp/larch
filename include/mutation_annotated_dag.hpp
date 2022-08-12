@@ -56,6 +56,9 @@ class MADAG {
   [[nodiscard]] std::vector<EdgeMutations> ComputeEdgeMutations(
       std::string_view reference_sequence) const;
 
+  const EdgeMutations& GetEdgeMutations(EdgeId edge_id) const;
+  EdgeMutations& GetEdgeMutations(EdgeId edge_id);
+
  private:
   DAG dag_;
   std::string reference_sequence_;
