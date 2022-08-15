@@ -43,6 +43,7 @@ class DAG {
   DAG(DAG&&) = default;
   DAG& operator=(DAG&&) = default;
   DAG(const DAG&) = delete;
+  //DAG& operator=(const DAG&) = delete;
 
   MutableNode AddNode(NodeId id);
 
