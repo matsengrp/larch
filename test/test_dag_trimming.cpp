@@ -25,7 +25,7 @@ static void test_dag_trimming(MADAG& dag, size_t expected_edges) {
     }
   }
 
-  assert_equal(edges_count, expected_edges, "Edgs count");
+  assert_equal(edges_count, expected_edges, "Edges count");
 }
 
 static void test_dag_trimming(std::string_view path, size_t expected_edges) {

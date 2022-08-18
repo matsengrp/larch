@@ -15,8 +15,7 @@ static void test_subtree_weight(MADAG& dag, size_t expected_score) {
 
   SubtreeWeight<ParsimonyScore> weight(dag);
 
-  size_t score =
-      weight.ComputeWeightBelow(dag.GetDAG().GetRoot(), {});
+  size_t score = weight.ComputeWeightBelow(dag.GetDAG().GetRoot(), {});
 
   assert_equal(score, expected_score, "Parsimony score");
 }
