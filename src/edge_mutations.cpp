@@ -1,5 +1,11 @@
 #include "edge_mutations.hpp"
 
+EdgeMutations::EdgeMutations(
+    const std::map<MutationPosition, std::pair<char, char>>& mutations)
+    : mutations_{mutations} {}
+
+EdgeMutations EdgeMutations::Copy() const { return EdgeMutations{mutations_}; }
+
 auto EdgeMutations::begin() const -> decltype(mutations_.begin()) {
   return mutations_.begin();
 }

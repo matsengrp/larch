@@ -10,6 +10,7 @@
 #pragma once
 
 #include <functional>
+#include <random>
 
 #include "mutation_annotated_dag.hpp"
 
@@ -30,8 +31,8 @@ class SubtreeWeight {
                                                                WeightOps&& weight_ops);
 
   template <typename EdgeSelector>
-  void ExtractTree(Node node, WeightOps&& weight_ops, EdgeSelector&& edge_selector,
-                   MADAG& result);
+  void ExtractTree(const MADAG& input_dag, Node node, WeightOps&& weight_ops,
+                   EdgeSelector&& edge_selector, MADAG& result);
 
   const MADAG& dag_;
 
@@ -40,6 +41,9 @@ class SubtreeWeight {
 
   // Outer vector indexed by CladeIdx, inner vector indexed by NodeId.
   std::vector<std::vector<EdgeId>> cached_min_weight_edges_;
+
+  std::random_device random_device_;
+  std::mt19937 random_generator_;
 };
 
 #include "impl/subtree_weight_impl.hpp"

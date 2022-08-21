@@ -2,7 +2,10 @@
 
 template <typename WeightOps>
 SubtreeWeight<WeightOps>::SubtreeWeight(const MADAG& dag)
-    : dag_{dag}, cached_weights_(dag_.GetDAG().GetNodesCount(), WeightOps::Identity) {}
+    : dag_{dag},
+      cached_weights_(dag_.GetDAG().GetNodesCount(), WeightOps::Identity),
+      random_device_{},
+      random_generator_{random_device_()} {}
 
 template <typename WeightOps>
 typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(
@@ -39,7 +42,7 @@ MADAG SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
   result.GetReferenceSequence() = dag_.GetReferenceSequence();
 
   ExtractTree(
-      dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
+      dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
       [this](Node node, CladeIdx clade_idx) {
         return node.GetDAG().Get(
             cached_min_weight_edges_.at(clade_idx.value).at(node.GetId().value));
@@ -55,8 +58,13 @@ MADAG SubtreeWeight<WeightOps>::SampleTree(WeightOps&& weight_ops) {
   result.GetReferenceSequence() = dag_.GetReferenceSequence();
 
   ExtractTree(
-      dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
-      [this](Node node, CladeIdx clade_idx) { return node.GetClade(clade_idx).at(0); },
+      dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
+      [this](Node node, CladeIdx clade_idx) {
+        auto clade = node.GetClade(clade_idx);
+        Assert(not clade.empty());
+        std::uniform_int_distribution<size_t> distribuition{0, clade.size() - 1};
+        return clade.at(distribuition(random_generator_));
+      },
       result);
 
   return result;
@@ -86,20 +94,37 @@ std::pair<typename WeightOps::Weight, EdgeId> SubtreeWeight<WeightOps>::MinClade
 
 template <typename WeightOps>
 template <typename EdgeSelector>
-void SubtreeWeight<WeightOps>::ExtractTree(Node node, WeightOps&& weight_ops,
+void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
+                                           WeightOps&& weight_ops,
                                            EdgeSelector&& edge_selector,
                                            MADAG& result) {
   ComputeWeightBelow(node, std::forward<WeightOps>(weight_ops));
   CladeIdx clade_idx{0};
+
+  NodeId parent_id{result.GetDAG().GetNodesCount()};
+  result.GetDAG().AddNode(parent_id);
+
+  if (not input_dag.GetCompactGenomes().empty()) {
+    result.GetCompactGenomes().push_back(
+        input_dag.GetCompactGenomes().at(node.GetId().value).Copy());
+  }
+
   for (auto clade : node.GetClades()) {
     Edge edge = edge_selector(node, clade_idx);
     clade_idx.value++;
 
-    result.GetDAG().AddNode(edge.GetParent());
-    result.GetDAG().AddNode(edge.GetChild());
-    result.GetDAG().AddEdge(edge, edge.GetParent(), edge.GetChild(), edge.GetClade());
+    EdgeId edge_id{result.GetDAG().GetEdgesCount()};
+    NodeId child_id{result.GetDAG().GetNodesCount()};
 
-    ExtractTree(edge.GetChild(), std::forward<WeightOps>(weight_ops),
+    result.GetDAG().AddNode(child_id);
+    result.GetDAG().AddEdge(edge_id, parent_id, child_id, edge.GetClade());
+
+    if (not input_dag.GetEdgeMutations().empty()) {
+      result.GetEdgeMutations().push_back(
+          input_dag.GetEdgeMutations().at(edge.GetId().value).Copy());
+    }
+
+    ExtractTree(dag_, edge.GetChild(), std::forward<WeightOps>(weight_ops),
                 std::forward<EdgeSelector>(edge_selector), result);
   }
 }
