@@ -116,7 +116,6 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
     EdgeId edge_id{result.GetDAG().GetEdgesCount()};
     NodeId child_id{result.GetDAG().GetNodesCount()};
 
-    result.GetDAG().AddNode(child_id);
     result.GetDAG().AddEdge(edge_id, parent_id, child_id, edge.GetClade());
 
     if (not input_dag.GetEdgeMutations().empty()) {
@@ -126,5 +125,9 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
 
     ExtractTree(dag_, edge.GetChild(), std::forward<WeightOps>(weight_ops),
                 std::forward<EdgeSelector>(edge_selector), result);
+  }
+
+  if (node.IsRoot()) {
+    result.GetDAG().BuildConnections();
   }
 }

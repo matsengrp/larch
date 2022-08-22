@@ -8,7 +8,7 @@
 
 #include "dag_loader.hpp"
 
-static void test_sample_tree(MADAG& dag, size_t expected_score) {
+static void test_sample_tree(MADAG& dag) {
   if (dag.GetEdgeMutations().empty()) {
     dag.GetEdgeMutations() = dag.ComputeEdgeMutations(dag.GetReferenceSequence());
   }
@@ -17,18 +17,18 @@ static void test_sample_tree(MADAG& dag, size_t expected_score) {
 
   MADAG result = weight.SampleTree({});
 
-  assert_true(result.GetDAG().GetEdgesCount() > 0, "Edges");
+  assert_true(result.GetDAG().IsTree(), "Tree");
 }
 
-static void test_sample_tree(std::string_view path, size_t expected_score) {
+static void test_sample_tree(std::string_view path) {
   MADAG dag = LoadDAGFromProtobuf(path);
-  test_sample_tree(dag, expected_score);
+  test_sample_tree(dag);
 }
 
 [[maybe_unused]] static const auto test_added0 =
-    add_test({[] { test_sample_tree("data/testcase/full_dag.pb.gz", 75); },
+    add_test({[] { test_sample_tree("data/testcase/full_dag.pb.gz"); },
               "Sample tree: testcase"});
 
 [[maybe_unused]] static const auto test_added1 =
-    add_test({[] { test_sample_tree("data/testcase1/full_dag.pb.gz", 75); },
+    add_test({[] { test_sample_tree("data/testcase1/full_dag.pb.gz"); },
               "Sample tree: testcase1"});

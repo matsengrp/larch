@@ -4,6 +4,7 @@
 
 template <typename NodeType>
 PreOrderIterator<NodeType>::PreOrderIterator(NodeType node) {
+  Assert(node.GetDAG().IsTree());
   stack_.push(*node.GetChildren().begin());
 }
 
