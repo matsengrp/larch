@@ -18,14 +18,7 @@ static void test_dag_trimming(MADAG& dag, size_t expected_edges) {
 
   MADAG trimmed = weight.TrimToMinWeight({});
 
-  size_t edges_count = 0;
-  for (Edge edge : trimmed.GetDAG().GetEdges()) {
-    if (not(edge.GetId() == EdgeId{})) {
-      ++edges_count;  // Manually counting valid edges until reindexing is ready
-    }
-  }
-
-  assert_equal(edges_count, expected_edges, "Edgs count");
+  assert_equal(trimmed.GetDAG().GetEdgesCount(), expected_edges, "Edges count");
 }
 
 static void test_dag_trimming(std::string_view path, size_t expected_edges) {
@@ -34,9 +27,9 @@ static void test_dag_trimming(std::string_view path, size_t expected_edges) {
 }
 
 [[maybe_unused]] static const auto test_added0 =
-    add_test({[] { test_dag_trimming("data/testcase/full_dag.pb.gz", 2308); },
+    add_test({[] { test_dag_trimming("data/testcase/full_dag.pb.gz", 57); },
               "DAG trimming: testcase"});
 
 [[maybe_unused]] static const auto test_added1 =
-    add_test({[] { test_dag_trimming("data/testcase1/full_dag.pb.gz", 203); },
+    add_test({[] { test_dag_trimming("data/testcase1/full_dag.pb.gz", 59); },
               "DAG trimming: testcase1"});

@@ -35,6 +35,8 @@ class EdgeMutations {
   EdgeMutations(const EdgeMutations&) = delete;
   EdgeMutations& operator=(const EdgeMutations&) = delete;
 
+  [[nodiscard]] EdgeMutations Copy() const;
+
   auto begin() const -> decltype(mutations_.begin());
   auto end() const -> decltype(mutations_.end());
   size_t size() const;
@@ -43,4 +45,8 @@ class EdgeMutations {
       -> decltype(mutations_.insert(mut));
   bool operator==(const EdgeMutations& rhs) const;
   bool operator!=(const EdgeMutations& rhs) const;
+
+ private:
+  explicit EdgeMutations(
+      const std::map<MutationPosition, std::pair<char, char>>& mutations);
 };

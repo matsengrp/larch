@@ -57,6 +57,8 @@ MutableEdge DAG::Get(EdgeId id) { return {*this, id}; }
 size_t DAG::GetNodesCount() const { return nodes_.size(); }
 size_t DAG::GetEdgesCount() const { return edges_.size(); }
 
+bool DAG::IsTree() const { return GetNodesCount() == GetEdgesCount() + 1; }
+
 Node DAG::GetRoot() const { return {*this, root_}; }
 
 MutableNode DAG::GetRoot() { return {*this, root_}; }

@@ -4,6 +4,7 @@
 
 template <typename NodeType>
 PostOrderIterator<NodeType>::PostOrderIterator(NodeType node) {
+  Assert(node.GetDAG().IsTree());
   stack_.push(*node.GetChildren().begin());
   PushToNextLeaf();
 }

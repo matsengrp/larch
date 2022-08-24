@@ -91,6 +91,8 @@ class DAG {
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
 
+  bool IsTree() const;
+
   Node GetRoot() const;
   MutableNode GetRoot();
 

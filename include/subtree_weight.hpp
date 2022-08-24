@@ -10,28 +10,40 @@
 #pragma once
 
 #include <functional>
+#include <random>
 
 #include "mutation_annotated_dag.hpp"
-
-struct NOP {
-  template <typename... Args>
-  constexpr void operator()(Args&&...) noexcept {}
-};
 
 template <typename WeightOps>
 class SubtreeWeight {
  public:
   explicit SubtreeWeight(const MADAG& dag);
 
-  template <typename MinEdgeCallback = NOP>
-  typename WeightOps::Weight ComputeWeightBelow(
-      Node node, WeightOps&& weight_ops, MinEdgeCallback&& min_edge_callback = {});
-  
+  typename WeightOps::Weight ComputeWeightBelow(Node node, WeightOps&& weight_ops);
+
   [[nodiscard]] MADAG TrimToMinWeight(WeightOps&& weight_ops);
 
+  [[nodiscard]] MADAG SampleTree(WeightOps&& weight_ops);
+
  private:
+  template <typename CladeRange>
+  std::pair<typename WeightOps::Weight, EdgeId> MinCladeWeight(CladeRange&& clade,
+                                                               WeightOps&& weight_ops);
+
+  template <typename EdgeSelector>
+  void ExtractTree(const MADAG& input_dag, Node node, WeightOps&& weight_ops,
+                   EdgeSelector&& edge_selector, MADAG& result);
+
   const MADAG& dag_;
-  std::vector<typename WeightOps::Weight> weights_below_node_;
+
+  // Indexed by NodeId.
+  std::vector<typename WeightOps::Weight> cached_weights_;
+
+  // Outer vector indexed by CladeIdx, inner vector indexed by NodeId.
+  std::vector<std::vector<EdgeId>> cached_min_weight_edges_;
+
+  std::random_device random_device_;
+  std::mt19937 random_generator_;
 };
 
 #include "impl/subtree_weight_impl.hpp"
