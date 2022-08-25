@@ -96,3 +96,6 @@ larch_executable(dag_diff
 
 larch_executable(dag2dot
     tools/dag2dot.cpp)
+
+larch_executable(larch-usher
+    tools/larch-usher.cpp)

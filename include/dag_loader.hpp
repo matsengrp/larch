@@ -18,4 +18,12 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
                         const std::vector<EdgeMutations>& edge_parent_mutations,
                         std::string_view path);
 
+void StoreDAGToProtobuf(const MADAG& dag, std::string_view path);
+
+void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
+                         const std::vector<EdgeMutations>& edge_parent_mutations,
+                         std::string_view path);
+
+void StoreTreeToProtobuf(const MADAG& dag, std::string_view path);
+
 void MADAGToDOT(const MADAG& dag, std::ostream& out);

@@ -261,6 +261,29 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
   data.SerializeToOstream(&file);
 }
 
+void StoreDAGToProtobuf(const MADAG& dag, std::string_view path) {
+  Assert(not dag.GetEdgeMutations().empty());
+  StoreDAGToProtobuf(dag.GetDAG(), dag.GetReferenceSequence(), dag.GetEdgeMutations(),
+                     path);
+}
+
+void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
+                         const std::vector<EdgeMutations>& edge_parent_mutations,
+                         std::string_view path) {
+  Assert(dag.IsTree());
+
+  Parsimony::data data;
+
+  std::ofstream file{std::string{path}};
+  data.SerializeToOstream(&file);
+}
+
+void StoreTreeToProtobuf(const MADAG& dag, std::string_view path) {
+  Assert(not dag.GetEdgeMutations().empty());
+  StoreTreeToProtobuf(dag.GetDAG(), dag.GetReferenceSequence(), dag.GetEdgeMutations(),
+                      path);
+}
+
 static std::string EdgeMutationsToString(Edge edge, const MADAG& dag) {
   std::string result;
   size_t count = 0;

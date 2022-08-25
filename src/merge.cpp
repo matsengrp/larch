@@ -1,7 +1,11 @@
 #include "merge.hpp"
 
 Merge::Merge(std::string_view reference_sequence)
-    : reference_sequence_{reference_sequence} {}
+    : reference_sequence_{reference_sequence} {
+  result_dag_.GetReferenceSequence() = reference_sequence;
+}
+
+std::string_view Merge::GetReferenceSequence() const { return reference_sequence_; }
 
 void Merge::AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& trees,
                     bool have_compact_genomes) {
@@ -30,14 +34,14 @@ void Merge::AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& trees,
 
   ComputeLeafSets(tree_idxs);
   MergeTrees(tree_idxs);
-  Assert(result_nodes_.size() == result_dag_.GetNodesCount());
-  Assert(result_edges_.size() == result_dag_.GetEdgesCount());
-  result_dag_.BuildConnections();
+  Assert(result_nodes_.size() == result_dag_.GetDAG().GetNodesCount());
+  Assert(result_edges_.size() == result_dag_.GetDAG().GetEdgesCount());
+  result_dag_.GetDAG().BuildConnections();
 }
 
-DAG& Merge::GetResult() { return result_dag_; }
+MADAG& Merge::GetResult() { return result_dag_; }
 
-const DAG& Merge::GetResult() const { return result_dag_; }
+const MADAG& Merge::GetResult() const { return result_dag_; }
 
 const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
   return result_nodes_;
@@ -45,7 +49,7 @@ const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
 
 std::vector<EdgeMutations> Merge::ComputeResultEdgeMutations() const {
   std::vector<EdgeMutations> result;
-  result.resize(result_dag_.GetEdgesCount());
+  result.resize(result_dag_.GetDAG().GetEdgesCount());
   Assert(result_edges_.size() == result.size());
   for (auto& [label, edge_id] : result_edges_) {
     Assert(label.GetParent().GetCompactGenome());
@@ -85,7 +89,7 @@ void Merge::ComputeLeafSets(const std::vector<size_t>& tree_idxs) {
 }
 
 void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
-  NodeId node_id{result_dag_.GetNodesCount()};
+  NodeId node_id{result_dag_.GetDAG().GetNodesCount()};
   std::mutex mtx;
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
@@ -109,16 +113,17 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
       }
     }
   });
-  result_dag_.InitializeNodes(result_nodes_.size());
-  EdgeId edge_id{result_dag_.GetEdgesCount()};
+  result_dag_.GetDAG().InitializeNodes(result_nodes_.size());
+  EdgeId edge_id{result_dag_.GetDAG().GetEdgesCount()};
   for (auto edge : added_edges) {
     auto parent = result_nodes_.find(edge.GetParent());
     auto child = result_nodes_.find(edge.GetChild());
     Assert(parent != result_nodes_.end());
     Assert(child != result_nodes_.end());
-    Assert(parent->second.value < result_dag_.GetNodesCount());
-    Assert(child->second.value < result_dag_.GetNodesCount());
-    result_dag_.AddEdge(edge_id, parent->second, child->second, edge.ComputeCladeIdx());
+    Assert(parent->second.value < result_dag_.GetDAG().GetNodesCount());
+    Assert(child->second.value < result_dag_.GetDAG().GetNodesCount());
+    result_dag_.GetDAG().AddEdge(edge_id, parent->second, child->second,
+                                 edge.ComputeCladeIdx());
     auto result_edge_it = result_edges_.find(edge);
     Assert(result_edge_it != result_edges_.end());
     result_edge_it->second = edge_id;

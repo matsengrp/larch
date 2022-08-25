@@ -43,6 +43,8 @@ class Merge {
   Merge& operator=(Merge&&) = delete;
   Merge& operator=(const Merge&) = delete;
 
+  std::string_view GetReferenceSequence() const;
+
   /**
    * Add DAGs to be merged. The input DAGs are externally owned, and should outlive the
    * Merge object. If the have_compact_genomes parameter is false, the per-node compact
@@ -57,8 +59,8 @@ class Merge {
    * Get the DAG resulting from merge
    * @{
    */
-  DAG& GetResult();
-  const DAG& GetResult() const;
+  MADAG& GetResult();
+  const MADAG& GetResult() const;
   /** @} */
 
   /**
@@ -105,5 +107,5 @@ class Merge {
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;
 
   // Resulting DAG from merging the input DAGs.
-  DAG result_dag_;
+  MADAG result_dag_;
 };

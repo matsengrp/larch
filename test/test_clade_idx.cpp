@@ -12,7 +12,7 @@ static void test_clade_idx(std::string_view path) {
   MADAG merged;
   merged.GetReferenceSequence() = dag.GetReferenceSequence();
   merged.GetEdgeMutations() = merge.ComputeResultEdgeMutations();
-  merged.GetDAG() = std::move(merge.GetResult());
+  merged.GetDAG() = std::move(merge.GetResult().GetDAG());
   merged.GetCompactGenomes() =
       merged.ComputeCompactGenomes(merged.GetReferenceSequence());
 }
