@@ -50,7 +50,7 @@ static void CallMatOptimize(std::string matoptimize_path, std::string input,
     if (wait(&status) == -1) {
       throw std::runtime_error("Wait failed");
     }
-    if (WIFEXITED(status)) {
+    if (not WIFEXITED(status)) {
       throw std::runtime_error("Child process failed");
     }
   } else {
