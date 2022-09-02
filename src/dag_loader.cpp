@@ -9,8 +9,6 @@
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/gzip_stream.h>
 
-#include <range/v3/view/transform.hpp>
-
 #include "nlohmann/json.hpp"
 
 #include "dag_loader.hpp"
@@ -86,19 +84,17 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
   size_t edge_id = 0;
   std::unordered_map<size_t, size_t> num_children;
   ParseNewick(
-      data.newick(),
-      [&result](size_t id, std::string label, std::optional<double> branch_length) {
-        result.GetDAG().AddNode({id});
-        std::ignore = label;
-        std::ignore = branch_length;
-      },
+      data.newick(), [&result](size_t, std::string, std::optional<double>) {},
       [&result, &edge_id, &num_children](size_t parent, size_t child) {
         result.GetDAG().AddEdge({edge_id++}, {parent}, {child},
                                 {num_children[parent]++});
       });
+  result.GetDAG().InitializeNodes(result.GetDAG().GetEdgesCount() + 1);
   result.GetDAG().BuildConnections();
 
   result.GetEdgeMutations().resize(result.GetDAG().GetEdgesCount());
+  Assert(static_cast<size_t>(data.node_mutations_size()) ==
+         result.GetEdgeMutations().size() + 1);
 
   size_t muts_idx = 0;
   for (Node node : result.GetDAG().TraversePreOrder()) {
@@ -272,27 +268,43 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
     if (not node.IsLeaf()) {
       newick += '(';
     }
-    for (Node child : node.GetChildren() | Transform::GetChild()) {
-      newick += ',';
-      self(self, child);
+    size_t clade_idx = 0;
+    for (auto clade : node.GetClades()) {
+      Assert(clade.size() == 1);
+      Node i = (*clade.begin()).GetChild();
+      if (i.IsLeaf()) {
+        newick += "leaf_";
+        newick += std::to_string(i.GetId().value);
+      } else {
+        newick += "inner_";
+        newick += std::to_string(i.GetId().value);
+      }
+      if (++clade_idx < node.GetCladesCount()) {
+        newick += ',';
+      }
+      self(self, i);
     }
     if (not node.IsLeaf()) {
       newick += ')';
     }
   };
   to_newick(to_newick, dag.GetRoot());
+  newick += ';';
   data.set_newick(newick);
 
-  for (Edge edge : dag.TraversePreOrder()) {
+  for (Node node : dag.TraversePreOrder()) {
     auto* proto = data.add_node_mutations();
-    for (auto [pos, mut] : edge_parent_mutations.at(edge.GetId().value)) {
+    if (node.IsRoot()) {
+      continue;
+    }
+    for (auto [pos, mut] :
+         edge_parent_mutations.at(node.GetSingleParent().GetId().value)) {
       auto* proto_mut = proto->add_mutation();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
       proto_mut->set_ref_nuc(EncodeBase(reference_sequence.at(pos.value)));
       proto_mut->set_par_nuc(EncodeBase(mut.first));
       proto_mut->add_mut_nuc(EncodeBase(mut.second));
     }
-    auto& in = edge_parent_mutations.at(edge.GetId().value);
   }
 
   std::ofstream file{std::string{path}};

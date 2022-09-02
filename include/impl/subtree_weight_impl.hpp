@@ -111,7 +111,7 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
 
   for (auto clade : node.GetClades()) {
     Edge edge = edge_selector(node, clade_idx);
-    clade_idx.value++;
+    ++clade_idx.value;
 
     EdgeId edge_id{result.GetDAG().GetEdgesCount()};
     NodeId child_id{result.GetDAG().GetNodesCount()};

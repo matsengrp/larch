@@ -48,6 +48,10 @@ class NodeView {
    */
   auto GetClade(CladeIdx clade) const;
   /**
+   * Return the count of child clades
+   */
+  size_t GetCladesCount() const;
+  /**
    * Return a range containing child Edges
    */
   auto GetChildren() const;

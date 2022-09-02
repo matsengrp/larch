@@ -42,7 +42,7 @@ static void CallMatOptimize(std::string matoptimize_path, std::string input,
   pid_t pid = fork();
   if (pid == 0) {
     if (execl(matoptimize_path.c_str(), "matOptimize", "-i", input.c_str(), "-o",
-              output.c_str(), nullptr) == -1) {
+              output.c_str(), "-n", nullptr) == -1) {
       throw std::runtime_error("Exec failed");
     }
   } else if (pid > 0) {
@@ -50,7 +50,7 @@ static void CallMatOptimize(std::string matoptimize_path, std::string input,
     if (wait(&status) == -1) {
       throw std::runtime_error("Wait failed");
     }
-    if (not WIFEXITED(status)) {
+    if (not WIFEXITED(status) or WEXITSTATUS(status) != EXIT_SUCCESS) {
       throw std::runtime_error("Child process failed");
     }
   } else {
@@ -112,6 +112,7 @@ int main(int argc, char** argv) {
   MADAG input_dag = LoadDAGFromProtobuf(input_dag_path);
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
+  std::vector<MADAG> optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
     merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
@@ -120,8 +121,9 @@ int main(int argc, char** argv) {
 
     StoreTreeToProtobuf(sample, "sampled_tree.pb");
     CallMatOptimize(matoptimize_path, "sampled_tree.pb", "optimized_tree.pb");
-    MADAG optimized = LoadTreeFromProtobuf("optimized_tree.pb");
-    merge.AddDAGs({optimized});
+
+    optimized_dags.push_back(LoadTreeFromProtobuf("optimized_tree.pb"));
+    merge.AddDAGs({optimized_dags.back()});
   }
 
   StoreDAGToProtobuf(merge.GetResult().GetDAG(), merge.GetReferenceSequence(),
