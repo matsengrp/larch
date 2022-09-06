@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 project (larch)
 
+include(${TBB_DIR}/cmake/TBBBuild.cmake)
+tbb_build(TBB_ROOT ${TBB_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1)
+find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
+
 find_package(Protobuf REQUIRED)
 protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS
     proto/dag.proto
@@ -48,7 +52,7 @@ function(larch_link_opts PRODUCT)
     target_link_libraries(${PRODUCT} PUBLIC -lz)
     target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
     target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
-    target_link_libraries(${PRODUCT} PUBLIC tbb -lstdc++fs)
+    target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
 endfunction()
 
 function(larch_executable PRODUCT)

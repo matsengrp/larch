@@ -90,6 +90,9 @@ class DAG {
   MutableEdge Get(EdgeId id);
   /** @} */
 
+  void DAG::DepthFirstExpansionHelper(NodeId node, std::vector<NodeId>& vec) const;
+  std::vector<NodeId> DAG::DepthFirstExpansion(NodeId node) const {
+
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
 
