@@ -1,5 +1,5 @@
 #include "merge.hpp"
-
+#include <mutex>
 Merge::Merge(std::string_view reference_sequence)
     : reference_sequence_{reference_sequence} {
   result_dag_.GetReferenceSequence() = reference_sequence;
