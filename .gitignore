@@ -1,3 +1,4 @@
 doc-build
 build
 .vscode
+.cache
