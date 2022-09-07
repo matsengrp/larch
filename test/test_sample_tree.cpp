@@ -18,6 +18,23 @@ static void test_sample_tree(MADAG& dag) {
   MADAG result = weight.SampleTree({});
 
   assert_true(result.GetDAG().IsTree(), "Tree");
+  auto testorder = result.GetDAG().TraversePreOrder();
+  auto trueorder = result.GetDAG().DepthFirstExpansion();
+
+  auto it1 = testorder.begin();
+  auto it2 = trueorder.begin();
+  while(it1 != testorder.end() || it2 != trueorder.end())
+  {
+      assert_equal(it1.NodeId(), it2, "nodeId");
+      if(it1 != testorder.end())
+      {
+          ++it1;
+      }
+      if(it2 != trueorder.end())
+      {
+          ++it2;
+      }
+  }
 }
 
 static void test_sample_tree(std::string_view path) {
