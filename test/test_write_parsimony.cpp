@@ -10,6 +10,17 @@
 
 #include "dag_loader.hpp"
 
+bool compare_treedags(MADAG& dag1, MADAG& dag2) {
+    assert (dag1.GetReferenceSequence() == dag2.GetReferenceSequence());
+    assert (dag1.GetDAG().GetNodesCount() == dag2.GetDAG().GetNodesCount());
+    assert (dag1.GetDAG().GetEdgesCount() == dag2.GetDAG().GetEdgesCount());
+    /* assert (not (not dag1.GetCompactGenomes().empty() and dag2.GetCompactGenomes().empty())); */
+    /* assert (not (not dag1.GetEdgeMutations().empty() and dag2.GetEdgeMutations().empty())); */
+    assert(dag1.GetCompactGenomes() == dag2.GetCompactGenomes());
+    assert(dag1.GetEdgeMutations() == dag2.GetEdgeMutations());
+    return true;
+}
+
 static void test_write_protobuf() {
     std::string_view path = "data/check_parsimony_protobuf/example_tree.pb";
     MADAG treedag = LoadTreeFromProtobuf(path);
@@ -21,30 +32,26 @@ static void test_write_protobuf() {
     treedag.GetReferenceSequence() = refseq;
     std::cout << "loaded..." << std::flush;
 
-    size_t counter = 0;
-    for (auto node : treedag.GetDAG().GetNodes()) {
-        if (node.IsLeaf()) {
-            counter++;
-        }
-    }
+    SubtreeWeight<ParsimonyScore> weight{treedag};
+    MADAG sample_tree = weight.SampleTree({});
 
-    std::cout << "tree has " << counter << " leaf nodes" << std::flush;
+    std::cout << "comparing tree to its sample\n" << std::flush;
+    StoreTreeToProtobuf(sample_tree, "/home/wdumm/larch/test_write_protobuf.pb");
+    compare_treedags(treedag, sample_tree);
+    sample_tree.GetCompactGenomes() = sample_tree.ComputeCompactGenomes(sample_tree.GetReferenceSequence());
     treedag.GetCompactGenomes() = treedag.ComputeCompactGenomes(treedag.GetReferenceSequence());
-    treedag.GetEdgeMutations() = treedag.ComputeEdgeMutations(treedag.GetReferenceSequence());
-    
-    /* std::cout << "computed compact genomes on original treedag...\n" << std::flush; */
+    std::cout << "comparing tree to its sample, with computed compact genomes\n" << std::flush;
+    compare_treedags(treedag, sample_tree);
 
-    /* SubtreeWeight<ParsimonyScore> weight{treedag}; */
-    /* MADAG sample_tree = weight.SampleTree({}); */
-    /* std::cout << "sampled...\n" << std::flush; */
-    /* auto cgs1_ = sample_tree.ComputeCompactGenomes(sample_tree.GetReferenceSequence()); */
-    /* std::cout << "computed compact genomes on sampled tree...\n" << std::flush; */
+    treedag.GetEdgeMutations() = treedag.ComputeEdgeMutations(treedag.GetReferenceSequence());
+    std::cout << "comparing recomputed edge mutations to original\n" << std::flush;
+    compare_treedags(treedag, sample_tree);
 
     /* Merge merge{treedag.GetReferenceSequence()}; */
     /* merge.AddDAGs({treedag, sample_tree}); */
+    /* merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations(); */
 
 
-    StoreTreeToProtobuf(treedag, "/home/wdumm/larch/test_write_protobuf.pb");
 }
 
 [[maybe_unused]] static const auto test_added_write =
