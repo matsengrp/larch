@@ -10,7 +10,8 @@
 #include "subtree_weight.hpp"
 #include "parsimony_score.hpp"
 #include "merge.hpp"
-
+#include <mpi.h>
+void check_mat_madag_conversion(const MADAG& dag);
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
   std::cout << "larch-usher -i,--input file -o,--output file [-m,--matopt file] "
@@ -57,10 +58,11 @@ static void CallMatOptimize(std::string matoptimize_path, std::string input,
     throw std::runtime_error("Fork failed");
   }
 }
-
+void check_edge_mutations(const MADAG& madag);
 int main(int argc, char** argv) {
   Arguments args = GetArguments(argc, argv);
-
+  int ignored;
+  auto init_result=MPI_Init_thread(&argc, &argv,MPI_THREAD_MULTIPLE,&ignored);
   std::string input_dag_path = "";
   std::string output_dag_path = "";
   std::string matoptimize_path = "matOptimize";
@@ -118,7 +120,8 @@ int main(int argc, char** argv) {
     merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     MADAG sample = weight.SampleTree({});
-
+    check_edge_mutations(sample);
+    check_mat_madag_conversion(sample);
     StoreTreeToProtobuf(sample, "sampled_tree.pb");
     CallMatOptimize(matoptimize_path, "sampled_tree.pb", "optimized_tree.pb");
 
