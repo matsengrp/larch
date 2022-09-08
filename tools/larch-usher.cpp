@@ -120,6 +120,7 @@ int main(int argc, char** argv) {
     MADAG sample = weight.SampleTree({});
 
     StoreTreeToProtobuf(sample, "sampled_tree.pb");
+    std::cout << "wrote sample tree " << std::to_string(i);
     CallMatOptimize(matoptimize_path, "sampled_tree.pb", "optimized_tree.pb");
 
     optimized_dags.push_back(LoadTreeFromProtobuf("optimized_tree.pb"));

@@ -19,6 +19,9 @@
 
 #include <string_view>
 #include <vector>
+#include <iostream>
+#include <unordered_map>
+#include <utility>
 
 #include "dag.hpp"
 #include "compact_genome.hpp"
