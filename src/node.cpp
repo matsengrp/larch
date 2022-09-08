@@ -67,5 +67,17 @@ void NodeView<T>::RemoveParentEdge(Edge edge) const {
   }
 }
 
+template <typename T>
+const std::optional<std::string> NodeView<T>::GetSampleId() const {
+    return GetStorage().GetSampleId();
+}
+
+template <typename T>
+void NodeView<T>::SetSampleId(std::optional<std::string> sample_id) {
+  if constexpr (is_mutable) {
+    GetStorage().SetSampleId(sample_id);
+  }
+}
+
 template class NodeView<DAG&>;
 template class NodeView<const DAG&>;

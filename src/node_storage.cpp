@@ -19,6 +19,14 @@ void NodeStorage::AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent) {
   }
 }
 
+const std::optional<std::string> NodeStorage::GetSampleId() const{
+    return sample_id_;
+}
+
+void NodeStorage::SetSampleId(std::optional<std::string> sample_id) {
+    sample_id_ = sample_id;
+}
+
 void NodeStorage::RemoveEdge(Edge edge, bool this_node_is_parent) {
   if (this_node_is_parent) {
     auto& clade = clades_.at(edge.GetClade().value);

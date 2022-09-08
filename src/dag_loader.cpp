@@ -83,14 +83,22 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
 
   size_t edge_id = 0;
   std::unordered_map<size_t, size_t> num_children;
+  std::map<size_t, std::optional<std::string>> seq_ids;
   ParseNewick(
-      data.newick(), [&result](size_t, std::string, std::optional<double>) {},
+      data.newick(), [&result, &seq_ids](size_t node_id, std::string label, std::optional<double>) {
+      seq_ids[node_id] = label;
+      },
       [&result, &edge_id, &num_children](size_t parent, size_t child) {
         result.GetDAG().AddEdge({edge_id++}, {parent}, {child},
                                 {num_children[parent]++});
       });
   result.GetDAG().InitializeNodes(result.GetDAG().GetEdgesCount() + 1);
   result.GetDAG().BuildConnections();
+  for (auto node : result.GetDAG().GetNodes()){
+      if (node.IsLeaf()) {
+          node.SetSampleId(seq_ids[node.GetId().value]);
+      }
+  }
 
   result.GetEdgeMutations().resize(result.GetDAG().GetEdgesCount());
   Assert(static_cast<size_t>(data.node_mutations_size()) ==
@@ -273,16 +281,20 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
       Assert(clade.size() == 1);
       Node i = (*clade.begin()).GetChild();
       if (i.IsLeaf()) {
-        newick += "leaf_";
-        newick += std::to_string(i.GetId().value);
+        if (i.GetSampleId()) {
+            newick += *i.GetSampleId();
+        } else {
+            newick += "unknown_leaf_";
+            newick += std::to_string(i.GetId().value);
+        }
       } else {
+        self(self, i);
         newick += "inner_";
         newick += std::to_string(i.GetId().value);
       }
       if (++clade_idx < node.GetCladesCount()) {
         newick += ',';
       }
-      self(self, i);
     }
     if (not node.IsLeaf()) {
       newick += ')';
@@ -304,6 +316,7 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
       proto_mut->set_ref_nuc(EncodeBase(reference_sequence.at(pos.value)));
       proto_mut->set_par_nuc(EncodeBase(mut.first));
       proto_mut->add_mut_nuc(EncodeBase(mut.second));
+      proto_mut->set_chromosome("leaf_0");
     }
   }
 
