@@ -276,13 +276,13 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
         newick += "leaf_";
         newick += std::to_string(i.GetId().value);
       } else {
+        self(self, i);
         newick += "inner_";
         newick += std::to_string(i.GetId().value);
       }
       if (++clade_idx < node.GetCladesCount()) {
         newick += ',';
       }
-      self(self, i);
     }
     if (not node.IsLeaf()) {
       newick += ')';
