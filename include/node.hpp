@@ -71,6 +71,9 @@ class NodeView {
   void AddChildEdge(Edge edge) const;
   void RemoveParentEdge(Edge edge) const;
 
+  const std::optional<std::string> GetSampleId() const;
+  void SetSampleId(std::optional<std::string> sample_id);
+
  private:
   auto& GetStorage() const;
   T dag_;

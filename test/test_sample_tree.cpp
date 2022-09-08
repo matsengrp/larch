@@ -23,17 +23,11 @@ static void test_sample_tree(MADAG& dag) {
 
   auto it1 = testorder.begin();
   auto it2 = trueorder.begin();
-  while(it1 != testorder.end() || it2 != trueorder.end())
+  size_t vindex = 0;
+  for (auto it1 : testorder)
   {
-      assert_equal(it1.NodeId(), it2, "nodeId");
-      if(it1 != testorder.end())
-      {
-          ++it1;
-      }
-      if(it2 != trueorder.end())
-      {
-          ++it2;
-      }
+      assert_equal(it1.GetNode().GetId().value, trueorder[vindex].value, "nodeId");
+      vindex = vindex + 1;
   }
 }
 
