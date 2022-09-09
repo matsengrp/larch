@@ -13,9 +13,15 @@
 #include "dag_loader.hpp"
 
 bool compare_treedags(MADAG& dag1, MADAG& dag2) {
-    assert (dag1.GetReferenceSequence() == dag2.GetReferenceSequence());
-    assert (dag1.GetDAG().GetNodesCount() == dag2.GetDAG().GetNodesCount());
-    assert (dag1.GetDAG().GetEdgesCount() == dag2.GetDAG().GetEdgesCount());
+    if (dag1.GetReferenceSequence() != dag2.GetReferenceSequence()) {
+        return false;
+    }
+    if (dag1.GetDAG().GetNodesCount() != dag2.GetDAG().GetNodesCount()) {
+        return false;
+    }
+    if (dag1.GetDAG().GetEdgesCount() != dag2.GetDAG().GetEdgesCount()) {
+        return false;
+    }
 
     if (not dag1.GetReferenceSequence().empty()) {
         if (dag1.GetCompactGenomes().empty()) {
@@ -29,7 +35,9 @@ bool compare_treedags(MADAG& dag1, MADAG& dag2) {
         for (auto &cg : dag2.GetCompactGenomes()) {
              dag2_cgs.emplace(cg.Copy());
         }
-        assert(dag1_cgs == dag2_cgs);
+        if (dag1_cgs != dag2_cgs) {
+            return false;
+        }
     }
 
     if (not (dag1.GetEdgeMutations().empty() or dag2.GetEdgeMutations().empty())) {
@@ -37,7 +45,9 @@ bool compare_treedags(MADAG& dag1, MADAG& dag2) {
         std::vector<EdgeMutations> &dag2_ems = dag2.GetEdgeMutations();
 
         for (auto &em : dag1_ems) {
-            assert(std::find(dag2_ems.begin(), dag2_ems.end(), em) != dag2_ems.end());
+            if (std::find(dag2_ems.begin(), dag2_ems.end(), em) == dag2_ems.end()) {
+                return false;
+            }
         }
     } else if (not (dag1.GetEdgeMutations().empty() and dag2.GetEdgeMutations().empty())) {
         return false;
@@ -75,6 +85,7 @@ static void test_write_protobuf() {
     Merge merge{treedag.GetReferenceSequence()};
     merge.AddDAGs({treedag, sample_tree});
     merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
+
     std::cout << "comparing original treedag to trivial merge\n" << std::flush;
     compare_treedags(treedag, merge.GetResult());
 
