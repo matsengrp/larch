@@ -45,7 +45,7 @@ bool compare_treedags(MADAG& dag1, MADAG& dag2) {
         std::vector<EdgeMutations> &dag2_ems = dag2.GetEdgeMutations();
 
         for (auto &em : dag1_ems) {
-            if (std::find(dag2_ems.begin(), dag2_ems.end(), em) == dag2_ems.end()) {
+            if (std::count(dag2_ems.begin(), dag2_ems.end(), em) != std::count(dag1_ems.begin(), dag1_ems.end(), em)) {
                 return false;
             }
         }
