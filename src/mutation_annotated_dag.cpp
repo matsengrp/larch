@@ -29,22 +29,37 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
   auto ComputeCG = [&](auto& self, Node node) {
     CompactGenome& compact_genome = result.at(node.GetId().value);
     if (node.IsRoot()) {
-      compact_genome = CompactGenome(node, edge_mutations_, reference_sequence_);
+      compact_genome = CompactGenome();
       return;
     }
     if (not compact_genome.empty()) {
       return;
     }
-    for (Edge edge : node.GetParents()) {
-      self(self, edge.GetParent());
-      const EdgeMutations& mutations = edge_mutations_.at(edge.GetId().value);
-      const CompactGenome& parent = result.at(edge.GetParentId().value);
-      compact_genome.AddParentEdge(mutations, parent, reference_sequence_);
-    }
+    Edge edge = *(node.GetParents().begin());
+    self(self, edge.GetParent());
+    const EdgeMutations& mutations = edge_mutations_.at(edge.GetId().value);
+    const CompactGenome& parent = result.at(edge.GetParentId().value);
+    compact_genome.AddParentEdge(mutations, parent, reference_sequence_);
   };
+  std::unordered_map<CompactGenome, size_t> leaf_cgs;
   for (Node node : dag_.GetNodes()) {
     ComputeCG(ComputeCG, node);
+    if (node.IsLeaf()) {
+        bool success = leaf_cgs.emplace(result[node.GetId().value].Copy(), node.GetId().value).second;
+        if (not success) {
+            std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
+                << node.GetId().value
+                << " also seen at "
+                << leaf_cgs[result[node.GetId().value].Copy()]
+                << "\nCompact Genome is\n"
+                << result[node.GetId().value].ToString()
+                << "\n" << std::flush;
+            assert(false);
+        }
+    }
+
   }
+  std::cout << "ComputeCompactGenomes found " << leaf_cgs.size() << " unique leaf cgs\n";
   return result;
 }
 
