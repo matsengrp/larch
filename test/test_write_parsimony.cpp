@@ -5,6 +5,8 @@
 #include <iostream>
 #include <fstream>
 #include <string_view>
+#include <unordered_set>
+#include <algorithm>
 
 #include "test_common.hpp"
 
@@ -14,10 +16,32 @@ bool compare_treedags(MADAG& dag1, MADAG& dag2) {
     assert (dag1.GetReferenceSequence() == dag2.GetReferenceSequence());
     assert (dag1.GetDAG().GetNodesCount() == dag2.GetDAG().GetNodesCount());
     assert (dag1.GetDAG().GetEdgesCount() == dag2.GetDAG().GetEdgesCount());
-    /* assert (not (not dag1.GetCompactGenomes().empty() and dag2.GetCompactGenomes().empty())); */
-    /* assert (not (not dag1.GetEdgeMutations().empty() and dag2.GetEdgeMutations().empty())); */
-    assert(dag1.GetCompactGenomes() == dag2.GetCompactGenomes());
-    assert(dag1.GetEdgeMutations() == dag2.GetEdgeMutations());
+
+    if (not dag1.GetReferenceSequence().empty()) {
+        if (dag1.GetCompactGenomes().empty()) {
+            dag1.GetCompactGenomes() = dag1.ComputeCompactGenomes(dag1.GetReferenceSequence());
+            dag2.GetCompactGenomes() = dag2.ComputeCompactGenomes(dag2.GetReferenceSequence());
+        }
+        std::unordered_set<CompactGenome> dag1_cgs, dag2_cgs;
+        for (auto &cg : dag1.GetCompactGenomes()) {
+             dag1_cgs.emplace(cg.Copy());
+        }
+        for (auto &cg : dag2.GetCompactGenomes()) {
+             dag2_cgs.emplace(cg.Copy());
+        }
+        assert(dag1_cgs == dag2_cgs);
+    }
+
+    if (not (dag1.GetEdgeMutations().empty() or dag2.GetEdgeMutations().empty())) {
+        std::vector<EdgeMutations> &dag1_ems = dag1.GetEdgeMutations();
+        std::vector<EdgeMutations> &dag2_ems = dag2.GetEdgeMutations();
+
+        for (auto &em : dag1_ems) {
+            assert(std::find(dag2_ems.begin(), dag2_ems.end(), em) != dag2_ems.end());
+        }
+    } else if (not (dag1.GetEdgeMutations().empty() and dag2.GetEdgeMutations().empty())) {
+        return false;
+    }
     return true;
 }
 
@@ -38,6 +62,7 @@ static void test_write_protobuf() {
     std::cout << "comparing tree to its sample\n" << std::flush;
     StoreTreeToProtobuf(sample_tree, "/home/wdumm/larch/test_write_protobuf.pb");
     compare_treedags(treedag, sample_tree);
+
     sample_tree.GetCompactGenomes() = sample_tree.ComputeCompactGenomes(sample_tree.GetReferenceSequence());
     treedag.GetCompactGenomes() = treedag.ComputeCompactGenomes(treedag.GetReferenceSequence());
     std::cout << "comparing tree to its sample, with computed compact genomes\n" << std::flush;
@@ -47,10 +72,11 @@ static void test_write_protobuf() {
     std::cout << "comparing recomputed edge mutations to original\n" << std::flush;
     compare_treedags(treedag, sample_tree);
 
-    /* Merge merge{treedag.GetReferenceSequence()}; */
-    /* merge.AddDAGs({treedag, sample_tree}); */
-    /* merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations(); */
-
+    Merge merge{treedag.GetReferenceSequence()};
+    merge.AddDAGs({treedag, sample_tree});
+    merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
+    std::cout << "comparing original treedag to trivial merge\n" << std::flush;
+    compare_treedags(treedag, merge.GetResult());
 
 }
 
