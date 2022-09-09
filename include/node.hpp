@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common.hpp"
-
+#include <optional>
 struct NodeId {
   size_t value = NoId;
 };
