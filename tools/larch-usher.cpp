@@ -7,11 +7,13 @@
 
 #include "arguments.hpp"
 #include "dag_loader.hpp"
+#include "mutation_annotated_dag.hpp"
 #include "subtree_weight.hpp"
 #include "parsimony_score.hpp"
 #include "merge.hpp"
 #include <mpi.h>
-void check_mat_madag_conversion(const MADAG& dag);
+#define DIRECT_MAT
+MADAG optimize_dag_direct(const MADAG& dag);
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
   std::cout << "larch-usher -i,--input file -o,--output file [-m,--matopt file] "
@@ -121,7 +123,10 @@ int main(int argc, char** argv) {
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     MADAG sample = weight.SampleTree({});
     check_edge_mutations(sample);
-    check_mat_madag_conversion(sample);
+    MADAG result;
+    #ifdef DIRECT_MAT
+    result=optimize_dag_direct(sample);
+    #else
     sample.GetCompactGenomes() = sample.ComputeCompactGenomes(input_dag.GetReferenceSequence());
     std::cout << " got sample tree and computed its compact genome.\n" << std::flush;
 
@@ -143,8 +148,9 @@ int main(int argc, char** argv) {
     mo_dag.GetReferenceSequence() = input_dag.GetReferenceSequence();
     mo_dag.GetCompactGenomes() = mo_dag.ComputeCompactGenomes(mo_dag.GetReferenceSequence());
     std::cout << "...computed its compact genome successfully.\n" << std::flush;
-
-    optimized_dags.push_back(LoadTreeFromProtobuf("optimized_tree.pb"));
+    result=LoadTreeFromProtobuf("optimized_tree.pb");
+    #endif
+    optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back()});
   }
 
