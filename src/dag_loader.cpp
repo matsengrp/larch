@@ -49,6 +49,11 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
 
   for (auto& i : data.node_names()) {
     result.GetDAG().AddNode({static_cast<size_t>(i.node_id())});
+    if (not i.condensed_leaves().empty()) {
+        NodeId tmp_nodeId;
+        tmp_nodeId.value = static_cast<size_t>(i.node_id());
+        result.GetDAG().Get(tmp_nodeId).SetSampleId(i.condensed_leaves()[0]);
+    }
   }
 
   size_t edge_id = 0;
@@ -235,9 +240,14 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
 
   data.set_reference_seq(std::string{reference_sequence});
 
-  for (size_t i = 0; i < dag.GetNodesCount(); ++i) {
+  for (auto i : dag.GetNodes()) {
     auto* proto_node = data.add_node_names();
-    proto_node->set_node_id(i);
+    proto_node->set_node_id(i.GetId().value);
+    if ((bool) dag.Get(i).GetSampleId()) {
+        proto_node->add_condensed_leaves(dag.Get(i).GetSampleId().value());
+    } else {
+        //proto_node->add_condensed_leaves({});
+    }
   }
 
   for (Edge edge : dag.GetEdges()) {
