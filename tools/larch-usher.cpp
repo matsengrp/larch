@@ -42,7 +42,7 @@ static void CallMatOptimize(std::string matoptimize_path, std::string input,
   pid_t pid = fork();
   if (pid == 0) {
     if (execl(matoptimize_path.c_str(), "matOptimize", "-i", input.c_str(), "-o",
-              output.c_str(), "-n", nullptr) == -1) {
+              output.c_str(), "-T", "1", "-n", nullptr) == -1) {
       throw std::runtime_error("Exec failed");
     }
   } else if (pid > 0) {
@@ -119,9 +119,27 @@ int main(int argc, char** argv) {
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     MADAG sample = weight.SampleTree({});
 
+    sample.GetCompactGenomes() = sample.ComputeCompactGenomes(input_dag.GetReferenceSequence());
+    std::cout << " got sample tree and computed its compact genome.\n" << std::flush;
+
     StoreTreeToProtobuf(sample, "sampled_tree.pb");
-    std::cout << "wrote sample tree " << std::to_string(i);
+    std::cout << "wrote sample tree " << std::to_string(i) << "\n" << std::flush;
     CallMatOptimize(matoptimize_path, "sampled_tree.pb", "optimized_tree.pb");
+
+    std::cout << "ran matOptimize on the sample tree, and now we will try to recompute its compact genome\n" << std::flush;
+    sample.GetCompactGenomes() = sample.ComputeCompactGenomes(input_dag.GetReferenceSequence());
+    std::cout << "...computed its compact genome successfully.\n" << std::flush;
+
+    MADAG sample1 = LoadTreeFromProtobuf("sampled_tree.pb");
+    sample1.GetReferenceSequence() = input_dag.GetReferenceSequence();
+    sample1.GetCompactGenomes() = sample1.ComputeCompactGenomes(input_dag.GetReferenceSequence());
+    std::cout << " got sample tree and computed its compact genome.\n" << std::flush;
+
+    MADAG mo_dag = LoadTreeFromProtobuf("./optimized_tree.pb");
+    std::cout << "was able to read the matOptimize tree back from protobuf.\n" << std::flush;
+    mo_dag.GetReferenceSequence() = input_dag.GetReferenceSequence();
+    mo_dag.GetCompactGenomes() = mo_dag.ComputeCompactGenomes(mo_dag.GetReferenceSequence());
+    std::cout << "...computed its compact genome successfully.\n" << std::flush;
 
     optimized_dags.push_back(LoadTreeFromProtobuf("optimized_tree.pb"));
     merge.AddDAGs({optimized_dags.back()});
@@ -132,3 +150,4 @@ int main(int argc, char** argv) {
 
   return EXIT_SUCCESS;
 }
+
