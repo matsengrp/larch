@@ -11,6 +11,27 @@
 #include "parsimony_score.hpp"
 #include "merge.hpp"
 
+void assign_sample_ids(MADAG &dag1, MADAG &dag2) {
+    std::vector<CompactGenome> &dag1_cgs = dag1.GetCompactGenomes();
+    std::vector<CompactGenome> &dag2_cgs = dag2.GetCompactGenomes();
+
+    if (dag1_cgs.size() > 0 and dag2_cgs.size() > 0) {
+        for (auto node1 : dag1.GetDAG().GetNodes()) {
+            if (node1.IsLeaf()) {
+                CompactGenome cg1 = dag1_cgs.at(node1.GetId().value).Copy();
+                for (auto node2 : dag2.GetDAG().GetNodes()) {
+                     if (node2.IsLeaf()  and 
+                         (cg1 == dag2_cgs.at(node2.GetId().value).Copy())) {
+                         node2.SetSampleId(node1.GetSampleId());
+                     }
+                }
+            }
+        }
+    } else {
+        throw std::runtime_error("could not assign sample ids when one DAG has no compact genome");
+    }
+}
+
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
   std::cout << "larch-usher -i,--input file -o,--output file [-m,--matopt file] "
@@ -118,6 +139,9 @@ int main(int argc, char** argv) {
     merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     MADAG sample = weight.SampleTree({});
+    input_dag.GetCompactGenomes() = input_dag.ComputeCompactGenomes(input_dag.GetReferenceSequence());
+    sample.GetCompactGenomes() = sample.ComputeCompactGenomes(sample.GetReferenceSequence());
+    assign_sample_ids(input_dag, sample);
 
     sample.GetCompactGenomes() = sample.ComputeCompactGenomes(input_dag.GetReferenceSequence());
     std::cout << " got sample tree and computed its compact genome.\n" << std::flush;
