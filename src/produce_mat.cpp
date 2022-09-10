@@ -123,9 +123,9 @@ void check_MAT_MADAG_Eq(const MAT::Tree& tree,const MADAG& init){
 }
 MADAG optimize_dag_direct(const MADAG& dag){
     auto dag_ref=dag.GetReferenceSequence();
-    MAT::Mutation::refs.resize(dag_ref.size());
+    MAT::Mutation::refs.resize(dag_ref.size()+1);
     for (size_t ref_idx=0; ref_idx<dag_ref.size(); ref_idx++) {
-        MAT::Mutation::refs[ref_idx]=EncodeBase(dag_ref[ref_idx]);
+        MAT::Mutation::refs[ref_idx+1]=EncodeBase(dag_ref[ref_idx]);
     }
     auto tree=mat_from_dag(dag);
     check_MAT_MADAG_Eq(tree, dag);

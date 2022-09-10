@@ -22,7 +22,7 @@ void check_edge_mutations_helper(const Node dag_node,const all_mutated_t& all_mu
             auto ins_result=this_mutated.emplace(edge_mut.first.value,ParNuc_Info{dag_node.GetId(),child.GetChildId(),edge_id,edge_mut.second.second});
             auto actual_par=edge_mut.second.first;
             if(ins_result.second){
-                auto expected=ref_seq[edge_mut.first.value];
+                auto expected=ref_seq[edge_mut.first.value-1];
                 if(expected!=actual_par){
                     std::cout<<"On edge "<<edge_id.value<<" from "<<dag_node.GetId().value<<" to "<<child.GetChildId().value<<" at position "<< edge_mut.first.value<<" expected reference "<<expected<<" but got "<<actual_par<<"\n";
                 }
