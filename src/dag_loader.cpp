@@ -329,7 +329,7 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
          edge_parent_mutations.at(node.GetSingleParent().GetId().value)) {
       auto* proto_mut = proto->add_mutation();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
-      proto_mut->set_ref_nuc(EncodeBase(reference_sequence.at(pos.value)));
+      proto_mut->set_ref_nuc(EncodeBase(reference_sequence.at(pos.value - 1)));
       proto_mut->set_par_nuc(EncodeBase(mut.first));
       proto_mut->add_mut_nuc(EncodeBase(mut.second));
       proto_mut->set_chromosome("leaf_0");
