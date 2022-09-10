@@ -136,10 +136,8 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
       }
   }
   for (auto node : result.GetDAG().GetNodes()) {
-      size_t idx = node.GetId().value;
-      std::optional<std::string> old_sample_id = input_dag.GetDAG().Get(node).GetSampleId();
-      if (node.IsLeaf() and (bool) old_sample_id) {
-          std::cout << "nodeId: " << std::to_string(idx) << old_sample_id.value() << "\n";
+      std::optional<std::string> old_sample_id = input_dag.GetDAG().Get(node.GetId()).GetSampleId();
+      if (old_sample_id) {
           node.SetSampleId(old_sample_id);
       }
   }

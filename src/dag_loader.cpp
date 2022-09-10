@@ -1,6 +1,7 @@
 #include <fstream>
 #include <vector>
 #include <unordered_map>
+#include <string>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -290,17 +291,22 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
     for (auto clade : node.GetClades()) {
       Assert(clade.size() == 1);
       Node i = (*clade.begin()).GetChild();
+      size_t num_muts = 0;
+      if (not node.IsRoot()) {
+        num_muts = edge_parent_mutations.at(node.GetSingleParent().GetId().value).size();
+      }
       if (i.IsLeaf()) {
         if (i.GetSampleId()) {
             newick += *i.GetSampleId();
         } else {
             newick += "unknown_leaf_";
-            newick += std::to_string(i.GetId().value);
+            newick += std::to_string(i.GetId().value+2);
         }
+        newick += ":"+std::to_string(num_muts);
       } else {
         self(self, i);
-        newick += "inner_";
-        newick += std::to_string(i.GetId().value);
+        newick += std::to_string(i.GetId().value+2);
+        newick += ":"+std::to_string(num_muts);
       }
       if (++clade_idx < node.GetCladesCount()) {
         newick += ',';
@@ -311,7 +317,7 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
     }
   };
   to_newick(to_newick, dag.GetRoot());
-  newick += ';';
+  newick += "1:0;";
   data.set_newick(newick);
 
   for (Node node : dag.TraversePreOrder()) {
