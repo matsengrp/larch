@@ -1,5 +1,0 @@
-BasedOnStyle:  LLVM
-Standard:        Cpp11
-IndentWidth:     4   
-TabWidth:        4   
-UseTab:          Never 
