@@ -133,6 +133,7 @@ MADAG optimize_dag_direct(const MADAG& dag){
     check_samples(tree.root, origin_states, &tree);
     reassign_states(tree, origin_states);
     auto all_nodes=tree.depth_first_expansion();
+
     optimize_inner_loop(all_nodes, tree, 2, true);
     MADAG result=build_madag_from_mat(tree);
     tree.delete_nodes();

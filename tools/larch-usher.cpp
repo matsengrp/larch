@@ -118,6 +118,7 @@ int main(int argc, char** argv) {
   std::vector<MADAG> optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
+    std::cout << "############ Beginning optimize loop " << std::to_string(i) << " #######\n";
     merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     MADAG sample = weight.SampleTree({});
