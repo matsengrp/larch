@@ -25,12 +25,12 @@
 #include <tbb/task_scheduler_init.h>
 
 namespace MAT = Mutation_Annotated_Tree;
-std::atomic_bool interrupted(false);
-int process_count=1;
-int this_rank=0;
-uint32_t num_threads=tbb::task_scheduler_init::default_num_threads();
-FILE* movalbe_src_log;
-bool changing_radius=false;
+/* std::atomic_bool interrupted(false); */
+/* int process_count=1; */
+/* int this_rank=0; */
+/* uint32_t num_threads=tbb::task_scheduler_init::default_num_threads(); */
+/* FILE* movalbe_src_log; */
+/* bool changing_radius=false; */
 static int32_t EncodeBase(char base) {
   switch (base) {
     case 'A':
