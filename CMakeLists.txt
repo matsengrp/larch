@@ -1,8 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
 project (larch)
 
-include(${TBB_DIR}/cmake/TBBBuild.cmake)
-tbb_build(TBB_ROOT ${TBB_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1)
+include(FetchContent)
+FetchContent_Declare(oneTBB-src
+  GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
+  GIT_TAG        2019_U9
+)
+FetchContent_MakeAvailable(oneTBB-src)
+
+include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
+tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1)
 find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
@@ -13,7 +20,6 @@ protobuf_generate_cpp(
         PROTO_SRCS PROTO_HDRS
         deps/usher/parsimony.proto)
     
-include(FetchContent)
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
 FetchContent_MakeAvailable(json)
 
