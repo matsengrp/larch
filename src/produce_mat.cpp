@@ -134,7 +134,23 @@ MADAG optimize_dag_direct(const MADAG& dag){
     reassign_states(tree, origin_states);
     auto all_nodes=tree.depth_first_expansion();
 
-    optimize_inner_loop(all_nodes, tree, 2, true);
+    std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point end_time = start_time + std::chrono::hours(8);
+    optimize_inner_loop(all_nodes, // nodes to search
+            tree, // tree
+            2, // radius
+            true, // allow drift
+            true, // search all directions
+            5, // minutes between save
+            true, // do not write intermediate files
+            end_time, // search end time
+            start_time, // start time
+            false, // log moves
+            1, // current iteration
+            "intermediate", // intermediate template
+            "intermediate_base", // intermediate base name
+            "intermediate_newick" // intermediate newick name
+            );
     MADAG result=build_madag_from_mat(tree);
     tree.delete_nodes();
     return result;
