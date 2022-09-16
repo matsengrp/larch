@@ -45,7 +45,7 @@ set_target_properties(larch_autogen
 )
 
 function(larch_compile_opts PRODUCT)
-    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17  -Wall -Wextra -pedantic -pedantic-errors -Wno-unused)
+    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17  -Wall -Wextra -pedantic -Wno-unused)
     if (${USE_ASAN})
         target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined)
     endif()
@@ -138,12 +138,17 @@ larch_executable(dag_diff
 larch_executable(dag2dot
     tools/dag2dot.cpp)
 
+add_library(usher
+    ${MATOPTIMIZE_SRC}
+    ${DETAILED_MUTATIONS_PROTO_SRCS}
+    ${DETAILED_MUTATIONS_PROTO_HDRS})
+larch_compile_opts(usher)
+larch_link_opts(usher)
+
 larch_executable(larch-usher
     tools/larch-usher.cpp
     src/produce_mat.cpp
     src/check_edge_mutations.cpp
-    ${MATOPTIMIZE_SRC}
-    ${DETAILED_MUTATIONS_PROTO_SRCS}
-    ${DETAILED_MUTATIONS_PROTO_HDRS}
     )
-target_link_libraries( larch-usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+target_link_libraries( larch-usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} usher)
+add_dependencies(larch-usher usher)
