@@ -136,21 +136,27 @@ MADAG optimize_dag_direct(const MADAG& dag){
 
     std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point end_time = start_time + std::chrono::hours(8);
-    optimize_inner_loop(all_nodes, // nodes to search
-            tree, // tree
-            2, // radius
-            true, // allow drift
-            true, // search all directions
-            5, // minutes between save
-            true, // do not write intermediate files
-            end_time, // search end time
-            start_time, // start time
-            false, // log moves
-            1, // current iteration
-            "intermediate", // intermediate template
-            "intermediate_base", // intermediate base name
-            "intermediate_newick" // intermediate newick name
-            );
+    int ddepth = tree.get_max_level() * 2;
+    std::cout << "maximum radius is " << std::to_string(ddepth) << "\n";
+    for (size_t rad_exp = 1; (1 << rad_exp) <= ddepth; rad_exp++) {
+        std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
+
+        optimize_inner_loop(all_nodes, // nodes to search
+                tree, // tree
+                1 << rad_exp, // radius
+                true, // allow drift
+                true, // search all directions
+                5, // minutes between save
+                true, // do not write intermediate files
+                end_time, // search end time
+                start_time, // start time
+                false, // log moves
+                1, // current iteration
+                "intermediate", // intermediate template
+                "intermediate_base", // intermediate base name
+                "intermediate_newick" // intermediate newick name
+                );
+    }
     MADAG result=build_madag_from_mat(tree);
     tree.delete_nodes();
     return result;

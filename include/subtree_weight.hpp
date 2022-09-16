@@ -27,8 +27,7 @@ class SubtreeWeight {
 
  private:
   template <typename CladeRange>
-  std::pair<typename WeightOps::Weight, EdgeId> MinCladeWeight(CladeRange&& clade,
-                                                               WeightOps&& weight_ops);
+  typename WeightOps::Weight CladeWeight(CladeRange&& clade, WeightOps&& weight_ops);
 
   template <typename EdgeSelector>
   void ExtractTree(const MADAG& input_dag, Node node, WeightOps&& weight_ops,
@@ -38,9 +37,10 @@ class SubtreeWeight {
 
   // Indexed by NodeId.
   std::vector<typename WeightOps::Weight> cached_weights_;
+  std::vector<bool> weight_is_cached_;
 
-  // Outer vector indexed by CladeIdx, inner vector indexed by NodeId.
-  std::vector<std::vector<EdgeId>> cached_min_weight_edges_;
+  // outermost vector indexed by NodeId, next vector indexed by CladeIdx, innermost vector records which EdgeIds achieve minimum in that clade.
+  std::vector<std::vector<std::vector<EdgeId>>> cached_min_weight_edges_;
 
   std::random_device random_device_;
   std::mt19937 random_generator_;
