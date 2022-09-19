@@ -1,7 +1,17 @@
 /**
-  A way to build a WeightOp using binary operations...
+  A way to build a WeightOp type possessing all the values required by SubtreeWeight, using simpler-to-define binary operations.
 
-  This type is meant to be used as a parameter to SubtreeWeight.
+  The template parameter BinaryOperatorWeightOps is expected to provide at least the values in the following example struct:
+
+struct ExampleBinaryOperatorWeightOps {
+  using Weight = size_t;  // Provide any weight type you like
+  constexpr static Weight Identity = 0;  // The identity element under Combine
+  inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);  // The value assigned to a leaf node
+  inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);  // The value assigned to an edge
+  inline bool Compare(Weight lhs, Weight rhs);  // The ordering operator: is lhs 'better than' rhs
+  inline bool CompareEqual(Weight lhs, Weight rhs);  // A custom implemented equality
+  inline Weight Combine(Weight lhs, Weight rhs);  // A binary operation that respects ordering, e.g. '+'
+};
 
  */
 
@@ -12,20 +22,10 @@
 template <typename BinaryOperatorWeightOps>
 struct SimpleWeightOps {
     using Weight = typename BinaryOperatorWeightOps::Weight;
-    BinaryOperatorWeightOps binary_operator_weight_ops;
+    BinaryOperatorWeightOps&& binary_operator_weight_ops_;
     inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);
     inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);
-
-    /*
-     * Given a vector of weights for edges below a clade, compute the minimum
-     * weight of them all, and return that minimum weight, and a vector
-     * containing the indices of all elements of the passed vector that achieve
-     * that minimum
-     */
     inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(std::vector<Weight>);
-    /*
-     * Given a vector of weights, one for each child clade, aggregate them
-     */
     inline Weight BetweenClades(std::vector<Weight>);
     inline Weight AboveNode(std::vector<Weight>);
 };

@@ -1,7 +1,10 @@
 /**
-  Representation of edge mutations parsimony-based weight scoring for MADAG.
+  Provides a class and templated WeightOps struct for counting the weights of all trees in a DAG.
 
-  This type is meant to be used as a parameter to SubtreeWeight.
+  The WeightAccumulator struct is meant to be used as a parameter to SubtreeWeight.
+
+  This should correctly accumulate weights for any WeightOps for which
+  WeightOps::WithinCladeAccumOptimum called on a list containing a single Weight returns only that weight, and for which WeightOps::BetweenClades can be decomposed as a commutative binary operation on any list of Weights.
 
  */
 
@@ -11,24 +14,27 @@
 template <typename WeightOps>
 class WeightCounter {
     public:
-        WeightCounter();
-        WeightCounter(std::vector<typename WeightOps::Weight>);
-        WeightCounter operator+(WeightCounter lhs, WeightCounter rhs);
-        WeightCounter operator*(WeightCounter lhs, WeightCounter rhs);
+        WeightCounter(const WeightOps&& weight_ops);
+        WeightCounter(std::vector<typename WeightOps::Weight>, const WeightOps&& weight_ops);
+        WeightCounter(std::map<typename WeightOps::Weight, size_t>, const WeightOps&& weight_ops);
+        /* A union of multisets */
+        inline WeightCounter operator+(WeightCounter lhs, WeightCounter rhs);
+        /* a cartesian product of multisets, applying
+         * weight_ops.BetweenClades to pairs in the product */
+        inline WeightCounter operator*(WeightCounter lhs, WeightCounter rhs);
+        std::map<typename WeightOps::Weight, size_t> GetWeights();
+
     private:
         std::map<typename WeightOps::Weight, size_t> weights_;
+        const WeightOps&& weight_ops_;
 };
 
 template <typename WeightOps>
 struct WeightAccumulator {
   using Weight = WeightCounter<WeightOps>;
-  /* constexpr static Weight MaxWeight = std::numeric_limits<size_t>::max(); */ 
-  /* constexpr static Weight Identity = 0; */
+  const WeightOps&& weight_ops_;
   inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);
   inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);
-  /* inline bool Compare(Weight lhs, Weight rhs); */
-  /* inline bool IsIdentity(Weight weight); */
-  /* inline Weight Combine(Weight lhs, Weight rhs); */
 
   /*
    * Given a vector of weights for edges below a clade, compute the minimum
@@ -45,4 +51,4 @@ struct WeightAccumulator {
 };
 
 
-#include "impl/parsimony_score_impl.hpp"
+#include "impl/weight_accumulator_impl.hpp"
