@@ -6,10 +6,11 @@
 
 #pragma once
 
+#include <boost/multiprecision/cpp_int.hpp>
 #include "mutation_annotated_dag.hpp"
 
 struct TreeCount {
-  using Weight = unsigned long long int;
+  using Weight = boost::multiprecision::cpp_int;
   inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);
   inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);
   /*

@@ -3,26 +3,27 @@
 
 #include <iostream>
 #include <string_view>
+#include <string>
 
 #include "test_common.hpp"
 
 #include "dag_loader.hpp"
 
-static void test_tree_count(MADAG& dag, size_t expected_score) {
+static void test_tree_count(MADAG& dag, TreeCount::Weight expected_score) {
   if (dag.GetEdgeMutations().empty()) {
     dag.GetEdgeMutations() = dag.ComputeEdgeMutations(dag.GetReferenceSequence());
   }
 
   SubtreeWeight<TreeCount> treecount(dag);
 
-  size_t score = treecount.ComputeWeightBelow(dag.GetDAG().GetRoot(), {});
+  TreeCount::Weight score = treecount.ComputeWeightBelow(dag.GetDAG().GetRoot(), {});
 
-  assert_equal(score, expected_score,
-          "True tree count " + std::to_string(expected_score) +
-          " but counted " + std::to_string(score));
+  assert_equal(score, expected_score, "Tree count");
+          /* "True tree count " + (std::string) expected_score + */
+          /* " but counted " + (std::string) score); */
 }
 
-static void test_tree_count(std::string_view path, size_t expected_score) {
+static void test_tree_count(std::string_view path, TreeCount::Weight expected_score) {
   MADAG dag = LoadDAGFromProtobuf(path);
   test_tree_count(dag, expected_score);
 }
