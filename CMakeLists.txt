@@ -127,6 +127,7 @@ larch_executable(larch-test
     test/test_sample_tree.cpp
     test/test_subtree_weight.cpp
     test/test_write_parsimony.cpp
+    test/test_count_trees.cpp
     test/test_synthetic.cpp)
 
 larch_executable(merge

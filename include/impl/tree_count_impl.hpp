@@ -10,15 +10,9 @@ TreeCount::Weight TreeCount::ComputeEdge(const MADAG& dag, EdgeId edge_id) {
 }
 
 std::pair<TreeCount::Weight, std::vector<size_t>> TreeCount::WithinCladeAccumOptimum(std::vector<TreeCount::Weight> inweights) {
-    TreeCount::Weight result = 1;
-    std::vector<size_t> optimal_indices;
-    size_t inweight_idx = 0;
-    for (auto weight : inweights) {
-        result += weight;
-        optimal_indices.push_back(inweight_idx);
-        inweight_idx++;
-    }
-    return {result, optimal_indices};
+    std::vector<size_t> indices;
+    std::iota(indices.begin(), indices.end(), 0);
+    return {std::accumulate(inweights.begin(), inweights.end(), 0, std::plus<TreeCount::Weight>()), indices};
 }
 
 TreeCount::Weight TreeCount::BetweenClades(std::vector<TreeCount::Weight> inweights) {
