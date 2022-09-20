@@ -1,5 +1,5 @@
 #include "subtree_weight.hpp"
-#include "parsimony_score.hpp"
+#include "parsimony_score_binary.hpp"
 #include "merge.hpp"
 
 #include <iostream>
