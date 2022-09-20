@@ -45,7 +45,7 @@ set_target_properties(larch_autogen
 )
 
 function(larch_compile_opts PRODUCT)
-    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17  -Wall -Wextra -pedantic -pedantic-errors -Wno-unused)
+    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17  -Wall -Wextra -pedantic -Wno-unused)
     if (${USE_ASAN})
         target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined)
     endif()

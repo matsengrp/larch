@@ -13,17 +13,17 @@ WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::ComputeEdge(c
 }
 
 template <typename WeightOps>
-std::pair<WeightAccumulator<WeightOps>::Weight, std::vector<size_t>> WithinCladeAccumOptimum(std::vector<WeightAccumulator<WeightOps>::Weight> inweights) {
+std::pair<WeightAccumulator<WeightOps>::Weight, std::vector<size_t>> WeightAccumulator<WeightOps>::WithinCladeAccumOptimum(std::vector<WeightAccumulator<WeightOps>::Weight> inweights) {
     std::vector<size_t> optimal_indices;
     std::iota(optimal_indices.begin(), optimal_indices.end(), 0);
     return {std::accumulate(inweights.begin(), inweights.end(), WeightAccumulator<WeightOps>(std::forward<WeightOps>(weight_ops_)), WeightCounter<WeightOps>::operator+()), optimal_indices};
 }
 
-WeightAccumulator<WeightOps>::Weight BetweenClades(std::vector<WeightAccumulator<WeightOps>::Weight> inweights) {
+WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::BetweenClades(std::vector<WeightAccumulator<WeightOps>::Weight> inweights) {
     return std::accumulate(inweights.begin(), inweights.end(), WeightAccumulator<WeightOps>(std::forward<WeightOps>(weight_ops_)), WeightCounter<WeightOps>::operator*());
 }
 
-WeightAccumulator<WeightOps>::Weight AboveNode(WeightAccumulator<WeightOps>::Weight edgeweight, WeightAccumulator<WeightOps>::Weight childnodeweight) {
+WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::AboveNode(WeightAccumulator<WeightOps>::Weight edgeweight, WeightAccumulator<WeightOps>::Weight childnodeweight) {
     // because edgeweight should have come from ComputeEdge:
     assert(edgeweight.size() == 1);
     auto edgepair = edgeweight.begin();

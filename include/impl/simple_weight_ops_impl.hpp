@@ -29,7 +29,7 @@ std::pair<typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight, std::vector
 }
 
 template <typename BinaryOperatorWeightOps>
-typename BinaryOperatorWeightOps::Weight BetweenClades(std::vector<typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight> inweights) {
+typename BinaryOperatorWeightOps::Weight SimpleWeightOps<BinaryOperatorWeightOps>::BetweenClades(std::vector<typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight> inweights) {
     typename BinaryOperatorWeightOps::Weight result = BinaryOperatorWeightOps::Identity;
     for (auto weight : inweights) {
         result = binary_operator_weight_ops_.Combine(result, weight);
@@ -38,6 +38,6 @@ typename BinaryOperatorWeightOps::Weight BetweenClades(std::vector<typename Simp
 }
 
 template <typename BinaryOperatorWeightOps>
-typename BinaryOperatorWeightOps::Weight AboveNode(typename BinaryOperatorWeightOps::Weight edgeweight, typename BinaryOperatorWeightOps::Weight childnodeweight) {
+typename BinaryOperatorWeightOps::Weight SimpleWeightOps<BinaryOperatorWeightOps>::AboveNode(typename BinaryOperatorWeightOps::Weight edgeweight, typename BinaryOperatorWeightOps::Weight childnodeweight) {
     return binary_operator_weight_ops_.Combine(edgeweight, childnodeweight);
 }
