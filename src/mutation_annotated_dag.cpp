@@ -59,7 +59,6 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
     }
 
   }
-  std::cout << "ComputeCompactGenomes found " << leaf_cgs.size() << " unique leaf cgs\n";
   return result;
 }
 

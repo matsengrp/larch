@@ -50,8 +50,7 @@ class SubtreeWeight {
   const MADAG& dag_;
 
   // Indexed by NodeId.
-  std::vector<typename WeightOps::Weight> cached_weights_;
-  std::vector<bool> weight_is_cached_;
+  std::vector<std::optional<typename WeightOps::Weight>> cached_weights_;
 
   // outermost vector indexed by NodeId, next vector indexed by CladeIdx, innermost vector records which EdgeIds achieve minimum in that clade.
   std::vector<std::vector<std::vector<EdgeId>>> cached_min_weight_edges_;

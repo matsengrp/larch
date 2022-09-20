@@ -4,7 +4,7 @@ template <typename WeightOps>
 SubtreeWeight<WeightOps>::SubtreeWeight(const MADAG& dag)
     : dag_{dag},
       cached_weights_(dag_.GetDAG().GetNodesCount()),
-      weight_is_cached_(dag_.GetDAG().GetNodesCount(), false),
+      cached_min_weight_edges_(dag_.GetDAG().GetNodesCount()),
       random_device_{},
       random_generator_{random_device_()} {}
 
@@ -16,14 +16,12 @@ template <typename WeightOps>
 typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(Node node, WeightOps&& weight_ops) {
   NodeId node_id = node.GetId();
   auto& cached = cached_weights_.at(node_id.value);
-  bool is_cached = weight_is_cached_.at(node_id.value);
-  if (is_cached) {
-    return cached;
+  if (cached) {
+    return *cached;
   }
   if (node.IsLeaf()) {
     cached = weight_ops.ComputeLeaf(dag_, node_id);
-    weight_is_cached_.at(node_id.value) = true;
-    return cached;
+    return *cached;
   }
   std::vector<typename WeightOps::Weight> cladeweights;
   for (auto clade : node.GetClades()) {
@@ -32,8 +30,7 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(Node nod
   typename WeightOps::Weight result = weight_ops.BetweenClades(cladeweights);
 
   cached = result;
-  weight_is_cached_.at(node_id.value) = true;
-  return cached;
+  return *cached;
 }
 
 template <typename WeightOps>
@@ -90,7 +87,7 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::CladeWeight(
       optimum_edgeids.push_back(clade.at(i));
   }
   Edge first_edge = dag_.GetDAG().Get(clade[0]);
-  cached_min_weight_edges_.at(first_edge.GetParentId().value).at(first_edge.GetClade().value) = optimum_edgeids;
+  GetOrInsert(GetOrInsert(cached_min_weight_edges_, first_edge.GetParentId().value), first_edge.GetClade().value) = optimum_edgeids;
   return clade_result.first;
 }
 
@@ -132,18 +129,10 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
   if (node.IsRoot()) {
     result.GetDAG().BuildConnections();
   }
-  for (auto node : input_dag.GetDAG().GetNodes()) {
-      if (node.IsLeaf()) {
-          if(node.GetSampleId()){
-          std::cout << *node.GetSampleId() << "\n";
-          }
-      }
-  }
   for (auto node : result.GetDAG().GetNodes()) {
       size_t idx = node.GetId().value;
       std::optional<std::string> old_sample_id = input_dag.GetDAG().GetNodes().at(idx).GetSampleId();
       if (node.IsLeaf() and (bool) old_sample_id) {
-          std::cout << "nodeId: " << std::to_string(idx) << old_sample_id.value() << "\n";
           node.SetSampleId(old_sample_id);
       }
   }
