@@ -27,7 +27,7 @@ struct SimpleWeightOps {
     inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);
     inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(std::vector<Weight>);
     inline Weight BetweenClades(std::vector<Weight>);
-    inline Weight AboveNode(std::vector<Weight>);
+    inline Weight AboveNode(Weight eddgeweight, Weight childnodeweight);
 };
 
 #include "impl/simple_weight_ops_impl.hpp"

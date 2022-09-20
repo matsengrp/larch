@@ -12,7 +12,7 @@ typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight SimpleWeightOps<Binary
 
 template <typename BinaryOperatorWeightOps>
 std::pair<typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight, std::vector<size_t>> SimpleWeightOps<BinaryOperatorWeightOps>::WithinCladeAccumOptimum(std::vector<typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight> inweights) {
-    typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight optimal_weight = inweights.first();
+    typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight optimal_weight = inweights[0];
     std::vector<size_t> optimal_indices;
     size_t inweight_idx = 0;
     for (auto weight : inweights) {
@@ -24,8 +24,8 @@ std::pair<typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight, std::vector
             optimal_indices.push_back(inweight_idx);
         }
         inweight_idx++;
-    return {binary_operator_weight_ops_.Combine(BinaryOperatorWeightOps::Identity, optimal_weight), optimal_indices};
     }
+    return {binary_operator_weight_ops_.Combine(BinaryOperatorWeightOps::Identity, optimal_weight), optimal_indices};
 }
 
 template <typename BinaryOperatorWeightOps>

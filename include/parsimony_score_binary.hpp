@@ -21,9 +21,7 @@ struct ParsimonyScore_ {
   inline Weight Combine(Weight lhs, Weight rhs);
 };
 
-ParsimonyScore_ parsimony_score_instance;
 
 using ParsimonyScore = SimpleWeightOps<ParsimonyScore_>;
-ParsimonyScore parsimony_score{parsimony_score_instance};
 
-#include "impl/parsimony_score_impl.hpp"
+#include "impl/parsimony_score_binary_impl.hpp"
