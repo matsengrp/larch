@@ -7,7 +7,27 @@
   This should correctly accumulate weights for any WeightOps for which
   WeightOps::WithinCladeAccumOptimum called on a list containing a single Weight returns
   only that weight, and for which WeightOps::BetweenClades can be decomposed as a
-  commutative binary operation on any list of Weights.
+  commutative binary operation on any list of Weights. (TODO this last requirement could be avoided by another implementation)
+
+  WeightAccumulator expects a WeightOps type with the same data/methods as the following example:
+
+  struct TreeWeightOps {
+  using Weight = size_t;  // Provide any weight type
+  inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);  // The value assigned to
+each leaf node inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);  // The
+value assigned to each edge
+  // Describes how to aggregate weights for alternative subtrees below a clade.
+  // The returned pair contains the aggregated weight (for example, the optimal
+  // one), and a vector containing indices for optimal weights in the input
+  // vector. If optimality is undefined, all indices should be returned.
+  inline std::pair<Weight, std::vector<size_t>>
+  inline Weight BetweenClades(std::vector<Weight>);
+  // Describes how to aggregate the weight of a subtree below a node, and the
+  // weight of an edge above that node. The edge weight is always the first argument.
+  inline Weight AboveNode(Weight edgweight, Weight childnodeweight);
+};
+
+  Note that unlike for the template parameter to SubtreeWeight, no WithinCladeAccumOptimum method is needed, since each child clade in a tree may have only one descendant edge.
 
  */
 
