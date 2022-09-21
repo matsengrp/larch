@@ -27,9 +27,8 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(Node nod
   for (auto clade : node.GetClades()) {
       cladeweights.push_back(SubtreeWeight<WeightOps>::CladeWeight(clade, std::forward<WeightOps>(weight_ops)));
   }
-  typename WeightOps::Weight result = weight_ops.BetweenClades(cladeweights);
 
-  cached = result;
+  cached = weight_ops.BetweenClades(cladeweights);
   return *cached;
 }
 
