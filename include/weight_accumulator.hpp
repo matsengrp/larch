@@ -17,31 +17,34 @@
 template <typename WeightOps>
 class WeightCounter {
  public:
-  WeightCounter(WeightCounter<WeightOps>&);
+  WeightCounter(const WeightCounter<WeightOps>&);
   WeightCounter(WeightOps&& weight_ops);
-  WeightCounter(std::vector<typename WeightOps::Weight>, WeightOps&& weight_ops);
-  WeightCounter(std::map<typename WeightOps::Weight, size_t>,
-                const WeightOps&& weight_ops);
+  WeightCounter(const WeightOps& weight_ops) : weight_ops_{weight_ops} {}
+  WeightCounter(const std::vector<typename WeightOps::Weight>& weights,
+                const WeightOps& weight_ops);
+  WeightCounter(const std::map<typename WeightOps::Weight, size_t>& weights,
+                const WeightOps& weight_ops);
   /* A union of multisets */
-  inline WeightCounter operator+(WeightCounter rhs);
+  WeightCounter operator+(const WeightCounter& rhs) const;
   /* a cartesian product of multisets, applying
    * weight_ops.BetweenClades to pairs in the product */
-  inline WeightCounter operator*(WeightCounter rhs);
-  WeightCounter<WeightOps> operator=(WeightCounter<WeightOps> rhs);
-  WeightCounter<WeightOps>& operator=(WeightCounter<WeightOps>& rhs);
-  WeightCounter<WeightOps>&& operator=(WeightCounter<WeightOps>&& rhs);
-  std::map<typename WeightOps::Weight, size_t> GetWeights();
-  WeightOps&& GetWeightOps();
+  WeightCounter operator*(const WeightCounter& rhs) const;
+  WeightCounter<WeightOps>& operator=(const WeightCounter<WeightOps>& rhs);
+  WeightCounter<WeightOps>& operator=(WeightCounter<WeightOps>&& rhs);
+  const std::map<typename WeightOps::Weight, size_t>& GetWeights() const;
+  const WeightOps& GetWeightOps() const;
 
  private:
   std::map<typename WeightOps::Weight, size_t> weights_;
-  const WeightOps&& weight_ops_;
+  WeightOps weight_ops_;
 };
 
 template <typename WeightOps>
 struct WeightAccumulator {
   using Weight = WeightCounter<WeightOps>;
-  const WeightOps&& weight_ops_ = WeightOps();
+  WeightAccumulator() : weight_ops_{} {}
+  WeightAccumulator(const WeightOps& ops) : weight_ops_{ops} {}
+  WeightOps weight_ops_;
   inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);
   inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);
 
@@ -52,11 +55,11 @@ struct WeightAccumulator {
    * that minimum
    */
   inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(
-      std::vector<Weight>);
+      const std::vector<Weight>&);
   /*
    * Given a vector of weights, one for each child clade, aggregate them
    */
-  inline Weight BetweenClades(std::vector<Weight>);
+  inline Weight BetweenClades(const std::vector<Weight>&) const;
   inline Weight AboveNode(Weight edgeweight, Weight childnodeweight);
 };
 

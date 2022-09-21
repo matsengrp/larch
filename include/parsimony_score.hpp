@@ -24,7 +24,7 @@ struct ParsimonyScore {
   /*
    * Given a vector of weights, one for each child clade, aggregate them
    */
-  inline Weight BetweenClades(std::vector<Weight>);
+  inline Weight BetweenClades(const std::vector<Weight>&) const;
   inline Weight AboveNode(Weight edgweight, Weight childnodeweight);
 };
 

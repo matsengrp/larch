@@ -3,38 +3,32 @@
 template <typename WeightOps>
 typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::ComputeLeaf(
     const MADAG& dag, NodeId node_id) {
-  return WeightCounter<WeightOps>({weight_ops_.ComputeLeaf(dag, node_id)},
-                                  std::forward<WeightOps>(weight_ops_));
+  return WeightCounter<WeightOps>({weight_ops_.ComputeLeaf(dag, node_id)}, weight_ops_);
 }
 
 template <typename WeightOps>
 typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::ComputeEdge(
     const MADAG& dag, EdgeId edge_id) {
-  return WeightCounter<WeightOps>({weight_ops_.ComputeEdge(dag, edge_id)},
-                                  std::forward<WeightOps>(weight_ops_));
+  return WeightCounter<WeightOps>({weight_ops_.ComputeEdge(dag, edge_id)}, weight_ops_);
 }
 
 template <typename WeightOps>
 std::pair<typename WeightAccumulator<WeightOps>::Weight, std::vector<size_t>>
 WeightAccumulator<WeightOps>::WithinCladeAccumOptimum(
-    std::vector<typename WeightAccumulator<WeightOps>::Weight> inweights) {
+    const std::vector<typename WeightAccumulator<WeightOps>::Weight>& inweights) {
   std::vector<size_t> optimal_indices;
   std::iota(optimal_indices.begin(), optimal_indices.end(), 0);
-  return {std::accumulate(
-              inweights.begin(), inweights.end(),
-              WeightAccumulator<WeightOps>(std::forward<WeightOps>(weight_ops_)),
-              WeightCounter<WeightOps>::operator+()),
+  return {std::accumulate(inweights.begin(), inweights.end(), Weight{weight_ops_},
+                          [](auto& lhs, auto& rhs) { return lhs + rhs; }),
           optimal_indices};
 }
 
 template <typename WeightOps>
 typename WeightAccumulator<WeightOps>::Weight
 WeightAccumulator<WeightOps>::BetweenClades(
-    std::vector<typename WeightAccumulator<WeightOps>::Weight> inweights) {
-  return std::accumulate(
-      inweights.begin(), inweights.end(),
-      WeightAccumulator<WeightOps>(std::forward<WeightOps>(weight_ops_)),
-      WeightCounter<WeightOps>::operator*());
+    const std::vector<typename WeightAccumulator<WeightOps>::Weight>& inweights) const {
+  return std::accumulate(inweights.begin(), inweights.end(), Weight{weight_ops_},
+                         [](auto& lhs, auto& rhs) { return lhs * rhs; });
 }
 
 template <typename WeightOps>
@@ -42,10 +36,10 @@ typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::Abov
     typename WeightAccumulator<WeightOps>::Weight edgeweight,
     typename WeightAccumulator<WeightOps>::Weight childnodeweight) {
   // because edgeweight should have come from ComputeEdge:
-  assert(edgeweight.size() == 1);
-  auto edgepair = edgeweight.begin();
+  Assert(edgeweight.GetWeights().size() == 1);
+  auto edgepair = edgeweight.GetWeights().begin();
   std::map<typename WeightOps::Weight, size_t> result;
-  for (auto const& childitem : childnodeweight) {
+  for (auto const& childitem : childnodeweight.GetWeights()) {
     result[weight_ops_.AboveNode(edgepair->first, childitem.first)] += childitem.second;
   }
   return WeightCounter<WeightOps>(result, std::forward<WeightOps>(weight_ops_));
@@ -56,51 +50,53 @@ WeightCounter<WeightOps>::WeightCounter(WeightOps&& weight_ops)
     : weight_ops_{weight_ops} {}
 
 template <typename WeightOps>
-WeightCounter<WeightOps>::WeightCounter(WeightCounter<WeightOps>& incounter)
-    : WeightCounter(incounter.GetWeights(), incounter.GetWeightOps()) {}
+WeightCounter<WeightOps>::WeightCounter(const WeightCounter<WeightOps>& incounter)
+    : WeightCounter(incounter.GetWeights(), WeightOps{incounter.GetWeightOps()}) {}
 
 template <typename WeightOps>
 WeightCounter<WeightOps>::WeightCounter(
-    std::vector<typename WeightOps::Weight> inweights, WeightOps&& weight_ops)
+    const std::vector<typename WeightOps::Weight>& inweights,
+    const WeightOps& weight_ops)
     : weight_ops_{weight_ops} {
-  for (auto weight : inweights) {
+  for (const auto& weight : inweights) {
     weights_[weight]++;
   }
 }
 
 template <typename WeightOps>
 WeightCounter<WeightOps>::WeightCounter(
-    std::map<typename WeightOps::Weight, size_t> inweights,
-    const WeightOps&& weight_ops)
+    const std::map<typename WeightOps::Weight, size_t>& inweights,
+    const WeightOps& weight_ops)
     : weights_{inweights}, weight_ops_{weight_ops} {
-  for (auto weight : inweights) {
-    weights_[weight]++;
+  for (const auto& weight : inweights) {
+    weights_[weight.first]++;
   }
 }
 
 template <typename WeightOps>
-std::map<typename WeightOps::Weight, size_t> WeightCounter<WeightOps>::GetWeights() {
+const std::map<typename WeightOps::Weight, size_t>&
+WeightCounter<WeightOps>::GetWeights() const {
   return weights_;
 }
 
 template <typename WeightOps>
-WeightOps&& WeightCounter<WeightOps>::GetWeightOps() {
+const WeightOps& WeightCounter<WeightOps>::GetWeightOps() const {
   return weight_ops_;
 }
 
 template <typename WeightOps>
 WeightCounter<WeightOps> WeightCounter<WeightOps>::operator+(
-    WeightCounter<WeightOps> rhs) {
+    const WeightCounter<WeightOps>& rhs) const {
   std::map<typename WeightOps::Weight, size_t> result = weights_;
   for (auto const& map_pair : rhs.GetWeights()) {
     result[map_pair.first] += map_pair.second;
   }
-  return WeightCounter<WeightOps>(result, std::forward<WeightOps>(weight_ops_));
+  return WeightCounter<WeightOps>(result, weight_ops_);
 }
 
 template <typename WeightOps>
 WeightCounter<WeightOps> WeightCounter<WeightOps>::operator*(
-    WeightCounter<WeightOps> rhs) {
+    const WeightCounter<WeightOps>& rhs) const {
   std::map<typename WeightOps::Weight, size_t> result;
   for (auto const& lpair : weights_) {
     for (auto const& rpair : rhs.GetWeights()) {
@@ -108,23 +104,21 @@ WeightCounter<WeightOps> WeightCounter<WeightOps>::operator*(
       result[value] += lpair.second * rpair.second;
     }
   }
-  return WeightCounter<WeightOps>(result, std::forward<WeightOps>(weight_ops_));
-}
-
-template <typename WeightOps>
-WeightCounter<WeightOps> WeightCounter<WeightOps>::operator=(
-    WeightCounter<WeightOps> rhs) {
-  return WeightCounter(&rhs);
+  return WeightCounter<WeightOps>(result, weight_ops_);
 }
 
 template <typename WeightOps>
 WeightCounter<WeightOps>& WeightCounter<WeightOps>::operator=(
-    WeightCounter<WeightOps>& rhs) {
-  return WeightCounter(rhs);
+    const WeightCounter<WeightOps>& rhs) {
+  weights_ = rhs.weights_;
+  weight_ops_ = rhs.weight_ops_;
+  return *this;
 }
 
 template <typename WeightOps>
-WeightCounter<WeightOps>&& WeightCounter<WeightOps>::operator=(
+WeightCounter<WeightOps>& WeightCounter<WeightOps>::operator=(
     WeightCounter<WeightOps>&& rhs) {
-  return rhs;
+  weights_ = rhs.weights_;
+  weight_ops_ = rhs.weight_ops_;
+  return *this;
 }

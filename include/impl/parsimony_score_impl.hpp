@@ -27,7 +27,7 @@ ParsimonyScore::WithinCladeAccumOptimum(std::vector<ParsimonyScore::Weight> inwe
 }
 
 ParsimonyScore::Weight ParsimonyScore::BetweenClades(
-    std::vector<ParsimonyScore::Weight> inweights) {
+    const std::vector<ParsimonyScore::Weight>& inweights) const {
   return std::accumulate(inweights.begin(), inweights.end(), 0);
 }
 
