@@ -86,7 +86,8 @@ larch_executable(larch-test
     test/test_merge.cpp
     test/test_sample_tree.cpp
     test/test_subtree_weight.cpp
-    test/test_synthetic.cpp)
+    test/test_synthetic.cpp
+    test/test_traversal_iterators.cpp)
 
 larch_executable(merge
     tools/merge.cpp)
