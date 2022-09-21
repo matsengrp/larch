@@ -1,6 +1,7 @@
 /**
 
-  This type may be used as a parameter to SubtreeWeight for counting (sub)trees beneath each node.
+  This type may be used as a parameter to SubtreeWeight for counting (sub)trees beneath
+  each node.
 
  */
 
@@ -19,7 +20,8 @@ struct TreeCount {
    * containing the indices of all elements of the passed vector that achieve
    * that minimum
    */
-  inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(std::vector<Weight>);
+  inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(
+      std::vector<Weight>);
   /*
    * Given a vector of weights, one for each child clade, aggregate them
    */

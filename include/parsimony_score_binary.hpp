@@ -1,7 +1,8 @@
 /**
   Representation of edge mutations parsimony-based weight scoring for MADAG.
 
-  This type is meant to be used as a parameter to SimpleWeightOps, which can then be used as a parameter for SubtreeWeight.
+  This type is meant to be used as a parameter to SimpleWeightOps, which can then be
+  used as a parameter for SubtreeWeight.
 
  */
 
@@ -20,7 +21,6 @@ struct ParsimonyScore_ {
   inline bool IsIdentity(Weight weight);
   inline Weight Combine(Weight lhs, Weight rhs);
 };
-
 
 using ParsimonyScore = SimpleWeightOps<ParsimonyScore_>;
 

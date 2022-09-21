@@ -34,8 +34,8 @@ class EdgeMutations {
   EdgeMutations& operator=(EdgeMutations&&) = default;
   EdgeMutations(const EdgeMutations&) = delete;
   EdgeMutations& operator=(const EdgeMutations&) = delete;
-  template<typename T>
-  EdgeMutations(T view):mutations_(view.begin(),view.end()){}
+  template <typename T>
+  EdgeMutations(T view) : mutations_(view.begin(), view.end()) {}
   [[nodiscard]] EdgeMutations Copy() const;
 
   auto begin() const -> decltype(mutations_.begin());

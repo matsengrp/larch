@@ -85,8 +85,9 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
   std::unordered_map<size_t, size_t> num_children;
   std::map<size_t, std::optional<std::string>> seq_ids;
   ParseNewick(
-      data.newick(), [&result, &seq_ids](size_t node_id, std::string label, std::optional<double>) {
-      seq_ids[node_id] = label;
+      data.newick(),
+      [&result, &seq_ids](size_t node_id, std::string label, std::optional<double>) {
+        seq_ids[node_id] = label;
       },
       [&result, &edge_id, &num_children](size_t parent, size_t child) {
         result.GetDAG().AddEdge({edge_id++}, {parent}, {child},
@@ -94,10 +95,10 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
       });
   result.GetDAG().InitializeNodes(result.GetDAG().GetEdgesCount() + 1);
   result.GetDAG().BuildConnections();
-  for (auto node : result.GetDAG().GetNodes()){
-      if (node.IsLeaf()) {
-          node.SetSampleId(seq_ids[node.GetId().value]);
-      }
+  for (auto node : result.GetDAG().GetNodes()) {
+    if (node.IsLeaf()) {
+      node.SetSampleId(seq_ids[node.GetId().value]);
+    }
   }
 
   result.GetEdgeMutations().resize(result.GetDAG().GetEdgesCount());
@@ -282,10 +283,10 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
       Node i = (*clade.begin()).GetChild();
       if (i.IsLeaf()) {
         if (i.GetSampleId()) {
-            newick += *i.GetSampleId();
+          newick += *i.GetSampleId();
         } else {
-            newick += "unknown_leaf_";
-            newick += std::to_string(i.GetId().value);
+          newick += "unknown_leaf_";
+          newick += std::to_string(i.GetId().value);
         }
       } else {
         self(self, i);

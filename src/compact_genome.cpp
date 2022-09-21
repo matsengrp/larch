@@ -117,14 +117,14 @@ CompactGenome CompactGenome::Copy() const {
 }
 
 std::string CompactGenome::ToString() {
-    std::string result = "\n<";
-    for (auto mutpair : mutations_) {
-        result += std::to_string(mutpair.first.value);
-        result += mutpair.second;
-        result += ",";
-    }
-    result += ">\n";
-    return result;
+  std::string result = "\n<";
+  for (auto mutpair : mutations_) {
+    result += std::to_string(mutpair.first.value);
+    result += mutpair.second;
+    result += ",";
+  }
+  result += ">\n";
+  return result;
 }
 
 EdgeMutations CompactGenome::ToEdgeMutations(std::string_view reference_sequence,

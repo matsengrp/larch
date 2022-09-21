@@ -63,7 +63,7 @@ void check_edge_mutations(const MADAG& madag);
 int main(int argc, char** argv) {
   Arguments args = GetArguments(argc, argv);
   int ignored;
-  auto init_result=MPI_Init_thread(&argc, &argv,MPI_THREAD_MULTIPLE,&ignored);
+  auto init_result = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
   std::string input_dag_path = "";
   std::string output_dag_path = "";
   std::string matoptimize_path = "matOptimize";
@@ -118,13 +118,14 @@ int main(int argc, char** argv) {
   std::vector<MADAG> optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
-    std::cout << "############ Beginning optimize loop " << std::to_string(i) << " #######\n";
+    std::cout << "############ Beginning optimize loop " << std::to_string(i)
+              << " #######\n";
     merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     MADAG sample = weight.SampleTree({});
     check_edge_mutations(sample);
     MADAG result;
-    result=optimize_dag_direct(sample);
+    result = optimize_dag_direct(sample);
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back()});
   }
@@ -134,4 +135,3 @@ int main(int argc, char** argv) {
 
   return EXIT_SUCCESS;
 }
-

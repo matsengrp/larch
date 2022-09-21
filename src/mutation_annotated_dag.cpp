@@ -45,19 +45,19 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
   for (Node node : dag_.GetNodes()) {
     ComputeCG(ComputeCG, node);
     if (node.IsLeaf()) {
-        bool success = leaf_cgs.emplace(result[node.GetId().value].Copy(), node.GetId().value).second;
-        if (not success) {
-            std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
-                << node.GetId().value
-                << " also seen at "
-                << leaf_cgs[result[node.GetId().value].Copy()]
-                << "\nCompact Genome is\n"
-                << result[node.GetId().value].ToString()
-                << "\n" << std::flush;
-            assert(false);
-        }
+      bool success =
+          leaf_cgs.emplace(result[node.GetId().value].Copy(), node.GetId().value)
+              .second;
+      if (not success) {
+        std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
+                  << node.GetId().value << " also seen at "
+                  << leaf_cgs[result[node.GetId().value].Copy()]
+                  << "\nCompact Genome is\n"
+                  << result[node.GetId().value].ToString() << "\n"
+                  << std::flush;
+        assert(false);
+      }
     }
-
   }
   return result;
 }

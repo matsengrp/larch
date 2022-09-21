@@ -24,7 +24,7 @@ static void test_weight_accum(MADAG& dag, Weight expected_score) {
   std::cout << "parsimony score counts";
   std::cout << "score   |   count";
   for (auto& scorepair : score.GetWeights()) {
-      std::cout << scorepair.first << " | " << scorepair.second;
+    std::cout << scorepair.first << " | " << scorepair.second;
   }
   /* assert_equal(score, expected_score, "expected parsimony counts"); */
 }

@@ -24,10 +24,9 @@ static void test_sample_tree(MADAG& dag) {
   auto it1 = testorder.begin();
   auto it2 = trueorder.begin();
   size_t vindex = 0;
-  for (auto it1 : testorder)
-  {
-      assert_equal(it1.GetNode().GetId().value, trueorder[vindex].value, "nodeId");
-      vindex = vindex + 1;
+  for (auto it1 : testorder) {
+    assert_equal(it1.GetNode().GetId().value, trueorder[vindex].value, "nodeId");
+    vindex = vindex + 1;
   }
 }
 

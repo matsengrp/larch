@@ -1,17 +1,21 @@
 /**
-  SubtreeWeight is used to calculate the (possibly optimal) tree weights achievable below a given node in a DAG.
+  SubtreeWeight is used to calculate the (possibly optimal) tree weights achievable
+below a given node in a DAG.
 
-  SubtreeWeight expects as a template parameter a descriptor of required operations on the weight type, including at least the values of this example struct:
+  SubtreeWeight expects as a template parameter a descriptor of required operations on
+the weight type, including at least the values of this example struct:
 
 struct ExampleWeightOps {
   using Weight = size_t;  // Provide any weight type
-  inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);  // The value assigned to each leaf node
-  inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);  // The value assigned to each edge
+  inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);  // The value assigned to
+each leaf node inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);  // The
+value assigned to each edge
   // Describes how to aggregate weights for alternative subtrees below a clade.
   // The returned pair contains the aggregated weight (for example, the optimal
   // one), and a vector containing indices for optimal weights in the input
   // vector. If optimality is undefined, all indices should be returned.
-  inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(std::vector<Weight>);
+  inline std::pair<Weight, std::vector<size_t>>
+WithinCladeAccumOptimum(std::vector<Weight>);
   // Describes how to aggregate weights of subtrees below different child clades
   inline Weight BetweenClades(std::vector<Weight>);
   // Describes how to aggregate the weight of a subtree below a node, and the
@@ -52,7 +56,8 @@ class SubtreeWeight {
   // Indexed by NodeId.
   std::vector<std::optional<typename WeightOps::Weight>> cached_weights_;
 
-  // outermost vector indexed by NodeId, next vector indexed by CladeIdx, innermost vector records which EdgeIds achieve minimum in that clade.
+  // outermost vector indexed by NodeId, next vector indexed by CladeIdx, innermost
+  // vector records which EdgeIds achieve minimum in that clade.
   std::vector<std::vector<std::vector<EdgeId>>> cached_min_weight_edges_;
 
   std::random_device random_device_;

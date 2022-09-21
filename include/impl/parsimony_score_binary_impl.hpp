@@ -8,12 +8,21 @@ ParsimonyScore_::Weight ParsimonyScore_::ComputeEdge(const MADAG& dag, EdgeId ed
   return dag.GetEdgeMutations(edge_id).size();
 }
 
-bool ParsimonyScore_::Compare(ParsimonyScore_::Weight lhs, ParsimonyScore_::Weight rhs) { return lhs < rhs; }
+bool ParsimonyScore_::Compare(ParsimonyScore_::Weight lhs,
+                              ParsimonyScore_::Weight rhs) {
+  return lhs < rhs;
+}
 
-bool ParsimonyScore_::CompareEqual(ParsimonyScore_::Weight lhs, ParsimonyScore_::Weight rhs) { return lhs == rhs; }
+bool ParsimonyScore_::CompareEqual(ParsimonyScore_::Weight lhs,
+                                   ParsimonyScore_::Weight rhs) {
+  return lhs == rhs;
+}
 
-inline bool ParsimonyScore_::IsIdentity(ParsimonyScore_::Weight weight) { return weight == Identity; }
+inline bool ParsimonyScore_::IsIdentity(ParsimonyScore_::Weight weight) {
+  return weight == Identity;
+}
 
-ParsimonyScore_::Weight ParsimonyScore_::Combine(ParsimonyScore_::Weight lhs, ParsimonyScore_::Weight rhs) {
+ParsimonyScore_::Weight ParsimonyScore_::Combine(ParsimonyScore_::Weight lhs,
+                                                 ParsimonyScore_::Weight rhs) {
   return lhs + rhs;
 }

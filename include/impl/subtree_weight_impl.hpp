@@ -13,7 +13,8 @@ SubtreeWeight<WeightOps>::SubtreeWeight(const MADAG& dag)
  *
  */
 template <typename WeightOps>
-typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(Node node, WeightOps&& weight_ops) {
+typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(
+    Node node, WeightOps&& weight_ops) {
   NodeId node_id = node.GetId();
   auto& cached = cached_weights_.at(node_id.value);
   if (cached) {
@@ -25,7 +26,8 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(Node nod
   }
   std::vector<typename WeightOps::Weight> cladeweights;
   for (auto clade : node.GetClades()) {
-      cladeweights.push_back(SubtreeWeight<WeightOps>::CladeWeight(clade, std::forward<WeightOps>(weight_ops)));
+    cladeweights.push_back(SubtreeWeight<WeightOps>::CladeWeight(
+        clade, std::forward<WeightOps>(weight_ops)));
   }
 
   cached = weight_ops.BetweenClades(cladeweights);
@@ -74,19 +76,20 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::CladeWeight(
   assert(not clade.empty());
   std::vector<typename WeightOps::Weight> edge_weights;
   for (auto edge_id : clade) {
-      edge_weights.push_back(
-          weight_ops.AboveNode(weight_ops.ComputeEdge(dag_, edge_id),
-          ComputeWeightBelow(dag_.GetDAG().Get(edge_id).GetChild(), std::forward<WeightOps>(weight_ops)))
-      );
+    edge_weights.push_back(
+        weight_ops.AboveNode(weight_ops.ComputeEdge(dag_, edge_id),
+                             ComputeWeightBelow(dag_.GetDAG().Get(edge_id).GetChild(),
+                                                std::forward<WeightOps>(weight_ops))));
   }
   auto clade_result = weight_ops.WithinCladeAccumOptimum(edge_weights);
 
   std::vector<EdgeId> optimum_edgeids;
   for (auto i : clade_result.second) {
-      optimum_edgeids.push_back(clade.at(i));
+    optimum_edgeids.push_back(clade.at(i));
   }
   Edge first_edge = dag_.GetDAG().Get(clade[0]);
-  GetOrInsert(GetOrInsert(cached_min_weight_edges_, first_edge.GetParentId().value), first_edge.GetClade().value) = optimum_edgeids;
+  GetOrInsert(GetOrInsert(cached_min_weight_edges_, first_edge.GetParentId().value),
+              first_edge.GetClade().value) = optimum_edgeids;
   return clade_result.first;
 }
 
@@ -129,10 +132,11 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
     result.GetDAG().BuildConnections();
   }
   for (auto node : result.GetDAG().GetNodes()) {
-      size_t idx = node.GetId().value;
-      std::optional<std::string> old_sample_id = input_dag.GetDAG().GetNodes().at(idx).GetSampleId();
-      if (node.IsLeaf() and (bool) old_sample_id) {
-          node.SetSampleId(old_sample_id);
-      }
+    size_t idx = node.GetId().value;
+    std::optional<std::string> old_sample_id =
+        input_dag.GetDAG().GetNodes().at(idx).GetSampleId();
+    if (node.IsLeaf() and (bool) old_sample_id) {
+      node.SetSampleId(old_sample_id);
+    }
   }
 }

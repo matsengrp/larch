@@ -69,7 +69,7 @@ void NodeView<T>::RemoveParentEdge(Edge edge) const {
 
 template <typename T>
 const std::optional<std::string> NodeView<T>::GetSampleId() const {
-    return GetStorage().GetSampleId();
+  return GetStorage().GetSampleId();
 }
 
 template <typename T>
