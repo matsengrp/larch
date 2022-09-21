@@ -67,19 +67,6 @@ size_t DAG::GetEdgesCount() const { return edges_.size(); }
 
 bool DAG::IsTree() const { return GetNodesCount() == GetEdgesCount() + 1; }
 
-void DAG::DepthFirstExpansionHelper(NodeId node, std::vector<NodeId>& vec) const {
-  vec.push_back(node);
-  for (auto c : Get(node).GetChildren() | Transform::GetChild() | Transform::GetId()) {
-    DepthFirstExpansionHelper(c, vec);
-  }
-}
-
-std::vector<NodeId> DAG::DepthFirstExpansion() const {
-  std::vector<NodeId> traversal;
-  DepthFirstExpansionHelper(root_, traversal);
-  return traversal;
-}
-
 bool DAG::HaveRoot() const { return root_.value != NoId; }
 
 Node DAG::GetRoot() const { return {*this, root_}; }

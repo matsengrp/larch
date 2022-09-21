@@ -1,5 +1,5 @@
 #include "subtree_weight.hpp"
-#include "parsimony_score_binary.hpp"
+#include "parsimony_score.hpp"
 
 #include <iostream>
 #include <string_view>
@@ -18,16 +18,6 @@ static void test_sample_tree(MADAG& dag) {
   MADAG result = weight.SampleTree({});
 
   assert_true(result.GetDAG().IsTree(), "Tree");
-  auto testorder = result.GetDAG().TraversePreOrder();
-  auto trueorder = result.GetDAG().DepthFirstExpansion();
-
-  auto it1 = testorder.begin();
-  auto it2 = trueorder.begin();
-  size_t vindex = 0;
-  for (auto it1 : testorder) {
-    assert_equal(it1.GetNode().GetId().value, trueorder[vindex].value, "nodeId");
-    vindex = vindex + 1;
-  }
 }
 
 static void test_sample_tree(std::string_view path) {

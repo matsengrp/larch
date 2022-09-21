@@ -68,12 +68,10 @@ static void test_write_protobuf() {
   while (file >> refseq) {
   }
   treedag.GetReferenceSequence() = refseq;
-  std::cout << "loaded..." << std::flush;
 
   SubtreeWeight<ParsimonyScore> weight{treedag};
   MADAG sample_tree = weight.SampleTree({});
 
-  std::cout << "comparing tree to its sample\n" << std::flush;
   StoreTreeToProtobuf(sample_tree, "/home/wdumm/larch/test_write_protobuf.pb");
   compare_treedags(treedag, sample_tree);
 
@@ -81,20 +79,16 @@ static void test_write_protobuf() {
       sample_tree.ComputeCompactGenomes(sample_tree.GetReferenceSequence());
   treedag.GetCompactGenomes() =
       treedag.ComputeCompactGenomes(treedag.GetReferenceSequence());
-  std::cout << "comparing tree to its sample, with computed compact genomes\n"
-            << std::flush;
   compare_treedags(treedag, sample_tree);
 
   treedag.GetEdgeMutations() =
       treedag.ComputeEdgeMutations(treedag.GetReferenceSequence());
-  std::cout << "comparing recomputed edge mutations to original\n" << std::flush;
   compare_treedags(treedag, sample_tree);
 
   Merge merge{treedag.GetReferenceSequence()};
   merge.AddDAGs({treedag, sample_tree});
   merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
 
-  std::cout << "comparing original treedag to trivial merge\n" << std::flush;
   compare_treedags(treedag, merge.GetResult());
 }
 
