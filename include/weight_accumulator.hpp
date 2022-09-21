@@ -13,7 +13,10 @@
 
 #pragma once
 
+#include <boost/multiprecision/cpp_int.hpp>
 #include "mutation_annotated_dag.hpp"
+using Count = boost::multiprecision::cpp_int;
+
 template <typename WeightOps>
 class WeightCounter {
  public:
@@ -22,7 +25,7 @@ class WeightCounter {
   WeightCounter(const WeightOps& weight_ops) : weight_ops_{weight_ops} {}
   WeightCounter(const std::vector<typename WeightOps::Weight>& weights,
                 const WeightOps& weight_ops);
-  WeightCounter(const std::map<typename WeightOps::Weight, size_t>& weights,
+  WeightCounter(const std::map<typename WeightOps::Weight, Count>& weights,
                 const WeightOps& weight_ops);
   /* A union of multisets */
   WeightCounter operator+(const WeightCounter& rhs) const;
@@ -31,11 +34,13 @@ class WeightCounter {
   WeightCounter operator*(const WeightCounter& rhs) const;
   WeightCounter<WeightOps>& operator=(const WeightCounter<WeightOps>& rhs);
   WeightCounter<WeightOps>& operator=(WeightCounter<WeightOps>&& rhs);
-  const std::map<typename WeightOps::Weight, size_t>& GetWeights() const;
+  bool operator==(const WeightCounter<WeightOps>& rhs);
+  bool operator!=(const WeightCounter<WeightOps>& rhs);
+  const std::map<typename WeightOps::Weight, Count>& GetWeights() const;
   const WeightOps& GetWeightOps() const;
 
  private:
-  std::map<typename WeightOps::Weight, size_t> weights_;
+  std::map<typename WeightOps::Weight, Count> weights_;
   WeightOps weight_ops_;
 };
 
