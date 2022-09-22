@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <iterator>
 #include <stack>
+#include <set>
 
 #include "traverse_value.hpp"
 
@@ -27,7 +28,7 @@ class PreOrderIterator {
 
   explicit PreOrderIterator(NodeType node);
   PreOrderIterator() = default;
-  value_type operator*() const;
+  value_type operator*();
   PreOrderIterator& operator++();
   PreOrderIterator operator++(int);
   bool operator==(const PreOrderIterator& other) const;
@@ -37,5 +38,6 @@ class PreOrderIterator {
   static std::optional<EdgeType> GetFirstChild(EdgeType edge);
 
   std::stack<EdgeType> stack_;
+  std::set<NodeId> visited_nodes_;
   bool root_visited_ = false;
 };
