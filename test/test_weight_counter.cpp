@@ -29,26 +29,16 @@ std::string to_string(T& inobject) {
 template std::string to_string(Count&);
 template std::string to_string(size_t&);
 
-std::string counter_to_string(Counter& incounter) {
-    auto weights = incounter.GetWeights();
-    std::string result = "{";
-    for (auto& wpair : weights) {
-        result += to_string(wpair.first) + ": " + to_string(wpair.second) + ", ";
-    }
-    return result + "}";
-}
-
-
 static void test_counter_add(Counter lhs, Counter rhs, Counter expected_counter) {
     Counter result = lhs + rhs;
-    assert_equal(result, expected_counter, "Expected: " + counter_to_string(expected_counter) + "\nGot: " + counter_to_string(result));
+    assert_equal(result, expected_counter, "Expected: " + to_string(expected_counter) + "\nGot: " + to_string(result));
 }
 
 static void test_counter_multiply(Counter lhs, Counter rhs, Counter expected_counter) {
-    /* std::cout << counter_to_string(lhs) << "\n"; */
-    /* std::cout << counter_to_string(rhs) << "\n"; */
+    /* std::cout << lhs << "\n"; */
+    /* std::cout << rhs << "\n"; */
     Counter result = lhs * rhs;
-    assert_equal(result, expected_counter, "Expected: " + counter_to_string(expected_counter) + "\nGot: " + counter_to_string(result));
+    assert_equal(result, expected_counter, "Expected: " + to_string(expected_counter) + "\nGot: " + to_string(result));
 }
 
 

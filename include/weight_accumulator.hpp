@@ -33,8 +33,10 @@ value assigned to each edge
 
 #pragma once
 
+#include <iostream>
 #include <boost/multiprecision/cpp_int.hpp>
 #include "mutation_annotated_dag.hpp"
+
 using Count = boost::multiprecision::cpp_int;
 
 template <typename WeightOps>
@@ -63,6 +65,9 @@ class WeightCounter {
   std::map<typename WeightOps::Weight, Count> weights_;
   WeightOps weight_ops_;
 };
+
+template <typename WeightOps>
+std::ostream& operator<<(std::ostream& os, const WeightCounter<WeightOps>& weight_counter);
 
 template <typename WeightOps>
 struct WeightAccumulator {

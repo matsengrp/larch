@@ -131,3 +131,21 @@ template <typename WeightOps>
 bool WeightCounter<WeightOps>::operator!=(const WeightCounter<WeightOps>& rhs){
     return weights_ != rhs.GetWeights();
 }
+
+template <typename WeightOps>
+std::ostream& operator<<(std::ostream& os, const WeightCounter<WeightOps>& weight_counter){
+    auto weights = weight_counter.GetWeights();
+    if (weights.empty()){
+        os << "{}";
+        return os;
+    }
+    auto addpair = [&os](auto const& mappair) {os << mappair.first << ": " << mappair.second; };
+    os << "{";
+    for (auto i = weights.begin(); i != --weights.end(); i++) {
+        addpair(*i);
+        os << ", ";
+    }
+    addpair(*(--weights.end()));
+    os << "}";
+    return os;
+}

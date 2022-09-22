@@ -9,6 +9,8 @@
 #include "dag_loader.hpp"
 #include "mutation_annotated_dag.hpp"
 #include "subtree_weight.hpp"
+#include "weight_accumulator.hpp"
+#include "tree_count.hpp"
 #include "parsimony_score.hpp"
 #include "merge.hpp"
 #include <mpi.h>
@@ -128,7 +130,15 @@ int main(int argc, char** argv) {
     result = optimize_dag_direct(sample);
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back()});
+    SubtreeWeight<WeightAccumulator<ParsimonyScore>> weightcounter{merge.GetResult()};
+    merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
+    std::cout << "Parsimony scores of trees in DAG: " << weightcounter.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {}) << "\n";
+
+    SubtreeWeight<TreeCount> treecount{merge.GetResult()};
+    std::cout << "Total trees in DAG: " << treecount.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {}) << "\n";
   }
+
+
 
   StoreDAGToProtobuf(merge.GetResult().GetDAG(), merge.GetReferenceSequence(),
                      merge.ComputeResultEdgeMutations(), output_dag_path);
