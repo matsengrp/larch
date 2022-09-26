@@ -4,17 +4,21 @@
 
 template <typename NodeType>
 PostOrderIterator<NodeType>::PostOrderIterator(NodeType node) {
-  Assert(node.GetDAG().IsTree());
   stack_.push(*node.GetChildren().begin());
   PushToNextLeaf();
 }
 
 template <typename NodeType>
 typename PostOrderIterator<NodeType>::value_type
-PostOrderIterator<NodeType>::operator*() const {
+PostOrderIterator<NodeType>::operator*() {
   Assert(not stack_.empty());
-  EdgeType top = stack_.top();
-  return {top.GetDAG(), visit_root_ ? top.GetParent() : top.GetChild(), top};
+  EdgeType edge = stack_.top();
+  NodeType node = visit_root_ ? edge.GetParent() : edge.GetChild();
+  if (not visited_nodes_.insert(node).second) {
+    this->operator++();
+    return this->operator*();
+  }
+  return {edge.GetDAG(), node, edge};
 }
 
 template <typename NodeType>

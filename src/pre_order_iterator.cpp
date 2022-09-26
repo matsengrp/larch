@@ -4,16 +4,20 @@
 
 template <typename NodeType>
 PreOrderIterator<NodeType>::PreOrderIterator(NodeType node) {
-  Assert(node.GetDAG().IsTree());
   stack_.push(*node.GetChildren().begin());
 }
 
 template <typename NodeType>
-typename PreOrderIterator<NodeType>::value_type PreOrderIterator<NodeType>::operator*()
-    const {
+typename PreOrderIterator<NodeType>::value_type
+PreOrderIterator<NodeType>::operator*() {
   Assert(not stack_.empty());
-  EdgeType top = stack_.top();
-  return {top.GetDAG(), root_visited_ ? top.GetChild() : top.GetParent(), top};
+  EdgeType edge = stack_.top();
+  NodeType node = root_visited_ ? edge.GetChild() : edge.GetParent();
+  if (not visited_nodes_.insert(node).second) {
+    this->operator++();
+    return this->operator*();
+  }
+  return {edge.GetDAG(), node, edge};
 }
 
 template <typename NodeType>
