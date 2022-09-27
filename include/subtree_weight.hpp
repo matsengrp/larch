@@ -1,9 +1,27 @@
 /**
-  SubtreeWeight is used to calculate the minimum weight below a given node in a DAG.
+  SubtreeWeight is used to calculate the (possibly optimal) tree weights achievable
+below a given node in a DAG.
 
-  The two template parameters are respectively the type of the weight, and a
-  descriptor of some arithmetic operations on the weight type. An example of such
-  descriptor struct can be seen in parsimony_score.hpp.
+  SubtreeWeight expects as a template parameter a descriptor of required operations on
+the weight type, including at least the values of this example struct:
+
+struct ExampleWeightOps {
+  using Weight = size_t;  // Provide any weight type
+  inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);  // The value assigned to
+each leaf node inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);  // The
+value assigned to each edge
+  // Describes how to aggregate weights for alternative subtrees below a clade.
+  // The returned pair contains the aggregated weight (for example, the optimal
+  // one), and a vector containing indices for optimal weights in the input
+  // vector. If optimality is undefined, all indices should be returned.
+  inline std::pair<Weight, std::vector<size_t>>
+WithinCladeAccumOptimum(std::vector<Weight>);
+  // Describes how to aggregate weights of subtrees below different child clades
+  inline Weight BetweenClades(std::vector<Weight>);
+  // Describes how to aggregate the weight of a subtree below a node, and the
+  // weight of an edge above that node. The edge weight is always the first argument.
+  inline Weight AboveNode(Weight edgweight, Weight childnodeweight);
+};
 
  */
 
@@ -27,8 +45,7 @@ class SubtreeWeight {
 
  private:
   template <typename CladeRange>
-  std::pair<typename WeightOps::Weight, EdgeId> MinCladeWeight(CladeRange&& clade,
-                                                               WeightOps&& weight_ops);
+  typename WeightOps::Weight CladeWeight(CladeRange&& clade, WeightOps&& weight_ops);
 
   template <typename EdgeSelector>
   void ExtractTree(const MADAG& input_dag, Node node, WeightOps&& weight_ops,
@@ -37,10 +54,11 @@ class SubtreeWeight {
   const MADAG& dag_;
 
   // Indexed by NodeId.
-  std::vector<typename WeightOps::Weight> cached_weights_;
+  std::vector<std::optional<typename WeightOps::Weight>> cached_weights_;
 
-  // Outer vector indexed by CladeIdx, inner vector indexed by NodeId.
-  std::vector<std::vector<EdgeId>> cached_min_weight_edges_;
+  // outermost vector indexed by NodeId, next vector indexed by CladeIdx, innermost
+  // vector records which EdgeIds achieve minimum in that clade.
+  std::vector<std::vector<std::vector<EdgeId>>> cached_min_weight_edges_;
 
   std::random_device random_device_;
   std::mt19937 random_generator_;

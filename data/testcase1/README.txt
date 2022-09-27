@@ -1,0 +1,15 @@
+before_collapse_n_trees7
+before_collapse_n_nodes84
+before_collapse_max_pars79
+before_collapse_min_pars75
+n_trees2
+parsimony_score75
+avg_node_parents1.0
+n_nodes62
+n_edges65
+n_leaves43
+tree_min_n_nodes58
+tree_max_n_nodes59
+n_nodes_unlabeled62
+n_tree_roots1
+

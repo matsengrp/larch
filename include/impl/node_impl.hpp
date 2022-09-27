@@ -20,6 +20,11 @@ auto NodeView<T>::GetClade(CladeIdx clade) const {
 }
 
 template <typename T>
+size_t NodeView<T>::GetCladesCount() const {
+  return GetStorage().GetClades().size();
+}
+
+template <typename T>
 auto NodeView<T>::GetChildren() const {
   return GetClades() | ranges::views::join;
 }

@@ -8,6 +8,8 @@
 #pragma once
 
 #include <optional>
+#include <ostream>
+#include <string>
 
 #include "edge_mutations.hpp"
 
@@ -23,8 +25,8 @@ class CompactGenome {
   CompactGenome& operator=(CompactGenome&&) = default;
   CompactGenome& operator=(const CompactGenome&) = delete;
 
-  CompactGenome(Node root, const std::vector<EdgeMutations>& edge_mutations,
-                std::string_view reference_sequence);
+  /* CompactGenome(Node root, const std::vector<EdgeMutations>& edge_mutations, */
+  /*               std::string_view reference_sequence); */
 
   CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations);
 
@@ -41,6 +43,7 @@ class CompactGenome {
   [[nodiscard]] size_t Hash() const noexcept;
 
   std::optional<char> operator[](MutationPosition pos) const;
+  std::string ToString();
 
   auto begin() const -> decltype(mutations_.begin());
   auto end() const -> decltype(mutations_.end());

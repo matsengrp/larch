@@ -57,6 +57,8 @@ class DAG {
    */
   void BuildConnections();
 
+  void BuildConnectionsRaw();
+
   /**
    * Return a range containing NodeId's for each node in the DAG
    * @{
@@ -93,6 +95,7 @@ class DAG {
 
   bool IsTree() const;
 
+  bool HaveRoot() const;
   Node GetRoot() const;
   MutableNode GetRoot();
 

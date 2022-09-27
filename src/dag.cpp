@@ -22,9 +22,7 @@ MutableEdge DAG::AppendEdge(NodeId parent, NodeId child, CladeIdx clade) {
 
 void DAG::InitializeNodes(size_t nodes_count) { nodes_.resize(nodes_count); }
 
-void DAG::BuildConnections() {
-  root_ = {NoId};
-  leafs_ = {};
+void DAG::BuildConnectionsRaw() {
   for (auto& node : nodes_) {
     node.ClearConnections();
   }
@@ -38,8 +36,18 @@ void DAG::BuildConnections() {
     child.AddEdge(edge.GetClade(), edge_id, false);
     ++edge_id.value;
   }
+}
+
+void DAG::BuildConnections() {
+  root_ = {NoId};
+  leafs_ = {};
+  BuildConnectionsRaw();
   for (auto node : GetNodes()) {
+    for (auto clade : node.GetClades()) {
+      Assert(not clade.empty());
+    }
     if (node.IsRoot()) {
+      Assert(root_.value == NoId);
       root_ = node;
     }
     if (node.IsLeaf()) {
@@ -58,6 +66,8 @@ size_t DAG::GetNodesCount() const { return nodes_.size(); }
 size_t DAG::GetEdgesCount() const { return edges_.size(); }
 
 bool DAG::IsTree() const { return GetNodesCount() == GetEdgesCount() + 1; }
+
+bool DAG::HaveRoot() const { return root_.value != NoId; }
 
 Node DAG::GetRoot() const { return {*this, root_}; }
 

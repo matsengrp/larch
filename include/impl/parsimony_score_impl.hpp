@@ -8,10 +8,30 @@ ParsimonyScore::Weight ParsimonyScore::ComputeEdge(const MADAG& dag, EdgeId edge
   return dag.GetEdgeMutations(edge_id).size();
 }
 
-bool ParsimonyScore::Compare(Weight lhs, Weight rhs) { return lhs < rhs; }
+std::pair<ParsimonyScore::Weight, std::vector<size_t>>
+ParsimonyScore::WithinCladeAccumOptimum(std::vector<ParsimonyScore::Weight> inweights) {
+  ParsimonyScore::Weight optimal_weight = std::numeric_limits<size_t>::max();
+  std::vector<size_t> optimal_indices;
+  size_t inweight_idx = 0;
+  for (auto weight : inweights) {
+    if (weight < optimal_weight) {
+      optimal_weight = weight;
+      optimal_indices.clear();
+      optimal_indices.push_back(inweight_idx);
+    } else if (weight == optimal_weight) {
+      optimal_indices.push_back(inweight_idx);
+    }
+    inweight_idx++;
+  }
+  return {optimal_weight, optimal_indices};
+}
 
-inline bool ParsimonyScore::IsIdentity(Weight weight) { return weight == Identity; }
+ParsimonyScore::Weight ParsimonyScore::BetweenClades(
+    const std::vector<ParsimonyScore::Weight>& inweights) const {
+  return std::accumulate(inweights.begin(), inweights.end(), 0);
+}
 
-ParsimonyScore::Weight ParsimonyScore::Combine(Weight lhs, Weight rhs) {
-  return lhs + rhs;
+ParsimonyScore::Weight ParsimonyScore::AboveNode(
+    ParsimonyScore::Weight edgeweight, ParsimonyScore::Weight childnodeweight) {
+  return edgeweight + childnodeweight;
 }

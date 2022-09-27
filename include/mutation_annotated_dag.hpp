@@ -19,9 +19,18 @@
 
 #include <string_view>
 #include <vector>
+#include <iostream>
+#include <unordered_map>
+#include <utility>
 
 #include "dag.hpp"
 #include "compact_genome.hpp"
+#include "edge.hpp"
+
+namespace Mutation_Annotated_Tree {
+class Tree;
+class Node;
+}  // namespace Mutation_Annotated_Tree
 
 class MADAG {
  public:
@@ -97,6 +106,9 @@ class MADAG {
   template <typename>
   friend class SubtreeWeight;
   friend class Merge;
+  friend MADAG build_madag_from_mat(const Mutation_Annotated_Tree::Tree&);
+  friend void build_madag_from_mat_helper(Mutation_Annotated_Tree::Node*, size_t,
+                                          size_t&, MADAG&, size_t&);
 
   MutableNode AddNode(NodeId id);
   MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
@@ -107,6 +119,8 @@ class MADAG {
   void AppendEdgeMutations(EdgeMutations&& edge_mutations);
   void AppendCompactGenome(CompactGenome&& compact_genome);
   CompactGenome&& ExtractCompactGenome(NodeId node);
+  void ResizeEdgeMutations(size_t size);
+  void SetEdgeMutations(EdgeId edge, EdgeMutations&& mutations);
 
   DAG dag_;
   std::string reference_sequence_;

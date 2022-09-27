@@ -42,21 +42,35 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
   auto ComputeCG = [&](auto& self, Node node) {
     CompactGenome& compact_genome = result.at(node.GetId().value);
     if (node.IsRoot()) {
-      compact_genome = CompactGenome(node, edge_mutations, reference_sequence);
+      compact_genome = CompactGenome();
       return;
     }
     if (not compact_genome.empty()) {
       return;
     }
-    for (Edge edge : node.GetParents()) {
-      self(self, edge.GetParent());
-      const EdgeMutations& mutations = edge_mutations.at(edge.GetId().value);
-      const CompactGenome& parent = result.at(edge.GetParentId().value);
-      compact_genome.AddParentEdge(mutations, parent, reference_sequence);
-    }
+    Edge edge = *(node.GetParents().begin());
+    self(self, edge.GetParent());
+    const EdgeMutations& mutations = edge_mutations.at(edge.GetId().value);
+    const CompactGenome& parent = result.at(edge.GetParentId().value);
+    compact_genome.AddParentEdge(mutations, parent, reference_sequence);
   };
+  std::unordered_map<CompactGenome, size_t> leaf_cgs;
   for (Node node : dag.GetNodes()) {
     ComputeCG(ComputeCG, node);
+    if (node.IsLeaf()) {
+      bool success =
+          leaf_cgs.emplace(result[node.GetId().value].Copy(), node.GetId().value)
+              .second;
+      if (not success) {
+        std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
+                  << node.GetId().value << " also seen at "
+                  << leaf_cgs[result[node.GetId().value].Copy()]
+                  << "\nCompact Genome is\n"
+                  << result[node.GetId().value].ToString() << "\n"
+                  << std::flush;
+        assert(false);
+      }
+    }
   }
   return result;
 }
@@ -114,4 +128,10 @@ void MADAG::AppendCompactGenome(CompactGenome&& compact_genome) {
 
 CompactGenome&& MADAG::ExtractCompactGenome(NodeId node) {
   return std::move(compact_genomes_.at(node.value));
+}
+
+void MADAG::ResizeEdgeMutations(size_t size) { edge_mutations_.resize(size); }
+
+void MADAG::SetEdgeMutations(EdgeId edge, EdgeMutations&& mutations) {
+  edge_mutations_.at(edge.value) = std::forward<EdgeMutations>(mutations);
 }

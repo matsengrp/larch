@@ -1,12 +1,25 @@
 cmake_minimum_required(VERSION 3.16)
 project (larch)
 
+include(FetchContent)
+FetchContent_Declare(oneTBB-src
+  GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
+  GIT_TAG        2019_U9
+)
+FetchContent_MakeAvailable(oneTBB-src)
+
+include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
+tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1)
+find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
+find_package(MPI REQUIRED)
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 find_package(Protobuf REQUIRED)
 protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS
-    proto/dag.proto
-    proto/parsimony.proto)
-
-include(FetchContent)
+    proto/dag.proto)
+protobuf_generate_cpp(
+        PROTO_SRCS PROTO_HDRS
+        deps/usher/parsimony.proto)
+    
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
 FetchContent_MakeAvailable(json)
 
@@ -21,16 +34,18 @@ ExternalProject_Add(range-v3
     PREFIX              range-v3
     INSTALL_DIR         range-v3/install
 )
+find_package(ZLIB)
 
 add_library(larch_autogen OBJECT
     ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
+    ${PROTO_SRCS} ${PROTO_HDRS}
 )
 set_target_properties(larch_autogen
     PROPERTIES CXX_CLANG_TIDY ""
 )
 
 function(larch_compile_opts PRODUCT)
-    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -Werror -Wall -Wextra -pedantic -pedantic-errors -Wno-unused)
+    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17  -Wall -Wextra -pedantic -Wno-unused)
     if (${USE_ASAN})
         target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined)
     endif()
@@ -40,6 +55,31 @@ function(larch_compile_opts PRODUCT)
     target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
     add_dependencies(${PRODUCT} range-v3)
 endfunction()
+FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
+
+protobuf_generate_cpp(
+    DETAILED_MUTATIONS_PROTO_SRCS
+    DETAILED_MUTATIONS_PROTO_HDRS
+    deps/usher/mutation_detailed.proto)
+include_directories(deps/usher/)
+file(GLOB MATOPTIMIZE_SRC 
+    "deps/usher/src/matOptimize/apply_move/*.cpp"
+    "deps/usher/src/matOptimize/Profitable_Moves_Enumerators/*.cpp"
+    "deps/usher/src/matOptimize/Fitch_Sankoff.cpp"
+    "deps/usher/src/matOptimize/mutation_annotated_tree.cpp"
+    "deps/usher/src/matOptimize/mutation_annotated_tree_nuc_util.cpp"
+    "deps/usher/src/matOptimize/mutation_annotated_tree_node.cpp"
+    "deps/usher/src/matOptimize/mutation_annotated_tree_load_store.cpp"
+    "deps/usher/src/matOptimize/mutation_annotated_tree_nuc_utils.cpp"
+    "deps/usher/src/matOptimize/optimize_inner_loop.cpp"
+    "deps/usher/src/matOptimize/Mutation_Collection.cpp"
+    "deps/usher/src/matOptimize/reassign_states.cpp"
+    "deps/usher/src/matOptimize/detailed_mutations_load.cpp"
+    "deps/usher/src/matOptimize/detailed_mutations_store.cpp"
+    "deps/usher/src/matOptimize/optimize_tree.cpp"
+    "deps/usher/src/matOptimize/priority_conflict_resolver.cpp"
+    "deps/usher/src/matOptimize/check_samples.cpp"
+    )
 
 function(larch_link_opts PRODUCT)
     if (${USE_ASAN})
@@ -48,7 +88,7 @@ function(larch_link_opts PRODUCT)
     target_link_libraries(${PRODUCT} PUBLIC -lz)
     target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
     target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
-    target_link_libraries(${PRODUCT} PUBLIC tbb -lstdc++fs)
+    target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
 endfunction()
 
 function(larch_executable PRODUCT)
@@ -86,6 +126,10 @@ larch_executable(larch-test
     test/test_merge.cpp
     test/test_sample_tree.cpp
     test/test_subtree_weight.cpp
+    test/test_write_parsimony.cpp
+    test/test_count_trees.cpp
+    test/test_weight_accum.cpp
+    test/test_weight_counter.cpp
     test/test_synthetic.cpp
     test/test_traversal_iterators.cpp)
 
@@ -97,3 +141,13 @@ larch_executable(dag_diff
 
 larch_executable(dag2dot
     tools/dag2dot.cpp)
+
+larch_executable(larch-usher
+    tools/larch-usher.cpp
+    src/produce_mat.cpp
+    src/check_edge_mutations.cpp
+    ${MATOPTIMIZE_SRC}
+    ${DETAILED_MUTATIONS_PROTO_SRCS}
+    ${DETAILED_MUTATIONS_PROTO_HDRS}
+    )
+target_link_libraries( larch-usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})

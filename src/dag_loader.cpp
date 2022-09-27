@@ -86,20 +86,27 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
 
   size_t edge_id = 0;
   std::unordered_map<size_t, size_t> num_children;
+  std::map<size_t, std::optional<std::string>> seq_ids;
   ParseNewick(
       data.newick(),
-      [&result](size_t id, std::string label, std::optional<double> branch_length) {
-        result.AddNode({id});
-        std::ignore = label;
-        std::ignore = branch_length;
+      [&result, &seq_ids](size_t node_id, std::string label, std::optional<double>) {
+        seq_ids[node_id] = label;
       },
       [&result, &edge_id, &num_children](size_t parent, size_t child) {
         result.AddEdge({edge_id++}, {parent}, {child}, {num_children[parent]++});
       });
+  result.InitializeNodes(result.GetDAG().GetEdgesCount() + 1);
   result.BuildConnections();
+  for (auto node : result.GetDAG().GetNodes()) {
+    if (node.IsLeaf()) {
+      node.SetSampleId(seq_ids[node.GetId().value]);
+    }
+  }
 
   std::vector<EdgeMutations> edge_mutations;
   edge_mutations.resize(result.GetDAG().GetEdgesCount());
+  Assert(static_cast<size_t>(data.node_mutations_size()) == edge_mutations.size() + 1);
+
   size_t muts_idx = 0;
   for (Node node : result.GetDAG().TraversePreOrder()) {
     const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
@@ -200,6 +207,29 @@ MADAG LoadDAGFromJson(std::string_view path) {
   return result;
 }
 
+static int32_t EncodeBase(char base) {
+  switch (base) {
+    case 'A':
+      return 0;
+    case 'C':
+      return 1;
+    case 'G':
+      return 2;
+    case 'T':
+      return 3;
+    default:
+      Fail("Invalid base");
+  };
+}
+
+template <typename Mutation>
+void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut) {
+  proto_mut->set_position(static_cast<int32_t>(pos));
+  proto_mut->set_ref_nuc(EncodeBase(ref));
+  proto_mut->set_par_nuc(EncodeBase(par));
+  proto_mut->add_mut_nuc(EncodeBase(mut));
+}
+
 void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
                         const std::vector<EdgeMutations>& edge_parent_mutations,
                         std::string_view path) {
@@ -219,45 +249,87 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
     proto_edge->set_child_node(edge.GetChildId().value);
     proto_edge->set_parent_clade(edge.GetClade().value);
     for (auto [pos, nucs] : edge_parent_mutations.at(edge.GetId().value)) {
-      auto* mut = proto_edge->add_edge_mutations();
-      mut->set_position(pos.value);
-      switch (nucs.first) {
-        case 'A':
-          mut->set_par_nuc(0);
-          break;
-        case 'C':
-          mut->set_par_nuc(1);
-          break;
-        case 'G':
-          mut->set_par_nuc(2);
-          break;
-        case 'T':
-          mut->set_par_nuc(3);
-          break;
-        default:
-          Fail("Invalid base");
-      };
-      switch (nucs.second) {
-        case 'A':
-          mut->add_mut_nuc(0);
-          break;
-        case 'C':
-          mut->add_mut_nuc(1);
-          break;
-        case 'G':
-          mut->add_mut_nuc(2);
-          break;
-        case 'T':
-          mut->add_mut_nuc(3);
-          break;
-        default:
-          Fail("Invalid base");
-      };
+      auto* proto_mut = proto_edge->add_edge_mutations();
+      proto_mut->set_position(pos.value);
+      proto_mut->set_par_nuc(EncodeBase(nucs.first));
+      proto_mut->add_mut_nuc(EncodeBase(nucs.second));
     }
   }
 
   std::ofstream file{std::string{path}};
   data.SerializeToOstream(&file);
+}
+
+void StoreDAGToProtobuf(const MADAG& dag, std::string_view path) {
+  Assert(not dag.GetEdgeMutations().empty());
+  StoreDAGToProtobuf(dag.GetDAG(), dag.GetReferenceSequence(), dag.GetEdgeMutations(),
+                     path);
+}
+
+void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
+                         const std::vector<EdgeMutations>& edge_parent_mutations,
+                         std::string_view path) {
+  Assert(dag.IsTree());
+
+  Parsimony::data data;
+
+  std::string newick;
+  auto to_newick = [&](auto& self, Node node) -> void {
+    if (not node.IsLeaf()) {
+      newick += '(';
+    }
+    size_t clade_idx = 0;
+    for (auto clade : node.GetClades()) {
+      Assert(clade.size() == 1);
+      Node i = (*clade.begin()).GetChild();
+      if (i.IsLeaf()) {
+        if (i.GetSampleId()) {
+          newick += *i.GetSampleId();
+        } else {
+          newick += "unknown_leaf_";
+          newick += std::to_string(i.GetId().value);
+        }
+      } else {
+        self(self, i);
+        newick += "inner_";
+        newick += std::to_string(i.GetId().value);
+      }
+      if (++clade_idx < node.GetCladesCount()) {
+        newick += ',';
+      }
+    }
+    if (not node.IsLeaf()) {
+      newick += ')';
+    }
+  };
+  to_newick(to_newick, dag.GetRoot());
+  newick += ';';
+  data.set_newick(newick);
+
+  for (Node node : dag.TraversePreOrder()) {
+    auto* proto = data.add_node_mutations();
+    if (node.IsRoot()) {
+      continue;
+    }
+    for (auto [pos, mut] :
+         edge_parent_mutations.at(node.GetSingleParent().GetId().value)) {
+      auto* proto_mut = proto->add_mutation();
+      proto_mut->set_position(static_cast<int32_t>(pos.value));
+      proto_mut->set_ref_nuc(EncodeBase(reference_sequence.at(pos.value - 1)));
+      proto_mut->set_par_nuc(EncodeBase(mut.first));
+      proto_mut->add_mut_nuc(EncodeBase(mut.second));
+      proto_mut->set_chromosome("leaf_0");
+    }
+  }
+
+  std::ofstream file{std::string{path}};
+  data.SerializeToOstream(&file);
+}
+
+void StoreTreeToProtobuf(const MADAG& dag, std::string_view path) {
+  Assert(not dag.GetEdgeMutations().empty());
+  StoreTreeToProtobuf(dag.GetDAG(), dag.GetReferenceSequence(), dag.GetEdgeMutations(),
+                      path);
 }
 
 static std::string EdgeMutationsToString(Edge edge, const MADAG& dag) {

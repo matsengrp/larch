@@ -18,7 +18,7 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
                  std::vector<LeafSet>& computed_leafsets)
     : clades_{[&] {
         std::vector<std::vector<const CompactGenome*>> clades;
-        clades.reserve(node.GetClades().size());
+        clades.reserve(node.GetCladesCount());
         for (auto clade : node.GetClades()) {
           std::vector<const CompactGenome*> clade_leafs;
           clade_leafs.reserve(clade.size());

@@ -1,16 +1,17 @@
 /**
-  Representation of edge mutations parsimony-based weight scoring for MADAG.
 
-  This type is meant to be used as a parameter to SubtreeWeight.
+  This type may be used as a parameter to SubtreeWeight for counting (sub)trees beneath
+  each node.
 
  */
 
 #pragma once
 
+#include <boost/multiprecision/cpp_int.hpp>
 #include "mutation_annotated_dag.hpp"
 
-struct ParsimonyScore {
-  using Weight = size_t;
+struct TreeCount {
+  using Weight = boost::multiprecision::cpp_int;
   inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);
   inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);
   /*
@@ -24,8 +25,8 @@ struct ParsimonyScore {
   /*
    * Given a vector of weights, one for each child clade, aggregate them
    */
-  inline Weight BetweenClades(const std::vector<Weight>&) const;
+  inline Weight BetweenClades(std::vector<Weight>);
   inline Weight AboveNode(Weight edgweight, Weight childnodeweight);
 };
 
-#include "impl/parsimony_score_impl.hpp"
+#include "impl/tree_count_impl.hpp"
