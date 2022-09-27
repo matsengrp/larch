@@ -9,12 +9,9 @@ static void test_clade_idx(std::string_view path) {
   MADAG dag = LoadDAGFromProtobuf(path);
   Merge merge{dag.GetReferenceSequence()};
   merge.AddDAGs({dag});
-  MADAG merged;
-  merged.GetReferenceSequence() = dag.GetReferenceSequence();
-  merged.GetEdgeMutations() = merge.ComputeResultEdgeMutations();
-  merged.GetDAG() = std::move(merge.GetResult().GetDAG());
-  merged.GetCompactGenomes() =
-      merged.ComputeCompactGenomes(merged.GetReferenceSequence());
+  merge.ComputeResultEdgeMutations();
+  MADAG& merged = merge.GetResult();
+  merged.RecomputeCompactGenomes();
 }
 
 [[maybe_unused]] static const auto test_added_0 = add_test(

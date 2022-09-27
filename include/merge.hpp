@@ -43,8 +43,6 @@ class Merge {
   Merge& operator=(Merge&&) = delete;
   Merge& operator=(const Merge&) = delete;
 
-  std::string_view GetReferenceSequence() const;
-
   /**
    * Add DAGs to be merged. The input DAGs are externally owned, and should outlive the
    * Merge object. If the have_compact_genomes parameter is false, the per-node compact
@@ -69,10 +67,9 @@ class Merge {
   const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
 
   /**
-   * Compute the mutations on the resulting DAG's edges. Can be used to build a MADAG
-   * from the result.
+   * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
    */
-  [[nodiscard]] std::vector<EdgeMutations> ComputeResultEdgeMutations() const;
+  void ComputeResultEdgeMutations();
 
  private:
   void ComputeCompactGenomes(const std::vector<size_t>& tree_idxs);
@@ -83,9 +80,6 @@ class Merge {
 
   static std::vector<LeafSet> ComputeLeafSets(const MADAG& dag,
                                               const std::vector<NodeLabel>& labels);
-
-  // Externally owned reference sequence.
-  std::string_view reference_sequence_;
 
   // Vector of externally owned input DAGs.
   std::vector<std::reference_wrapper<MADAG>> trees_;

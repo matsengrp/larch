@@ -79,9 +79,7 @@ MAT::Tree mat_from_dag(const MADAG& dag) {
   return tree;
 }
 void build_madag_from_mat_helper(MAT::Node* par_node, size_t par_node_idx,
-                                 size_t& curr_idx, DAG& dag,
-                                 std::vector<EdgeMutations>& edge_muts,
-                                 size_t& edge_idx) {
+                                 size_t& curr_idx, MADAG& dag, size_t& edge_idx) {
   for (size_t clade_idx = 0; clade_idx < par_node->children.size(); clade_idx++) {
     curr_idx++;
     dag.AddEdge(EdgeId{edge_idx}, NodeId{par_node_idx}, NodeId{curr_idx},
@@ -96,23 +94,20 @@ void build_madag_from_mat_helper(MAT::Node* par_node, size_t par_node_idx,
                                   {decode[one_hot_to_two_bit(mut.get_par_one_hot())],
                                    decode[one_hot_to_two_bit(mut.get_mut_one_hot())]}};
                         });
-    edge_muts[edge_idx] = EdgeMutations(mut_view);
+    dag.SetEdgeMutations({edge_idx}, EdgeMutations{mut_view});
     edge_idx++;
-    build_madag_from_mat_helper(child_node, curr_idx, curr_idx, dag, edge_muts,
-                                edge_idx);
+    build_madag_from_mat_helper(child_node, curr_idx, curr_idx, dag, edge_idx);
   }
 }
 MADAG build_madag_from_mat(const MAT::Tree& tree) {
   MADAG result;
-  auto& edge_muts = result.GetEdgeMutations();
-  edge_muts.resize(tree.get_size_upper());
+  result.ResizeEdgeMutations(tree.get_size_upper());
   size_t node_count = 0;
   size_t edge_count = 0;
-  build_madag_from_mat_helper(tree.root, 0, node_count, result.GetDAG(), edge_muts,
-                              edge_count);
-  result.GetDAG().InitializeNodes(node_count + 1);
-  result.GetDAG().BuildConnections();
-  edge_muts.resize(edge_count + 1);
+  build_madag_from_mat_helper(tree.root, 0, node_count, result, edge_count);
+  result.InitializeNodes(node_count + 1);
+  result.BuildConnections();
+  result.ResizeEdgeMutations(edge_count + 1);
   return result;
 }
 void compareDAG(const Node dag1, const Node dag2,

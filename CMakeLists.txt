@@ -130,7 +130,8 @@ larch_executable(larch-test
     test/test_count_trees.cpp
     test/test_weight_accum.cpp
     test/test_weight_counter.cpp
-    test/test_synthetic.cpp)
+    test/test_synthetic.cpp
+    test/test_traversal_iterators.cpp)
 
 larch_executable(merge
     tools/merge.cpp)

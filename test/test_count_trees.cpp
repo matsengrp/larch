@@ -11,7 +11,7 @@
 
 static void test_tree_count(MADAG& dag, TreeCount::Weight expected_score) {
   if (dag.GetEdgeMutations().empty()) {
-    dag.GetEdgeMutations() = dag.ComputeEdgeMutations(dag.GetReferenceSequence());
+    dag.RecomputeEdgeMutations();
   }
 
   SubtreeWeight<TreeCount> treecount(dag);

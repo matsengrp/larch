@@ -33,6 +33,14 @@ template <typename T, typename Id>
   }
 }
 
+template <typename T>
+void MoveElements(std::vector<T>&& source, std::vector<T>& destination) {
+  destination.resize(0);
+  destination.insert(destination.end(), std::make_move_iterator(source.begin()),
+                     std::make_move_iterator(source.end()));
+  source.resize(0);
+}
+
 namespace Transform {
 inline auto GetParent() {
   return ranges::views::transform([](auto&& i) { return i.GetParent(); });

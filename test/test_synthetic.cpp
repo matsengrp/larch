@@ -7,14 +7,12 @@
 static void test_compact_genome() {
   MADAG dag = MakeSyntheticDAG();
 
-  std::vector<EdgeMutations> computed_mutations =
-      dag.ComputeEdgeMutations(dag.GetReferenceSequence());
+  std::vector<EdgeMutations> computed_mutations = dag.ComputeEdgeMutations();
 
   Assert(dag.GetCompactGenomes().size() == dag.GetDAG().GetNodesCount());
   Assert(computed_mutations.size() == dag.GetDAG().GetEdgesCount());
 
-  std::vector<CompactGenome> computed_cgs =
-      dag.ComputeCompactGenomes(dag.GetReferenceSequence());
+  std::vector<CompactGenome> computed_cgs = dag.ComputeCompactGenomes();
 
   assert_equal(computed_cgs, dag.GetCompactGenomes(), "Compact genomes");
 }

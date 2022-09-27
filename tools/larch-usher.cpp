@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)
               << " #######\n";
-    merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
+    merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     MADAG sample = weight.SampleTree({});
     check_edge_mutations(sample);
@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back()});
     SubtreeWeight<WeightAccumulator<ParsimonyScore>> weightcounter{merge.GetResult()};
-    merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
+    merge.ComputeResultEdgeMutations();
     std::cout << "Parsimony scores of trees in DAG: "
               << weightcounter.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(),
                                                   {})
@@ -143,8 +143,9 @@ int main(int argc, char** argv) {
               << "\n";
   }
 
-  StoreDAGToProtobuf(merge.GetResult().GetDAG(), merge.GetReferenceSequence(),
-                     merge.ComputeResultEdgeMutations(), output_dag_path);
+  StoreDAGToProtobuf(merge.GetResult().GetDAG(),
+                     merge.GetResult().GetReferenceSequence(),
+                     merge.GetResult().GetEdgeMutations(), output_dag_path);
 
   return EXIT_SUCCESS;
 }

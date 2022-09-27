@@ -25,10 +25,8 @@ bool compare_treedags(MADAG &dag1, MADAG &dag2) {
 
   if (not dag1.GetReferenceSequence().empty()) {
     if (dag1.GetCompactGenomes().empty()) {
-      dag1.GetCompactGenomes() =
-          dag1.ComputeCompactGenomes(dag1.GetReferenceSequence());
-      dag2.GetCompactGenomes() =
-          dag2.ComputeCompactGenomes(dag2.GetReferenceSequence());
+      dag1.RecomputeCompactGenomes();
+      dag2.RecomputeCompactGenomes();
     }
     std::unordered_set<CompactGenome> dag1_cgs, dag2_cgs;
     for (auto &cg : dag1.GetCompactGenomes()) {
@@ -43,8 +41,8 @@ bool compare_treedags(MADAG &dag1, MADAG &dag2) {
   }
 
   if (not(dag1.GetEdgeMutations().empty() or dag2.GetEdgeMutations().empty())) {
-    std::vector<EdgeMutations> &dag1_ems = dag1.GetEdgeMutations();
-    std::vector<EdgeMutations> &dag2_ems = dag2.GetEdgeMutations();
+    const std::vector<EdgeMutations> &dag1_ems = dag1.GetEdgeMutations();
+    const std::vector<EdgeMutations> &dag2_ems = dag2.GetEdgeMutations();
 
     for (auto &em : dag1_ems) {
       if (std::count(dag2_ems.begin(), dag2_ems.end(), em) !=
@@ -60,34 +58,30 @@ bool compare_treedags(MADAG &dag1, MADAG &dag2) {
 
 static void test_write_protobuf() {
   std::string_view path = "data/check_parsimony_protobuf/example_tree.pb";
-  MADAG treedag = LoadTreeFromProtobuf(path);
   std::fstream file;
   std::string refseq, filename;
   filename = "data/check_parsimony_protobuf/refseq.fasta";
   file.open(filename);
   while (file >> refseq) {
   }
-  treedag.GetReferenceSequence() = refseq;
+  MADAG treedag = LoadTreeFromProtobuf(path, refseq);
 
   SubtreeWeight<ParsimonyScore> weight{treedag};
   MADAG sample_tree = weight.SampleTree({});
 
-  StoreTreeToProtobuf(sample_tree, "/home/wdumm/larch/test_write_protobuf.pb");
+  StoreTreeToProtobuf(sample_tree, "test_write_protobuf.pb");
   compare_treedags(treedag, sample_tree);
 
-  sample_tree.GetCompactGenomes() =
-      sample_tree.ComputeCompactGenomes(sample_tree.GetReferenceSequence());
-  treedag.GetCompactGenomes() =
-      treedag.ComputeCompactGenomes(treedag.GetReferenceSequence());
+  sample_tree.RecomputeCompactGenomes();
+  treedag.RecomputeCompactGenomes();
   compare_treedags(treedag, sample_tree);
 
-  treedag.GetEdgeMutations() =
-      treedag.ComputeEdgeMutations(treedag.GetReferenceSequence());
+  treedag.RecomputeEdgeMutations();
   compare_treedags(treedag, sample_tree);
 
   Merge merge{treedag.GetReferenceSequence()};
   merge.AddDAGs({treedag, sample_tree});
-  merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
+  merge.ComputeResultEdgeMutations();
 
   compare_treedags(treedag, merge.GetResult());
 }

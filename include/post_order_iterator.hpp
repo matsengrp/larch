@@ -5,6 +5,7 @@
 #include <iterator>
 #include <stack>
 #include <optional>
+#include <set>
 
 #include "traverse_value.hpp"
 
@@ -28,7 +29,7 @@ class PostOrderIterator {
 
   explicit PostOrderIterator(NodeType node);
   PostOrderIterator() = default;
-  value_type operator*() const;
+  value_type operator*();
   PostOrderIterator& operator++();
   PostOrderIterator operator++(int);
   bool operator==(const PostOrderIterator& other) const;
@@ -39,6 +40,7 @@ class PostOrderIterator {
   auto GetCurrent() const;
 
   std::stack<EdgeType> stack_;
+  std::set<NodeId> visited_nodes_;
   bool visit_root_ = false;
   bool end_sentinel_ = false;
 };
