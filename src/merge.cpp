@@ -1,7 +1,7 @@
 #include "merge.hpp"
 
 Merge::Merge(std::string_view reference_sequence) {
-  result_dag_.GetReferenceSequence() = reference_sequence;
+  result_dag_.SetReferenceSequence(reference_sequence);
 }
 
 void Merge::AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& trees,
@@ -19,11 +19,11 @@ void Merge::AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& trees,
       std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
       labels.resize(tree.GetDAG().GetNodesCount());
       for (size_t node_idx = 0; node_idx < tree.GetDAG().GetNodesCount(); ++node_idx) {
-        auto cg_iter = all_compact_genomes_.insert(
-            std::move(tree.GetCompactGenomes().at(node_idx)));
+        auto cg_iter =
+            all_compact_genomes_.insert(tree.ExtractCompactGenome({node_idx}));
         labels.at(node_idx).SetCompactGenome(std::addressof(*cg_iter.first));
       }
-      tree.GetCompactGenomes().resize(0);
+      tree.RemoveCompactGenomes();
     });
   } else {
     ComputeCompactGenomes(tree_idxs);
@@ -65,8 +65,7 @@ void Merge::ComputeCompactGenomes(const std::vector<size_t>& tree_idxs) {
     const MADAG& tree = trees_.at(tree_idx).get();
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     labels.resize(tree.GetDAG().GetNodesCount());
-    std::vector<CompactGenome> computed_cgs =
-        tree.ComputeCompactGenomes(result_dag_.GetReferenceSequence());
+    std::vector<CompactGenome> computed_cgs = tree.ComputeCompactGenomes();
     for (size_t node_idx = 0; node_idx < tree.GetDAG().GetNodesCount(); ++node_idx) {
       auto cg_iter = all_compact_genomes_.insert(std::move(computed_cgs.at(node_idx)));
       labels.at(node_idx).SetCompactGenome(std::addressof(*cg_iter.first));

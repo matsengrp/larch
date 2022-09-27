@@ -33,7 +33,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
                       bool dags) {
   std::vector<MADAG> trees;
   std::string reference_sequence =
-      LoadDAGFromJson(refseq_json_path).GetReferenceSequence();
+      std::string{LoadDAGFromJson(refseq_json_path).GetReferenceSequence()};
 
   trees.resize(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;

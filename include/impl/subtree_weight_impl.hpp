@@ -39,7 +39,7 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(
 template <typename WeightOps>
 MADAG SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
   MADAG result;
-  result.GetReferenceSequence() = dag_.GetReferenceSequence();
+  result.SetReferenceSequence(dag_.GetReferenceSequence());
 
   ExtractTree(
       dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
@@ -55,7 +55,7 @@ MADAG SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
 template <typename WeightOps>
 MADAG SubtreeWeight<WeightOps>::SampleTree(WeightOps&& weight_ops) {
   MADAG result;
-  result.GetReferenceSequence() = dag_.GetReferenceSequence();
+  result.SetReferenceSequence(dag_.GetReferenceSequence());
 
   ExtractTree(
       dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
@@ -105,7 +105,7 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
   result.GetDAG().AddNode(parent_id);
 
   if (not input_dag.GetCompactGenomes().empty()) {
-    result.GetCompactGenomes().push_back(
+    result.AppendCompactGenome(
         input_dag.GetCompactGenomes().at(node.GetId().value).Copy());
   }
 
@@ -119,7 +119,7 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
     result.GetDAG().AddEdge(edge_id, parent_id, child_id, edge.GetClade());
 
     if (not input_dag.GetEdgeMutations().empty()) {
-      result.GetEdgeMutations().push_back(
+      result.AppendEdgeMutations(
           input_dag.GetEdgeMutations().at(edge.GetId().value).Copy());
     }
 

@@ -47,7 +47,7 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
   Parse(data, path);
 
   MADAG result;
-  result.GetReferenceSequence() = data.reference_seq();
+  result.SetReferenceSequence(data.reference_seq());
 
   for (auto& i : data.node_names()) {
     result.GetDAG().AddNode({static_cast<size_t>(i.node_id())});
@@ -62,10 +62,11 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
 
   result.GetDAG().BuildConnections();
 
-  result.GetEdgeMutations().resize(result.GetDAG().GetEdgesCount());
+  std::vector<EdgeMutations> edge_mutations;
+  edge_mutations.resize(result.GetDAG().GetEdgesCount());
   edge_id = 0;
   for (auto& i : data.edges()) {
-    EdgeMutations& muts = result.GetEdgeMutations().at(edge_id++);
+    EdgeMutations& muts = edge_mutations.at(edge_id++);
     for (auto& mut : i.edge_mutations()) {
       static const char decode[] = {'A', 'C', 'G', 'T'};
       Assert(mut.position() > 0);
@@ -74,6 +75,7 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
                                                      decode[mut.mut_nuc().Get(0)]};
     }
   }
+  result.SetEdgeMutations(std::move(edge_mutations));
   return result;
 }
 
@@ -98,15 +100,15 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
       });
   result.GetDAG().BuildConnections();
 
-  result.GetEdgeMutations().resize(result.GetDAG().GetEdgesCount());
-
+  std::vector<EdgeMutations> edge_mutations;
+  edge_mutations.resize(result.GetDAG().GetEdgesCount());
   size_t muts_idx = 0;
   for (Node node : result.GetDAG().TraversePreOrder()) {
     const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
     if (node.IsRoot()) {
       continue;
     }
-    auto& edge_muts = result.GetEdgeMutations(node.GetSingleParent());
+    auto& edge_muts = edge_mutations.at(node.GetSingleParent().GetId().value);
     for (auto i :
          pb_muts |
              ranges::views::transform(
@@ -119,6 +121,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
       edge_muts.insert(i);
     }
   }
+  result.SetEdgeMutations(std::move(edge_mutations));
   return result;
 }
 
@@ -185,13 +188,13 @@ MADAG LoadDAGFromJson(std::string_view path) {
   nlohmann::json json = LoadJson(path);
   MADAG result;
 
-  result.GetReferenceSequence() = json["refseq"][1];
+  result.SetReferenceSequence(std::string{json["refseq"][1]});
 
   size_t id = 0;
   for ([[maybe_unused]] auto& i : json["nodes"]) {
     result.GetDAG().AddNode({id++});
     size_t compact_genome_index = i[0];
-    result.GetCompactGenomes().push_back(GetCompactGenome(json, compact_genome_index));
+    result.AppendCompactGenome(GetCompactGenome(json, compact_genome_index));
   }
   id = 0;
   for (auto& i : json["edges"]) {

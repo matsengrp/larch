@@ -3,7 +3,7 @@
 MADAG MakeSyntheticDAG() {
   MADAG result;
 
-  result.GetReferenceSequence() = "ACGTACGT";
+  result.SetReferenceSequence("ACGTACGT");
 
   result.GetDAG().InitializeNodes(31);
   result.GetDAG().AppendEdge({0}, {1}, {0});    // 0
@@ -42,43 +42,45 @@ MADAG MakeSyntheticDAG() {
 
   result.GetDAG().BuildConnections();
 
-  result.GetEdgeMutations().resize(result.GetDAG().GetEdgesCount());
+  std::vector<EdgeMutations> edge_mutations;
+  edge_mutations.resize(result.GetDAG().GetEdgesCount());
 
-  result.GetEdgeMutations().at(1)[{1}] = {'A', 'G'};
-  result.GetEdgeMutations().at(2)[{3}] = {'G', 'C'};
-  result.GetEdgeMutations().at(3)[{2}] = {'C', 'T'};
-  result.GetEdgeMutations().at(4)[{2}] = {'C', 'A'};
-  result.GetEdgeMutations().at(5)[{2}] = {'C', 'G'};
-  result.GetEdgeMutations().at(5)[{4}] = {'T', 'A'};
-  result.GetEdgeMutations().at(6)[{5}] = {'A', 'G'};
-  result.GetEdgeMutations().at(8)[{2}] = {'A', 'G'};
-  result.GetEdgeMutations().at(8)[{6}] = {'C', 'A'};
-  result.GetEdgeMutations().at(9)[{8}] = {'T', 'C'};
-  result.GetEdgeMutations().at(10)[{2}] = {'A', 'C'};
-  result.GetEdgeMutations().at(10)[{3}] = {'G', 'A'};
-  result.GetEdgeMutations().at(11)[{4}] = {'A', 'T'};
-  result.GetEdgeMutations().at(12)[{2}] = {'G', 'C'};
-  result.GetEdgeMutations().at(13)[{1}] = {'G', 'C'};
-  result.GetEdgeMutations().at(13)[{2}] = {'T', 'A'};
-  result.GetEdgeMutations().at(14)[{4}] = {'T', 'C'};
-  result.GetEdgeMutations().at(15)[{3}] = {'G', 'A'};
-  result.GetEdgeMutations().at(16)[{6}] = {'C', 'T'};
-  result.GetEdgeMutations().at(17)[{2}] = {'T', 'G'};
-  result.GetEdgeMutations().at(17)[{4}] = {'T', 'C'};
-  result.GetEdgeMutations().at(18)[{8}] = {'C', 'G'};
-  result.GetEdgeMutations().at(19)[{8}] = {'C', 'A'};
-  result.GetEdgeMutations().at(20)[{1}] = {'G', 'T'};
-  result.GetEdgeMutations().at(23)[{2}] = {'T', 'C'};
-  result.GetEdgeMutations().at(25)[{1}] = {'G', 'C'};
-  result.GetEdgeMutations().at(26)[{5}] = {'A', 'C'};
-  result.GetEdgeMutations().at(26)[{8}] = {'A', 'G'};
-  result.GetEdgeMutations().at(27)[{5}] = {'A', 'C'};
-  result.GetEdgeMutations().at(28)[{3}] = {'A', 'T'};
-  result.GetEdgeMutations().at(30)[{3}] = {'G', 'C'};
-  result.GetEdgeMutations().at(31)[{6}] = {'T', 'A'};
+  edge_mutations.at(1)[{1}] = {'A', 'G'};
+  edge_mutations.at(2)[{3}] = {'G', 'C'};
+  edge_mutations.at(3)[{2}] = {'C', 'T'};
+  edge_mutations.at(4)[{2}] = {'C', 'A'};
+  edge_mutations.at(5)[{2}] = {'C', 'G'};
+  edge_mutations.at(5)[{4}] = {'T', 'A'};
+  edge_mutations.at(6)[{5}] = {'A', 'G'};
+  edge_mutations.at(8)[{2}] = {'A', 'G'};
+  edge_mutations.at(8)[{6}] = {'C', 'A'};
+  edge_mutations.at(9)[{8}] = {'T', 'C'};
+  edge_mutations.at(10)[{2}] = {'A', 'C'};
+  edge_mutations.at(10)[{3}] = {'G', 'A'};
+  edge_mutations.at(11)[{4}] = {'A', 'T'};
+  edge_mutations.at(12)[{2}] = {'G', 'C'};
+  edge_mutations.at(13)[{1}] = {'G', 'C'};
+  edge_mutations.at(13)[{2}] = {'T', 'A'};
+  edge_mutations.at(14)[{4}] = {'T', 'C'};
+  edge_mutations.at(15)[{3}] = {'G', 'A'};
+  edge_mutations.at(16)[{6}] = {'C', 'T'};
+  edge_mutations.at(17)[{2}] = {'T', 'G'};
+  edge_mutations.at(17)[{4}] = {'T', 'C'};
+  edge_mutations.at(18)[{8}] = {'C', 'G'};
+  edge_mutations.at(19)[{8}] = {'C', 'A'};
+  edge_mutations.at(20)[{1}] = {'G', 'T'};
+  edge_mutations.at(23)[{2}] = {'T', 'C'};
+  edge_mutations.at(25)[{1}] = {'G', 'C'};
+  edge_mutations.at(26)[{5}] = {'A', 'C'};
+  edge_mutations.at(26)[{8}] = {'A', 'G'};
+  edge_mutations.at(27)[{5}] = {'A', 'C'};
+  edge_mutations.at(28)[{3}] = {'A', 'T'};
+  edge_mutations.at(30)[{3}] = {'G', 'C'};
+  edge_mutations.at(31)[{6}] = {'T', 'A'};
 
-  result.GetCompactGenomes() =
-      result.ComputeCompactGenomes(result.GetReferenceSequence());
+  result.SetEdgeMutations(std::move(edge_mutations));
+
+  result.RecomputeCompactGenomes();
 
   return result;
 }

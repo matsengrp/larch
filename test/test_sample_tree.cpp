@@ -10,7 +10,7 @@
 
 static void test_sample_tree(MADAG& dag) {
   if (dag.GetEdgeMutations().empty()) {
-    dag.GetEdgeMutations() = dag.ComputeEdgeMutations(dag.GetReferenceSequence());
+    dag.RecomputeEdgeMutations();
   }
 
   SubtreeWeight<ParsimonyScore> weight(dag);
