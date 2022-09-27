@@ -10,7 +10,8 @@
 
 [[nodiscard]] MADAG LoadDAGFromProtobuf(std::string_view path);
 
-[[nodiscard]] MADAG LoadTreeFromProtobuf(std::string_view path);
+[[nodiscard]] MADAG LoadTreeFromProtobuf(std::string_view path,
+                                         std::string_view reference_sequence);
 
 [[nodiscard]] MADAG LoadDAGFromJson(std::string_view path);
 

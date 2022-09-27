@@ -43,8 +43,9 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   std::cout << "Loading trees ";
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
     std::cout << "." << std::flush;
-    trees.at(path_idx.first) = dags ? LoadDAGFromProtobuf(path_idx.second)
-                                    : LoadTreeFromProtobuf(path_idx.second);
+    trees.at(path_idx.first) =
+        dags ? LoadDAGFromProtobuf(path_idx.second)
+             : LoadTreeFromProtobuf(path_idx.second, reference_sequence);
   });
   std::cout << " done."
             << "\n";
@@ -61,7 +62,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   std::cout << "DAG edges: " << merge.GetResult().GetDAG().GetEdgesCount() << "\n";
 
   StoreDAGToProtobuf(merge.GetResult().GetDAG(), reference_sequence,
-                     merge.ComputeResultEdgeMutations(), out_path);
+                     merge.GetResult().GetEdgeMutations(), out_path);
 
   return EXIT_SUCCESS;
 }

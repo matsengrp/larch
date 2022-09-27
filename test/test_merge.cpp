@@ -80,9 +80,8 @@ static void test_case_20d() {
     paths_idx.push_back({i, paths.at(i)});
   }
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
-    trees.at(path_idx.first) = LoadTreeFromProtobuf(path_idx.second);
-    trees.at(path_idx.first)
-        .SetReferenceSequence(correct_result.GetReferenceSequence());
+    trees.at(path_idx.first) =
+        LoadTreeFromProtobuf(path_idx.second, correct_result.GetReferenceSequence());
   });
 
   Benchmark merge_time;

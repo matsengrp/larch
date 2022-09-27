@@ -67,10 +67,9 @@ class Merge {
   const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
 
   /**
-   * Compute the mutations on the resulting DAG's edges. Can be used to build a MADAG
-   * from the result.
+   * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
    */
-  [[nodiscard]] std::vector<EdgeMutations> ComputeResultEdgeMutations() const;
+  void ComputeResultEdgeMutations();
 
  private:
   void ComputeCompactGenomes(const std::vector<size_t>& tree_idxs);

@@ -1,6 +1,9 @@
 #include "mutation_annotated_dag.hpp"
 #include <string_view>
 
+MADAG::MADAG(std::string_view reference_sequence)
+    : reference_sequence_{reference_sequence} {}
+
 const DAG& MADAG::GetDAG() const { return dag_; }
 
 const std::string& MADAG::GetReferenceSequence() const { return reference_sequence_; }
@@ -13,19 +16,6 @@ const std::vector<CompactGenome>& MADAG::GetCompactGenomes() const {
   return compact_genomes_;
 }
 
-void MADAG::SetReferenceSequence(std::string_view reference_sequence) {
-  reference_sequence_ = reference_sequence;
-}
-
-void MADAG::SetEdgeMutations(std::vector<EdgeMutations>&& edge_mutations) {
-  MoveElements(std::forward<std::vector<EdgeMutations>>(edge_mutations),
-               edge_mutations_);
-}
-
-void MADAG::AppendEdgeMutations(EdgeMutations&& edge_mutations) {
-  edge_mutations_.push_back(std::forward<EdgeMutations>(edge_mutations));
-}
-
 void MADAG::RemoveEdgeMutations() {
   edge_mutations_.resize(0);
   edge_mutations_.shrink_to_fit();
@@ -34,14 +24,6 @@ void MADAG::RemoveEdgeMutations() {
 void MADAG::RemoveCompactGenomes() {
   compact_genomes_.resize(0);
   compact_genomes_.shrink_to_fit();
-}
-
-void MADAG::AppendCompactGenome(CompactGenome&& compact_genome) {
-  compact_genomes_.push_back(std::forward<CompactGenome>(compact_genome));
-}
-
-CompactGenome&& MADAG::ExtractCompactGenome(NodeId node) {
-  return std::move(compact_genomes_.at(node.value));
 }
 
 void MADAG::RecomputeCompactGenomes() { compact_genomes_ = ComputeCompactGenomes(); }
@@ -103,10 +85,6 @@ const EdgeMutations& MADAG::GetEdgeMutations(EdgeId edge_id) const {
   return edge_mutations_.at(edge_id.value);
 }
 
-EdgeMutations& MADAG::GetEdgeMutations(EdgeId edge_id) {
-  return edge_mutations_.at(edge_id.value);
-}
-
 MutableNode MADAG::AddNode(NodeId id) { return dag_.AddNode(id); }
 
 MutableEdge MADAG::AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade) {
@@ -120,3 +98,20 @@ MutableEdge MADAG::AppendEdge(NodeId parent, NodeId child, CladeIdx clade) {
 void MADAG::BuildConnections() { dag_.BuildConnections(); }
 
 void MADAG::InitializeNodes(size_t nodes_count) { dag_.InitializeNodes(nodes_count); }
+
+void MADAG::SetEdgeMutations(std::vector<EdgeMutations>&& edge_mutations) {
+  MoveElements(std::forward<std::vector<EdgeMutations>>(edge_mutations),
+               edge_mutations_);
+}
+
+void MADAG::AppendEdgeMutations(EdgeMutations&& edge_mutations) {
+  edge_mutations_.push_back(std::forward<EdgeMutations>(edge_mutations));
+}
+
+void MADAG::AppendCompactGenome(CompactGenome&& compact_genome) {
+  compact_genomes_.push_back(std::forward<CompactGenome>(compact_genome));
+}
+
+CompactGenome&& MADAG::ExtractCompactGenome(NodeId node) {
+  return std::move(compact_genomes_.at(node.value));
+}

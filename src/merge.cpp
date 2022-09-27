@@ -1,8 +1,6 @@
 #include "merge.hpp"
 
-Merge::Merge(std::string_view reference_sequence) {
-  result_dag_.SetReferenceSequence(reference_sequence);
-}
+Merge::Merge(std::string_view reference_sequence) : result_dag_{reference_sequence} {}
 
 void Merge::AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& trees,
                     bool have_compact_genomes) {
@@ -46,7 +44,7 @@ const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
   return result_nodes_;
 }
 
-std::vector<EdgeMutations> Merge::ComputeResultEdgeMutations() const {
+void Merge::ComputeResultEdgeMutations() {
   std::vector<EdgeMutations> result;
   result.resize(result_dag_.GetDAG().GetEdgesCount());
   Assert(result_edges_.size() == result.size());
@@ -59,7 +57,7 @@ std::vector<EdgeMutations> Merge::ComputeResultEdgeMutations() const {
     muts = CompactGenome::ToEdgeMutations(result_dag_.GetReferenceSequence(), parent,
                                           child);
   }
-  return result;
+  result_dag_.SetEdgeMutations(std::move(result));
 }
 
 void Merge::ComputeCompactGenomes(const std::vector<size_t>& tree_idxs) {

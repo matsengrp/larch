@@ -1,9 +1,7 @@
 #include "synthetic_dags.hpp"
 
 MADAG MakeSyntheticDAG() {
-  MADAG result;
-
-  result.SetReferenceSequence("ACGTACGT");
+  MADAG result{"ACGTACGT"};
 
   result.InitializeNodes(31);
   result.AppendEdge({0}, {1}, {0});    // 0

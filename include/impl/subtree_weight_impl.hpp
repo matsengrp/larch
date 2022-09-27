@@ -38,8 +38,7 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(
 
 template <typename WeightOps>
 MADAG SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
-  MADAG result;
-  result.SetReferenceSequence(dag_.GetReferenceSequence());
+  MADAG result{dag_.GetReferenceSequence()};
 
   ExtractTree(
       dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
@@ -54,8 +53,7 @@ MADAG SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
 
 template <typename WeightOps>
 MADAG SubtreeWeight<WeightOps>::SampleTree(WeightOps&& weight_ops) {
-  MADAG result;
-  result.SetReferenceSequence(dag_.GetReferenceSequence());
+  MADAG result{dag_.GetReferenceSequence()};
 
   ExtractTree(
       dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),

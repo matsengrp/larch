@@ -46,8 +46,7 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
   ProtoDAG::data data;
   Parse(data, path);
 
-  MADAG result;
-  result.SetReferenceSequence(data.reference_seq());
+  MADAG result{data.reference_seq()};
 
   for (auto& i : data.node_names()) {
     result.AddNode({static_cast<size_t>(i.node_id())});
@@ -79,11 +78,11 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
   return result;
 }
 
-MADAG LoadTreeFromProtobuf(std::string_view path) {
+MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_sequence) {
   Parsimony::data data;
   Parse(data, path);
 
-  MADAG result;
+  MADAG result{reference_sequence};
 
   size_t edge_id = 0;
   std::unordered_map<size_t, size_t> num_children;
@@ -185,9 +184,7 @@ the clade in the parent node's clade_list from which this edge descends.
 
 MADAG LoadDAGFromJson(std::string_view path) {
   nlohmann::json json = LoadJson(path);
-  MADAG result;
-
-  result.SetReferenceSequence(std::string{json["refseq"][1]});
+  MADAG result{std::string{json["refseq"][1]}};
 
   size_t id = 0;
   for ([[maybe_unused]] auto& i : json["nodes"]) {
