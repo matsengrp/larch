@@ -22,10 +22,10 @@ static void test_protobuf(const std::string& correct_path,
   merge.AddDAGs(tree_refs);
 
   assert_equal(correct_result.GetDAG().GetNodesCount(),
-               merge.GetResult().GetNodesCount(), "Nodes count");
+               merge.GetResult().GetDAG().GetNodesCount(), "Nodes count");
 
   assert_equal(correct_result.GetDAG().GetEdgesCount(),
-               merge.GetResult().GetEdgesCount(), "Edges count");
+               merge.GetResult().GetDAG().GetEdgesCount(), "Edges count");
 }
 
 static void test_five_trees() {
@@ -92,10 +92,10 @@ static void test_case_20d() {
   std::cout << " DAGs merged in " << merge_time.durationMs() << " ms. ";
 
   assert_equal(correct_result.GetDAG().GetNodesCount(),
-               merge.GetResult().GetNodesCount(), "Nodes count");
+               merge.GetResult().GetDAG().GetNodesCount(), "Nodes count");
 
   assert_equal(correct_result.GetDAG().GetEdgesCount(),
-               merge.GetResult().GetEdgesCount(), "Edges count");
+               merge.GetResult().GetDAG().GetEdgesCount(), "Edges count");
 }
 
 static void test_add_trees() {
@@ -123,10 +123,10 @@ static void test_add_trees() {
   merge.AddDAGs(tree_refs2);
 
   assert_equal(correct_result.GetDAG().GetNodesCount(),
-               merge.GetResult().GetNodesCount(), "Nodes count");
+               merge.GetResult().GetDAG().GetNodesCount(), "Nodes count");
 
   assert_equal(correct_result.GetDAG().GetEdgesCount(),
-               merge.GetResult().GetEdgesCount(), "Edges count");
+               merge.GetResult().GetDAG().GetEdgesCount(), "Edges count");
 }
 
 [[maybe_unused]] static const auto test0_added =

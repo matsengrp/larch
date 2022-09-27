@@ -57,8 +57,8 @@ class Merge {
    * Get the DAG resulting from merge
    * @{
    */
-  DAG& GetResult();
-  const DAG& GetResult() const;
+  MADAG& GetResult();
+  const MADAG& GetResult() const;
   /** @} */
 
   /**
@@ -82,9 +82,6 @@ class Merge {
   static std::vector<LeafSet> ComputeLeafSets(const MADAG& dag,
                                               const std::vector<NodeLabel>& labels);
 
-  // Externally owned reference sequence.
-  std::string_view reference_sequence_;
-
   // Vector of externally owned input DAGs.
   std::vector<std::reference_wrapper<MADAG>> trees_;
 
@@ -105,5 +102,5 @@ class Merge {
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;
 
   // Resulting DAG from merging the input DAGs.
-  DAG result_dag_;
+  MADAG result_dag_;
 };
