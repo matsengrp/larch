@@ -8,12 +8,11 @@
   std::cout << "Usage:\n";
   std::cout << "dag2dot -t,--tree-pb file\n";
   std::cout << "dag2dot [-c,--cgs] -d,--dag-pb file\n";
-  std::cout << "dag2dot [-m,--muts] -j,--dag-json file\n";
+  std::cout << "dag2dot -j,--dag-json file\n";
   std::cout << "  -t,--tree-pb   Input protobuf tree filename\n";
   std::cout << "  -d,--dag-pb    Input protobuf DAG filename\n";
   std::cout << "  -j,--dag-json  Input json DAG filename\n";
   std::cout << "  -c,--cgs       Compute compact genomes\n";
-  std::cout << "  -m,--muts      Compute edge mutations\n";
 
   std::exit(EXIT_SUCCESS);
 }
@@ -32,7 +31,6 @@ int main(int argc, char** argv) {
   InputType type = InputType::TreePB;
   std::string path = "";
   bool cgs = false;
-  bool muts = false;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -60,8 +58,6 @@ int main(int argc, char** argv) {
       path = *params.begin();
     } else if (name == "-c" or name == "--cgs") {
       cgs = true;
-    } else if (name == "-m" or name == "--muts") {
-      muts = true;
     } else {
       std::cerr << "Unknown argument.\n";
       Fail();
@@ -76,26 +72,17 @@ int main(int argc, char** argv) {
   MADAG dag;
   switch (type) {
     case InputType::TreePB:
-      dag = LoadTreeFromProtobuf(path);
+      dag = LoadTreeFromProtobuf(path, "");
       break;
     case InputType::DagPB:
       dag = LoadDAGFromProtobuf(path);
       if (cgs) {
         Assert(not dag.GetReferenceSequence().empty());
-        dag.GetCompactGenomes() = dag.ComputeCompactGenomes(dag.GetReferenceSequence());
+        dag.RecomputeCompactGenomes();
       }
       break;
     case InputType::DagJson:
       dag = LoadDAGFromJson(path);
-      if (muts) {
-        dag.GetEdgeMutations().resize(dag.GetDAG().GetEdgesCount());
-        for (Edge edge : dag.GetDAG().GetEdges()) {
-          auto [parent, child] = edge.GetNodeIds();
-          dag.GetEdgeMutations(edge) = CompactGenome::ToEdgeMutations(
-              dag.GetReferenceSequence(), dag.GetCompactGenomes().at(parent.value),
-              dag.GetCompactGenomes().at(child.value));
-        }
-      }
       break;
   }
   MADAGToDOT(dag, std::cout);

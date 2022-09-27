@@ -46,26 +46,26 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
   ProtoDAG::data data;
   Parse(data, path);
 
-  MADAG result;
-  result.GetReferenceSequence() = data.reference_seq();
+  MADAG result{data.reference_seq()};
 
   for (auto& i : data.node_names()) {
-    result.GetDAG().AddNode({static_cast<size_t>(i.node_id())});
+    result.AddNode({static_cast<size_t>(i.node_id())});
   }
 
   size_t edge_id = 0;
   for (auto& i : data.edges()) {
-    result.GetDAG().AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
-                            {static_cast<size_t>(i.child_node())},
-                            {static_cast<size_t>(i.parent_clade())});
+    result.AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
+                   {static_cast<size_t>(i.child_node())},
+                   {static_cast<size_t>(i.parent_clade())});
   }
 
-  result.GetDAG().BuildConnections();
+  result.BuildConnections();
 
-  result.GetEdgeMutations().resize(result.GetDAG().GetEdgesCount());
+  std::vector<EdgeMutations> edge_mutations;
+  edge_mutations.resize(result.GetDAG().GetEdgesCount());
   edge_id = 0;
   for (auto& i : data.edges()) {
-    EdgeMutations& muts = result.GetEdgeMutations().at(edge_id++);
+    EdgeMutations& muts = edge_mutations.at(edge_id++);
     for (auto& mut : i.edge_mutations()) {
       static const char decode[] = {'A', 'C', 'G', 'T'};
       Assert(mut.position() > 0);
@@ -74,39 +74,39 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
                                                      decode[mut.mut_nuc().Get(0)]};
     }
   }
+  result.SetEdgeMutations(std::move(edge_mutations));
   return result;
 }
 
-MADAG LoadTreeFromProtobuf(std::string_view path) {
+MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_sequence) {
   Parsimony::data data;
   Parse(data, path);
 
-  MADAG result;
+  MADAG result{reference_sequence};
 
   size_t edge_id = 0;
   std::unordered_map<size_t, size_t> num_children;
   ParseNewick(
       data.newick(),
       [&result](size_t id, std::string label, std::optional<double> branch_length) {
-        result.GetDAG().AddNode({id});
+        result.AddNode({id});
         std::ignore = label;
         std::ignore = branch_length;
       },
       [&result, &edge_id, &num_children](size_t parent, size_t child) {
-        result.GetDAG().AddEdge({edge_id++}, {parent}, {child},
-                                {num_children[parent]++});
+        result.AddEdge({edge_id++}, {parent}, {child}, {num_children[parent]++});
       });
-  result.GetDAG().BuildConnections();
+  result.BuildConnections();
 
-  result.GetEdgeMutations().resize(result.GetDAG().GetEdgesCount());
-
+  std::vector<EdgeMutations> edge_mutations;
+  edge_mutations.resize(result.GetDAG().GetEdgesCount());
   size_t muts_idx = 0;
   for (Node node : result.GetDAG().TraversePreOrder()) {
     const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
     if (node.IsRoot()) {
       continue;
     }
-    auto& edge_muts = result.GetEdgeMutations(node.GetSingleParent());
+    auto& edge_muts = edge_mutations.at(node.GetSingleParent().GetId().value);
     for (auto i :
          pb_muts |
              ranges::views::transform(
@@ -119,6 +119,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
       edge_muts.insert(i);
     }
   }
+  result.SetEdgeMutations(std::move(edge_mutations));
   return result;
 }
 
@@ -183,21 +184,19 @@ the clade in the parent node's clade_list from which this edge descends.
 
 MADAG LoadDAGFromJson(std::string_view path) {
   nlohmann::json json = LoadJson(path);
-  MADAG result;
-
-  result.GetReferenceSequence() = json["refseq"][1];
+  MADAG result{std::string{json["refseq"][1]}};
 
   size_t id = 0;
   for ([[maybe_unused]] auto& i : json["nodes"]) {
-    result.GetDAG().AddNode({id++});
+    result.AddNode({id++});
     size_t compact_genome_index = i[0];
-    result.GetCompactGenomes().push_back(GetCompactGenome(json, compact_genome_index));
+    result.AppendCompactGenome(GetCompactGenome(json, compact_genome_index));
   }
   id = 0;
   for (auto& i : json["edges"]) {
-    result.GetDAG().AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
+    result.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
   }
-  result.GetDAG().BuildConnections();
+  result.BuildConnections();
   return result;
 }
 

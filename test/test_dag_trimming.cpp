@@ -11,7 +11,7 @@
 
 static void test_dag_trimming(MADAG& dag, size_t expected_edges) {
   if (dag.GetEdgeMutations().empty()) {
-    dag.GetEdgeMutations() = dag.ComputeEdgeMutations(dag.GetReferenceSequence());
+    dag.RecomputeEdgeMutations();
   }
 
   SubtreeWeight<ParsimonyScore> weight{dag};

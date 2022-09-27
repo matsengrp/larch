@@ -38,8 +38,7 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(
 
 template <typename WeightOps>
 MADAG SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
-  MADAG result;
-  result.GetReferenceSequence() = dag_.GetReferenceSequence();
+  MADAG result{dag_.GetReferenceSequence()};
 
   ExtractTree(
       dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
@@ -54,8 +53,7 @@ MADAG SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
 
 template <typename WeightOps>
 MADAG SubtreeWeight<WeightOps>::SampleTree(WeightOps&& weight_ops) {
-  MADAG result;
-  result.GetReferenceSequence() = dag_.GetReferenceSequence();
+  MADAG result{dag_.GetReferenceSequence()};
 
   ExtractTree(
       dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
@@ -102,10 +100,10 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
   CladeIdx clade_idx{0};
 
   NodeId parent_id{result.GetDAG().GetNodesCount()};
-  result.GetDAG().AddNode(parent_id);
+  result.AddNode(parent_id);
 
   if (not input_dag.GetCompactGenomes().empty()) {
-    result.GetCompactGenomes().push_back(
+    result.AppendCompactGenome(
         input_dag.GetCompactGenomes().at(node.GetId().value).Copy());
   }
 
@@ -116,10 +114,10 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
     EdgeId edge_id{result.GetDAG().GetEdgesCount()};
     NodeId child_id{result.GetDAG().GetNodesCount()};
 
-    result.GetDAG().AddEdge(edge_id, parent_id, child_id, edge.GetClade());
+    result.AddEdge(edge_id, parent_id, child_id, edge.GetClade());
 
     if (not input_dag.GetEdgeMutations().empty()) {
-      result.GetEdgeMutations().push_back(
+      result.AppendEdgeMutations(
           input_dag.GetEdgeMutations().at(edge.GetId().value).Copy());
     }
 
@@ -128,6 +126,6 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
   }
 
   if (node.IsRoot()) {
-    result.GetDAG().BuildConnections();
+    result.BuildConnections();
   }
 }

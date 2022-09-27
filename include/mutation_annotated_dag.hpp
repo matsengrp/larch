@@ -25,11 +25,14 @@
 
 class MADAG {
  public:
+  MADAG() = default;
+  explicit MADAG(std::string_view reference_sequence);
+
   const DAG& GetDAG() const;
   /**
    * Get UA node sequence
    */
-  std::string_view GetReferenceSequence() const;
+  const std::string& GetReferenceSequence() const;
   /**
    * Edge mutations are ordered by edge ID
    */
@@ -39,27 +42,72 @@ class MADAG {
    */
   const std::vector<CompactGenome>& GetCompactGenomes() const;
 
-  DAG& GetDAG();
-  std::string& GetReferenceSequence();
-  std::vector<EdgeMutations>& GetEdgeMutations();
-  std::vector<CompactGenome>& GetCompactGenomes();
+  /**
+   * Clears all stored edge mutations
+   */
+  void RemoveEdgeMutations();
+
+  /**
+   * Clears all stored compact genomes
+   */
+  void RemoveCompactGenomes();
+
+  /**
+   * Compute compact genomes from stored edge mutatons, and store internally
+   */
+  void RecomputeCompactGenomes();
+
+  /**
+   * Compute compact genomes from stored edge mutatons, doesn't change the existing
+   * stored mutations
+   */
+  [[nodiscard]] std::vector<CompactGenome> ComputeCompactGenomes() const;
 
   /**
    * Compute compact genomes, ordered by node ID, from edge mutations
    */
-  [[nodiscard]] std::vector<CompactGenome> ComputeCompactGenomes(
-      std::string_view reference_sequence) const;
+  [[nodiscard]] static std::vector<CompactGenome> ComputeCompactGenomes(
+      std::string_view reference_sequence, const DAG& dag,
+      const std::vector<EdgeMutations>& edge_mutations);
+  /**
+   * Compute edge mutations from stored compact genomes, and store internally
+   */
+  void RecomputeEdgeMutations();
+
+  /**
+   * Compute edge mutations from stored compact genomes, doesn't change the existing
+   * stored mutations
+   */
+  [[nodiscard]] std::vector<EdgeMutations> ComputeEdgeMutations() const;
 
   /**
    * Compute edge mutations, ordered by edge ID, from compact genomes
    */
-  [[nodiscard]] std::vector<EdgeMutations> ComputeEdgeMutations(
-      std::string_view reference_sequence) const;
+  [[nodiscard]] static std::vector<EdgeMutations> ComputeEdgeMutations(
+      std::string_view reference_sequence, const DAG& dag,
+      const std::vector<CompactGenome>& compact_genomes);
 
   const EdgeMutations& GetEdgeMutations(EdgeId edge_id) const;
-  EdgeMutations& GetEdgeMutations(EdgeId edge_id);
 
  private:
+  friend MADAG LoadDAGFromProtobuf(std::string_view);
+  friend MADAG LoadTreeFromProtobuf(std::string_view, std::string_view);
+  friend MADAG LoadDAGFromJson(std::string_view);
+  friend MADAG MakeSyntheticDAG();
+  template <typename>
+  friend class SubtreeWeight;
+  friend class Merge;
+
+  MutableNode AddNode(NodeId id);
+  MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
+  MutableEdge AppendEdge(NodeId parent, NodeId child, CladeIdx clade);
+  void BuildConnections();
+  void InitializeNodes(size_t nodes_count);
+  void SetEdgeMutations(std::vector<EdgeMutations>&& edge_mutations);
+  void AppendEdgeMutations(EdgeMutations&& edge_mutations);
+  void AppendCompactGenome(CompactGenome&& compact_genome);
+  CompactGenome&& ExtractCompactGenome(NodeId node);
+
   DAG dag_;
   std::string reference_sequence_;
   std::vector<EdgeMutations> edge_mutations_;
