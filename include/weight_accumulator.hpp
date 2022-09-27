@@ -7,9 +7,11 @@
   This should correctly accumulate weights for any WeightOps for which
   WeightOps::WithinCladeAccumOptimum called on a list containing a single Weight returns
   only that weight, and for which WeightOps::BetweenClades can be decomposed as a
-  commutative binary operation on any list of Weights. (TODO this last requirement could be avoided by another implementation)
+  commutative binary operation on any list of Weights. (TODO this last requirement could
+be avoided by another implementation)
 
-  WeightAccumulator expects a WeightOps type with the same data/methods as the following example:
+  WeightAccumulator expects a WeightOps type with the same data/methods as the following
+example:
 
   struct TreeWeightOps {
   using Weight = size_t;  // Provide any weight type
@@ -27,7 +29,9 @@ value assigned to each edge
   inline Weight AboveNode(Weight edgweight, Weight childnodeweight);
 };
 
-  Note that unlike for the template parameter to SubtreeWeight, no WithinCladeAccumOptimum method is needed, since each child clade in a tree may have only one descendant edge.
+  Note that unlike for the template parameter to SubtreeWeight, no
+WithinCladeAccumOptimum method is needed, since each child clade in a tree may have only
+one descendant edge.
 
  */
 
@@ -67,7 +71,8 @@ class WeightCounter {
 };
 
 template <typename WeightOps>
-std::ostream& operator<<(std::ostream& os, const WeightCounter<WeightOps>& weight_counter);
+std::ostream& operator<<(std::ostream& os,
+                         const WeightCounter<WeightOps>& weight_counter);
 
 template <typename WeightOps>
 struct WeightAccumulator {

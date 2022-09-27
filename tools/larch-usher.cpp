@@ -132,13 +132,16 @@ int main(int argc, char** argv) {
     merge.AddDAGs({optimized_dags.back()});
     SubtreeWeight<WeightAccumulator<ParsimonyScore>> weightcounter{merge.GetResult()};
     merge.GetResult().GetEdgeMutations() = merge.ComputeResultEdgeMutations();
-    std::cout << "Parsimony scores of trees in DAG: " << weightcounter.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {}) << "\n";
+    std::cout << "Parsimony scores of trees in DAG: "
+              << weightcounter.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(),
+                                                  {})
+              << "\n";
 
     SubtreeWeight<TreeCount> treecount{merge.GetResult()};
-    std::cout << "Total trees in DAG: " << treecount.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {}) << "\n";
+    std::cout << "Total trees in DAG: "
+              << treecount.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {})
+              << "\n";
   }
-
-
 
   StoreDAGToProtobuf(merge.GetResult().GetDAG(), merge.GetReferenceSequence(),
                      merge.ComputeResultEdgeMutations(), output_dag_path);
