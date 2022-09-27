@@ -26,6 +26,11 @@ void MADAG::AppendEdgeMutations(EdgeMutations&& edge_mutations) {
   edge_mutations_.push_back(std::forward<EdgeMutations>(edge_mutations));
 }
 
+void MADAG::RemoveEdgeMutations() {
+  edge_mutations_.resize(0);
+  edge_mutations_.shrink_to_fit();
+}
+
 void MADAG::RemoveCompactGenomes() {
   compact_genomes_.resize(0);
   compact_genomes_.shrink_to_fit();
@@ -39,8 +44,6 @@ CompactGenome&& MADAG::ExtractCompactGenome(NodeId node) {
   return std::move(compact_genomes_.at(node.value));
 }
 
-DAG& MADAG::GetDAG() { return dag_; }
-
 void MADAG::RecomputeCompactGenomes() { compact_genomes_ = ComputeCompactGenomes(); }
 
 std::vector<CompactGenome> MADAG::ComputeCompactGenomes() const {
@@ -51,7 +54,7 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
     std::string_view reference_sequence, const DAG& dag,
     const std::vector<EdgeMutations>& edge_mutations) {
   Assert(not reference_sequence.empty());
-  Assert(not edge_mutations.empty());
+  Assert(edge_mutations.size() == dag.GetEdgesCount());
   std::vector<CompactGenome> result;
   result.resize(dag.GetNodesCount());
   auto ComputeCG = [&](auto& self, Node node) {
@@ -86,7 +89,7 @@ std::vector<EdgeMutations> MADAG::ComputeEdgeMutations(
     std::string_view reference_sequence, const DAG& dag,
     const std::vector<CompactGenome>& compact_genomes) {
   Assert(not reference_sequence.empty());
-  Assert(not compact_genomes.empty());
+  Assert(compact_genomes.size() == dag.GetNodesCount());
   std::vector<EdgeMutations> result;
   for (auto [parent, child] : dag.GetEdges()) {
     result.emplace_back(CompactGenome::ToEdgeMutations(
@@ -103,3 +106,17 @@ const EdgeMutations& MADAG::GetEdgeMutations(EdgeId edge_id) const {
 EdgeMutations& MADAG::GetEdgeMutations(EdgeId edge_id) {
   return edge_mutations_.at(edge_id.value);
 }
+
+MutableNode MADAG::AddNode(NodeId id) { return dag_.AddNode(id); }
+
+MutableEdge MADAG::AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade) {
+  return dag_.AddEdge(id, parent, child, clade);
+}
+
+MutableEdge MADAG::AppendEdge(NodeId parent, NodeId child, CladeIdx clade) {
+  return dag_.AppendEdge(parent, child, clade);
+}
+
+void MADAG::BuildConnections() { dag_.BuildConnections(); }
+
+void MADAG::InitializeNodes(size_t nodes_count) { dag_.InitializeNodes(nodes_count); }

@@ -50,17 +50,17 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
   result.SetReferenceSequence(data.reference_seq());
 
   for (auto& i : data.node_names()) {
-    result.GetDAG().AddNode({static_cast<size_t>(i.node_id())});
+    result.AddNode({static_cast<size_t>(i.node_id())});
   }
 
   size_t edge_id = 0;
   for (auto& i : data.edges()) {
-    result.GetDAG().AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
-                            {static_cast<size_t>(i.child_node())},
-                            {static_cast<size_t>(i.parent_clade())});
+    result.AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
+                   {static_cast<size_t>(i.child_node())},
+                   {static_cast<size_t>(i.parent_clade())});
   }
 
-  result.GetDAG().BuildConnections();
+  result.BuildConnections();
 
   std::vector<EdgeMutations> edge_mutations;
   edge_mutations.resize(result.GetDAG().GetEdgesCount());
@@ -90,15 +90,14 @@ MADAG LoadTreeFromProtobuf(std::string_view path) {
   ParseNewick(
       data.newick(),
       [&result](size_t id, std::string label, std::optional<double> branch_length) {
-        result.GetDAG().AddNode({id});
+        result.AddNode({id});
         std::ignore = label;
         std::ignore = branch_length;
       },
       [&result, &edge_id, &num_children](size_t parent, size_t child) {
-        result.GetDAG().AddEdge({edge_id++}, {parent}, {child},
-                                {num_children[parent]++});
+        result.AddEdge({edge_id++}, {parent}, {child}, {num_children[parent]++});
       });
-  result.GetDAG().BuildConnections();
+  result.BuildConnections();
 
   std::vector<EdgeMutations> edge_mutations;
   edge_mutations.resize(result.GetDAG().GetEdgesCount());
@@ -192,15 +191,15 @@ MADAG LoadDAGFromJson(std::string_view path) {
 
   size_t id = 0;
   for ([[maybe_unused]] auto& i : json["nodes"]) {
-    result.GetDAG().AddNode({id++});
+    result.AddNode({id++});
     size_t compact_genome_index = i[0];
     result.AppendCompactGenome(GetCompactGenome(json, compact_genome_index));
   }
   id = 0;
   for (auto& i : json["edges"]) {
-    result.GetDAG().AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
+    result.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
   }
-  result.GetDAG().BuildConnections();
+  result.BuildConnections();
   return result;
 }
 

@@ -42,11 +42,10 @@ class MADAG {
   void SetReferenceSequence(std::string_view reference_sequence);
   void SetEdgeMutations(std::vector<EdgeMutations>&& edge_mutations);
   void AppendEdgeMutations(EdgeMutations&& edge_mutations);
+  void RemoveEdgeMutations();
   void RemoveCompactGenomes();
   void AppendCompactGenome(CompactGenome&& compact_genome);
   CompactGenome&& ExtractCompactGenome(NodeId node);
-
-  DAG& GetDAG();
 
   void RecomputeCompactGenomes();
   [[nodiscard]] std::vector<CompactGenome> ComputeCompactGenomes() const;
@@ -72,6 +71,20 @@ class MADAG {
   EdgeMutations& GetEdgeMutations(EdgeId edge_id);
 
  private:
+  friend MADAG LoadDAGFromProtobuf(std::string_view);
+  friend MADAG LoadTreeFromProtobuf(std::string_view);
+  friend MADAG LoadDAGFromJson(std::string_view);
+  friend MADAG MakeSyntheticDAG();
+  template <typename>
+  friend class SubtreeWeight;
+  friend class Merge;
+
+  MutableNode AddNode(NodeId id);
+  MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
+  MutableEdge AppendEdge(NodeId parent, NodeId child, CladeIdx clade);
+  void BuildConnections();
+  void InitializeNodes(size_t nodes_count);
+
   DAG dag_;
   std::string reference_sequence_;
   std::vector<EdgeMutations> edge_mutations_;

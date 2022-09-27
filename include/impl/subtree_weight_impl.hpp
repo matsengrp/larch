@@ -102,7 +102,7 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
   CladeIdx clade_idx{0};
 
   NodeId parent_id{result.GetDAG().GetNodesCount()};
-  result.GetDAG().AddNode(parent_id);
+  result.AddNode(parent_id);
 
   if (not input_dag.GetCompactGenomes().empty()) {
     result.AppendCompactGenome(
@@ -116,7 +116,7 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
     EdgeId edge_id{result.GetDAG().GetEdgesCount()};
     NodeId child_id{result.GetDAG().GetNodesCount()};
 
-    result.GetDAG().AddEdge(edge_id, parent_id, child_id, edge.GetClade());
+    result.AddEdge(edge_id, parent_id, child_id, edge.GetClade());
 
     if (not input_dag.GetEdgeMutations().empty()) {
       result.AppendEdgeMutations(
@@ -128,6 +128,6 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
   }
 
   if (node.IsRoot()) {
-    result.GetDAG().BuildConnections();
+    result.BuildConnections();
   }
 }

@@ -5,42 +5,42 @@ MADAG MakeSyntheticDAG() {
 
   result.SetReferenceSequence("ACGTACGT");
 
-  result.GetDAG().InitializeNodes(31);
-  result.GetDAG().AppendEdge({0}, {1}, {0});    // 0
-  result.GetDAG().AppendEdge({1}, {2}, {0});    // 1
-  result.GetDAG().AppendEdge({1}, {3}, {1});    // 2
-  result.GetDAG().AppendEdge({2}, {4}, {0});    // 3
-  result.GetDAG().AppendEdge({2}, {5}, {1});    // 4
-  result.GetDAG().AppendEdge({2}, {6}, {2});    // 5
-  result.GetDAG().AppendEdge({4}, {7}, {0});    // 6
-  result.GetDAG().AppendEdge({4}, {8}, {1});    // 7
-  result.GetDAG().AppendEdge({5}, {16}, {0});   // 8
-  result.GetDAG().AppendEdge({5}, {9}, {1});    // 9
-  result.GetDAG().AppendEdge({5}, {11}, {2});   // 10
-  result.GetDAG().AppendEdge({6}, {10}, {0});   // 11
-  result.GetDAG().AppendEdge({6}, {11}, {1});   // 12
-  result.GetDAG().AppendEdge({7}, {12}, {0});   // 13
-  result.GetDAG().AppendEdge({7}, {13}, {1});   // 14
-  result.GetDAG().AppendEdge({8}, {14}, {0});   // 15
-  result.GetDAG().AppendEdge({8}, {15}, {1});   // 16
-  result.GetDAG().AppendEdge({8}, {16}, {2});   // 17
-  result.GetDAG().AppendEdge({9}, {17}, {0});   // 18
-  result.GetDAG().AppendEdge({9}, {18}, {1});   // 19
-  result.GetDAG().AppendEdge({9}, {19}, {2});   // 20
-  result.GetDAG().AppendEdge({11}, {20}, {0});  // 21
-  result.GetDAG().AppendEdge({11}, {21}, {1});  // 22
-  result.GetDAG().AppendEdge({15}, {22}, {0});  // 23
-  result.GetDAG().AppendEdge({15}, {23}, {1});  // 24
-  result.GetDAG().AppendEdge({18}, {24}, {0});  // 25
-  result.GetDAG().AppendEdge({18}, {25}, {1});  // 26
-  result.GetDAG().AppendEdge({20}, {25}, {0});  // 27
-  result.GetDAG().AppendEdge({20}, {26}, {1});  // 28
-  result.GetDAG().AppendEdge({22}, {27}, {0});  // 29
-  result.GetDAG().AppendEdge({22}, {28}, {1});  // 30
-  result.GetDAG().AppendEdge({28}, {29}, {0});  // 31
-  result.GetDAG().AppendEdge({28}, {30}, {1});  // 32
+  result.InitializeNodes(31);
+  result.AppendEdge({0}, {1}, {0});    // 0
+  result.AppendEdge({1}, {2}, {0});    // 1
+  result.AppendEdge({1}, {3}, {1});    // 2
+  result.AppendEdge({2}, {4}, {0});    // 3
+  result.AppendEdge({2}, {5}, {1});    // 4
+  result.AppendEdge({2}, {6}, {2});    // 5
+  result.AppendEdge({4}, {7}, {0});    // 6
+  result.AppendEdge({4}, {8}, {1});    // 7
+  result.AppendEdge({5}, {16}, {0});   // 8
+  result.AppendEdge({5}, {9}, {1});    // 9
+  result.AppendEdge({5}, {11}, {2});   // 10
+  result.AppendEdge({6}, {10}, {0});   // 11
+  result.AppendEdge({6}, {11}, {1});   // 12
+  result.AppendEdge({7}, {12}, {0});   // 13
+  result.AppendEdge({7}, {13}, {1});   // 14
+  result.AppendEdge({8}, {14}, {0});   // 15
+  result.AppendEdge({8}, {15}, {1});   // 16
+  result.AppendEdge({8}, {16}, {2});   // 17
+  result.AppendEdge({9}, {17}, {0});   // 18
+  result.AppendEdge({9}, {18}, {1});   // 19
+  result.AppendEdge({9}, {19}, {2});   // 20
+  result.AppendEdge({11}, {20}, {0});  // 21
+  result.AppendEdge({11}, {21}, {1});  // 22
+  result.AppendEdge({15}, {22}, {0});  // 23
+  result.AppendEdge({15}, {23}, {1});  // 24
+  result.AppendEdge({18}, {24}, {0});  // 25
+  result.AppendEdge({18}, {25}, {1});  // 26
+  result.AppendEdge({20}, {25}, {0});  // 27
+  result.AppendEdge({20}, {26}, {1});  // 28
+  result.AppendEdge({22}, {27}, {0});  // 29
+  result.AppendEdge({22}, {28}, {1});  // 30
+  result.AppendEdge({28}, {29}, {0});  // 31
+  result.AppendEdge({28}, {30}, {1});  // 32
 
-  result.GetDAG().BuildConnections();
+  result.BuildConnections();
 
   std::vector<EdgeMutations> edge_mutations;
   edge_mutations.resize(result.GetDAG().GetEdgesCount());
