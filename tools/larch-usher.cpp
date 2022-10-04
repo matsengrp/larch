@@ -8,13 +8,17 @@
 #include "arguments.hpp"
 #include "dag_loader.hpp"
 #include "mutation_annotated_dag.hpp"
+#include "src/matOptimize/tree_rearrangement_internal.hpp"
 #include "subtree_weight.hpp"
 #include "weight_accumulator.hpp"
 #include "tree_count.hpp"
 #include "parsimony_score.hpp"
 #include "merge.hpp"
 #include <mpi.h>
-MADAG optimize_dag_direct(const MADAG& dag);
+
+#include "../deps/usher/src/matOptimize/Profitable_Moves_Enumerators/Profitable_Moves_Enumerators.hpp"
+
+MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback);
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
   std::cout << "larch-usher -i,--input file -o,--output file [-m,--matopt file] "
@@ -128,7 +132,8 @@ int main(int argc, char** argv) {
     MADAG sample = weight.SampleTree({});
     check_edge_mutations(sample);
     MADAG result;
-    result = optimize_dag_direct(sample);
+    Move_Found_Callback callback;
+    result = optimize_dag_direct(sample, callback);
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back()});
     SubtreeWeight<WeightAccumulator<ParsimonyScore>> weightcounter{merge.GetResult()};

@@ -134,7 +134,7 @@ void check_MAT_MADAG_Eq(const MAT::Tree& tree, const MADAG& init) {
   compareDAG(converted_dag.GetDAG().GetRoot(), init.GetDAG().GetRoot(),
              converted_dag.GetEdgeMutations(), converted_dag.GetEdgeMutations());
 }
-MADAG optimize_dag_direct(const MADAG& dag) {
+MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
   auto dag_ref = dag.GetReferenceSequence();
   MAT::Mutation::refs.resize(dag_ref.size() + 1);
   for (size_t ref_idx = 0; ref_idx < dag_ref.size(); ref_idx++) {
@@ -157,6 +157,7 @@ MADAG optimize_dag_direct(const MADAG& dag) {
     optimize_inner_loop(all_nodes,             // nodes to search
                         tree,                  // tree
                         1 << rad_exp,          // radius
+                        callback,
                         true,                  // allow drift
                         true,                  // search all directions
                         5,                     // minutes between save
@@ -167,7 +168,7 @@ MADAG optimize_dag_direct(const MADAG& dag) {
                         1,                     // current iteration
                         "intermediate",        // intermediate template
                         "intermediate_base",   // intermediate base name
-                        "intermediate_newick"  // intermediate newick name
+                        "intermediate_newick" // intermediate newick name
     );
   }
   MADAG result = build_madag_from_mat(tree, dag.GetReferenceSequence());
