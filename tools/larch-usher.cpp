@@ -65,7 +65,15 @@ static void CallMatOptimize(std::string matoptimize_path, std::string input,
     throw std::runtime_error("Fork failed");
   }
 }
+
 void check_edge_mutations(const MADAG& madag);
+
+struct Larch_Move_Found_Callback : public Move_Found_Callback {
+    bool operator()(Profitable_Moves move,int best_score_change,std::vector<Node_With_Major_Allele_Set_Change>& node_with_major_allele_set_change) override {
+        return move.score_change <= best_score_change;
+    }
+};
+
 int main(int argc, char** argv) {
   Arguments args = GetArguments(argc, argv);
   int ignored;
@@ -132,7 +140,7 @@ int main(int argc, char** argv) {
     MADAG sample = weight.SampleTree({});
     check_edge_mutations(sample);
     MADAG result;
-    Move_Found_Callback callback;
+    Larch_Move_Found_Callback callback;
     result = optimize_dag_direct(sample, callback);
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back()});
