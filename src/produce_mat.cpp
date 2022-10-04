@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <iostream>
 #include <charconv>
+#include <string_view>
 #include <vector>
 
 #include <unistd.h>
@@ -99,8 +100,8 @@ void build_madag_from_mat_helper(MAT::Node* par_node, size_t par_node_idx,
     build_madag_from_mat_helper(child_node, curr_idx, curr_idx, dag, edge_idx);
   }
 }
-MADAG build_madag_from_mat(const MAT::Tree& tree) {
-  MADAG result;
+MADAG build_madag_from_mat(const MAT::Tree& tree, std::string_view reference_sequence) {
+  MADAG result{reference_sequence};
   result.ResizeEdgeMutations(tree.get_size_upper());
   size_t node_count = 0;
   size_t edge_count = 0;
@@ -129,7 +130,7 @@ void compareDAG(const Node dag1, const Node dag2,
   }
 }
 void check_MAT_MADAG_Eq(const MAT::Tree& tree, const MADAG& init) {
-  MADAG converted_dag = build_madag_from_mat(tree);
+  MADAG converted_dag = build_madag_from_mat(tree, init.GetReferenceSequence());
   compareDAG(converted_dag.GetDAG().GetRoot(), init.GetDAG().GetRoot(),
              converted_dag.GetEdgeMutations(), converted_dag.GetEdgeMutations());
 }
@@ -169,7 +170,7 @@ MADAG optimize_dag_direct(const MADAG& dag) {
                         "intermediate_newick"  // intermediate newick name
     );
   }
-  MADAG result = build_madag_from_mat(tree);
+  MADAG result = build_madag_from_mat(tree, dag.GetReferenceSequence());
   tree.delete_nodes();
   return result;
 }

@@ -65,7 +65,6 @@ void check_edge_mutations(const MADAG& madag);
 int main(int argc, char** argv) {
   Arguments args = GetArguments(argc, argv);
   int ignored;
-  auto init_result = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
   std::string input_dag_path = "";
   std::string output_dag_path = "";
   std::string matoptimize_path = "matOptimize";
@@ -113,6 +112,8 @@ int main(int argc, char** argv) {
     std::cerr << "Path to output DAG not specified.\n";
     Fail();
   }
+
+  auto init_result = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
 
   MADAG input_dag = LoadDAGFromProtobuf(input_dag_path);
   Merge merge{input_dag.GetReferenceSequence()};
