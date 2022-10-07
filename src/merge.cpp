@@ -1,4 +1,5 @@
 #include "merge.hpp"
+#include "common.hpp"
 
 Merge::Merge(std::string_view reference_sequence) : result_dag_{reference_sequence} {}
 
@@ -44,6 +45,10 @@ const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
   return result_nodes_;
 }
 
+const std::vector<NodeLabel>& Merge::GetResultNodeLabels() const {
+  return result_node_labels_;
+}
+
 void Merge::ComputeResultEdgeMutations() {
   std::vector<EdgeMutations> result;
   result.resize(result_dag_.GetDAG().GetEdgesCount());
@@ -58,6 +63,10 @@ void Merge::ComputeResultEdgeMutations() {
                                           child);
   }
   result_dag_.SetEdgeMutations(std::move(result));
+}
+
+bool Merge::ContainsLeafset(const LeafSet& leafset) const {
+  return all_leaf_sets_.find(leafset) != all_leaf_sets_.end();
 }
 
 void Merge::ComputeCompactGenomes(const std::vector<size_t>& tree_idxs) {
@@ -93,6 +102,7 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
     for (auto label : labels) {
       std::unique_lock<std::mutex> lock{mtx};
       if (result_nodes_.try_emplace(label, node_id).second) {
+        GetOrInsert(result_node_labels_, node_id) = label;
         ++node_id.value;
       }
     }

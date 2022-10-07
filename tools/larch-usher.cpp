@@ -8,6 +8,9 @@
 #include "arguments.hpp"
 #include "dag_loader.hpp"
 #include "mutation_annotated_dag.hpp"
+#include "node.hpp"
+#include "range/v3/algorithm/sort.hpp"
+#include "range/v3/algorithm/unique.hpp"
 #include "src/matOptimize/tree_rearrangement_internal.hpp"
 #include "subtree_weight.hpp"
 #include "weight_accumulator.hpp"
@@ -69,9 +72,36 @@ static void CallMatOptimize(std::string matoptimize_path, std::string input,
 void check_edge_mutations(const MADAG& madag);
 
 struct Larch_Move_Found_Callback : public Move_Found_Callback {
+    Larch_Move_Found_Callback(const Merge& merge, const MADAG& sample, const std::vector<NodeId>& sample_dag_ids) :
+      merge_{merge}, sample_{sample}, sample_dag_ids_{sample_dag_ids} {}
     bool operator()(Profitable_Moves move,int best_score_change,std::vector<Node_With_Major_Allele_Set_Change>& node_with_major_allele_set_change) override {
-        return move.score_change <= best_score_change;
+        NodeLabel src_label = merge_.GetResultNodeLabels().at(sample_dag_ids_.at(move.src->node_id).value);
+        NodeLabel dst_label = merge_.GetResultNodeLabels().at(sample_dag_ids_.at(move.dst->node_id).value);
+
+        std::vector<std::vector<const CompactGenome*>> clades = src_label.GetLeafSet()->GetClades();
+
+        // Get the union of src and dst leafsets:
+        size_t clade_idx = 0;
+        for (auto& i : dst_label.GetLeafSet()->GetClades()) {
+          if (clade_idx >= clades.size()) {
+            break;
+          }
+          auto& clade = clades.at(clade_idx++);
+          clade.insert(clade.end(), i.begin(), i.end());
+        }
+
+        for (auto& i : clades) {
+          ranges::sort(i);
+          ranges::unique(i);
+        }
+        ranges::sort(clades);
+
+        return not merge_.ContainsLeafset(std::move(clades));
+        //return move.score_change <= best_score_change;
     }
+    const Merge& merge_;
+    const MADAG& sample_;
+    const std::vector<NodeId>& sample_dag_ids_;
 };
 
 int main(int argc, char** argv) {
@@ -137,10 +167,10 @@ int main(int argc, char** argv) {
               << " #######\n";
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
-    MADAG sample = weight.SampleTree({});
+    auto [sample, dag_ids] = weight.SampleTree({});
     check_edge_mutations(sample);
     MADAG result;
-    Larch_Move_Found_Callback callback;
+    Larch_Move_Found_Callback callback{merge, sample, dag_ids};
     result = optimize_dag_direct(sample, callback);
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back()});

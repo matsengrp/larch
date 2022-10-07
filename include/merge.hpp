@@ -66,10 +66,14 @@ class Merge {
    */
   const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
 
+  const std::vector<NodeLabel>& GetResultNodeLabels() const;
+
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
    */
   void ComputeResultEdgeMutations();
+
+  bool ContainsLeafset(const LeafSet& leafset) const;
 
  private:
   void ComputeCompactGenomes(const std::vector<size_t>& tree_idxs);
@@ -96,6 +100,7 @@ class Merge {
 
   // Node ids of the resulting DAG's nodes.
   std::unordered_map<NodeLabel, NodeId> result_nodes_;
+  std::vector<NodeLabel> result_node_labels_;
 
   // Edge ids of the resulting DAG's edges.
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;
