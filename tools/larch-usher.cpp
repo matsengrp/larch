@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <charconv>
 
 #include <unistd.h>
@@ -29,6 +30,7 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback);
   std::cout << "  -i,--input   Path to input DAG\n";
   std::cout << "  -o,--output  Path to output DAG\n";
   std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
+  std::cout << "  -l,--logfile  Name for logging csv file. Default: logfile.csv\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
 
   std::exit(EXIT_SUCCESS);
@@ -110,6 +112,7 @@ int main(int argc, char** argv) {
   std::string input_dag_path = "";
   std::string output_dag_path = "";
   std::string matoptimize_path = "matOptimize";
+  std::string logfile_path = "logfile.csv";
   size_t count = 1;
 
   for (auto [name, params] : args) {
@@ -139,6 +142,12 @@ int main(int argc, char** argv) {
         Fail();
       }
       count = ParseNumber(*params.begin());
+    } else if (name == "-l" or name == "--logfile") {
+      if (params.empty()) {
+        std::cerr << "Logfile name not specified.\n";
+        Fail();
+      }
+      logfile_path = *params.begin();
     } else {
       std::cerr << "Unknown argument.\n";
       Fail();
@@ -157,10 +166,36 @@ int main(int argc, char** argv) {
 
   auto init_result = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
 
+  std::ofstream logfile;
+  logfile.open(logfile_path);
+  logfile << "Iteration\tNTrees\tMaxParsimony\tNTreesMaxParsimony";
+
+
   MADAG input_dag = LoadDAGFromProtobuf(input_dag_path);
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
   std::vector<MADAG> optimized_dags;
+
+  auto logger = [&merge, &logfile](size_t iteration) {
+      SubtreeWeight<WeightAccumulator<ParsimonyScore>> weightcounter{merge.GetResult()};
+      merge.ComputeResultEdgeMutations();
+      auto parsimonyscores = weightcounter.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {});
+
+      std::cout << "Parsimony scores of trees in DAG: "
+                << parsimonyscores
+                << "\n";
+
+      SubtreeWeight<TreeCount> treecount{merge.GetResult()};
+      auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {});
+      std::cout << "Total trees in DAG: "
+                << ntrees
+                << "\n";
+      logfile << '\n'
+              << iteration << '\t'
+              << ntrees << '\t'
+              << parsimonyscores.GetWeights().begin()->first << '\t'
+              << parsimonyscores.GetWeights().begin()->second << '\t';
+  };
 
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)
@@ -174,19 +209,11 @@ int main(int argc, char** argv) {
     result = optimize_dag_direct(sample, callback);
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back()});
-    SubtreeWeight<WeightAccumulator<ParsimonyScore>> weightcounter{merge.GetResult()};
-    merge.ComputeResultEdgeMutations();
-    std::cout << "Parsimony scores of trees in DAG: "
-              << weightcounter.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(),
-                                                  {})
-              << "\n";
 
-    SubtreeWeight<TreeCount> treecount{merge.GetResult()};
-    std::cout << "Total trees in DAG: "
-              << treecount.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {})
-              << "\n";
+    logger(i + 1);
   }
 
+  logfile.close();
   StoreDAGToProtobuf(merge.GetResult().GetDAG(),
                      merge.GetResult().GetReferenceSequence(),
                      merge.GetResult().GetEdgeMutations(), output_dag_path);
