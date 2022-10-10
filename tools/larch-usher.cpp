@@ -125,8 +125,9 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
                            .GetLeafSet()
                            ->GetClades();
 
-    return not merge_.ContainsLeafset(clades_union(src_clades, dst_clades)) or
-           not merge_.ContainsLeafset(clades_difference(src_clades, dst_clades));
+    return false;
+    /* return not merge_.ContainsLeafset(clades_union(src_clades, dst_clades)) or */
+    /*        not merge_.ContainsLeafset(clades_difference(src_clades, dst_clades)); */
   }
   const Merge& merge_;
   const MADAG& sample_;
@@ -223,6 +224,7 @@ int main(int argc, char** argv) {
               << parsimonyscores.GetWeights().begin()->first << '\t'
               << parsimonyscores.GetWeights().begin()->second << '\t';
   };
+  logger(0);
 
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)
