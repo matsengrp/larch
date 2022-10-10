@@ -154,9 +154,9 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
   for (size_t rad_exp = 1; (1 << rad_exp) <= ddepth; rad_exp++) {
     std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
 
-    optimize_inner_loop(all_nodes,             // nodes to search
-                        tree,                  // tree
-                        1 << rad_exp,          // radius
+    optimize_inner_loop(all_nodes,     // nodes to search
+                        tree,          // tree
+                        1 << rad_exp,  // radius
                         callback,
                         true,                  // allow drift
                         true,                  // search all directions
@@ -168,7 +168,7 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
                         1,                     // current iteration
                         "intermediate",        // intermediate template
                         "intermediate_base",   // intermediate base name
-                        "intermediate_newick" // intermediate newick name
+                        "intermediate_newick"  // intermediate newick name
     );
   }
   MADAG result = build_madag_from_mat(tree, dag.GetReferenceSequence());
