@@ -125,9 +125,8 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
                            .GetLeafSet()
                            ->GetClades();
 
-    return false;
-    /* return not merge_.ContainsLeafset(clades_union(src_clades, dst_clades)) or */
-    /*        not merge_.ContainsLeafset(clades_difference(src_clades, dst_clades)); */
+    return not merge_.ContainsLeafset(clades_union(src_clades, dst_clades)) or
+           not merge_.ContainsLeafset(clades_difference(src_clades, dst_clades));
   }
   const Merge& merge_;
   const MADAG& sample_;
