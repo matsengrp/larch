@@ -11,6 +11,7 @@
 #include "node.hpp"
 #include "range/v3/algorithm/sort.hpp"
 #include "range/v3/algorithm/unique.hpp"
+#include "range/v3/view/zip.hpp"
 #include "src/matOptimize/tree_rearrangement_internal.hpp"
 #include "subtree_weight.hpp"
 #include "weight_accumulator.hpp"
@@ -71,37 +72,63 @@ static void CallMatOptimize(std::string matoptimize_path, std::string input,
 
 void check_edge_mutations(const MADAG& madag);
 
+std::vector<std::vector<const CompactGenome*>> clades_union(
+    const std::vector<std::vector<const CompactGenome*>>& lhs,
+    const std::vector<std::vector<const CompactGenome*>>& rhs) {
+  std::vector<std::vector<const CompactGenome*>> result;
+
+  for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
+    std::vector<const CompactGenome*> clade{lhs_clade};
+    clade.insert(clade.end(), rhs_clade.begin(), rhs_clade.end());
+    ranges::sort(clade);
+    ranges::unique(clade);
+    result.push_back(std::move(clade));
+  }
+
+  ranges::sort(result);
+  return result;
+}
+
+std::vector<std::vector<const CompactGenome*>> clades_difference(
+    const std::vector<std::vector<const CompactGenome*>>& lhs,
+    const std::vector<std::vector<const CompactGenome*>>& rhs) {
+  std::vector<std::vector<const CompactGenome*>> result;
+
+  for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
+    std::vector<const CompactGenome*> clade;
+    std::set_difference(lhs_clade.begin(), lhs_clade.end(), rhs_clade.begin(),
+                        rhs_clade.end(), std::inserter(clade, clade.begin()));
+    ranges::sort(clade);
+    ranges::unique(clade);
+    result.push_back(std::move(clade));
+  }
+
+  ranges::sort(result);
+  return result;
+}
+
 struct Larch_Move_Found_Callback : public Move_Found_Callback {
-    Larch_Move_Found_Callback(const Merge& merge, const MADAG& sample, const std::vector<NodeId>& sample_dag_ids) :
-      merge_{merge}, sample_{sample}, sample_dag_ids_{sample_dag_ids} {}
-    bool operator()(Profitable_Moves move,int best_score_change,std::vector<Node_With_Major_Allele_Set_Change>& node_with_major_allele_set_change) override {
-        NodeLabel src_label = merge_.GetResultNodeLabels().at(sample_dag_ids_.at(move.src->node_id).value);
-        NodeLabel dst_label = merge_.GetResultNodeLabels().at(sample_dag_ids_.at(move.dst->node_id).value);
+  Larch_Move_Found_Callback(const Merge& merge, const MADAG& sample,
+                            const std::vector<NodeId>& sample_dag_ids)
+      : merge_{merge}, sample_{sample}, sample_dag_ids_{sample_dag_ids} {}
+  bool operator()(Profitable_Moves move, int best_score_change,
+                  std::vector<Node_With_Major_Allele_Set_Change>&
+                      node_with_major_allele_set_change) override {
+    auto& src_clades = merge_.GetResultNodeLabels()
+                           .at(sample_dag_ids_.at(move.src->node_id).value)
+                           .GetLeafSet()
+                           ->GetClades();
+    auto& dst_clades = merge_.GetResultNodeLabels()
+                           .at(sample_dag_ids_.at(move.dst->node_id).value)
+                           .GetLeafSet()
+                           ->GetClades();
 
-        std::vector<std::vector<const CompactGenome*>> clades = src_label.GetLeafSet()->GetClades();
-
-        // Get the union of src and dst leafsets:
-        size_t clade_idx = 0;
-        for (auto& i : dst_label.GetLeafSet()->GetClades()) {
-          if (clade_idx >= clades.size()) {
-            break;
-          }
-          auto& clade = clades.at(clade_idx++);
-          clade.insert(clade.end(), i.begin(), i.end());
-        }
-
-        for (auto& i : clades) {
-          ranges::sort(i);
-          ranges::unique(i);
-        }
-        ranges::sort(clades);
-
-        return not merge_.ContainsLeafset(std::move(clades));
-        //return move.score_change <= best_score_change;
-    }
-    const Merge& merge_;
-    const MADAG& sample_;
-    const std::vector<NodeId>& sample_dag_ids_;
+    return not merge_.ContainsLeafset(clades_union(src_clades, dst_clades)) or
+           not merge_.ContainsLeafset(clades_difference(src_clades, dst_clades));
+  }
+  const Merge& merge_;
+  const MADAG& sample_;
+  const std::vector<NodeId>& sample_dag_ids_;
 };
 
 int main(int argc, char** argv) {

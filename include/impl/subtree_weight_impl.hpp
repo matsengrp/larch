@@ -52,7 +52,8 @@ MADAG SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
 }
 
 template <typename WeightOps>
-std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTree(WeightOps&& weight_ops) {
+std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTree(
+    WeightOps&& weight_ops) {
   MADAG result{dag_.GetReferenceSequence()};
   std::vector<NodeId> result_dag_ids;
 
@@ -97,8 +98,8 @@ template <typename WeightOps>
 template <typename EdgeSelector>
 void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
                                            WeightOps&& weight_ops,
-                                           EdgeSelector&& edge_selector,
-                                           MADAG& result, std::vector<NodeId>& result_dag_ids) {
+                                           EdgeSelector&& edge_selector, MADAG& result,
+                                           std::vector<NodeId>& result_dag_ids) {
   ComputeWeightBelow(node, std::forward<WeightOps>(weight_ops));
   CladeIdx clade_idx{0};
 
