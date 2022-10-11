@@ -116,17 +116,46 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&
                       node_with_major_allele_set_change) override {
-    auto& src_clades = merge_.GetResultNodeLabels()
-                           .at(sample_dag_ids_.at(move.src->node_id).value)
-                           .GetLeafSet()
-                           ->GetClades();
-    auto& dst_clades = merge_.GetResultNodeLabels()
-                           .at(sample_dag_ids_.at(move.dst->node_id).value)
-                           .GetLeafSet()
-                           ->GetClades();
+    NodeId src_id = sample_dag_ids_.at(move.src->node_id);
+    NodeId dst_id = sample_dag_ids_.at(move.dst->node_id);
+    NodeId lca_id = sample_dag_ids_.at(move.LCA->node_id);
 
-    return not merge_.ContainsLeafset(clades_union(src_clades, dst_clades)) or
-           not merge_.ContainsLeafset(clades_difference(src_clades, dst_clades));
+    auto& src_clades =
+        merge_.GetResultNodeLabels().at(src_id.value).GetLeafSet()->GetClades();
+    auto& dst_clades =
+        merge_.GetResultNodeLabels().at(dst_id.value).GetLeafSet()->GetClades();
+
+    size_t new_nodes_count = 0;
+
+    MAT::Node* curr_node = move.src;
+    while (not(curr_node->node_id == lca_id.value)) {
+      Node node = merge_.GetResult().GetDAG().Get(NodeId{curr_node->node_id});
+      auto& clades =
+          merge_.GetResultNodeLabels().at(node.GetId().value).GetLeafSet()->GetClades();
+      if (not merge_.ContainsLeafset(clades_difference(clades, src_clades))) {
+        ++new_nodes_count;
+      }
+      curr_node = curr_node->parent;
+      if (not curr_node) {
+        break;
+      }
+    }
+
+    curr_node = move.dst;
+    while (not(curr_node->node_id == lca_id.value)) {
+      Node node = merge_.GetResult().GetDAG().Get(NodeId{curr_node->node_id});
+      auto& clades =
+          merge_.GetResultNodeLabels().at(node.GetId().value).GetLeafSet()->GetClades();
+      if (not merge_.ContainsLeafset(clades_union(clades, dst_clades))) {
+        ++new_nodes_count;
+      }
+      curr_node = curr_node->parent;
+      if (not curr_node) {
+        break;
+      }
+    }
+
+    return new_nodes_count > 2;
   }
   const Merge& merge_;
   const MADAG& sample_;
@@ -197,31 +226,27 @@ int main(int argc, char** argv) {
   logfile.open(logfile_path);
   logfile << "Iteration\tNTrees\tMaxParsimony\tNTreesMaxParsimony";
 
-
   MADAG input_dag = LoadDAGFromProtobuf(input_dag_path);
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
   std::vector<MADAG> optimized_dags;
 
   auto logger = [&merge, &logfile](size_t iteration) {
-      SubtreeWeight<WeightAccumulator<ParsimonyScore>> weightcounter{merge.GetResult()};
-      merge.ComputeResultEdgeMutations();
-      auto parsimonyscores = weightcounter.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {});
+    SubtreeWeight<WeightAccumulator<ParsimonyScore>> weightcounter{merge.GetResult()};
+    merge.ComputeResultEdgeMutations();
+    auto parsimonyscores =
+        weightcounter.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {});
 
-      std::cout << "Parsimony scores of trees in DAG: "
-                << parsimonyscores
-                << "\n";
+    std::cout << "Parsimony scores of trees in DAG: " << parsimonyscores << "\n";
 
-      SubtreeWeight<TreeCount> treecount{merge.GetResult()};
-      auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {});
-      std::cout << "Total trees in DAG: "
-                << ntrees
-                << "\n";
-      logfile << '\n'
-              << iteration << '\t'
-              << ntrees << '\t'
-              << parsimonyscores.GetWeights().begin()->first << '\t'
-              << parsimonyscores.GetWeights().begin()->second << '\t';
+    SubtreeWeight<TreeCount> treecount{merge.GetResult()};
+    auto ntrees =
+        treecount.ComputeWeightBelow(merge.GetResult().GetDAG().GetRoot(), {});
+    std::cout << "Total trees in DAG: " << ntrees << "\n";
+    logfile << '\n'
+            << iteration << '\t' << ntrees << '\t'
+            << parsimonyscores.GetWeights().begin()->first << '\t'
+            << parsimonyscores.GetWeights().begin()->second << '\t';
   };
   logger(0);
 
