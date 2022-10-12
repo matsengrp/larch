@@ -113,7 +113,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
   Larch_Move_Found_Callback(const Merge& merge, const MADAG& sample,
                             const std::vector<NodeId>& sample_dag_ids)
       : merge_{merge}, sample_{sample}, sample_dag_ids_{sample_dag_ids} {}
-  bool operator()(Profitable_Moves move, int best_score_change,
+  bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&
                       node_with_major_allele_set_change) override {
     NodeId src_id = sample_dag_ids_.at(move.src->node_id);
@@ -155,7 +155,8 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
       }
     }
 
-    return new_nodes_count > 2;
+    move.score_change -= new_nodes_count;
+    return true;
   }
   const Merge& merge_;
   const MADAG& sample_;
