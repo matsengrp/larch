@@ -33,6 +33,7 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback);
   std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
   std::cout << "  -l,--logfile  Name for logging csv file. Default: logfile.csv\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
+  std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a reference sequence\nif input points to MAT protobuf\n";
 
   std::exit(EXIT_SUCCESS);
 }
@@ -170,6 +171,7 @@ int main(int argc, char** argv) {
   std::string output_dag_path = "";
   std::string matoptimize_path = "matOptimize";
   std::string logfile_path = "logfile.csv";
+  std::string refseq_path = "";
   size_t count = 1;
 
   for (auto [name, params] : args) {
@@ -205,6 +207,12 @@ int main(int argc, char** argv) {
         Fail();
       }
       logfile_path = *params.begin();
+    } else if (name == "-r" or name == "--MAT-refseq-file") {
+      if (params.empty()) {
+        std::cerr << "Mutation annotated tree refsequence fasta path not specified.\n";
+        Fail();
+      }
+      refseq_path = *params.begin();
     } else {
       std::cerr << "Unknown argument.\n";
       Fail();
@@ -227,7 +235,18 @@ int main(int argc, char** argv) {
   logfile.open(logfile_path);
   logfile << "Iteration\tNTrees\tMaxParsimony\tNTreesMaxParsimony";
 
-  MADAG input_dag = LoadDAGFromProtobuf(input_dag_path);
+  MADAG input_dag;
+  if (!refseq_path.empty()) {
+      // we should really take a fasta with one record, or at least remove
+      // newlines
+      std::string refseq;
+      std::fstream file;
+      file.open(refseq_path);
+      while (file >> refseq) {}
+      input_dag = LoadTreeFromProtobuf(input_dag_path, refseq);
+  } else {
+      input_dag = LoadDAGFromProtobuf(input_dag_path);
+  }
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
   std::vector<MADAG> optimized_dags;
