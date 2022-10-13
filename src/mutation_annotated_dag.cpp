@@ -36,7 +36,7 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
     std::string_view reference_sequence, const DAG& dag,
     const std::vector<EdgeMutations>& edge_mutations) {
   Assert(not reference_sequence.empty());
-  Assert(edge_mutations.size() == dag.GetEdgesCount());
+  Assert(edge_mutations.size() >= dag.GetEdgesCount());
   std::vector<CompactGenome> result;
   result.resize(dag.GetNodesCount());
   auto ComputeCG = [&](auto& self, Node node) {

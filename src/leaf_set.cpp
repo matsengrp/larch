@@ -66,6 +66,10 @@ std::vector<const CompactGenome*> LeafSet::ToParentClade() const {
   return result;
 }
 
+const std::vector<std::vector<const CompactGenome*>>& LeafSet::GetClades() const {
+  return clades_;
+}
+
 size_t LeafSet::ComputeHash(
     const std::vector<std::vector<const CompactGenome*>>& clades) {
   size_t hash = 0;

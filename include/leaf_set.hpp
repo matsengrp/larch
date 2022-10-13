@@ -40,6 +40,8 @@ class LeafSet {
 
   [[nodiscard]] std::vector<const CompactGenome*> ToParentClade() const;
 
+  const std::vector<std::vector<const CompactGenome*>>& GetClades() const;
+
  private:
   static size_t ComputeHash(
       const std::vector<std::vector<const CompactGenome*>>& clades);

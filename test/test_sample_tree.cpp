@@ -15,7 +15,7 @@ static void test_sample_tree(MADAG& dag) {
 
   SubtreeWeight<ParsimonyScore> weight(dag);
 
-  MADAG result = weight.SampleTree({});
+  MADAG result = weight.SampleTree({}).first;
 
   assert_true(result.GetDAG().IsTree(), "Tree");
 }
