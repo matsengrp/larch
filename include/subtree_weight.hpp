@@ -31,6 +31,9 @@ WithinCladeAccumOptimum(std::vector<Weight>);
 #include <random>
 
 #include "mutation_annotated_dag.hpp"
+#include <boost/multiprecision/cpp_int.hpp>
+
+using BigInt = boost::multiprecision::cpp_int;
 
 template <typename WeightOps>
 class SubtreeWeight {
@@ -38,6 +41,8 @@ class SubtreeWeight {
   explicit SubtreeWeight(const MADAG& dag);
 
   typename WeightOps::Weight ComputeWeightBelow(Node node, WeightOps&& weight_ops);
+
+  std::pair<typename WeightOps::Weight, BigInt> ComputeOptimalSubtreeCountBelow(Node, WeightOps&&);
 
   [[nodiscard]] MADAG TrimToMinWeight(WeightOps&& weight_ops);
 
@@ -57,6 +62,7 @@ class SubtreeWeight {
 
   // Indexed by NodeId.
   std::vector<std::optional<typename WeightOps::Weight>> cached_weights_;
+  std::vector<std::optional<BigInt>> cached_min_weight_subtree_count_;
 
   // outermost vector indexed by NodeId, next vector indexed by CladeIdx, innermost
   // vector records which EdgeIds achieve minimum in that clade.

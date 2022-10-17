@@ -5,6 +5,7 @@ SubtreeWeight<WeightOps>::SubtreeWeight(const MADAG& dag)
     : dag_{dag},
       cached_weights_(dag_.GetDAG().GetNodesCount()),
       cached_min_weight_edges_(dag_.GetDAG().GetNodesCount()),
+      cached_min_weight_subtree_count_(dag_.GetDAG().GetNodesCount()),
       random_device_{},
       random_generator_{random_device_()} {}
 
@@ -32,6 +33,39 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(
 
   cached = weight_ops.BetweenClades(cladeweights);
   return *cached;
+}
+
+
+/*
+ * Compute the Weight for the optimal subtree below `node`, as well as the
+ * number of optimal-weight subtrees below `node`.
+ * Conceptually this duplicates the code in TreeCount, and it would be nice to
+ * replace with the ability to arbitrarily chain WeightOps applications.
+ *
+ */
+template <typename WeightOps>
+std::pair<typename WeightOps::Weight, BigInt> SubtreeWeight<WeightOps>::ComputeOptimalSubtreeCountBelow(Node node, WeightOps&& weight_ops){
+  NodeId node_id = node.GetId();
+  typename WeightOps::Weight weight = ComputeWeightBelow(node, std::forward<WeightOps>(weight_ops));
+  auto& cached_n = cached_min_weight_subtree_count_.at(node_id.value);
+  auto& cached_optimal_edges = cached_min_weight_edges_.at(node_id.value);
+  if (cached_n) {
+    return {weight, *cached_n};
+  }
+  if (node.IsLeaf()) {
+    return {weight, 1};
+  }
+  BigInt this_node_count = 1;
+  for (auto this_clade_optimal : cached_optimal_edges) {
+    BigInt this_clade_count = 0;
+    for (auto edgeid : this_clade_optimal) {
+      this_clade_count += *cached_min_weight_subtree_count_.at(dag_.GetDAG().Get(edgeid).GetChildId().value);
+    }
+    this_node_count *= this_clade_count;
+  }
+
+  cached_n = this_node_count;
+  return {weight, *cached_n};
 }
 
 template <typename WeightOps>

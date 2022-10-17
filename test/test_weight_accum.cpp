@@ -19,7 +19,14 @@ static void test_weight_accum(MADAG& dag, Weight expected_score) {
 
   SubtreeWeight<WeightAccumulator<ParsimonyScore>> parsimonycount(dag);
 
+  SubtreeWeight<ParsimonyScore> parsimonyscore(dag);
+
   Weight score = parsimonycount.ComputeWeightBelow(dag.GetDAG().GetRoot(), {});
+
+  auto opt_pair = parsimonyscore.ComputeOptimalSubtreeCountBelow(dag.GetDAG().GetRoot(), {});
+
+  assert_equal(score.GetWeights().begin()->first, opt_pair.first, "optimal weight doesn't match");
+  assert_equal(score.GetWeights().begin()->second, opt_pair.second, "optimal weight count doesn't match");
 
   /* std::cout << "parsimony score counts\n"; */
   /* std::cout << "score   |   count\n"; */

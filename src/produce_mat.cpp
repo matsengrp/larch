@@ -95,6 +95,7 @@ void build_madag_from_mat_helper(MAT::Node* par_node, size_t par_node_idx,
                                   {decode[one_hot_to_two_bit(mut.get_par_one_hot())],
                                    decode[one_hot_to_two_bit(mut.get_mut_one_hot())]}};
                         });
+    dag.ResizeEdgeMutations(edge_idx + 1);
     dag.SetEdgeMutations({edge_idx}, EdgeMutations{mut_view});
     edge_idx++;
     build_madag_from_mat_helper(child_node, curr_idx, curr_idx, dag, edge_idx);
@@ -145,13 +146,13 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
   Original_State_t origin_states;
   check_samples(tree.root, origin_states, &tree);
   reassign_states(tree, origin_states);
-  auto all_nodes = tree.depth_first_expansion();
 
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
   std::chrono::steady_clock::time_point end_time = start_time + std::chrono::hours(8);
   int ddepth = tree.get_max_level() * 2;
   std::cout << "maximum radius is " << std::to_string(ddepth) << "\n";
   for (size_t rad_exp = 1; (1 << rad_exp) <= ddepth; rad_exp++) {
+    auto all_nodes = tree.depth_first_expansion();
     std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
 
     optimize_inner_loop(all_nodes,     // nodes to search

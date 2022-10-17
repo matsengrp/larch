@@ -156,7 +156,8 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
       }
     }
 
-    move.score_change -= new_nodes_count;
+    /* move.score_change -= new_nodes_count; */
+    move.score_change = -new_nodes_count;
     return true;
   }
   const Merge& merge_;
@@ -266,7 +267,8 @@ int main(int argc, char** argv) {
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t'
             << parsimonyscores.GetWeights().begin()->first << '\t'
-            << parsimonyscores.GetWeights().begin()->second << '\t';
+            << parsimonyscores.GetWeights().begin()->second << '\t'
+            << std::flush;
   };
   logger(0);
 
@@ -279,6 +281,7 @@ int main(int argc, char** argv) {
     check_edge_mutations(sample);
     MADAG result;
     Larch_Move_Found_Callback callback{merge, sample, dag_ids};
+    /* Move_Found_Callback callback; */
     result = optimize_dag_direct(sample, callback);
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back()});
