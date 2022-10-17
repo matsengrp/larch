@@ -44,6 +44,9 @@ class SubtreeWeight {
   [[nodiscard]] std::pair<MADAG, std::vector<NodeId>> SampleTree(
       WeightOps&& weight_ops);
 
+  [[nodiscard]] std::pair<MADAG, std::vector<NodeId>> UniformSampleTree(
+      WeightOps&& weight_ops);
+
  private:
   template <typename CladeRange>
   typename WeightOps::Weight CladeWeight(CladeRange&& clade, WeightOps&& weight_ops);

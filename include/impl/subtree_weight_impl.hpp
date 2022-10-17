@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <type_traits>
 
 template <typename WeightOps>
 SubtreeWeight<WeightOps>::SubtreeWeight(const MADAG& dag)
@@ -63,6 +64,41 @@ std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTree(
         auto clade = node.GetClade(clade_idx);
         Assert(not clade.empty());
         std::uniform_int_distribution<size_t> distribuition{0, clade.size() - 1};
+        return clade.at(distribuition(random_generator_));
+      },
+      result, result_dag_ids);
+
+  return {std::move(result), std::move(result_dag_ids)};
+}
+
+template <typename WeightOps>
+std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::UniformSampleTree(
+    WeightOps&& weight_ops) {
+  MADAG result{dag_.GetReferenceSequence()};
+  std::vector<NodeId> result_dag_ids;
+
+  ExtractTree(
+      dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
+      [this, &weight_ops](Node node, CladeIdx clade_idx) {
+        auto clade = node.GetClade(clade_idx);
+        Assert(not clade.empty());
+        std::vector<double> probabilities;
+        typename WeightOps::Weight sum{};
+        for (Node child : clade | Transform::GetChild()) {
+          auto tree_count =
+              ComputeWeightBelow(child, std::forward<WeightOps>(weight_ops));
+          sum += tree_count;
+        }
+        if (sum > 0) {
+          for (Node child : clade | Transform::GetChild()) {
+            auto tree_count =
+                ComputeWeightBelow(child, std::forward<WeightOps>(weight_ops));
+            typename WeightOps::Weight prob = tree_count / sum;
+            probabilities.push_back(static_cast<double>(prob));
+          }
+        }
+        std::discrete_distribution<size_t> distribuition{probabilities.begin(),
+                                                         probabilities.end()};
         return clade.at(distribuition(random_generator_));
       },
       result, result_dag_ids);
