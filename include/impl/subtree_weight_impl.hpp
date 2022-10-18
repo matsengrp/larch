@@ -55,55 +55,35 @@ MADAG SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
 template <typename WeightOps>
 std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTree(
     WeightOps&& weight_ops) {
-  MADAG result{dag_.GetReferenceSequence()};
-  std::vector<NodeId> result_dag_ids;
-
-  ExtractTree(
-      dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
-      [this](Node node, CladeIdx clade_idx) {
-        auto clade = node.GetClade(clade_idx);
-        Assert(not clade.empty());
-        std::uniform_int_distribution<size_t> distribuition{0, clade.size() - 1};
-        return clade.at(distribuition(random_generator_));
-      },
-      result, result_dag_ids);
-
-  return {std::move(result), std::move(result_dag_ids)};
+  return SampleTreeImpl(std::forward<WeightOps>(weight_ops), [](auto clade) {
+    return std::uniform_int_distribution<size_t>{0, clade.size() - 1};
+  });
 }
 
+struct TreeCount;
 template <typename WeightOps>
 std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::UniformSampleTree(
     WeightOps&& weight_ops) {
-  MADAG result{dag_.GetReferenceSequence()};
-  std::vector<NodeId> result_dag_ids;
-
-  ExtractTree(
-      dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
-      [this, &weight_ops](Node node, CladeIdx clade_idx) {
-        auto clade = node.GetClade(clade_idx);
-        Assert(not clade.empty());
+  static_assert(std::is_same_v<std::decay_t<WeightOps>, TreeCount>,
+                "UniformSampleTree needs TreeCount");
+  // Ensure cache is filled
+  ComputeWeightBelow(dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops));
+  return SampleTreeImpl(
+      std::forward<WeightOps>(weight_ops), [this, &weight_ops](auto clade) {
         std::vector<double> probabilities;
         typename WeightOps::Weight sum{};
-        for (Node child : clade | Transform::GetChild()) {
-          auto tree_count =
-              ComputeWeightBelow(child, std::forward<WeightOps>(weight_ops));
-          sum += tree_count;
+        for (NodeId child : clade | Transform::GetChild()) {
+          sum += cached_weights_.at(child.value).value();
         }
         if (sum > 0) {
-          for (Node child : clade | Transform::GetChild()) {
-            auto tree_count =
-                ComputeWeightBelow(child, std::forward<WeightOps>(weight_ops));
-            typename WeightOps::Weight prob = tree_count / sum;
-            probabilities.push_back(static_cast<double>(prob));
+          for (NodeId child : clade | Transform::GetChild()) {
+            probabilities.push_back(
+                static_cast<double>(cached_weights_.at(child.value).value() / sum));
           }
         }
-        std::discrete_distribution<size_t> distribuition{probabilities.begin(),
-                                                         probabilities.end()};
-        return clade.at(distribuition(random_generator_));
-      },
-      result, result_dag_ids);
-
-  return {std::move(result), std::move(result_dag_ids)};
+        return std::discrete_distribution<size_t>{probabilities.begin(),
+                                                  probabilities.end()};
+      });
 }
 
 template <typename WeightOps>
@@ -128,6 +108,25 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::CladeWeight(
   GetOrInsert(GetOrInsert(cached_min_weight_edges_, first_edge.GetParentId().value),
               first_edge.GetClade().value) = optimum_edgeids;
   return clade_result.first;
+}
+
+template <typename WeightOps>
+template <typename DistributionMaker>
+std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
+    WeightOps&& weight_ops, DistributionMaker&& distribution_maker) {
+  MADAG result{dag_.GetReferenceSequence()};
+  std::vector<NodeId> result_dag_ids;
+
+  ExtractTree(
+      dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
+      [this, &distribution_maker](Node node, CladeIdx clade_idx) {
+        auto clade = node.GetClade(clade_idx);
+        Assert(not clade.empty());
+        return clade.at(distribution_maker(clade)(random_generator_));
+      },
+      result, result_dag_ids);
+
+  return {std::move(result), std::move(result_dag_ids)};
 }
 
 template <typename WeightOps>

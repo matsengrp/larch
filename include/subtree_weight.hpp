@@ -51,6 +51,10 @@ class SubtreeWeight {
   template <typename CladeRange>
   typename WeightOps::Weight CladeWeight(CladeRange&& clade, WeightOps&& weight_ops);
 
+  template <typename DistributionMaker>
+  [[nodiscard]] std::pair<MADAG, std::vector<NodeId>> SampleTreeImpl(
+      WeightOps&& weight_ops, DistributionMaker&& distribution_maker);
+
   template <typename EdgeSelector>
   void ExtractTree(const MADAG& input_dag, Node node, WeightOps&& weight_ops,
                    EdgeSelector&& edge_selector, MADAG& result,
