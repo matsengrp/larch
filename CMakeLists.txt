@@ -111,7 +111,6 @@ add_library(larch
     src/mutation_annotated_dag.cpp
     src/node_label.cpp
     src/node_storage.cpp
-    src/node.cpp
     src/post_order_iterator.cpp
     src/pre_order_iterator.cpp)
 larch_compile_opts(larch)

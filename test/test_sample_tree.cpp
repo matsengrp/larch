@@ -1,3 +1,4 @@
+#include "mutation_annotated_dag.hpp"
 #include "subtree_weight.hpp"
 #include "parsimony_score.hpp"
 
@@ -8,6 +9,8 @@
 
 #include "dag_loader.hpp"
 
+#include "tree_count.hpp"
+
 static void test_sample_tree(MADAG& dag) {
   if (dag.GetEdgeMutations().empty()) {
     dag.RecomputeEdgeMutations();
@@ -16,8 +19,11 @@ static void test_sample_tree(MADAG& dag) {
   SubtreeWeight<ParsimonyScore> weight(dag);
 
   MADAG result = weight.SampleTree({}).first;
-
   assert_true(result.GetDAG().IsTree(), "Tree");
+
+  SubtreeWeight<TreeCount> tree_count{dag};
+  MADAG result2 = tree_count.UniformSampleTree({}).first;
+  assert_true(result2.GetDAG().IsTree(), "Tree");
 }
 
 static void test_sample_tree(std::string_view path) {

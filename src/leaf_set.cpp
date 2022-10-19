@@ -6,7 +6,6 @@
 #include <range/v3/range/conversion.hpp>
 
 #include "dag.hpp"
-#include "compact_genome.hpp"
 #include "node_label.hpp"
 
 const LeafSet* LeafSet::Empty() {
@@ -42,13 +41,6 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
       }()},
       hash_{ComputeHash(clades_)} {}
 
-LeafSet::LeafSet(std::vector<std::vector<const CompactGenome*>>&& clades)
-    : clades_{clades}, hash_{ComputeHash(clades_)} {}
-
-bool LeafSet::operator==(const LeafSet& rhs) const noexcept {
-  return clades_ == rhs.clades_;
-}
-
 size_t LeafSet::Hash() const noexcept { return hash_; }
 
 auto LeafSet::begin() const -> decltype(clades_.begin()) { return clades_.begin(); }
@@ -68,15 +60,4 @@ std::vector<const CompactGenome*> LeafSet::ToParentClade() const {
 
 const std::vector<std::vector<const CompactGenome*>>& LeafSet::GetClades() const {
   return clades_;
-}
-
-size_t LeafSet::ComputeHash(
-    const std::vector<std::vector<const CompactGenome*>>& clades) {
-  size_t hash = 0;
-  for (auto& clade : clades) {
-    for (auto leaf : clade) {
-      hash = HashCombine(hash, leaf->Hash());
-    }
-  }
-  return hash;
 }

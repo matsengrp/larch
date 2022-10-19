@@ -18,8 +18,8 @@ class NodeStorage {
    */
   const std::vector<std::vector<EdgeId>>& GetClades() const;
 
-  const std::optional<std::string> GetSampleId() const;
-  void SetSampleId(std::optional<std::string> sample_id);
+  const std::optional<std::string>& GetSampleId() const;
+  void SetSampleId(std::optional<std::string>&& sample_id);
 
   /**
    * Remove all parent and child edges
