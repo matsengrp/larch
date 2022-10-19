@@ -99,7 +99,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
   result.BuildConnections();
   for (auto node : result.GetDAG().GetNodes()) {
     if (node.IsLeaf()) {
-      node.SetSampleId(seq_ids[node.GetId().value]);
+      node.SetSampleId(std::move(seq_ids[node.GetId().value]));
     }
   }
 

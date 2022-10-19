@@ -19,9 +19,12 @@
 #include "tree_count.hpp"
 #include "parsimony_score.hpp"
 #include "merge.hpp"
+#include "benchmark.hpp"
 #include <mpi.h>
 
 #include "../deps/usher/src/matOptimize/Profitable_Moves_Enumerators/Profitable_Moves_Enumerators.hpp"
+
+#include <valgrind/callgrind.h>
 
 MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback);
 [[noreturn]] static void Usage() {
@@ -33,7 +36,8 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback);
   std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
   std::cout << "  -l,--logfile  Name for logging csv file. Default: logfile.csv\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
-  std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a reference sequence\nif input points to MAT protobuf\n";
+  std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
+               "reference sequence\nif input points to MAT protobuf\n";
 
   std::exit(EXIT_SUCCESS);
 }
@@ -237,15 +241,16 @@ int main(int argc, char** argv) {
 
   MADAG input_dag;
   if (!refseq_path.empty()) {
-      // we should really take a fasta with one record, or at least remove
-      // newlines
-      std::string refseq;
-      std::fstream file;
-      file.open(refseq_path);
-      while (file >> refseq) {}
-      input_dag = LoadTreeFromProtobuf(input_dag_path, refseq);
+    // we should really take a fasta with one record, or at least remove
+    // newlines
+    std::string refseq;
+    std::fstream file;
+    file.open(refseq_path);
+    while (file >> refseq) {
+    }
+    input_dag = LoadTreeFromProtobuf(input_dag_path, refseq);
   } else {
-      input_dag = LoadDAGFromProtobuf(input_dag_path);
+    input_dag = LoadDAGFromProtobuf(input_dag_path);
   }
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
@@ -270,6 +275,9 @@ int main(int argc, char** argv) {
   };
   logger(0);
 
+  CALLGRIND_START_INSTRUMENTATION;
+  Benchmark loop_time;
+  loop_time.start();
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)
               << " #######\n";
@@ -285,6 +293,9 @@ int main(int argc, char** argv) {
 
     logger(i + 1);
   }
+  loop_time.stop();
+  std::cout << " Loop ended in " << loop_time.durationMs() << " ms.\n";
+  CALLGRIND_STOP_INSTRUMENTATION;
 
   logfile.close();
   StoreDAGToProtobuf(merge.GetResult().GetDAG(),

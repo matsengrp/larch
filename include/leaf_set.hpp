@@ -1,8 +1,8 @@
 #pragma once
 
 #include "common.hpp"
+#include "compact_genome.hpp"
 
-class CompactGenome;
 class NodeLabel;
 
 /**
@@ -27,9 +27,9 @@ class LeafSet {
   LeafSet(Node node, const std::vector<NodeLabel>& labels,
           std::vector<LeafSet>& computed_leafsets);
 
-  LeafSet(std::vector<std::vector<const CompactGenome*>>&& clades);
+  inline LeafSet(std::vector<std::vector<const CompactGenome*>>&& clades);
 
-  bool operator==(const LeafSet& rhs) const noexcept;
+  inline bool operator==(const LeafSet& rhs) const noexcept;
 
   [[nodiscard]] size_t Hash() const noexcept;
 
@@ -43,8 +43,8 @@ class LeafSet {
   const std::vector<std::vector<const CompactGenome*>>& GetClades() const;
 
  private:
-  static size_t ComputeHash(
-      const std::vector<std::vector<const CompactGenome*>>& clades);
+  inline static size_t ComputeHash(
+      const std::vector<std::vector<const CompactGenome*>>& clades) noexcept;
 };
 
 template <>
@@ -58,3 +58,22 @@ struct std::equal_to<LeafSet> {
     return lhs == rhs;
   }
 };
+
+bool LeafSet::operator==(const LeafSet& rhs) const noexcept {
+  return clades_ == rhs.clades_;
+}
+
+LeafSet::LeafSet(std::vector<std::vector<const CompactGenome*>>&& clades)
+    : clades_{std::forward<std::vector<std::vector<const CompactGenome*>>>(clades)},
+      hash_{ComputeHash(clades_)} {}
+
+size_t LeafSet::ComputeHash(
+    const std::vector<std::vector<const CompactGenome*>>& clades) noexcept {
+  size_t hash = 0;
+  for (auto& clade : clades) {
+    for (auto leaf : clade) {
+      hash = HashCombine(hash, leaf->Hash());
+    }
+  }
+  return hash;
+}

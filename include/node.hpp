@@ -26,14 +26,14 @@ class NodeView {
   constexpr static const bool is_mutable = std::is_same_v<T, DAG&>;
   using NodeType = std::conditional_t<is_mutable, MutableNode, Node>;
   using EdgeType = std::conditional_t<is_mutable, MutableEdge, Edge>;
-  NodeView(T dag, NodeId id);
-  operator Node() const;
-  operator NodeId() const;
+  inline NodeView(T dag, NodeId id);
+  inline operator Node() const;
+  inline operator NodeId() const;
   /**
    * Return DAG-like object containing this node
    */
-  T GetDAG() const;
-  NodeId GetId() const;
+  inline T GetDAG() const;
+  inline NodeId GetId() const;
   /**
    * Return a range containing parent Edge objects
    */
@@ -50,7 +50,7 @@ class NodeView {
   /**
    * Return the count of child clades
    */
-  size_t GetCladesCount() const;
+  inline size_t GetCladesCount() const;
   /**
    * Return a range containing child Edges
    */
@@ -58,21 +58,21 @@ class NodeView {
   /**
    * Return a single parent edge of this node
    */
-  EdgeType GetSingleParent() const;
+  inline EdgeType GetSingleParent() const;
   /**
    * Checks if node has no parents
    */
-  bool IsRoot() const;
+  inline bool IsRoot() const;
   /**
    * Checks if node has no children
    */
-  bool IsLeaf() const;
-  void AddParentEdge(Edge edge) const;
-  void AddChildEdge(Edge edge) const;
-  void RemoveParentEdge(Edge edge) const;
+  inline bool IsLeaf() const;
+  inline void AddParentEdge(Edge edge) const;
+  inline void AddChildEdge(Edge edge) const;
+  inline void RemoveParentEdge(Edge edge) const;
 
-  const std::optional<std::string> GetSampleId() const;
-  void SetSampleId(std::optional<std::string> sample_id);
+  inline const std::optional<std::string>& GetSampleId() const;
+  inline void SetSampleId(std::optional<std::string>&& sample_id);
 
  private:
   auto& GetStorage() const;
