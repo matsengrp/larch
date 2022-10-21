@@ -24,8 +24,6 @@
 
 #include "../deps/usher/src/matOptimize/Profitable_Moves_Enumerators/Profitable_Moves_Enumerators.hpp"
 
-#include <valgrind/callgrind.h>
-
 MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback);
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
@@ -275,9 +273,6 @@ int main(int argc, char** argv) {
   };
   logger(0);
 
-  CALLGRIND_START_INSTRUMENTATION;
-  Benchmark loop_time;
-  loop_time.start();
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)
               << " #######\n";
@@ -287,15 +282,13 @@ int main(int argc, char** argv) {
     check_edge_mutations(sample);
     MADAG result;
     Larch_Move_Found_Callback callback{merge, sample, dag_ids};
+    StoreTreeToProtobuf(sample, "before_optimize_dag.pb");
     result = optimize_dag_direct(sample, callback);
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back()});
 
     logger(i + 1);
   }
-  loop_time.stop();
-  std::cout << " Loop ended in " << loop_time.durationMs() << " ms.\n";
-  CALLGRIND_STOP_INSTRUMENTATION;
 
   logfile.close();
   StoreDAGToProtobuf(merge.GetResult().GetDAG(),
