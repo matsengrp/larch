@@ -101,6 +101,8 @@ const EdgeMutations& MADAG::GetEdgeMutations(EdgeId edge_id) const {
 
 MutableNode MADAG::AddNode(NodeId id) { return dag_.AddNode(id); }
 
+MutableNode MADAG::AppendNode() { return dag_.AppendNode(); }
+
 MutableEdge MADAG::AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade) {
   return dag_.AddEdge(id, parent, child, clade);
 }

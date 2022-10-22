@@ -6,6 +6,8 @@ MutableNode DAG::AddNode(NodeId id) {
   return {*this, id};
 }
 
+MutableNode DAG::AppendNode() { return AddNode({GetNodesCount()}); }
+
 MutableEdge DAG::AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade) {
   Assert(id.value != NoId);
   Assert(parent.value != NoId);

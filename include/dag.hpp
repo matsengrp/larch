@@ -45,6 +45,7 @@ class DAG {
   DAG& operator=(const DAG&) = delete;
 
   MutableNode AddNode(NodeId id);
+  MutableNode AppendNode();
 
   MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
   MutableEdge AppendEdge(NodeId parent, NodeId child, CladeIdx clade);

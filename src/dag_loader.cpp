@@ -13,6 +13,10 @@
 
 #include "nlohmann/json.hpp"
 
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/copy.hpp>
+
 #include "dag_loader.hpp"
 #include "dag.pb.h"
 #include "parsimony.pb.h"
@@ -97,6 +101,9 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
       });
   result.InitializeNodes(result.GetDAG().GetEdgesCount() + 1);
   result.BuildConnections();
+  Node ua_node = result.AppendNode();
+  Edge ua_edge = result.AppendEdge(ua_node, result.GetDAG().GetRoot(), {0});
+  result.BuildConnections();
   for (auto node : result.GetDAG().GetNodes()) {
     if (node.IsLeaf()) {
       node.SetSampleId(std::move(seq_ids[node.GetId().value]));
@@ -105,14 +112,14 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
 
   std::vector<EdgeMutations> edge_mutations;
   edge_mutations.resize(result.GetDAG().GetEdgesCount());
-  Assert(static_cast<size_t>(data.node_mutations_size()) == edge_mutations.size() + 1);
+  Assert(static_cast<size_t>(data.node_mutations_size()) == edge_mutations.size());
 
   size_t muts_idx = 0;
   for (Node node : result.GetDAG().TraversePreOrder()) {
-    const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
     if (node.IsRoot()) {
       continue;
     }
+    const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
     auto& edge_muts = edge_mutations.at(node.GetSingleParent().GetId().value);
     for (auto i :
          pb_muts |
@@ -222,6 +229,22 @@ static int32_t EncodeBase(char base) {
   };
 }
 
+std::string LoadReferenceSequence(std::string_view path) {
+  std::string result;
+  if (IsGzipped(path)) {
+    std::ifstream file{std::string{path}};
+    boost::iostreams::filtering_ostream str;
+    str.push(boost::iostreams::gzip_decompressor());
+    str.push(boost::iostreams::back_inserter(result));
+    boost::iostreams::copy(file, str);
+  } else {
+    std::ifstream file{std::string{path}};
+    while (file >> result) {
+    }
+  }
+  return result;
+}
+
 template <typename Mutation>
 void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut) {
   proto_mut->set_position(static_cast<int32_t>(pos));
@@ -302,15 +325,15 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
       newick += ')';
     }
   };
-  to_newick(to_newick, dag.GetRoot());
+  to_newick(to_newick, (*dag.GetRoot().GetChildren().begin()).GetChild());
   newick += ';';
   data.set_newick(newick);
 
   for (Node node : dag.TraversePreOrder()) {
-    auto* proto = data.add_node_mutations();
     if (node.IsRoot()) {
       continue;
     }
+    auto* proto = data.add_node_mutations();
     for (auto [pos, mut] :
          edge_parent_mutations.at(node.GetSingleParent().GetId().value)) {
       auto* proto_mut = proto->add_mutation();

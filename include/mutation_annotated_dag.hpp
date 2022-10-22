@@ -108,10 +108,10 @@ class MADAG {
   friend class Merge;
   friend MADAG build_madag_from_mat(const Mutation_Annotated_Tree::Tree&,
                                     std::string_view);
-  friend void build_madag_from_mat_helper(Mutation_Annotated_Tree::Node*, size_t,
-                                          size_t&, MADAG&, size_t&);
+  friend void build_madag_from_mat_helper(Mutation_Annotated_Tree::Node*, Node, MADAG&);
 
   MutableNode AddNode(NodeId id);
+  MutableNode AppendNode();
   MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
   MutableEdge AppendEdge(NodeId parent, NodeId child, CladeIdx clade);
   void BuildConnections();

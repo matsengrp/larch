@@ -88,6 +88,7 @@ function(larch_link_opts PRODUCT)
     target_link_libraries(${PRODUCT} PUBLIC -lz)
     target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
     target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
+    target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
     target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
 endfunction()
 
@@ -122,6 +123,7 @@ larch_executable(larch-test
     test/test_clade_idx.cpp
     test/test_compact_genome.cpp
     test/test_dag_trimming.cpp
+    test/test_loading.cpp
     test/test_merge.cpp
     test/test_sample_tree.cpp
     test/test_subtree_weight.cpp
