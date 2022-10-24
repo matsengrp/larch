@@ -56,10 +56,11 @@ static void mat_from_dag_helper(Node dag_node, MAT::Node* mat_par_node,
     auto node = new MAT::Node(edge.GetChildId().value);
     new_tree.register_node_serial(node);
     node->mutations.reserve(mutations.size());
-    for (const auto& mut : mutations) {
-      MAT::Mutation mat_mut("ref", mut.first.value, EncodeBase(mut.second.second),
-                            EncodeBase(mut.second.first),
-                            EncodeBase(mut.second.second));
+    for (auto [pos, muts] : mutations) {
+      Assert(pos.value != NoId);
+      MAT::Mutation mat_mut("ref", pos.value, EncodeBase(muts.second),
+                            EncodeBase(muts.first),
+                            EncodeBase(muts.second));
       node->mutations.push_back(mat_mut);
     }
     node->parent = mat_par_node;
@@ -136,12 +137,17 @@ void check_MAT_MADAG_Eq(const MAT::Tree& tree, const MADAG& init) {
   compareDAG(converted_dag.GetDAG().GetRoot(), init.GetDAG().GetRoot(),
              converted_dag.GetEdgeMutations(), converted_dag.GetEdgeMutations());
 }
-MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
-  auto dag_ref = dag.GetReferenceSequence();
+
+void fill_static_reference_sequence(std::string_view dag_ref) {
   MAT::Mutation::refs.resize(dag_ref.size() + 1);
   for (size_t ref_idx = 0; ref_idx < dag_ref.size(); ref_idx++) {
     MAT::Mutation::refs[ref_idx + 1] = EncodeBase(dag_ref[ref_idx]);
   }
+}
+
+MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
+  auto dag_ref = dag.GetReferenceSequence();
+  fill_static_reference_sequence(dag_ref);
   auto tree = mat_from_dag(dag);
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "before_optimize.pb");
   check_MAT_MADAG_Eq(tree, dag);

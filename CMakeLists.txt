@@ -117,6 +117,24 @@ add_library(larch
 larch_compile_opts(larch)
 larch_link_opts(larch)
 
+add_library(usher
+    ${MATOPTIMIZE_SRC}
+    ${DETAILED_MUTATIONS_PROTO_SRCS}
+    ${DETAILED_MUTATIONS_PROTO_HDRS})
+larch_compile_opts(usher)
+larch_link_opts(usher)
+target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+
+add_library(larch-usher-glue
+    src/produce_mat.cpp
+    src/check_edge_mutations.cpp
+    ${MATOPTIMIZE_SRC}
+    ${DETAILED_MUTATIONS_PROTO_SRCS}
+    ${DETAILED_MUTATIONS_PROTO_HDRS}
+    )
+target_link_libraries(larch-usher-glue PRIVATE usher)
+add_dependencies(larch-usher-glue larch usher)
+
 larch_executable(larch-test
     test/main.cpp
     test/synthetic_dags.cpp
@@ -133,6 +151,8 @@ larch_executable(larch-test
     test/test_weight_counter.cpp
     test/test_synthetic.cpp
     test/test_traversal_iterators.cpp)
+target_link_libraries(larch-test PRIVATE larch-usher-glue)
+add_dependencies(larch-test larch-usher-glue)
 
 larch_executable(merge
     tools/merge.cpp)
@@ -143,20 +163,8 @@ larch_executable(dag_diff
 larch_executable(dag2dot
     tools/dag2dot.cpp)
 
-add_library(usher
-    ${MATOPTIMIZE_SRC}
-    ${DETAILED_MUTATIONS_PROTO_SRCS}
-    ${DETAILED_MUTATIONS_PROTO_HDRS})
-larch_compile_opts(usher)
-larch_link_opts(usher)
-
 larch_executable(larch-usher
     tools/larch-usher.cpp
-    src/produce_mat.cpp
-    src/check_edge_mutations.cpp
-    ${MATOPTIMIZE_SRC}
-    ${DETAILED_MUTATIONS_PROTO_SRCS}
-    ${DETAILED_MUTATIONS_PROTO_HDRS}
-    )
-target_link_libraries( larch-usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} usher)
-add_dependencies(larch-usher usher)
+)
+target_link_libraries(larch-usher PRIVATE larch-usher-glue)
+add_dependencies(larch-usher larch-usher-glue)
