@@ -59,8 +59,7 @@ static void mat_from_dag_helper(Node dag_node, MAT::Node* mat_par_node,
     for (auto [pos, muts] : mutations) {
       Assert(pos.value != NoId);
       MAT::Mutation mat_mut("ref", pos.value, EncodeBase(muts.second),
-                            EncodeBase(muts.first),
-                            EncodeBase(muts.second));
+                            EncodeBase(muts.first), EncodeBase(muts.second));
       node->mutations.push_back(mat_mut);
     }
     node->parent = mat_par_node;
@@ -95,22 +94,23 @@ auto mutations_view(MAT::Node* node) {
 
 void build_madag_from_mat_helper(MAT::Node* par_node, Node node, MADAG& dag) {
   for (size_t clade_idx = 0; clade_idx < par_node->children.size(); clade_idx++) {
-    Node child_node = dag.AppendNode();
-    Edge child_edge = dag.AppendEdge(node, child_node, CladeIdx{clade_idx});
-    dag.ResizeEdgeMutations(dag.GetDAG().GetEdgesCount());
     MAT::Node* mat_child = par_node->children[clade_idx];
+    Node child_node = dag.AddNode({mat_child->node_id});
+    Edge child_edge =
+        dag.AddEdge({mat_child->node_id}, node, child_node, CladeIdx{clade_idx});
+    dag.ResizeEdgeMutations(dag.GetDAG().GetEdgesCount());
     dag.SetEdgeMutations(child_edge, EdgeMutations{mutations_view(mat_child)});
     build_madag_from_mat_helper(mat_child, child_node, dag);
   }
 }
 MADAG build_madag_from_mat(const MAT::Tree& tree, std::string_view reference_sequence) {
   MADAG result{reference_sequence};
+  Node root_node = result.AddNode({tree.root->node_id});
+  build_madag_from_mat_helper(tree.root, root_node, result);
   Node ua_node = result.AppendNode();
-  Node root_node = result.AppendNode();
   Edge ua_edge = result.AppendEdge(ua_node, root_node, {0});
   result.ResizeEdgeMutations(result.GetDAG().GetEdgesCount());
   result.SetEdgeMutations(ua_edge, EdgeMutations{mutations_view(tree.root)});
-  build_madag_from_mat_helper(tree.root, root_node, result);
   result.BuildConnections();
   return result;
 }

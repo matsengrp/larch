@@ -88,7 +88,6 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
 
   MADAG result{reference_sequence};
 
-  size_t edge_id = 0;
   std::unordered_map<size_t, size_t> num_children;
   std::map<size_t, std::optional<std::string>> seq_ids;
   ParseNewick(
@@ -96,8 +95,8 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
       [&result, &seq_ids](size_t node_id, std::string label, std::optional<double>) {
         seq_ids[node_id] = label;
       },
-      [&result, &edge_id, &num_children](size_t parent, size_t child) {
-        result.AddEdge({edge_id++}, {parent}, {child}, {num_children[parent]++});
+      [&result, &num_children](size_t parent, size_t child) {
+        result.AddEdge({child}, {parent}, {child}, {num_children[parent]++});
       });
   result.InitializeNodes(result.GetDAG().GetEdgesCount() + 1);
   result.BuildConnections();
