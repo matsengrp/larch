@@ -114,6 +114,7 @@ template <typename WeightOps>
 template <typename DistributionMaker>
 std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
     WeightOps&& weight_ops, DistributionMaker&& distribution_maker) {
+  dag_.AssertUA();
   MADAG result{dag_.GetReferenceSequence()};
   std::vector<NodeId> result_dag_ids;
 

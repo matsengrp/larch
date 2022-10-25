@@ -5,6 +5,9 @@ Merge::Merge(std::string_view reference_sequence) : result_dag_{reference_sequen
 
 void Merge::AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& trees,
                     bool have_compact_genomes) {
+  for (auto tree : trees) {
+    tree.get().AssertUA();
+  }
   std::vector<size_t> tree_idxs;
   tree_idxs.resize(trees.size());
   std::iota(tree_idxs.begin(), tree_idxs.end(), trees_.size());

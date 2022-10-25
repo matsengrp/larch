@@ -51,12 +51,12 @@ CladeIdx EdgeView<T>::GetClade() const {
 
 template <typename T>
 NodeId EdgeView<T>::GetParentId() const {
-  return GetParent();
+  return GetStorage().GetParent();
 }
 
 template <typename T>
 NodeId EdgeView<T>::GetChildId() const {
-  return GetChild();
+  return GetStorage().GetChild();
 }
 
 template <typename T>

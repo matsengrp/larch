@@ -19,7 +19,6 @@
 
 #include <string_view>
 #include <vector>
-#include <iostream>
 #include <unordered_map>
 #include <utility>
 
@@ -97,6 +96,10 @@ class MADAG {
       const std::vector<CompactGenome>& compact_genomes);
 
   const EdgeMutations& GetEdgeMutations(EdgeId edge_id) const;
+
+  bool HaveUA() const;
+  void AssertUA() const;
+  void AddUA();
 
  private:
   friend MADAG LoadDAGFromProtobuf(std::string_view);

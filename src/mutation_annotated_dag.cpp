@@ -1,5 +1,7 @@
 #include "mutation_annotated_dag.hpp"
 #include <string_view>
+#include <iostream>
+#include "common.hpp"
 
 MADAG::MADAG(std::string_view reference_sequence)
     : reference_sequence_{reference_sequence} {}
@@ -97,6 +99,49 @@ std::vector<EdgeMutations> MADAG::ComputeEdgeMutations(
 
 const EdgeMutations& MADAG::GetEdgeMutations(EdgeId edge_id) const {
   return edge_mutations_.at(edge_id.value);
+}
+
+bool MADAG::HaveUA() const {
+  Assert(dag_.HaveRoot());
+  Node ua = dag_.GetRoot();
+  if (ua.GetId().value != dag_.GetNodesCount() - 1) {
+    return false;
+  }
+  if (ua.GetCladesCount() != 1) {
+    return false;
+  }
+  if (dag_.IsTree()) {
+    Node root = ua.GetFirstChild().GetChild();
+    if (root.GetId().value != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void MADAG::AssertUA() const {
+  Assert(dag_.HaveRoot());
+  Node ua = dag_.GetRoot();
+  Assert(ua.GetId().value == dag_.GetNodesCount() - 1);
+  Assert(ua.GetCladesCount() == 1);
+  if (dag_.IsTree()) {
+    Node root = ua.GetFirstChild().GetChild();
+    Assert(root.GetId().value == 0);
+  }
+}
+
+void MADAG::AddUA() {
+  Assert(not HaveUA());
+  Node root = dag_.GetRoot();
+  Node ua_node = dag_.AppendNode();
+  Edge ua_edge = dag_.AppendEdge(ua_node, root, {0});
+  if (not edge_mutations_.empty()) {
+    GetOrInsert(edge_mutations_, ua_edge.GetId()) = {};
+  }
+  if (not compact_genomes_.empty()) {
+    GetOrInsert(compact_genomes_, ua_node.GetId()) = {};
+  }
+  BuildConnections();
 }
 
 MutableNode MADAG::AddNode(NodeId id) { return dag_.AddNode(id); }

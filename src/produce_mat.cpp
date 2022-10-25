@@ -70,9 +70,10 @@ static void mat_from_dag_helper(Node dag_node, MAT::Node* mat_par_node,
 bool use_bound = true;
 
 MAT::Tree mat_from_dag(const MADAG& dag) {
+  dag.AssertUA();
   MAT::Tree tree;
   const std::vector<EdgeMutations>& edge_mutations = dag.GetEdgeMutations();
-  Node root_node = (*dag.GetDAG().GetRoot().GetChildren().begin()).GetChild();
+  Node root_node = dag.GetDAG().GetRoot().GetFirstChild().GetChild();
   MAT::Node* mat_root_node = new MAT::Node(root_node.GetId().value);
   tree.root = mat_root_node;
   tree.register_node_serial(mat_root_node);
@@ -107,11 +108,8 @@ MADAG build_madag_from_mat(const MAT::Tree& tree, std::string_view reference_seq
   MADAG result{reference_sequence};
   Node root_node = result.AddNode({tree.root->node_id});
   build_madag_from_mat_helper(tree.root, root_node, result);
-  Node ua_node = result.AppendNode();
-  Edge ua_edge = result.AppendEdge(ua_node, root_node, {0});
-  result.ResizeEdgeMutations(result.GetDAG().GetEdgesCount());
-  result.SetEdgeMutations(ua_edge, EdgeMutations{mutations_view(tree.root)});
   result.BuildConnections();
+  result.AddUA();
   return result;
 }
 void compareDAG(const Node dag1, const Node dag2,
