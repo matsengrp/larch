@@ -141,6 +141,9 @@ larch_executable(dag_diff
 larch_executable(dag2dot
     tools/dag2dot.cpp)
 
+larch_executable(mat2dag
+    tools/mat2dag.cpp)
+
 add_library(usher
     ${MATOPTIMIZE_SRC}
     ${DETAILED_MUTATIONS_PROTO_SRCS}
