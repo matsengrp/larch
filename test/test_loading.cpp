@@ -79,3 +79,10 @@ static void test_loading_dag(std::string_view path) {
 [[maybe_unused]] static const auto test_added1 =
     add_test({[] { test_loading_dag("data/20D_from_fasta/full_dag.pb.gz"); },
               "Loading: dag 20D_from_fasta"});
+
+[[maybe_unused]] static const auto test_added2 =
+    add_test({[] {
+                test_loading_tree("data/startmat/startmat_no_ancestral.pb.gz",
+                                  "data/startmat/refseq.txt.gz");
+              },
+              "Loading: tree startmat"});
