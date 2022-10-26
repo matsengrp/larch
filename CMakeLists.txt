@@ -142,6 +142,7 @@ larch_executable(larch-test
     test/test_compact_genome.cpp
     test/test_dag_trimming.cpp
     test/test_loading.cpp
+    test/test_matOptimize.cpp
     test/test_merge.cpp
     test/test_sample_tree.cpp
     test/test_subtree_weight.cpp

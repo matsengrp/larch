@@ -70,7 +70,7 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
                   << "\nCompact Genome is\n"
                   << result[node.GetId().value].ToString() << "\n"
                   << std::flush;
-        assert(false);
+        Assert(not "non-unique leaf node");
       }
     }
   }
