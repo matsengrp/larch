@@ -124,9 +124,11 @@ void MADAG::AssertUA() const {
   Node ua = dag_.GetRoot();
   Assert(ua.GetId().value == dag_.GetNodesCount() - 1);
   Assert(ua.GetCladesCount() == 1);
-  if (dag_.IsTree()) {
-    Node root = ua.GetFirstChild().GetChild();
-    Assert(root.GetId().value == 0);
+  if (not edge_mutations_.empty()) {
+    Assert(edge_mutations_.size() == dag_.GetEdgesCount());
+  }
+  if (not compact_genomes_.empty()) {
+    Assert(compact_genomes_.size() == dag_.GetNodesCount());
   }
 }
 
@@ -135,13 +137,16 @@ void MADAG::AddUA() {
   Node root = dag_.GetRoot();
   Node ua_node = dag_.AppendNode();
   Edge ua_edge = dag_.AppendEdge(ua_node, root, {0});
+  BuildConnections();
   if (not edge_mutations_.empty()) {
+    edge_mutations_.resize(dag_.GetEdgesCount());
     GetOrInsert(edge_mutations_, ua_edge.GetId()) = {};
   }
   if (not compact_genomes_.empty()) {
+    compact_genomes_.resize(dag_.GetNodesCount());
     GetOrInsert(compact_genomes_, ua_node.GetId()) = {};
   }
-  BuildConnections();
+  AssertUA();
 }
 
 MutableNode MADAG::AddNode(NodeId id) { return dag_.AddNode(id); }

@@ -36,19 +36,29 @@ auto DAG::GetLeafs() const { return leafs_ | Transform::ToNodes(*this); }
 
 auto DAG::GetLeafs() { return leafs_ | Transform::ToNodes(*this); }
 
-auto DAG::TraversePreOrder() const {
-  return ranges::subrange(PreOrderIterator{GetRoot()}, PreOrderIterator<Node>{});
+auto DAG::TraversePreOrder(NodeId below_node) const {
+  return ranges::subrange(PreOrderIterator{Get(below_node)}, PreOrderIterator<Node>{});
 }
 
-auto DAG::TraversePreOrder() {
-  return ranges::subrange(PreOrderIterator{GetRoot()}, PreOrderIterator<MutableNode>{});
+auto DAG::TraversePreOrder(NodeId below_node) {
+  return ranges::subrange(PreOrderIterator{Get(below_node)},
+                          PreOrderIterator<MutableNode>{});
 }
 
-auto DAG::TraversePostOrder() const {
-  return ranges::subrange(PostOrderIterator{GetRoot()}, PostOrderIterator<Node>{});
+auto DAG::TraversePostOrder(NodeId below_node) const {
+  return ranges::subrange(PostOrderIterator{Get(below_node)},
+                          PostOrderIterator<Node>{});
 }
 
-auto DAG::TraversePostOrder() {
-  return ranges::subrange(PostOrderIterator{GetRoot()},
+auto DAG::TraversePostOrder(NodeId below_node) {
+  return ranges::subrange(PostOrderIterator{Get(below_node)},
                           PostOrderIterator<MutableNode>{});
 }
+
+auto DAG::TraversePreOrder() const { return TraversePreOrder(GetRoot()); }
+
+auto DAG::TraversePreOrder() { return TraversePreOrder(GetRoot()); }
+
+auto DAG::TraversePostOrder() const { return TraversePostOrder(GetRoot()); }
+
+auto DAG::TraversePostOrder() { return TraversePostOrder(GetRoot()); }

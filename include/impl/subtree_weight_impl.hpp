@@ -41,7 +41,8 @@ MADAG SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
   std::vector<NodeId> result_dag_ids;
 
   ExtractTree(
-      dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
+      dag_, dag_.GetDAG().GetRoot(), result.AppendNode(),
+      std::forward<WeightOps>(weight_ops),
       [this](Node node, CladeIdx clade_idx) {
         return node.GetDAG().Get(
             // Probably don't want just the first one...?
@@ -118,8 +119,11 @@ std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
   MADAG result{dag_.GetReferenceSequence()};
   std::vector<NodeId> result_dag_ids;
 
+  NodeId parent_id = result.AppendNode();
+
   ExtractTree(
-      dag_, dag_.GetDAG().GetRoot(), std::forward<WeightOps>(weight_ops),
+      dag_, dag_.GetDAG().GetRoot().GetFirstChild().GetChild(), parent_id,
+      std::forward<WeightOps>(weight_ops),
       [this, &distribution_maker](Node node, CladeIdx clade_idx) {
         auto clade = node.GetClade(clade_idx);
         Assert(not clade.empty());
@@ -127,47 +131,45 @@ std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
       },
       result, result_dag_ids);
 
+  result.BuildConnections();
+  result.AddUA();
+
   return {std::move(result), std::move(result_dag_ids)};
 }
 
 template <typename WeightOps>
 template <typename EdgeSelector>
-void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node node,
-                                           WeightOps&& weight_ops,
+void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node input_node,
+                                           NodeId parent_id, WeightOps&& weight_ops,
                                            EdgeSelector&& edge_selector, MADAG& result,
                                            std::vector<NodeId>& result_dag_ids) {
-  ComputeWeightBelow(node, std::forward<WeightOps>(weight_ops));
+  ComputeWeightBelow(input_node, std::forward<WeightOps>(weight_ops));
   CladeIdx clade_idx{0};
 
-  NodeId parent_id{result.GetDAG().GetNodesCount()};
-  result.AddNode(parent_id);
-  GetOrInsert(result_dag_ids, parent_id) = node.GetId();
+  GetOrInsert(result_dag_ids, parent_id) = input_node.GetId();
 
   if (not input_dag.GetCompactGenomes().empty()) {
     result.AppendCompactGenome(
-        input_dag.GetCompactGenomes().at(node.GetId().value).Copy());
+        input_dag.GetCompactGenomes().at(input_node.GetId().value).Copy());
   }
 
-  for (auto clade : node.GetClades()) {
-    Edge edge = edge_selector(node, clade_idx);
+  for (auto clade : input_node.GetClades()) {
+    Assert(not clade.empty());
+
+    Edge input_edge = edge_selector(input_node, clade_idx);
     ++clade_idx.value;
 
-    EdgeId edge_id{result.GetDAG().GetEdgesCount()};
-    NodeId child_id{result.GetDAG().GetNodesCount()};
-
-    result.AddEdge(edge_id, parent_id, child_id, edge.GetClade());
+    NodeId child_id = result.AppendNode();
+    EdgeId edge_id = result.AppendEdge(parent_id, child_id, input_edge.GetClade());
 
     if (not input_dag.GetEdgeMutations().empty()) {
       result.AppendEdgeMutations(
-          input_dag.GetEdgeMutations().at(edge.GetId().value).Copy());
+          input_dag.GetEdgeMutations().at(input_edge.GetId().value).Copy());
     }
 
-    ExtractTree(dag_, edge.GetChild(), std::forward<WeightOps>(weight_ops),
+    ExtractTree(dag_, input_edge.GetChild(), child_id,
+                std::forward<WeightOps>(weight_ops),
                 std::forward<EdgeSelector>(edge_selector), result, result_dag_ids);
-  }
-
-  if (node.IsRoot()) {
-    result.BuildConnections();
   }
 
   for (auto node : result.GetDAG().GetNodes()) {

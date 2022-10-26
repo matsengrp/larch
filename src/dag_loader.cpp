@@ -79,6 +79,7 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
     }
   }
   result.SetEdgeMutations(std::move(edge_mutations));
+  result.AssertUA();
   return result;
 }
 
@@ -100,7 +101,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
       });
   result.InitializeNodes(result.GetDAG().GetEdgesCount() + 1);
   result.BuildConnections();
-  result.AddUA();
+
   for (auto node : result.GetDAG().GetNodes()) {
     if (node.IsLeaf()) {
       node.SetSampleId(std::move(seq_ids[node.GetId().value]));
@@ -109,15 +110,13 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
 
   std::vector<EdgeMutations> edge_mutations;
   edge_mutations.resize(result.GetDAG().GetEdgesCount());
-  Assert(static_cast<size_t>(data.node_mutations_size()) == edge_mutations.size());
+  Assert(static_cast<size_t>(data.node_mutations_size()) ==
+         result.GetDAG().GetNodesCount());
 
   size_t muts_idx = 0;
-  for (Node node : result.GetDAG().TraversePreOrder()) {
-    if (node.IsRoot()) {
-      continue;
-    }
+  for (auto iter : result.GetDAG().TraversePreOrder()) {
     const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
-    auto& edge_muts = edge_mutations.at(node.GetSingleParent().GetId().value);
+    auto& edge_muts = edge_mutations.at(iter.GetEdge().GetId().value);
     for (auto i :
          pb_muts |
              ranges::views::transform(
@@ -131,6 +130,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
     }
   }
   result.SetEdgeMutations(std::move(edge_mutations));
+  result.AddUA();
   return result;
 }
 
@@ -208,6 +208,7 @@ MADAG LoadDAGFromJson(std::string_view path) {
     result.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
   }
   result.BuildConnections();
+  result.AssertUA();
   return result;
 }
 
@@ -282,6 +283,7 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
 
 void StoreDAGToProtobuf(const MADAG& dag, std::string_view path) {
   Assert(not dag.GetEdgeMutations().empty());
+  dag.AssertUA();
   StoreDAGToProtobuf(dag.GetDAG(), dag.GetReferenceSequence(), dag.GetEdgeMutations(),
                      path);
 }
@@ -326,13 +328,11 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
   newick += ';';
   data.set_newick(newick);
 
-  for (Node node : dag.TraversePreOrder()) {
-    if (node.IsRoot()) {
-      continue;
-    }
+  for (Edge edge : dag.TraversePreOrder(dag.GetRoot().GetFirstChild().GetChild())) {
+    Assert(not edge.IsRoot());
+
     auto* proto = data.add_node_mutations();
-    for (auto [pos, mut] :
-         edge_parent_mutations.at(node.GetSingleParent().GetId().value)) {
+    for (auto [pos, mut] : edge_parent_mutations.at(edge.GetId().value)) {
       auto* proto_mut = proto->add_mutation();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
       proto_mut->set_ref_nuc(EncodeBase(reference_sequence.at(pos.value - 1)));
@@ -347,6 +347,7 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
 }
 
 void StoreTreeToProtobuf(const MADAG& dag, std::string_view path) {
+  dag.AssertUA();
   Assert(not dag.GetEdgeMutations().empty());
   StoreTreeToProtobuf(dag.GetDAG(), dag.GetReferenceSequence(), dag.GetEdgeMutations(),
                       path);
