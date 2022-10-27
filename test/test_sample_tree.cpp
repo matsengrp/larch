@@ -6,10 +6,14 @@
 #include <string_view>
 
 #include "test_common.hpp"
-
 #include "dag_loader.hpp"
-
 #include "tree_count.hpp"
+#include "merge.hpp"
+#include "benchmark.hpp"
+
+#if __has_include(<valgrind/callgrind.h>)
+#include <valgrind/callgrind.h>
+#endif
 
 static void test_sample_tree(MADAG& dag) {
   if (dag.GetEdgeMutations().empty()) {
@@ -31,6 +35,25 @@ static void test_sample_tree(std::string_view path) {
   test_sample_tree(dag);
 }
 
+static void bench_sampling(std::string_view path, std::string_view refseq_path) {
+  MADAG dag = LoadTreeFromProtobuf(path, LoadReferenceSequence(refseq_path));
+  Merge merge{dag.GetReferenceSequence()};
+  merge.AddDAGs({dag});
+  merge.ComputeResultEdgeMutations();
+  SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
+  Benchmark bench;
+#if defined(CALLGRIND_START_INSTRUMENTATION)
+  CALLGRIND_START_INSTRUMENTATION;
+#endif
+  bench.start();
+  std::ignore = weight.SampleTree({});
+  bench.stop();
+#if defined(CALLGRIND_START_INSTRUMENTATION)
+  CALLGRIND_STOP_INSTRUMENTATION;
+#endif
+  std::cout << " " << bench.durationMs() << " ms ";
+}
+
 [[maybe_unused]] static const auto test_added0 =
     add_test({[] { test_sample_tree("data/testcase/full_dag.pb.gz"); },
               "Sample tree: testcase"});
@@ -38,3 +61,10 @@ static void test_sample_tree(std::string_view path) {
 [[maybe_unused]] static const auto test_added1 =
     add_test({[] { test_sample_tree("data/testcase1/full_dag.pb.gz"); },
               "Sample tree: testcase1"});
+
+[[maybe_unused]] static const auto test_added2 =
+    add_test({[] {
+                bench_sampling("data/AY.103/AY.103_start_tree_no_ancestral.pb.gz",
+                                 "data/AY.103/ref_seq_noancestral.txt.gz");
+              },
+              "Bench sample tree: AY.103"});

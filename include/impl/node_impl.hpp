@@ -53,11 +53,12 @@ bool NodeView<T>::IsRoot() const {
 
 template <typename T>
 bool NodeView<T>::IsLeaf() const {
-  if (GetClades().empty()) {
-    return true;
+  for (auto&& i : GetStorage().GetClades()) {
+    if (not i.empty()) {
+      return false;
+    }
   }
-  auto children = GetChildren();
-  return children.begin() == children.end();
+  return true;
 }
 
 template <typename T>
