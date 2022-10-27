@@ -9,6 +9,8 @@ class Benchmark {
   inline void start();
   inline void stop();
 
+  inline auto lapMs();
+
   inline auto durationUs() const;
   inline auto durationMs() const;
   inline auto durationS() const;
@@ -34,4 +36,11 @@ auto Benchmark::durationMs() const {
 
 auto Benchmark::durationS() const {
   return std::chrono::duration_cast<std::chrono::seconds>(stop_ - start_).count();
+}
+
+auto Benchmark::lapMs() {
+  stop();
+  auto result = durationMs();
+  start_ = stop_ = std::chrono::high_resolution_clock::now();
+  return result;
 }

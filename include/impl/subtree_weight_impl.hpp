@@ -132,6 +132,15 @@ std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
       result, result_dag_ids);
 
   result.BuildConnections();
+  
+  for (Node node : result.GetDAG().GetNodes()) {
+    const std::optional<std::string>& old_sample_id =
+        dag_.GetDAG().Get(result_dag_ids.at(node.GetId().value)).GetSampleId();
+    if (node.IsLeaf() and old_sample_id.has_value()) {
+      node.SetSampleId(std::optional<std::string>{old_sample_id});
+    }
+  }
+
   result.AddUA();
 
   return {std::move(result), std::move(result_dag_ids)};
@@ -170,14 +179,5 @@ void SubtreeWeight<WeightOps>::ExtractTree(const MADAG& input_dag, Node input_no
     ExtractTree(dag_, input_edge.GetChild(), child_id,
                 std::forward<WeightOps>(weight_ops),
                 std::forward<EdgeSelector>(edge_selector), result, result_dag_ids);
-  }
-
-  for (auto node : result.GetDAG().GetNodes()) {
-    size_t idx = node.GetId().value;
-    const std::optional<std::string>& old_sample_id =
-        input_dag.GetDAG().GetNodes().at(idx).GetSampleId();
-    if (node.IsLeaf() and old_sample_id.has_value()) {
-      node.SetSampleId(std::optional<std::string>{old_sample_id});
-    }
   }
 }
