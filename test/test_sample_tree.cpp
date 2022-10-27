@@ -37,16 +37,18 @@ static void test_sample_tree(std::string_view path) {
 
 static void bench_sampling(std::string_view path, std::string_view refseq_path) {
   MADAG dag = LoadTreeFromProtobuf(path, LoadReferenceSequence(refseq_path));
+#if defined(CALLGRIND_START_INSTRUMENTATION)
+  CALLGRIND_START_INSTRUMENTATION;
+#endif
+  Benchmark bench;
+  bench.start();
+for (int i = 0; i < 100; ++i) {
   Merge merge{dag.GetReferenceSequence()};
   merge.AddDAGs({dag});
   merge.ComputeResultEdgeMutations();
   SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
-  Benchmark bench;
-#if defined(CALLGRIND_START_INSTRUMENTATION)
-  CALLGRIND_START_INSTRUMENTATION;
-#endif
-  bench.start();
   std::ignore = weight.SampleTree({});
+}
   bench.stop();
 #if defined(CALLGRIND_START_INSTRUMENTATION)
   CALLGRIND_STOP_INSTRUMENTATION;
@@ -65,6 +67,20 @@ static void bench_sampling(std::string_view path, std::string_view refseq_path) 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[] {
                 bench_sampling("data/AY.103/AY.103_start_tree_no_ancestral.pb.gz",
-                                 "data/AY.103/ref_seq_noancestral.txt.gz");
+                               "data/AY.103/ref_seq_noancestral.txt.gz");
               },
               "Bench sample tree: AY.103"});
+
+[[maybe_unused]] static const auto test_added3 =
+    add_test({[] {
+                bench_sampling("data/20B/20B_start_tree_no_ancestral.pb.gz",
+                               "data/20B/ref_seq_noancestral.txt.gz");
+              },
+              "Bench sample tree: 20B"});
+
+[[maybe_unused]] static const auto test_added4 =
+    add_test({[] {
+                bench_sampling("data/B.1.1.529/B.1.1.529_start_tree_no_ancestral.pb.gz",
+                               "data/B.1.1.529/ref_seq_noancestral.txt.gz");
+              },
+              "Bench sample tree: B.1.1.529"});
