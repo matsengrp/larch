@@ -130,7 +130,24 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
     }
   }
   result.SetEdgeMutations(std::move(edge_mutations));
-  result.AddUA();
+
+  // add UA node to tree, with mutations corresponding to original tree root node mutations (if any)
+  const auto& pb_muts = data.node_mutations().Get(0).mutation();
+  EdgeMutations edge_muts;
+  for (auto i :
+       pb_muts |
+           ranges::views::transform(
+               [](auto& mut) -> std::pair<MutationPosition, std::pair<char, char>> {
+                 static const char decode[] = {'A', 'C', 'G', 'T'};
+                 Assert(mut.mut_nuc().size() == 1);
+                 return {{static_cast<size_t>(mut.position())},
+                         {decode[mut.par_nuc()], decode[mut.mut_nuc().Get(0)]}};
+               })) {
+    edge_muts.insert(i);
+  }
+
+  result.AddUA(std::move(edge_muts));
+
   return result;
 }
 

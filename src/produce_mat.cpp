@@ -106,14 +106,17 @@ void build_madag_from_mat_helper(MAT::Node* par_node, Node node, MADAG& dag) {
     build_madag_from_mat_helper(mat_child, child_node, dag);
   }
 }
+
 MADAG build_madag_from_mat(const MAT::Tree& tree, std::string_view reference_sequence) {
   MADAG result{reference_sequence};
   Node root_node = result.AppendNode();
   build_madag_from_mat_helper(tree.root, root_node, result);
   result.BuildConnections();
   result.AddUA();
+  result.SetEdgeMutations(result.GetDAG().GetRoot().GetFirstChild(), EdgeMutations{mutations_view(tree.root)});
   return result;
 }
+
 void compareDAG(const Node dag1, const Node dag2,
                 const std::vector<EdgeMutations>& edge_mutations1,
                 const std::vector<EdgeMutations>& edge_mutations2) {
@@ -135,7 +138,7 @@ void compareDAG(const Node dag1, const Node dag2,
 void check_MAT_MADAG_Eq(const MAT::Tree& tree, const MADAG& init) {
   MADAG converted_dag = build_madag_from_mat(tree, init.GetReferenceSequence());
   compareDAG(converted_dag.GetDAG().GetRoot(), init.GetDAG().GetRoot(),
-             converted_dag.GetEdgeMutations(), converted_dag.GetEdgeMutations());
+             converted_dag.GetEdgeMutations(), init.GetEdgeMutations());
 }
 
 void fill_static_reference_sequence(std::string_view dag_ref) {
