@@ -12,31 +12,34 @@ void fill_static_reference_sequence(std::string_view);
 MAT::Tree mat_from_dag(const MADAG&);
 MADAG build_madag_from_mat(const MAT::Tree&, std::string_view);
 
+static void AssertEqual(Node lhs_node, Node rhs_node) {
+  // assert_equal(lhs_node.GetId().value, rhs_node.GetId().value, "Node id");
+  assert_equal(lhs_node.GetCladesCount(), rhs_node.GetCladesCount(), "Clades count");
+}
+
+static void AssertEqual(Edge lhs_edge, const std::vector<EdgeMutations>& lhs_mutations,
+                        Edge rhs_edge,
+                        const std::vector<EdgeMutations>& rhs_mutations) {
+  AssertEqual(lhs_edge.GetParent(), rhs_edge.GetParent());
+  AssertEqual(lhs_edge.GetChild(), rhs_edge.GetChild());
+  // assert_equal(lhs_edge.GetId().value, rhs_edge.GetId().value, "Edge id");
+
+  const EdgeMutations& lhs_muts = lhs_mutations.at(lhs_edge.GetId().value);
+  const EdgeMutations& rhs_muts = rhs_mutations.at(rhs_edge.GetId().value);
+  assert_equal(lhs_muts.size(), rhs_muts.size(), "Edge mutations count");
+  for (size_t i = 0; i < lhs_muts.size(); ++i) {
+    assert_equal(lhs_muts.size(), rhs_muts.size(), "Edge mutation");
+  }
+}
+
 static void AssertDAGsEqual(const MADAG& lhs, const MADAG& rhs) {
   assert_equal(lhs.GetDAG().GetNodesCount(), rhs.GetDAG().GetNodesCount(),
                "Nodes count");
   assert_equal(lhs.GetDAG().GetEdgesCount(), rhs.GetDAG().GetEdgesCount(),
                "Edges count");
 
-  auto lhs_order = lhs.GetDAG().TraversePostOrder();
-  auto rhs_order = rhs.GetDAG().TraversePostOrder();
-  auto lhs_it = lhs_order.begin();
-  auto rhs_it = rhs_order.begin();
-  while (lhs_it != lhs_order.end() && rhs_it != rhs_order.end()) {
-    auto [lhs_node, lhs_edge] = *lhs_it;
-    auto [rhs_node, rhs_edge] = *rhs_it;
-    // assert_equal(lhs_node.GetId().value, rhs_node.GetId().value, "Node id");
-    // assert_equal(lhs_edge.GetId().value, rhs_edge.GetId().value, "Edge id");
-    assert_equal(lhs_node.GetCladesCount(), rhs_node.GetCladesCount(), "Clades count");
-    const EdgeMutations& lhs_muts = lhs.GetEdgeMutations().at(lhs_edge.GetId().value);
-    const EdgeMutations& rhs_muts = rhs.GetEdgeMutations().at(rhs_edge.GetId().value);
-    assert_equal(lhs_muts.size(), rhs_muts.size(), "Edge mutations count");
-    for (size_t i = 0; i < lhs_muts.size(); ++i) {
-      assert_equal(lhs_muts.size(), rhs_muts.size(), "Edge mutation");
-    }
-    ++lhs_it;
-    ++rhs_it;
-  }
+  AssertEqual(lhs.GetDAG().GetRoot().GetFirstChild(), lhs.GetEdgeMutations(),
+              rhs.GetDAG().GetRoot().GetFirstChild(), rhs.GetEdgeMutations());
 }
 
 static void test_loading_tree(std::string_view path, std::string_view refseq_path) {
@@ -86,3 +89,31 @@ static void test_loading_dag(std::string_view path) {
                                   "data/startmat/refseq.txt.gz");
               },
               "Loading: tree startmat"});
+
+[[maybe_unused]] static const auto test_added3 =
+    add_test({[] {
+                test_loading_tree("data/20B/20B_start_tree_no_ancestral.pb.gz",
+                                  "data/20B/ref_seq_noancestral.txt.gz");
+              },
+              "Loading: tree 20B"});
+
+[[maybe_unused]] static const auto test_added4 =
+    add_test({[] {
+                test_loading_tree("data/20C/20C_start_tree_no_ancestral.pb.gz",
+                                  "data/20C/ref_seq_noancestral.txt.gz");
+              },
+              "Loading: tree 20C"});
+
+[[maybe_unused]] static const auto test_added5 =
+    add_test({[] {
+                test_loading_tree("data/AY.103/AY.103_start_tree_no_ancestral.pb.gz",
+                                  "data/AY.103/ref_seq_noancestral.txt.gz");
+              },
+              "Loading: tree AY.103"});
+
+[[maybe_unused]] static const auto test_added6 = add_test(
+    {[] {
+       test_loading_tree("data/B.1.1.529/B.1.1.529_start_tree_no_ancestral.pb.gz",
+                         "data/B.1.1.529/ref_seq_noancestral.txt.gz");
+     },
+     "Loading: tree B.1.1.529"});

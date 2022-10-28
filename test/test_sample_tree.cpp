@@ -42,13 +42,11 @@ static void bench_sampling(std::string_view path, std::string_view refseq_path) 
 #endif
   Benchmark bench;
   bench.start();
-for (int i = 0; i < 100; ++i) {
   Merge merge{dag.GetReferenceSequence()};
   merge.AddDAGs({dag});
   merge.ComputeResultEdgeMutations();
   SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
   std::ignore = weight.SampleTree({});
-}
   bench.stop();
 #if defined(CALLGRIND_START_INSTRUMENTATION)
   CALLGRIND_STOP_INSTRUMENTATION;

@@ -99,8 +99,7 @@ class MADAG {
 
   bool HaveUA() const;
   void AssertUA() const;
-  void AddUA();
-  void AddUA(const EdgeMutations mutations_at_root);
+  void AddUA(const EdgeMutations& mutations_at_root);
 
  private:
   friend MADAG LoadDAGFromProtobuf(std::string_view);

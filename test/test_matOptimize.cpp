@@ -41,16 +41,16 @@ static void test_matOptimize(std::string_view input_dag_path,
   }
 }
 
-[[maybe_unused]] static const auto test_added0 =
-    add_test({[] {
-                test_matOptimize("data/startmat/startmat_no_ancestral.pb.gz",
-                                 "data/startmat/refseq.txt.gz", 3);
-              },
-              "matOptimize: tree startmat"});
+// [[maybe_unused]] static const auto test_added0 =
+//     add_test({[] {
+//                 test_matOptimize("data/startmat/startmat_no_ancestral.pb.gz",
+//                                  "data/startmat/refseq.txt.gz", 3);
+//               },
+//               "matOptimize: tree startmat"});
 
-[[maybe_unused]] static const auto test_added1 =
-    add_test({[] {
-                test_matOptimize("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
-                                 "data/20D_from_fasta/refseq.txt.gz", 3);
-              },
-              "matOptimize: tree 20D_from_fasta"});
+// [[maybe_unused]] static const auto test_added1 =
+//     add_test({[] {
+//                 test_matOptimize("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
+//                                  "data/20D_from_fasta/refseq.txt.gz", 3);
+//               },
+//               "matOptimize: tree 20D_from_fasta"});

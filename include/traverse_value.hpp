@@ -3,6 +3,7 @@
 #include "node.hpp"
 #include "edge.hpp"
 
+#if 0
 template <typename T>
 class TraverseValue {
  public:
@@ -24,3 +25,4 @@ class TraverseValue {
   const NodeId node_;
   const EdgeId edge_;
 };
+#endif

@@ -107,7 +107,7 @@ class DAG {
   inline auto GetLeafs() const;
   inline auto GetLeafs();
   /** @} */
-
+#if 0
   /**
    * Return a range containing a preordering of Nodes in the DAG
    * @{
@@ -128,7 +128,7 @@ class DAG {
   inline auto TraversePreOrder(NodeId below_node);
   inline auto TraversePostOrder(NodeId below_node) const;
   inline auto TraversePostOrder(NodeId below_node);
-
+#endif
   /**
    * Change node IDs so that they are pre-ordered, and return a
    * map from old NodeIds to new NodeIds.

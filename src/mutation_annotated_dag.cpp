@@ -132,7 +132,7 @@ void MADAG::AssertUA() const {
   }
 }
 
-void MADAG::AddUA(const EdgeMutations mutations_at_root) {
+void MADAG::AddUA(const EdgeMutations& mutations_at_root) {
   Assert(not HaveUA());
   Node root = dag_.GetRoot();
   Node ua_node = dag_.AppendNode();
@@ -141,23 +141,6 @@ void MADAG::AddUA(const EdgeMutations mutations_at_root) {
   if (not edge_mutations_.empty()) {
     edge_mutations_.resize(dag_.GetEdgesCount());
     GetOrInsert(edge_mutations_, ua_edge.GetId()) = mutations_at_root.Copy();
-  }
-  AssertUA();
-}
-
-void MADAG::AddUA() {
-  Assert(not HaveUA());
-  Node root = dag_.GetRoot();
-  Node ua_node = dag_.AppendNode();
-  Edge ua_edge = dag_.AppendEdge(ua_node, root, {0});
-  BuildConnections();
-  if (not edge_mutations_.empty()) {
-    edge_mutations_.resize(dag_.GetEdgesCount());
-    GetOrInsert(edge_mutations_, ua_edge.GetId()) = {};
-  }
-  if (not compact_genomes_.empty()) {
-    compact_genomes_.resize(dag_.GetNodesCount());
-    GetOrInsert(compact_genomes_, ua_node.GetId()) = {};
   }
   AssertUA();
 }

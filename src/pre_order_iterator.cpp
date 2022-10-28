@@ -2,6 +2,7 @@
 
 #include "dag.hpp"
 
+#if 0
 template <typename NodeType>
 PreOrderIterator<NodeType>::PreOrderIterator(NodeType node) {
   stack_.push(*node.GetChildren().begin());
@@ -86,3 +87,4 @@ PreOrderIterator<NodeType>::GetFirstChild(EdgeType edge) {
 
 template class PreOrderIterator<Node>;
 template class PreOrderIterator<MutableNode>;
+#endif

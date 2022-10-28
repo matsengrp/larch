@@ -36,6 +36,7 @@ auto DAG::GetLeafs() const { return leafs_ | Transform::ToNodes(*this); }
 
 auto DAG::GetLeafs() { return leafs_ | Transform::ToNodes(*this); }
 
+#if 0
 auto DAG::TraversePreOrder(NodeId below_node) const {
   return ranges::subrange(PreOrderIterator{Get(below_node)}, PreOrderIterator<Node>{});
 }
@@ -62,3 +63,4 @@ auto DAG::TraversePreOrder() { return TraversePreOrder(GetRoot()); }
 auto DAG::TraversePostOrder() const { return TraversePostOrder(GetRoot()); }
 
 auto DAG::TraversePostOrder() { return TraversePostOrder(GetRoot()); }
+#endif

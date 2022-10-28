@@ -141,7 +141,7 @@ std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
     }
   }
 
-  result.AddUA();
+  result.AddUA({});
 
   return {std::move(result), std::move(result_dag_ids)};
 }
