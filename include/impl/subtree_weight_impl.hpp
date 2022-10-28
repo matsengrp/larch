@@ -122,7 +122,7 @@ std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
   NodeId parent_id = result.AppendNode();
 
   ExtractTree(
-      dag_, dag_.GetDAG().GetRoot(), parent_id,
+      dag_, dag_.GetDAG().GetRoot().GetFirstChild().GetChild(), parent_id,
       std::forward<WeightOps>(weight_ops),
       [this, &distribution_maker](Node node, CladeIdx clade_idx) {
         auto clade = node.GetClade(clade_idx);
@@ -140,8 +140,11 @@ std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
       node.SetSampleId(std::optional<std::string>{old_sample_id});
     }
   }
-
-  result.AddUA({});
+  if (not dag_.GetEdgeMutations().empty()) {
+    result.AddUA(dag_.GetEdgeMutations().at(dag_.GetDAG().GetRoot().GetFirstChild().GetId().value));
+  } else {
+    result.AddUA({});
+  }
 
   return {std::move(result), std::move(result_dag_ids)};
 }
