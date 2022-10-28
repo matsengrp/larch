@@ -132,7 +132,7 @@ void MADAG::AssertUA() const {
   }
 }
 
-void MADAG::AddUA(EdgeMutations mutations_at_root) {
+void MADAG::AddUA(const EdgeMutations mutations_at_root) {
   Assert(not HaveUA());
   Node root = dag_.GetRoot();
   Node ua_node = dag_.AppendNode();

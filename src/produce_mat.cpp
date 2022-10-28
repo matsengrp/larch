@@ -78,9 +78,20 @@ MAT::Tree mat_from_dag(const MADAG& dag) {
   const std::vector<EdgeMutations>& edge_mutations = dag.GetEdgeMutations();
   Node root_node = dag.GetDAG().GetRoot().GetFirstChild().GetChild();
   MAT::Node* mat_root_node = new MAT::Node(node_id++);
+
+  const auto& tree_root_mutations = edge_mutations.at(dag.GetDAG().GetRoot().GetFirstChild().GetId().value);
+  mat_root_node->mutations.reserve(tree_root_mutations.size());
+  for (auto [pos, muts] : tree_root_mutations) {
+    Assert(pos.value != NoId);
+    MAT::Mutation mat_mut("ref", pos.value, EncodeBase(muts.second),
+                          EncodeBase(muts.first), EncodeBase(muts.second));
+    mat_root_node->mutations.push_back(mat_mut);
+  }
+
   tree.root = mat_root_node;
   tree.register_node_serial(mat_root_node);
   mat_from_dag_helper(root_node, mat_root_node, node_id, edge_mutations, tree);
+
   return tree;
 }
 
@@ -112,8 +123,7 @@ MADAG build_madag_from_mat(const MAT::Tree& tree, std::string_view reference_seq
   Node root_node = result.AppendNode();
   build_madag_from_mat_helper(tree.root, root_node, result);
   result.BuildConnections();
-  result.AddUA();
-  result.SetEdgeMutations(result.GetDAG().GetRoot().GetFirstChild(), EdgeMutations{mutations_view(tree.root)});
+  result.AddUA(EdgeMutations{mutations_view(tree.root)});
   return result;
 }
 
@@ -152,6 +162,28 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
   auto dag_ref = dag.GetReferenceSequence();
   fill_static_reference_sequence(dag_ref);
   auto tree = mat_from_dag(dag);
+
+  auto tree_root_mutations = tree.root->mutations;
+  auto ua_child_mutations = dag.GetEdgeMutations().at(dag.GetDAG().GetRoot().GetFirstChild().GetId().value).Copy();
+
+  std::cout << "\n";
+  std::cout << "\n";
+  std::cout << "original tree has "
+            << tree_root_mutations.size()
+            << " edge mutations at root, and dag has "
+            << ua_child_mutations.size()
+            << ".\n" << std::flush;
+  std::cout << "\nthe tree root mutations are:\n";
+  for (auto i : tree_root_mutations) {
+    std::cout << i.get_string() << "\n";
+  }
+  std::cout << "\nand the dag root mutations are:\n";
+  for (auto i : ua_child_mutations) {
+    std::cout << i.first.value << ", " << i.second.first << ", " << i.second.second << "\n" << std::flush;
+  }
+  std::cout << "\n";
+  std::cout << "\n";
+
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "before_optimize.pb");
   check_MAT_MADAG_Eq(tree, dag);
   Original_State_t origin_states;

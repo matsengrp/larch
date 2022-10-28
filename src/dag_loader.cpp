@@ -108,15 +108,20 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
     }
   }
 
+  result.AddUA();
+
   std::vector<EdgeMutations> edge_mutations;
   edge_mutations.resize(result.GetDAG().GetEdgesCount());
   Assert(static_cast<size_t>(data.node_mutations_size()) ==
-         result.GetDAG().GetNodesCount());
+         result.GetDAG().GetNodesCount() - 1);
 
   size_t muts_idx = 0;
-  for (auto iter : result.GetDAG().TraversePreOrder()) {
+  for (Node node : result.GetDAG().TraversePreOrder()) {
+    if (node.IsRoot()) {
+      continue;
+    }
     const auto& pb_muts = data.node_mutations().Get(muts_idx++).mutation();
-    auto& edge_muts = edge_mutations.at(iter.GetEdge().GetId().value);
+    auto& edge_muts = edge_mutations.at(node.GetSingleParent().GetId().value);
     for (auto i :
          pb_muts |
              ranges::views::transform(
@@ -129,25 +134,31 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
       edge_muts.insert(i);
     }
   }
+
   result.SetEdgeMutations(std::move(edge_mutations));
 
-  // add UA node to tree, with mutations corresponding to original tree root node mutations (if any)
-  const auto& pb_muts = data.node_mutations().Get(0).mutation();
-  EdgeMutations edge_muts;
-  for (auto i :
-       pb_muts |
-           ranges::views::transform(
-               [](auto& mut) -> std::pair<MutationPosition, std::pair<char, char>> {
-                 static const char decode[] = {'A', 'C', 'G', 'T'};
-                 Assert(mut.mut_nuc().size() == 1);
-                 return {{static_cast<size_t>(mut.position())},
-                         {decode[mut.par_nuc()], decode[mut.mut_nuc().Get(0)]}};
-               })) {
-    edge_muts.insert(i);
+/* PRINTOUTS FOR CHECKING WE HAVE THE SAME MUTATIONS AT THE ROOT */
+  auto tree_root_mutations = data.node_mutations().Get(0).mutation();
+  auto ua_child_mutations = result.GetEdgeMutations().at(result.GetDAG().GetRoot().GetFirstChild().GetId().value).Copy();
+
+  std::cout << "\n";
+  std::cout << "\n";
+  std::cout << "original tree has "
+            << tree_root_mutations.size()
+            << " edge mutations at root, and dag has "
+            << ua_child_mutations.size()
+            << ".\n" << std::flush;
+  std::cout << "\nthe tree root mutations are:\n";
+  for (auto i : tree_root_mutations) {
+    std::cout << i.position() << ", " << i.par_nuc() << ", " << i.mut_nuc().Get(0) << ",\n" << std::flush;
   }
-
-  result.AddUA(std::move(edge_muts));
-
+  std::cout << "\nand the dag root mutations are:\n";
+  for (auto i : ua_child_mutations) {
+    std::cout << i.first.value << ", " << i.second.first << ", " << i.second.second << "\n" << std::flush;
+  }
+  std::cout << "\n";
+  std::cout << "\n";
+/* END PRINTOUTS */
   return result;
 }
 
