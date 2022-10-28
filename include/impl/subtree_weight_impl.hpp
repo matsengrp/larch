@@ -122,7 +122,7 @@ std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
   NodeId parent_id = result.AppendNode();
 
   ExtractTree(
-      dag_, dag_.GetDAG().GetRoot().GetFirstChild().GetChild(), parent_id,
+      dag_, dag_.GetDAG().GetRoot(), parent_id,
       std::forward<WeightOps>(weight_ops),
       [this, &distribution_maker](Node node, CladeIdx clade_idx) {
         auto clade = node.GetClade(clade_idx);

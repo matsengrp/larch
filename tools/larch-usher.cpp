@@ -250,6 +250,7 @@ int main(int argc, char** argv) {
   } else {
     input_dag = LoadDAGFromProtobuf(input_dag_path);
   }
+  input_dag.RecomputeCompactGenomes();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
   std::vector<MADAG> optimized_dags;
@@ -273,9 +274,11 @@ int main(int argc, char** argv) {
   };
   logger(0);
 
+
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)
               << " #######\n";
+
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     auto [sample, dag_ids] = weight.SampleTree({});
