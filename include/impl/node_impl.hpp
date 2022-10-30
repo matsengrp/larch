@@ -102,7 +102,7 @@ auto NodeView<T>::GetParents() const {
 template <typename T>
 auto NodeView<T>::GetClades() const {
   return GetStorage().GetClades() |
-         ranges::views::transform([this](const std::vector<EdgeId>& clade) {
+         ranges::views::transform([*this](const std::vector<EdgeId>& clade) {
            return clade | Transform::ToEdges(dag_);
          });
 }
