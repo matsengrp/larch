@@ -5,7 +5,7 @@
 #include "subtree_weight.hpp"
 #include "parsimony_score.hpp"
 
-#include "src/matOptimize/mutation_annotated_tree.hpp"
+#include "usher_glue.hpp"
 
 namespace MAT = Mutation_Annotated_Tree;
 void fill_static_reference_sequence(std::string_view);

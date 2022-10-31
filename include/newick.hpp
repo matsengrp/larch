@@ -9,15 +9,15 @@
 #include <string>
 #include <optional>
 
-#include <range/v3/view/reverse.hpp>
+#include "common.hpp"
 
 template <typename T, typename N, typename E>
 void ParseNewick(const T& source, N&& on_node, E&& on_edge) {
-  struct Node {
+  struct NewickNode {
     size_t id;
     std::string label;
   };
-  std::stack<std::vector<Node>> nodes;
+  std::stack<std::vector<NewickNode>> nodes;
   std::string label;
   size_t node_id = 0;
 

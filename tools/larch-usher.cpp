@@ -10,10 +10,6 @@
 #include "dag_loader.hpp"
 #include "mutation_annotated_dag.hpp"
 #include "node.hpp"
-#include "range/v3/algorithm/sort.hpp"
-#include "range/v3/algorithm/unique.hpp"
-#include "range/v3/view/zip.hpp"
-#include "src/matOptimize/tree_rearrangement_internal.hpp"
 #include "subtree_weight.hpp"
 #include "weight_accumulator.hpp"
 #include "tree_count.hpp"
@@ -22,7 +18,7 @@
 #include "benchmark.hpp"
 #include <mpi.h>
 
-#include "../deps/usher/src/matOptimize/Profitable_Moves_Enumerators/Profitable_Moves_Enumerators.hpp"
+#include "usher_glue.hpp"
 
 MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback);
 [[noreturn]] static void Usage() {
@@ -52,27 +48,6 @@ static size_t ParseNumber(std::string_view str) {
     return number;
   }
   throw std::runtime_error("Invalid number");
-}
-
-static void CallMatOptimize(std::string matoptimize_path, std::string input,
-                            std::string output) {
-  pid_t pid = fork();
-  if (pid == 0) {
-    if (execl(matoptimize_path.c_str(), "matOptimize", "-i", input.c_str(), "-o",
-              output.c_str(), "-T", "1", "-n", nullptr) == -1) {
-      throw std::runtime_error("Exec failed");
-    }
-  } else if (pid > 0) {
-    int status;
-    if (wait(&status) == -1) {
-      throw std::runtime_error("Wait failed");
-    }
-    if (not WIFEXITED(status) or WEXITSTATUS(status) != EXIT_SUCCESS) {
-      throw std::runtime_error("Child process failed");
-    }
-  } else {
-    throw std::runtime_error("Fork failed");
-  }
 }
 
 void check_edge_mutations(const MADAG& madag);
@@ -116,9 +91,9 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
   Larch_Move_Found_Callback(const Merge& merge, const MADAG& sample,
                             const std::vector<NodeId>& sample_dag_ids)
       : merge_{merge}, sample_{sample}, sample_dag_ids_{sample_dag_ids} {}
-  bool operator()(Profitable_Moves& move, int best_score_change,
+  bool operator()(Profitable_Moves& move, int /* best_score_change */,
                   std::vector<Node_With_Major_Allele_Set_Change>&
-                      node_with_major_allele_set_change) override {
+                  /* node_with_major_allele_set_change */) override {
     NodeId src_id = sample_dag_ids_.at(move.src->node_id);
     NodeId dst_id = sample_dag_ids_.at(move.dst->node_id);
     NodeId lca_id = sample_dag_ids_.at(move.LCA->node_id);
@@ -128,7 +103,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     auto& dst_clades =
         merge_.GetResultNodeLabels().at(dst_id.value).GetLeafSet()->GetClades();
 
-    size_t new_nodes_count = 0;
+    int new_nodes_count = 0;
 
     MAT::Node* curr_node = move.src;
     while (not(curr_node->node_id == lca_id.value)) {
@@ -231,7 +206,7 @@ int main(int argc, char** argv) {
     Fail();
   }
 
-  auto init_result = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
 
   std::ofstream logfile;
   logfile.open(logfile_path);
@@ -273,7 +248,6 @@ int main(int argc, char** argv) {
             << parsimonyscores.GetWeights().begin()->second << '\t';
   };
   logger(0);
-
 
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)

@@ -13,9 +13,6 @@
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for_each.h>
 
-#include <range/v3/action/sort.hpp>
-#include <range/v3/action/unique.hpp>
-
 #include "mutation_annotated_dag.hpp"
 #include "leaf_set.hpp"
 #include "node_label.hpp"

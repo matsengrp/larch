@@ -9,8 +9,7 @@
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/gzip_stream.h>
 
-#include <range/v3/view/transform.hpp>
-
+#pragma GCC diagnostic ignored "-Wstack-usage="
 #include "nlohmann/json.hpp"
 
 #include <boost/iostreams/filtering_stream.hpp>
@@ -101,7 +100,7 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
   std::map<size_t, std::optional<std::string>> seq_ids;
   ParseNewick(
       data.newick(),
-      [&result, &seq_ids](size_t node_id, std::string label, std::optional<double>) {
+      [&seq_ids](size_t node_id, std::string label, std::optional<double>) {
         seq_ids[node_id] = label;
       },
       [&result, &num_children](size_t parent, size_t child) {
@@ -118,15 +117,15 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
 
   result.AddUA({});
 
-  std::vector<EdgeMutations> edge_mutations;
-  edge_mutations.resize(result.GetDAG().GetEdgesCount());
+  std::vector<EdgeMutations> result_mutations;
+  result_mutations.resize(result.GetDAG().GetEdgesCount());
   Assert(static_cast<size_t>(data.node_mutations_size()) ==
          result.GetDAG().GetNodesCount() - 1);
 
   auto apply_mutations = [](auto& self, Edge edge, const auto& node_mutations,
                             std::vector<EdgeMutations>& edge_mutations,
                             size_t& idx) -> void {
-    const auto& pb_muts = node_mutations.Get(idx++).mutation();
+    const auto& pb_muts = node_mutations.Get(static_cast<int>(idx++)).mutation();
     auto& edge_muts = edge_mutations.at(edge.GetId().value);
     for (auto i : pb_muts | ranges::views::transform(DecodeMutation)) {
       edge_muts.insert(i);
@@ -137,9 +136,9 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
   };
   size_t muts_idx = 0;
   apply_mutations(apply_mutations, result.GetDAG().GetRoot().GetFirstChild(),
-                  data.node_mutations(), edge_mutations, muts_idx);
+                  data.node_mutations(), result_mutations, muts_idx);
 
-  result.SetEdgeMutations(std::move(edge_mutations));
+  result.SetEdgeMutations(std::move(result_mutations));
   return result;
 }
 
@@ -269,18 +268,18 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
 
   for (size_t i = 0; i < dag.GetNodesCount(); ++i) {
     auto* proto_node = data.add_node_names();
-    proto_node->set_node_id(i);
+    proto_node->set_node_id(static_cast<int64_t>(i));
   }
 
   for (Edge edge : dag.GetEdges()) {
     auto* proto_edge = data.add_edges();
-    proto_edge->set_edge_id(edge.GetId().value);
-    proto_edge->set_parent_node(edge.GetParentId().value);
-    proto_edge->set_child_node(edge.GetChildId().value);
-    proto_edge->set_parent_clade(edge.GetClade().value);
+    proto_edge->set_edge_id(static_cast<int64_t>(edge.GetId().value));
+    proto_edge->set_parent_node(static_cast<int64_t>(edge.GetParentId().value));
+    proto_edge->set_child_node(static_cast<int64_t>(edge.GetChildId().value));
+    proto_edge->set_parent_clade(static_cast<int64_t>(edge.GetClade().value));
     for (auto [pos, nucs] : edge_parent_mutations.at(edge.GetId().value)) {
       auto* proto_mut = proto_edge->add_edge_mutations();
-      proto_mut->set_position(pos.value);
+      proto_mut->set_position(static_cast<int32_t>(pos.value));
       proto_mut->set_par_nuc(EncodeBase(nucs.first));
       proto_mut->add_mut_nuc(EncodeBase(nucs.second));
     }
@@ -337,20 +336,20 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
   newick += ';';
   data.set_newick(newick);
 
-  auto store_mutations =
-      [](auto& self, Edge edge, const std::vector<EdgeMutations>& edge_mutations,
-         Parsimony::data& data, std::string_view reference_sequence) -> void {
-    auto* proto = data.add_node_mutations();
-    for (auto [pos, mut] : edge_mutations.at(edge.GetId().value)) {
+  auto store_mutations = [](auto& self, Edge edge,
+                            const std::vector<EdgeMutations>& muts,
+                            Parsimony::data& result, std::string_view ref_seq) -> void {
+    auto* proto = result.add_node_mutations();
+    for (auto [pos, mut] : muts.at(edge.GetId().value)) {
       auto* proto_mut = proto->add_mutation();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
-      proto_mut->set_ref_nuc(EncodeBase(reference_sequence.at(pos.value - 1)));
+      proto_mut->set_ref_nuc(EncodeBase(ref_seq.at(pos.value - 1)));
       proto_mut->set_par_nuc(EncodeBase(mut.first));
       proto_mut->add_mut_nuc(EncodeBase(mut.second));
       proto_mut->set_chromosome("leaf_0");
     }
     for (Edge child : edge.GetChild().GetChildren()) {
-      self(self, child, edge_mutations, data, reference_sequence);
+      self(self, child, muts, result, ref_seq);
     }
   };
   store_mutations(store_mutations, dag.GetRoot().GetFirstChild(), edge_mutations, data,

@@ -2,8 +2,6 @@
 #include <unordered_map>
 #include <numeric>
 
-#include <range/v3/view/subrange.hpp>
-
 auto DAG::GetNodes() const {
   return nodes_ |
          ranges::views::transform([this, idx = size_t{}](const NodeStorage&) mutable {

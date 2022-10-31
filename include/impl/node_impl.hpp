@@ -1,5 +1,4 @@
 // Functions defined here are documented where declared in `include/node.hpp`
-#include <range/v3/view/join.hpp>
 
 template <typename T>
 NodeView<T>::NodeView(T dag, NodeId id) : dag_{dag}, id_{id} {

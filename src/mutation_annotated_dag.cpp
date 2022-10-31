@@ -70,7 +70,7 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
                   << "\nCompact Genome is\n"
                   << result[node.GetId().value].ToString() << "\n"
                   << std::flush;
-        Assert(not "non-unique leaf node");
+        Assert(false);
       }
     }
   }
@@ -122,7 +122,7 @@ bool MADAG::HaveUA() const {
 void MADAG::AssertUA() const {
   Assert(dag_.HaveRoot());
   Node ua = dag_.GetRoot();
-  //Assert(ua.GetId().value == dag_.GetNodesCount() - 1);
+  // Assert(ua.GetId().value == dag_.GetNodesCount() - 1);
   Assert(ua.GetCladesCount() == 1);
   if (not edge_mutations_.empty()) {
     Assert(edge_mutations_.size() == dag_.GetEdgesCount());

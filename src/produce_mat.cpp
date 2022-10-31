@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <iostream>
 #include <charconv>
@@ -8,33 +9,30 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#include "arguments.hpp"
 #include "dag.hpp"
 #include "dag_loader.hpp"
 #include "edge.hpp"
 #include "edge_mutations.hpp"
 #include "mutation_annotated_dag.hpp"
 #include "node.hpp"
-#include "range/v3/view/transform.hpp"
 #include "subtree_weight.hpp"
 #include "parsimony_score.hpp"
 #include "merge.hpp"
 
-#include "../deps/usher/src/matOptimize/mutation_annotated_tree.hpp"
-#include "../deps/usher/src/matOptimize/check_samples.hpp"
-#include "../deps/usher/src/matOptimize/tree_rearrangement_internal.hpp"
+#include "usher_glue.hpp"
 #include <tbb/task_scheduler_init.h>
 
 namespace MAT = Mutation_Annotated_Tree;
 std::atomic_bool interrupted(false);
 int process_count = 1;
 int this_rank = 0;
-uint32_t num_threads = tbb::task_scheduler_init::default_num_threads();
+uint32_t num_threads =
+    static_cast<uint32_t>(tbb::task_scheduler_init::default_num_threads());
 FILE* movalbe_src_log;
 bool changing_radius = false;
 bool use_bound = true;
 
-static int32_t EncodeBase(char base) {
+static uint8_t EncodeBase(char base) {
   switch (base) {
     case 'A':
       return 1;
@@ -61,7 +59,7 @@ static void mat_from_dag_helper(Node dag_node, MAT::Node* mat_par_node, size_t& 
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
       Assert(pos.value != NoId);
-      MAT::Mutation mat_mut("ref", pos.value, EncodeBase(muts.second),
+      MAT::Mutation mat_mut("ref", static_cast<int>(pos.value), EncodeBase(muts.second),
                             EncodeBase(muts.first), EncodeBase(muts.second));
       node->mutations.push_back(mat_mut);
     }
@@ -79,11 +77,12 @@ MAT::Tree mat_from_dag(const MADAG& dag) {
   Node root_node = dag.GetDAG().GetRoot().GetFirstChild().GetChild();
   MAT::Node* mat_root_node = new MAT::Node(node_id++);
 
-  const auto& tree_root_mutations = edge_mutations.at(dag.GetDAG().GetRoot().GetFirstChild().GetId().value);
+  const auto& tree_root_mutations =
+      edge_mutations.at(dag.GetDAG().GetRoot().GetFirstChild().GetId().value);
   mat_root_node->mutations.reserve(tree_root_mutations.size());
   for (auto [pos, muts] : tree_root_mutations) {
     Assert(pos.value != NoId);
-    MAT::Mutation mat_mut("ref", pos.value, EncodeBase(muts.second),
+    MAT::Mutation mat_mut("ref", static_cast<int>(pos.value), EncodeBase(muts.second),
                           EncodeBase(muts.first), EncodeBase(muts.second));
     mat_root_node->mutations.push_back(mat_mut);
   }
@@ -138,7 +137,7 @@ void compareDAG(const Node dag1, const Node dag2,
   for (size_t child_idx = 0; child_idx < dag1.GetCladesCount(); child_idx++) {
     auto edge1 = dag1.GetClade(CladeIdx{child_idx})[0];
     auto edge2 = dag2.GetClade(CladeIdx{child_idx})[0];
-    if (edge_mutations1[edge1.GetId().value] != edge_mutations2[edge1.GetId().value]) {
+    if (edge_mutations1[edge1.GetId().value] != edge_mutations2[edge2.GetId().value]) {
       fprintf(stderr, "edge %zu and edge %zu  have mismatch mutation\n",
               edge1.GetId().value, edge2.GetId().value);
     }
@@ -171,9 +170,9 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
 
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
   std::chrono::steady_clock::time_point end_time = start_time + std::chrono::hours(8);
-  int ddepth = tree.get_max_level() * 2;
+  size_t ddepth = tree.get_max_level() * 2;
   std::cout << "maximum radius is " << std::to_string(ddepth) << "\n";
-  for (size_t rad_exp = 1; (1 << rad_exp) <= ddepth; rad_exp++) {
+  for (size_t rad_exp = 1; static_cast<size_t>(1) << rad_exp <= ddepth; rad_exp++) {
     auto all_nodes = tree.depth_first_expansion();
     std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
 
