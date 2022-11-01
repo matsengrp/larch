@@ -19,7 +19,6 @@
 
 #include <string_view>
 #include <vector>
-#include <iostream>
 #include <unordered_map>
 #include <utility>
 
@@ -38,6 +37,7 @@ class MADAG {
   explicit MADAG(std::string_view reference_sequence);
 
   const DAG& GetDAG() const;
+  DAG& GetDAG();
   /**
    * Get UA node sequence
    */
@@ -98,6 +98,10 @@ class MADAG {
 
   const EdgeMutations& GetEdgeMutations(EdgeId edge_id) const;
 
+  bool HaveUA() const;
+  void AssertUA() const;
+  void AddUA(const EdgeMutations& mutations_at_root);
+
  private:
   friend MADAG LoadDAGFromProtobuf(std::string_view);
   friend MADAG LoadTreeFromProtobuf(std::string_view, std::string_view);
@@ -108,10 +112,10 @@ class MADAG {
   friend class Merge;
   friend MADAG build_madag_from_mat(const Mutation_Annotated_Tree::Tree&,
                                     std::string_view);
-  friend void build_madag_from_mat_helper(Mutation_Annotated_Tree::Node*, size_t,
-                                          size_t&, MADAG&, size_t&);
+  friend void build_madag_from_mat_helper(Mutation_Annotated_Tree::Node*, Node, MADAG&);
 
   MutableNode AddNode(NodeId id);
+  MutableNode AppendNode();
   MutableEdge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
   MutableEdge AppendEdge(NodeId parent, NodeId child, CladeIdx clade);
   void BuildConnections();

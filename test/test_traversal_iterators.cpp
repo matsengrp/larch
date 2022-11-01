@@ -3,6 +3,7 @@
 #include "synthetic_dags.hpp"
 #include "dag_loader.hpp"
 
+#if 0
 static const std::vector<size_t> correct_preorder = {
     0,  1, 2, 4,  7,  12, 13, 8,  14, 15, 22, 27, 28, 29, 30, 23,
     16, 5, 9, 17, 18, 24, 25, 19, 11, 20, 26, 21, 6,  10, 3};
@@ -25,3 +26,4 @@ static const std::vector<size_t> correct_postorder = {
 
 [[maybe_unused]] static const auto test_added0 =
     add_test({[] { test_traversal_iterators(); }, "Traversal iterators"});
+#endif

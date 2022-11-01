@@ -2,6 +2,8 @@
 #include <vector>
 #include <regex>
 
+#include <mpi.h>
+
 #include "test_common.hpp"
 
 static std::vector<Test>& get_all_tests() {
@@ -14,7 +16,9 @@ bool add_test(const Test& test) noexcept {
   return true;
 }
 
-int main(int argc, const char* argv[]) {
+int main(int argc, char* argv[]) {
+  int ignored;
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
   bool no_catch = false;
   std::regex regex{".*"};
   for (int i = 1; i < argc; ++i) {

@@ -6,6 +6,8 @@ MutableNode DAG::AddNode(NodeId id) {
   return {*this, id};
 }
 
+MutableNode DAG::AppendNode() { return AddNode({GetNodesCount()}); }
+
 MutableEdge DAG::AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade) {
   Assert(id.value != NoId);
   Assert(parent.value != NoId);
@@ -28,8 +30,8 @@ void DAG::BuildConnectionsRaw() {
   }
   EdgeId edge_id = {0};
   for (auto& edge : edges_) {
-    Assert(edge.GetParent().value != NoId);
-    Assert(edge.GetChild().value != NoId);
+    Assert(edge.GetParent().value != NoId && "Edge has no parent");
+    Assert(edge.GetChild().value != NoId && "Edge has no child");
     auto& parent = nodes_.at(edge.GetParent().value);
     auto& child = nodes_.at(edge.GetChild().value);
     parent.AddEdge(edge.GetClade(), edge_id, true);
@@ -44,10 +46,10 @@ void DAG::BuildConnections() {
   BuildConnectionsRaw();
   for (auto node : GetNodes()) {
     for (auto clade : node.GetClades()) {
-      Assert(not clade.empty());
+      Assert(not clade.empty() && "Empty clade");
     }
     if (node.IsRoot()) {
-      Assert(root_.value == NoId);
+      Assert(root_.value == NoId && "Duplicate root");
       root_ = node;
     }
     if (node.IsLeaf()) {

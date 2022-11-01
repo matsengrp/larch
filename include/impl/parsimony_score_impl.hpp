@@ -1,8 +1,6 @@
 #include <algorithm>
 
-ParsimonyScore::Weight ParsimonyScore::ComputeLeaf(const MADAG& dag, NodeId node_id) {
-  return 0;
-}
+ParsimonyScore::Weight ParsimonyScore::ComputeLeaf(const MADAG&, NodeId) { return 0; }
 
 ParsimonyScore::Weight ParsimonyScore::ComputeEdge(const MADAG& dag, EdgeId edge_id) {
   return dag.GetEdgeMutations(edge_id).size();
@@ -28,7 +26,8 @@ ParsimonyScore::WithinCladeAccumOptimum(std::vector<ParsimonyScore::Weight> inwe
 
 ParsimonyScore::Weight ParsimonyScore::BetweenClades(
     const std::vector<ParsimonyScore::Weight>& inweights) const {
-  return std::accumulate(inweights.begin(), inweights.end(), 0);
+  return std::accumulate(inweights.begin(), inweights.end(),
+                         static_cast<ParsimonyScore::Weight>(0));
 }
 
 ParsimonyScore::Weight ParsimonyScore::AboveNode(

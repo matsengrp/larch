@@ -1,10 +1,5 @@
 #include "leaf_set.hpp"
 
-#include <range/v3/action/sort.hpp>
-#include <range/v3/action/unique.hpp>
-#include <range/v3/view/join.hpp>
-#include <range/v3/range/conversion.hpp>
-
 #include "dag.hpp"
 #include "node_label.hpp"
 
@@ -22,7 +17,6 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
           std::vector<const CompactGenome*> clade_leafs;
           clade_leafs.reserve(clade.size());
           for (Node child : clade | Transform::GetChild()) {
-            const LeafSet& child_leaf_set = computed_leafsets.at(child.GetId().value);
             if (child.IsLeaf()) {
               clade_leafs.push_back(labels.at(child.GetId().value).GetCompactGenome());
             } else {

@@ -3,8 +3,6 @@
 #include <vector>
 #include <algorithm>
 
-#include <range/v3/action/push_back.hpp>
-
 #include "arguments.hpp"
 #include "merge.hpp"
 #include "dag_loader.hpp"

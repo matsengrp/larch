@@ -12,6 +12,7 @@
 /*
  * PostOrderIterator provides a post order node iterator, given a DAG node.
  */
+#if 0
 template <typename NodeType>
 class PostOrderIterator {
  public:
@@ -44,3 +45,4 @@ class PostOrderIterator {
   bool visit_root_ = false;
   bool end_sentinel_ = false;
 };
+#endif

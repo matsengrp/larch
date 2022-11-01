@@ -1,10 +1,14 @@
 #include "mutation_annotated_dag.hpp"
 #include <string_view>
+#include <iostream>
+#include "common.hpp"
 
 MADAG::MADAG(std::string_view reference_sequence)
     : reference_sequence_{reference_sequence} {}
 
 const DAG& MADAG::GetDAG() const { return dag_; }
+
+DAG& MADAG::GetDAG() { return dag_; }
 
 const std::string& MADAG::GetReferenceSequence() const { return reference_sequence_; }
 
@@ -39,36 +43,35 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
   Assert(edge_mutations.size() >= dag.GetEdgesCount());
   std::vector<CompactGenome> result;
   result.resize(dag.GetNodesCount());
-  auto ComputeCG = [&](auto& self, Node node) {
-    CompactGenome& compact_genome = result.at(node.GetId().value);
-    if (node.IsRoot()) {
+  auto ComputeCG = [&](auto& self, Node for_node) {
+    CompactGenome& compact_genome = result.at(for_node.GetId().value);
+    if (for_node.IsRoot()) {
       compact_genome = CompactGenome();
       return;
     }
     if (not compact_genome.empty()) {
       return;
     }
-    Edge edge = *(node.GetParents().begin());
+    Edge edge = *(for_node.GetParents().begin());
     self(self, edge.GetParent());
     const EdgeMutations& mutations = edge_mutations.at(edge.GetId().value);
     const CompactGenome& parent = result.at(edge.GetParentId().value);
     compact_genome.AddParentEdge(mutations, parent, reference_sequence);
   };
-  std::unordered_map<CompactGenome, size_t> leaf_cgs;
+  std::unordered_map<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {
     ComputeCG(ComputeCG, node);
     if (node.IsLeaf()) {
       bool success =
-          leaf_cgs.emplace(result[node.GetId().value].Copy(), node.GetId().value)
-              .second;
+          leaf_cgs.emplace(result.at(node.GetId().value).Copy(), node.GetId()).second;
       if (not success) {
         std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
                   << node.GetId().value << " also seen at "
-                  << leaf_cgs[result[node.GetId().value].Copy()]
+                  << leaf_cgs.at(result.at(node.GetId().value).Copy()).value
                   << "\nCompact Genome is\n"
-                  << result[node.GetId().value].ToString() << "\n"
+                  << result.at(node.GetId().value).ToString() << "\n"
                   << std::flush;
-        assert(false);
+        Assert(false);
       }
     }
   }
@@ -99,7 +102,52 @@ const EdgeMutations& MADAG::GetEdgeMutations(EdgeId edge_id) const {
   return edge_mutations_.at(edge_id.value);
 }
 
+bool MADAG::HaveUA() const {
+  Assert(dag_.HaveRoot());
+  Node ua = dag_.GetRoot();
+  if (ua.GetId().value != dag_.GetNodesCount() - 1) {
+    return false;
+  }
+  if (ua.GetCladesCount() != 1) {
+    return false;
+  }
+  if (dag_.IsTree()) {
+    Node root = ua.GetFirstChild().GetChild();
+    if (root.GetId().value != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void MADAG::AssertUA() const {
+  Assert(dag_.HaveRoot());
+  Node ua = dag_.GetRoot();
+  Assert(ua.GetCladesCount() == 1);
+  if (not edge_mutations_.empty()) {
+    Assert(edge_mutations_.size() == dag_.GetEdgesCount());
+  }
+  if (not compact_genomes_.empty()) {
+    Assert(compact_genomes_.size() == dag_.GetNodesCount());
+  }
+}
+
+void MADAG::AddUA(const EdgeMutations& mutations_at_root) {
+  Assert(not HaveUA());
+  Node root = dag_.GetRoot();
+  Node ua_node = dag_.AppendNode();
+  Edge ua_edge = dag_.AppendEdge(ua_node, root, {0});
+  BuildConnections();
+  if (not edge_mutations_.empty()) {
+    edge_mutations_.resize(dag_.GetEdgesCount());
+    GetOrInsert(edge_mutations_, ua_edge.GetId()) = mutations_at_root.Copy();
+  }
+  AssertUA();
+}
+
 MutableNode MADAG::AddNode(NodeId id) { return dag_.AddNode(id); }
+
+MutableNode MADAG::AppendNode() { return dag_.AppendNode(); }
 
 MutableEdge MADAG::AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade) {
   return dag_.AddEdge(id, parent, child, clade);

@@ -37,7 +37,6 @@ one descendant edge.
 
 #pragma once
 
-#include <iostream>
 #include <boost/multiprecision/cpp_int.hpp>
 #include "mutation_annotated_dag.hpp"
 

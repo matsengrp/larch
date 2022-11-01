@@ -14,12 +14,14 @@ find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 find_package(Protobuf REQUIRED)
+
 protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS
     proto/dag.proto)
-protobuf_generate_cpp(
-        PROTO_SRCS PROTO_HDRS
-        deps/usher/parsimony.proto)
-    
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
+    deps/usher/parsimony.proto)
+protobuf_generate_cpp(DETAILED_MUTATIONS_PROTO_SRCS DETAILED_MUTATIONS_PROTO_HDRS
+    deps/usher/mutation_detailed.proto)
+
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
 FetchContent_MakeAvailable(json)
 
@@ -39,15 +41,21 @@ find_package(ZLIB)
 add_library(larch_autogen OBJECT
     ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
     ${PROTO_SRCS} ${PROTO_HDRS}
+    ${DETAILED_MUTATIONS_PROTO_SRCS} ${DETAILED_MUTATIONS_PROTO_HDRS}
 )
 set_target_properties(larch_autogen
     PROPERTIES CXX_CLANG_TIDY ""
 )
 
+set(STRICT_WARNINGS -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Werror -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses)
+if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+    list(APPEND STRICT_WARNINGS -Wcast-align=strict)
+endif()
+
 function(larch_compile_opts PRODUCT)
-    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17  -Wall -Wextra -pedantic -Wno-unused)
+    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17)
     if (${USE_ASAN})
-        target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined)
+        target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover)
     endif()
     target_include_directories(${PRODUCT} PUBLIC include tools test)
     target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
@@ -57,10 +65,6 @@ function(larch_compile_opts PRODUCT)
 endfunction()
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
 
-protobuf_generate_cpp(
-    DETAILED_MUTATIONS_PROTO_SRCS
-    DETAILED_MUTATIONS_PROTO_HDRS
-    deps/usher/mutation_detailed.proto)
 include_directories(deps/usher/)
 file(GLOB MATOPTIMIZE_SRC 
     "deps/usher/src/matOptimize/apply_move/*.cpp"
@@ -82,18 +86,21 @@ file(GLOB MATOPTIMIZE_SRC
     )
 
 function(larch_link_opts PRODUCT)
+    target_link_libraries(${PRODUCT} PUBLIC larch_autogen)
     if (${USE_ASAN})
         target_link_libraries(${PRODUCT} PUBLIC -lasan -lubsan)
     endif()
     target_link_libraries(${PRODUCT} PUBLIC -lz)
     target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
     target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
+    target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
     target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
 endfunction()
 
 function(larch_executable PRODUCT)
-    add_executable(${PRODUCT} ${ARGN} $<TARGET_OBJECTS:larch_autogen>)
+    add_executable(${PRODUCT} ${ARGN})
     larch_compile_opts(${PRODUCT})
+    target_compile_options(${PRODUCT} PRIVATE ${STRICT_WARNINGS})
     larch_link_opts(${PRODUCT})
     target_link_libraries(${PRODUCT} PUBLIC larch)
 endfunction()
@@ -114,7 +121,29 @@ add_library(larch
     src/post_order_iterator.cpp
     src/pre_order_iterator.cpp)
 larch_compile_opts(larch)
+target_compile_options(larch PRIVATE ${STRICT_WARNINGS})
+target_compile_options(larch PRIVATE -Wstack-usage=2048)
 larch_link_opts(larch)
+
+add_library(usher
+    ${MATOPTIMIZE_SRC})
+target_compile_options(usher PRIVATE -march=native -std=c++17 -w)
+if (${USE_ASAN})
+    target_compile_options(usher PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover)
+endif()
+target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
+target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+larch_link_opts(usher)
+target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+
+add_library(larch-usher-glue
+    src/produce_mat.cpp
+    src/check_edge_mutations.cpp)
+larch_compile_opts(larch-usher-glue)
+target_compile_options(larch-usher-glue PRIVATE ${STRICT_WARNINGS})
+larch_link_opts(larch-usher-glue)
+target_link_libraries(larch-usher-glue PUBLIC usher)
+add_dependencies(larch-usher-glue larch usher)
 
 larch_executable(larch-test
     test/main.cpp
@@ -122,6 +151,8 @@ larch_executable(larch-test
     test/test_clade_idx.cpp
     test/test_compact_genome.cpp
     test/test_dag_trimming.cpp
+    test/test_loading.cpp
+    test/test_matOptimize.cpp
     test/test_merge.cpp
     test/test_sample_tree.cpp
     test/test_subtree_weight.cpp
@@ -131,30 +162,19 @@ larch_executable(larch-test
     test/test_weight_counter.cpp
     test/test_synthetic.cpp
     test/test_traversal_iterators.cpp)
+target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
+target_link_libraries(larch-test PUBLIC larch-usher-glue)
+add_dependencies(larch-test larch-usher-glue)
 
 larch_executable(merge
     tools/merge.cpp)
 
-larch_executable(dag_diff
-    tools/dag_diff.cpp)
-
 larch_executable(dag2dot
     tools/dag2dot.cpp)
 
-add_library(usher
-    ${MATOPTIMIZE_SRC}
-    ${DETAILED_MUTATIONS_PROTO_SRCS}
-    ${DETAILED_MUTATIONS_PROTO_HDRS})
-larch_compile_opts(usher)
-larch_link_opts(usher)
-
 larch_executable(larch-usher
     tools/larch-usher.cpp
-    src/produce_mat.cpp
-    src/check_edge_mutations.cpp
-    ${MATOPTIMIZE_SRC}
-    ${DETAILED_MUTATIONS_PROTO_SRCS}
-    ${DETAILED_MUTATIONS_PROTO_HDRS}
-    )
-target_link_libraries( larch-usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS} usher)
-add_dependencies(larch-usher usher)
+)
+target_compile_options(larch-usher PRIVATE ${STRICT_WARNINGS})
+target_link_libraries(larch-usher PRIVATE larch-usher-glue)
+add_dependencies(larch-usher larch-usher-glue)

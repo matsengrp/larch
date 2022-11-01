@@ -11,6 +11,7 @@
 /*
  * PreOrderIterator provides a pre-order node iterator, given a DAG node.
  */
+#if 0
 template <typename NodeType>
 class PreOrderIterator {
  public:
@@ -41,3 +42,4 @@ class PreOrderIterator {
   std::set<NodeId> visited_nodes_;
   bool root_visited_ = false;
 };
+#endif

@@ -3,7 +3,6 @@
 #include <string_view>
 #include <vector>
 #include <unordered_map>
-#include <iostream>
 #include <algorithm>
 #include <shared_mutex>
 #include <thread>
@@ -13,9 +12,6 @@
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for_each.h>
-
-#include <range/v3/action/sort.hpp>
-#include <range/v3/action/unique.hpp>
 
 #include "mutation_annotated_dag.hpp"
 #include "leaf_set.hpp"

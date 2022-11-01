@@ -2,6 +2,7 @@
 
 #include "dag.hpp"
 
+#if 0
 template <typename NodeType>
 PostOrderIterator<NodeType>::PostOrderIterator(NodeType node) {
   stack_.push(*node.GetChildren().begin());
@@ -77,3 +78,4 @@ void PostOrderIterator<NodeType>::PushToNextLeaf() {
 
 template class PostOrderIterator<Node>;
 template class PostOrderIterator<MutableNode>;
+#endif

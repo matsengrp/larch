@@ -56,8 +56,8 @@ class SubtreeWeight {
       WeightOps&& weight_ops, DistributionMaker&& distribution_maker);
 
   template <typename EdgeSelector>
-  void ExtractTree(const MADAG& input_dag, Node node, WeightOps&& weight_ops,
-                   EdgeSelector&& edge_selector, MADAG& result,
+  void ExtractTree(const MADAG& input_dag, Node node, NodeId parent_id,
+                   WeightOps&& weight_ops, EdgeSelector&& edge_selector, MADAG& result,
                    std::vector<NodeId>& result_dag_ids);
 
   const MADAG& dag_;

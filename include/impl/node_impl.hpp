@@ -1,5 +1,4 @@
 // Functions defined here are documented where declared in `include/node.hpp`
-#include <range/v3/view/join.hpp>
 
 template <typename T>
 NodeView<T>::NodeView(T dag, NodeId id) : dag_{dag}, id_{id} {
@@ -35,38 +34,45 @@ typename NodeView<T>::EdgeType NodeView<T>::GetSingleParent() const {
 }
 
 template <typename T>
+typename NodeView<T>::EdgeType NodeView<T>::GetFirstChild() const {
+  Assert(not IsLeaf());
+  return *GetChildren().begin();
+}
+
+template <typename T>
+auto NodeView<T>::GetFirstClade() const {
+  Assert(not GetClades().empty());
+  return GetClade({0});
+}
+
+template <typename T>
 bool NodeView<T>::IsRoot() const {
   return GetStorage().GetParents().empty();
 }
 
 template <typename T>
 bool NodeView<T>::IsLeaf() const {
-  if (GetClades().empty()) {
-    return true;
+  for (auto&& i : GetStorage().GetClades()) {
+    if (not i.empty()) {
+      return false;
+    }
   }
-  auto children = GetChildren();
-  return children.begin() == children.end();
+  return true;
 }
 
 template <typename T>
 void NodeView<T>::AddParentEdge(Edge edge) const {
-  if constexpr (is_mutable) {
-    GetStorage().AddEdge(edge.GetClade(), edge.GetId(), false);
-  }
+  GetStorage().AddEdge(edge.GetClade(), edge.GetId(), false);
 }
 
 template <typename T>
 void NodeView<T>::AddChildEdge(Edge edge) const {
-  if constexpr (is_mutable) {
-    GetStorage().AddEdge(edge.GetClade(), edge.GetId(), true);
-  }
+  GetStorage().AddEdge(edge.GetClade(), edge.GetId(), true);
 }
 
 template <typename T>
 void NodeView<T>::RemoveParentEdge(Edge edge) const {
-  if constexpr (is_mutable) {
-    GetStorage().RemoveEdge(edge, false);
-  }
+  GetStorage().RemoveEdge(edge, false);
 }
 
 template <typename T>
@@ -75,10 +81,8 @@ const std::optional<std::string>& NodeView<T>::GetSampleId() const {
 }
 
 template <typename T>
-void NodeView<T>::SetSampleId(std::optional<std::string>&& sample_id) {
-  if constexpr (is_mutable) {
-    GetStorage().SetSampleId(std::forward<std::optional<std::string>>(sample_id));
-  }
+void NodeView<T>::SetSampleId(std::optional<std::string>&& sample_id) const {
+  GetStorage().SetSampleId(std::forward<std::optional<std::string>>(sample_id));
 }
 
 template <typename T>
@@ -89,7 +93,7 @@ auto NodeView<T>::GetParents() const {
 template <typename T>
 auto NodeView<T>::GetClades() const {
   return GetStorage().GetClades() |
-         ranges::views::transform([this](const std::vector<EdgeId>& clade) {
+         ranges::views::transform([*this](const std::vector<EdgeId>& clade) {
            return clade | Transform::ToEdges(dag_);
          });
 }

@@ -1,3 +1,4 @@
+#if 0
 template <typename T>
 TraverseValue<T>::TraverseValue(T dag, NodeId node, EdgeId edge)
     : dag_{dag}, node_{node}, edge_{edge} {}
@@ -56,3 +57,4 @@ std::tuple_element_t<Index, TraverseValue<T>> get(TraverseValue<T> tv) {
   if constexpr (Index == 0) return tv.GetNode();
   if constexpr (Index == 1) return tv.GetEdge();
 }
+#endif
