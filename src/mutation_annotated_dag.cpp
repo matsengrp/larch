@@ -8,6 +8,8 @@ MADAG::MADAG(std::string_view reference_sequence)
 
 const DAG& MADAG::GetDAG() const { return dag_; }
 
+DAG& MADAG::GetDAG() { return dag_; }
+
 const std::string& MADAG::GetReferenceSequence() const { return reference_sequence_; }
 
 const std::vector<EdgeMutations>& MADAG::GetEdgeMutations() const {
@@ -41,34 +43,33 @@ std::vector<CompactGenome> MADAG::ComputeCompactGenomes(
   Assert(edge_mutations.size() >= dag.GetEdgesCount());
   std::vector<CompactGenome> result;
   result.resize(dag.GetNodesCount());
-  auto ComputeCG = [&](auto& self, Node node) {
-    CompactGenome& compact_genome = result.at(node.GetId().value);
-    if (node.IsRoot()) {
+  auto ComputeCG = [&](auto& self, Node for_node) {
+    CompactGenome& compact_genome = result.at(for_node.GetId().value);
+    if (for_node.IsRoot()) {
       compact_genome = CompactGenome();
       return;
     }
     if (not compact_genome.empty()) {
       return;
     }
-    Edge edge = *(node.GetParents().begin());
+    Edge edge = *(for_node.GetParents().begin());
     self(self, edge.GetParent());
     const EdgeMutations& mutations = edge_mutations.at(edge.GetId().value);
     const CompactGenome& parent = result.at(edge.GetParentId().value);
     compact_genome.AddParentEdge(mutations, parent, reference_sequence);
   };
-  std::unordered_map<CompactGenome, size_t> leaf_cgs;
+  std::unordered_map<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {
     ComputeCG(ComputeCG, node);
     if (node.IsLeaf()) {
       bool success =
-          leaf_cgs.emplace(result[node.GetId().value].Copy(), node.GetId().value)
-              .second;
+          leaf_cgs.emplace(result.at(node.GetId().value).Copy(), node.GetId()).second;
       if (not success) {
         std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
                   << node.GetId().value << " also seen at "
-                  << leaf_cgs[result[node.GetId().value].Copy()]
+                  << leaf_cgs.at(result.at(node.GetId().value).Copy()).value
                   << "\nCompact Genome is\n"
-                  << result[node.GetId().value].ToString() << "\n"
+                  << result.at(node.GetId().value).ToString() << "\n"
                   << std::flush;
         Assert(false);
       }
@@ -122,7 +123,6 @@ bool MADAG::HaveUA() const {
 void MADAG::AssertUA() const {
   Assert(dag_.HaveRoot());
   Node ua = dag_.GetRoot();
-  // Assert(ua.GetId().value == dag_.GetNodesCount() - 1);
   Assert(ua.GetCladesCount() == 1);
   if (not edge_mutations_.empty()) {
     Assert(edge_mutations_.size() == dag_.GetEdgesCount());

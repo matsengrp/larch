@@ -62,23 +62,17 @@ bool NodeView<T>::IsLeaf() const {
 
 template <typename T>
 void NodeView<T>::AddParentEdge(Edge edge) const {
-  if constexpr (is_mutable) {
-    GetStorage().AddEdge(edge.GetClade(), edge.GetId(), false);
-  }
+  GetStorage().AddEdge(edge.GetClade(), edge.GetId(), false);
 }
 
 template <typename T>
 void NodeView<T>::AddChildEdge(Edge edge) const {
-  if constexpr (is_mutable) {
-    GetStorage().AddEdge(edge.GetClade(), edge.GetId(), true);
-  }
+  GetStorage().AddEdge(edge.GetClade(), edge.GetId(), true);
 }
 
 template <typename T>
 void NodeView<T>::RemoveParentEdge(Edge edge) const {
-  if constexpr (is_mutable) {
-    GetStorage().RemoveEdge(edge, false);
-  }
+  GetStorage().RemoveEdge(edge, false);
 }
 
 template <typename T>
@@ -87,10 +81,8 @@ const std::optional<std::string>& NodeView<T>::GetSampleId() const {
 }
 
 template <typename T>
-void NodeView<T>::SetSampleId(std::optional<std::string>&& sample_id) {
-  if constexpr (is_mutable) {
-    GetStorage().SetSampleId(std::forward<std::optional<std::string>>(sample_id));
-  }
+void NodeView<T>::SetSampleId(std::optional<std::string>&& sample_id) const {
+  GetStorage().SetSampleId(std::forward<std::optional<std::string>>(sample_id));
 }
 
 template <typename T>

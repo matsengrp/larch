@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
-#include <charconv>
 #include <string_view>
 #include <vector>
 
@@ -172,7 +171,8 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
   std::chrono::steady_clock::time_point end_time = start_time + std::chrono::hours(8);
   size_t ddepth = tree.get_max_level() * 2;
   std::cout << "maximum radius is " << std::to_string(ddepth) << "\n";
-  for (size_t rad_exp = 1; static_cast<size_t>(1) << rad_exp <= ddepth; rad_exp++) {
+  size_t rad_exp = 1;
+  // for (; static_cast<size_t>(1) << rad_exp <= ddepth; rad_exp++) {
     auto all_nodes = tree.depth_first_expansion();
     std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
 
@@ -192,7 +192,7 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
                         "intermediate_base",   // intermediate base name
                         "intermediate_newick"  // intermediate newick name
     );
-  }
+  // }
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
   MADAG result = build_madag_from_mat(tree, dag.GetReferenceSequence());
   tree.delete_nodes();

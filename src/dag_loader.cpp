@@ -203,7 +203,7 @@ the clade in the parent node's clade_list from which this edge descends.
 
 MADAG LoadDAGFromJson(std::string_view path) {
   nlohmann::json json = LoadJson(path);
-  MADAG result{std::string{json["refseq"][1]}};
+  MADAG result{std::string(json["refseq"][1])};
 
   size_t id = 0;
   for ([[maybe_unused]] auto& i : json["nodes"]) {

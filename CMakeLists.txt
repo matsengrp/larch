@@ -47,7 +47,10 @@ set_target_properties(larch_autogen
     PROPERTIES CXX_CLANG_TIDY ""
 )
 
-set(STRICT_WARNINGS -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Werror -Wold-style-cast -Wshadow -Wconversion -Wcast-align=strict -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses)
+set(STRICT_WARNINGS -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Werror -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses)
+if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+    list(APPEND STRICT_WARNINGS -Wcast-align=strict)
+endif()
 
 function(larch_compile_opts PRODUCT)
     target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17)

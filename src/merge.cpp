@@ -147,15 +147,15 @@ std::vector<LeafSet> Merge::ComputeLeafSets(const MADAG& dag,
                                             const std::vector<NodeLabel>& labels) {
   std::vector<LeafSet> result;
   result.resize(dag.GetDAG().GetNodesCount());
-  auto ComputeLS = [&](auto& self, Node node) {
-    LeafSet& leaf_set = result.at(node.GetId().value);
+  auto ComputeLS = [&](auto& self, Node for_node) {
+    LeafSet& leaf_set = result.at(for_node.GetId().value);
     if (not leaf_set.empty()) {
       return;
     }
-    for (Node child : node.GetChildren() | Transform::GetChild()) {
+    for (Node child : for_node.GetChildren() | Transform::GetChild()) {
       self(self, child);
     }
-    result.at(node.GetId().value) = LeafSet{node, labels, result};
+    result.at(for_node.GetId().value) = LeafSet{for_node, labels, result};
   };
   for (Node node : dag.GetDAG().GetNodes()) {
     ComputeLS(ComputeLS, node);

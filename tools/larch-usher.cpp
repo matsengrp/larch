@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
-#include <charconv>
+#include <sstream>
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -43,11 +43,13 @@ MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback);
 }
 
 static size_t ParseNumber(std::string_view str) {
-  size_t number;
-  if (std::from_chars(str.begin(), str.end(), number).ec == std::errc{}) {
-    return number;
+  size_t result;
+  std::istringstream stream{std::string{str}};
+  stream >> result;
+  if (stream.fail()) {
+    throw std::runtime_error("Invalid number");
   }
-  throw std::runtime_error("Invalid number");
+  return result;
 }
 
 void check_edge_mutations(const MADAG& madag);
@@ -216,12 +218,13 @@ int main(int argc, char** argv) {
   if (!refseq_path.empty()) {
     // we should really take a fasta with one record, or at least remove
     // newlines
-    std::string refseq;
-    std::fstream file;
-    file.open(refseq_path);
-    while (file >> refseq) {
-    }
-    input_dag = LoadTreeFromProtobuf(input_dag_path, refseq);
+    // std::string refseq;
+    // std::fstream file;
+    // file.open(refseq_path);
+    // while (file >> refseq) {
+    // }
+    input_dag =
+        LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path));
   } else {
     input_dag = LoadDAGFromProtobuf(input_dag_path);
   }

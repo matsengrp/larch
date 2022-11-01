@@ -133,7 +133,7 @@ std::pair<MADAG, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
 
   result.BuildConnections();
 
-  for (Node node : result.GetDAG().GetNodes()) {
+  for (MutableNode node : result.GetDAG().GetNodes()) {
     const std::optional<std::string>& old_sample_id =
         dag_.GetDAG().Get(result_dag_ids.at(node.GetId().value)).GetSampleId();
     if (node.IsLeaf() and old_sample_id.has_value()) {

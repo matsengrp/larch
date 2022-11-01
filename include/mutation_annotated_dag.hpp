@@ -37,6 +37,7 @@ class MADAG {
   explicit MADAG(std::string_view reference_sequence);
 
   const DAG& GetDAG() const;
+  DAG& GetDAG();
   /**
    * Get UA node sequence
    */

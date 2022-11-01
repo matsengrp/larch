@@ -1,3 +1,4 @@
+#include <tuple>
 #include "test_common.hpp"
 
 #include "dag_loader.hpp"
@@ -31,6 +32,7 @@ static void test_matOptimize(std::string_view input_dag_path,
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     auto [sample, dag_ids] = weight.SampleTree({});
+    std::ignore = dag_ids;
     check_edge_mutations(sample);
     MADAG result;
     Test_Move_Found_Callback callback;
