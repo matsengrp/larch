@@ -1,11 +1,11 @@
-#include "merge.hpp"
+#include "larch/merge/merge.hpp"
 
 #include <iostream>
 #include <fstream>
 #include <experimental/filesystem>
 
 #include "test_common.hpp"
-#include "dag_loader.hpp"
+#include "larch/dag_loader.hpp"
 #include "benchmark.hpp"
 
 static void test_protobuf(const std::string& correct_path,

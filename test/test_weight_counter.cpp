@@ -1,6 +1,6 @@
-#include "subtree_weight.hpp"
-#include "parsimony_score.hpp"
-#include "weight_accumulator.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score.hpp"
+#include "larch/subtree/weight_accumulator.hpp"
 
 #include <iostream>
 #include <string_view>
@@ -8,7 +8,7 @@
 
 #include "test_common.hpp"
 
-#include "dag_loader.hpp"
+#include "larch/dag_loader.hpp"
 
 using Weight = typename WeightAccumulator<ParsimonyScore>::Weight;
 using Counter = WeightCounter<ParsimonyScore>;

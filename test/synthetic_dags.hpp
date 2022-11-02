@@ -1,5 +1,5 @@
 #pragma once
 
-#include "mutation_annotated_dag.hpp"
+#include "larch/mutation_annotated_dag.hpp"
 
 MADAG MakeSyntheticDAG();

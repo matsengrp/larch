@@ -7,18 +7,18 @@
 #include <sys/wait.h>
 
 #include "arguments.hpp"
-#include "dag_loader.hpp"
-#include "mutation_annotated_dag.hpp"
-#include "node.hpp"
-#include "subtree_weight.hpp"
-#include "weight_accumulator.hpp"
-#include "tree_count.hpp"
-#include "parsimony_score.hpp"
-#include "merge.hpp"
+#include "larch/dag_loader.hpp"
+#include "larch/mutation_annotated_dag.hpp"
+#include "larch/dag/node.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/weight_accumulator.hpp"
+#include "larch/subtree/tree_count.hpp"
+#include "larch/subtree/parsimony_score.hpp"
+#include "larch/merge/merge.hpp"
 #include "benchmark.hpp"
 #include <mpi.h>
 
-#include "usher_glue.hpp"
+#include "larch/usher_glue.hpp"
 
 MADAG optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback);
 [[noreturn]] static void Usage() {

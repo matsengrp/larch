@@ -1,11 +1,11 @@
 #include <cstddef>
 #include "test_common.hpp"
 
-#include "dag_loader.hpp"
-#include "subtree_weight.hpp"
-#include "parsimony_score.hpp"
+#include "larch/dag_loader.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score.hpp"
 
-#include "usher_glue.hpp"
+#include "larch/usher_glue.hpp"
 
 namespace MAT = Mutation_Annotated_Tree;
 void fill_static_reference_sequence(std::string_view);

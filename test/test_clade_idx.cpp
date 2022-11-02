@@ -2,8 +2,8 @@
 
 #include "test_common.hpp"
 
-#include "dag_loader.hpp"
-#include "merge.hpp"
+#include "larch/dag_loader.hpp"
+#include "larch/merge/merge.hpp"
 
 static void test_clade_idx(std::string_view path) {
   MADAG dag = LoadDAGFromProtobuf(path);

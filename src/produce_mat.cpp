@@ -8,17 +8,17 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#include "dag.hpp"
-#include "dag_loader.hpp"
-#include "edge.hpp"
-#include "edge_mutations.hpp"
-#include "mutation_annotated_dag.hpp"
-#include "node.hpp"
-#include "subtree_weight.hpp"
-#include "parsimony_score.hpp"
-#include "merge.hpp"
+#include "larch/dag/dag.hpp"
+#include "larch/dag_loader.hpp"
+#include "larch/dag/edge.hpp"
+#include "larch/merge/edge_mutations.hpp"
+#include "larch/mutation_annotated_dag.hpp"
+#include "larch/dag/node.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score.hpp"
+#include "larch/merge/merge.hpp"
 
-#include "usher_glue.hpp"
+#include "larch/usher_glue.hpp"
 #include <tbb/task_scheduler_init.h>
 
 namespace MAT = Mutation_Annotated_Tree;

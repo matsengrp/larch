@@ -1,5 +1,5 @@
-#include "subtree_weight.hpp"
-#include "tree_count.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/tree_count.hpp"
 
 #include <iostream>
 #include <string_view>
@@ -7,7 +7,7 @@
 
 #include "test_common.hpp"
 
-#include "dag_loader.hpp"
+#include "larch/dag_loader.hpp"
 
 static void test_tree_count(MADAG& dag, TreeCount::Weight expected_score) {
   if (dag.GetEdgeMutations().empty()) {

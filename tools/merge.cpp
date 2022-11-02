@@ -4,8 +4,8 @@
 #include <algorithm>
 
 #include "arguments.hpp"
-#include "merge.hpp"
-#include "dag_loader.hpp"
+#include "larch/merge/merge.hpp"
+#include "larch/dag_loader.hpp"
 #include "benchmark.hpp"
 
 [[noreturn]] static void Usage() {

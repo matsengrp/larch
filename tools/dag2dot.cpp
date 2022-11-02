@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "arguments.hpp"
-#include "dag_loader.hpp"
+#include "larch/dag_loader.hpp"
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";

@@ -1,7 +1,7 @@
 #include "test_common.hpp"
-#include "dag.hpp"
+#include "larch/dag/dag.hpp"
 #include "synthetic_dags.hpp"
-#include "dag_loader.hpp"
+#include "larch/dag_loader.hpp"
 
 #if 0
 static const std::vector<size_t> correct_preorder = {

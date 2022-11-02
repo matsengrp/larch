@@ -1,6 +1,6 @@
-#include "subtree_weight.hpp"
-#include "parsimony_score_binary.hpp"
-#include "merge.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score_binary.hpp"
+#include "larch/merge/merge.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -10,7 +10,7 @@
 
 #include "test_common.hpp"
 
-#include "dag_loader.hpp"
+#include "larch/dag_loader.hpp"
 
 bool compare_treedags(MADAG &dag1, MADAG &dag2) {
   if (dag1.GetReferenceSequence() != dag2.GetReferenceSequence()) {

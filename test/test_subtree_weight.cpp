@@ -1,12 +1,12 @@
-#include "subtree_weight.hpp"
-#include "parsimony_score_binary.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score_binary.hpp"
 
 #include <iostream>
 #include <string_view>
 
 #include "test_common.hpp"
 
-#include "dag_loader.hpp"
+#include "larch/dag_loader.hpp"
 
 static void test_subtree_weight(MADAG& dag, size_t expected_score) {
   if (dag.GetEdgeMutations().empty()) {

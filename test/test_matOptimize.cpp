@@ -1,12 +1,12 @@
 #include <tuple>
 #include "test_common.hpp"
 
-#include "dag_loader.hpp"
-#include "merge.hpp"
-#include "subtree_weight.hpp"
-#include "parsimony_score.hpp"
+#include "larch/dag_loader.hpp"
+#include "larch/merge/merge.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score.hpp"
 
-#include "usher_glue.hpp"
+#include "larch/usher_glue.hpp"
 
 namespace MAT = Mutation_Annotated_Tree;
 

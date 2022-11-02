@@ -1,8 +1,8 @@
-#include "dag_loader.hpp"
-#include "edge.hpp"
-#include "edge_mutations.hpp"
-#include "mutation_annotated_dag.hpp"
-#include "node.hpp"
+#include "larch/dag_loader.hpp"
+#include "larch/dag/edge.hpp"
+#include "larch/merge/edge_mutations.hpp"
+#include "larch/mutation_annotated_dag.hpp"
+#include "larch/dag/node.hpp"
 #include <iostream>
 #include <ostream>
 #include <unordered_map>

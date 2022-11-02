@@ -1,7 +1,7 @@
-#include "mutation_annotated_dag.hpp"
+#include "larch/mutation_annotated_dag.hpp"
 #include <string_view>
 #include <iostream>
-#include "common.hpp"
+#include "larch/common.hpp"
 
 MADAG::MADAG(std::string_view reference_sequence)
     : reference_sequence_{reference_sequence} {}

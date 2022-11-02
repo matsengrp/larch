@@ -16,10 +16,10 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/copy.hpp>
 
-#include "dag_loader.hpp"
+#include "larch/dag_loader.hpp"
 #include "dag.pb.h"
 #include "parsimony.pb.h"
-#include "newick.hpp"
+#include "larch/newick.hpp"
 
 static bool IsGzipped(std::string_view path) {
   std::ifstream in{std::string{path}};

@@ -1,14 +1,14 @@
-#include "mutation_annotated_dag.hpp"
-#include "subtree_weight.hpp"
-#include "parsimony_score.hpp"
+#include "larch/mutation_annotated_dag.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score.hpp"
 
 #include <iostream>
 #include <string_view>
 
 #include "test_common.hpp"
-#include "dag_loader.hpp"
-#include "tree_count.hpp"
-#include "merge.hpp"
+#include "larch/dag_loader.hpp"
+#include "larch/subtree/tree_count.hpp"
+#include "larch/merge/merge.hpp"
 #include "benchmark.hpp"
 
 #if __has_include(<valgrind/callgrind.h>)

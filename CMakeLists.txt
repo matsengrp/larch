@@ -106,20 +106,22 @@ function(larch_executable PRODUCT)
 endfunction()
 
 add_library(larch
-    src/compact_genome.cpp
-    src/dag.cpp
+    src/dag/dag.cpp
+    src/dag/edge.cpp
+    src/dag/edge_storage.cpp
+    src/dag/node_storage.cpp
+    src/dag/post_order_iterator.cpp
+    src/dag/pre_order_iterator.cpp
+    src/merge/compact_genome.cpp
+    src/merge/edge_label.cpp
+    src/merge/edge_mutations.cpp
+    src/merge/leaf_set.cpp
+    src/merge/merge.cpp
+    src/merge/node_label.cpp
+    src/check_edge_mutations.cpp
     src/dag_loader.cpp
-    src/edge_label.cpp
-    src/edge_mutations.cpp
-    src/edge_storage.cpp
-    src/edge.cpp
-    src/leaf_set.cpp
-    src/merge.cpp
     src/mutation_annotated_dag.cpp
-    src/node_label.cpp
-    src/node_storage.cpp
-    src/post_order_iterator.cpp
-    src/pre_order_iterator.cpp)
+    src/produce_mat.cpp)
 larch_compile_opts(larch)
 target_compile_options(larch PRIVATE ${STRICT_WARNINGS})
 target_compile_options(larch PRIVATE -Wstack-usage=2048)

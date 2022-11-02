@@ -1,8 +1,8 @@
-#include "compact_genome.hpp"
+#include "larch/merge/compact_genome.hpp"
 
 #include "test_common.hpp"
-#include "dag_loader.hpp"
-#include "merge.hpp"
+#include "larch/dag_loader.hpp"
+#include "larch/merge/merge.hpp"
 
 [[maybe_unused]] static void test_edge_mutations(std::string_view path) {
   MADAG dag = LoadDAGFromProtobuf(path);
