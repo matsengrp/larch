@@ -1,12 +1,10 @@
-#include "larch/dag_loader.hpp"
-#include "larch/dag/edge.hpp"
-#include "larch/merge/edge_mutations.hpp"
-#include "larch/mutation_annotated_dag.hpp"
-#include "larch/dag/node.hpp"
 #include <iostream>
 #include <ostream>
 #include <unordered_map>
 #include <vector>
+
+#include "larch/madag/mutation_annotated_dag.hpp"
+
 struct ParNuc_Info {
   NodeId par_node_id;
   NodeId child_node_id;
@@ -14,19 +12,19 @@ struct ParNuc_Info {
   char nuc;
 };
 typedef std::unordered_map<size_t, ParNuc_Info> all_mutated_t;
-void check_edge_mutations_helper(const Node dag_node, const all_mutated_t& all_mutated,
-                                 const std::string_view ref_seq,
-                                 const std::vector<EdgeMutations>& edge_mutations) {
+
+template <typename Node>
+void check_edge_mutations_helper(const Node dag_node, const all_mutated_t& all_mutated) {
   for (auto child : dag_node.GetChildren()) {
     auto edge_id = child.GetId();
     all_mutated_t this_mutated(all_mutated);
-    for (const auto& edge_mut : edge_mutations[edge_id.value]) {
+    for (const auto& edge_mut : child.GetEdgeMutations()) {
       auto ins_result = this_mutated.emplace(
           edge_mut.first.value, ParNuc_Info{dag_node.GetId(), child.GetChildId(),
                                             edge_id, edge_mut.second.second});
       auto actual_par = edge_mut.second.first;
       if (ins_result.second) {
-        auto expected = ref_seq[edge_mut.first.value - 1];
+        auto expected = dag_node.GetDAG().GetReferenceSequence()[edge_mut.first.value - 1];
         if (expected != actual_par) {
           std::cout << "On edge " << edge_id.value << " from " << dag_node.GetId().value
                     << " to " << child.GetChildId().value << " at position "
@@ -51,8 +49,7 @@ void check_edge_mutations_helper(const Node dag_node, const all_mutated_t& all_m
         ins_result.first->second.nuc = edge_mut.second.second;
       }
     }
-    check_edge_mutations_helper(child.GetChild(), this_mutated, ref_seq,
-                                edge_mutations);
+    check_edge_mutations_helper(child.GetChild(), this_mutated);
   }
 }
 
@@ -60,7 +57,6 @@ void check_edge_mutations(const MADAG& madag) {
   std::cout << "start_check" << std::endl;
   const auto ref_req = madag.GetReferenceSequence();
   all_mutated_t init;
-  check_edge_mutations_helper(madag.GetDAG().GetRoot(), init,
-                              madag.GetReferenceSequence(), madag.GetEdgeMutations());
+  check_edge_mutations_helper(madag.GetRoot(), init);
   std::cout << "end_check" << std::endl;
 }

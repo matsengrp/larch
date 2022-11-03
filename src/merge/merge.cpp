@@ -1,51 +1,42 @@
 #include "larch/merge/merge.hpp"
 
-#include <mutex>
+Merge::Merge(std::string_view reference_sequence)
+    : result_dag_storage_{}, result_dag_{result_dag_storage_} {
+  result_dag_.SetReferenceSequence(reference_sequence);
+}
 
-#include "larch/common.hpp"
-
-Merge::Merge(std::string_view reference_sequence) : result_dag_{reference_sequence} {}
-
-void Merge::AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& trees,
-                    bool have_compact_genomes) {
+void Merge::AddDAGs(const std::vector<MADAG>& trees) {
   for (auto tree : trees) {
-    tree.get().AssertUA();
+    tree.AssertUA();
   }
   std::vector<size_t> tree_idxs;
   tree_idxs.resize(trees.size());
   std::iota(tree_idxs.begin(), tree_idxs.end(), trees_.size());
 
-  trees_.insert(trees_.end(), trees.begin(), trees.end());
+  for (MADAG i : trees) {
+    trees_.emplace_back(i);
+  }
   tree_labels_.resize(trees_.size());
 
-  if (have_compact_genomes) {
-    tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-      MADAG& tree = trees_.at(tree_idx).get();
-      std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-      labels.resize(tree.GetDAG().GetNodesCount());
-      for (size_t node_idx = 0; node_idx < tree.GetDAG().GetNodesCount(); ++node_idx) {
-        auto cg_iter =
-            all_compact_genomes_.insert(tree.ExtractCompactGenome({node_idx}));
-        labels.at(node_idx).SetCompactGenome(std::addressof(*cg_iter.first));
-      }
-      tree.RemoveCompactGenomes();
-    });
-  } else {
-    ComputeCompactGenomes(tree_idxs);
-  }
+  tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
+    MADAG tree = trees_.at(tree_idx);
+    std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
+    labels.resize(tree.GetNodesCount());
+    for (size_t node_idx = 0; node_idx < tree.GetNodesCount(); ++node_idx) {
+      auto cg_iter = all_compact_genomes_.insert(
+          tree.Get(NodeId{node_idx}).GetCompactGenome().Copy());
+      labels.at(node_idx).SetCompactGenome(std::addressof(*cg_iter.first));
+    }
+  });
 
   ComputeLeafSets(tree_idxs);
   MergeTrees(tree_idxs);
-  Assert(result_nodes_.size() == result_dag_.GetDAG().GetNodesCount());
-  Assert(result_edges_.size() == result_dag_.GetDAG().GetEdgesCount());
+  Assert(result_nodes_.size() == result_dag_.GetNodesCount());
+  Assert(result_edges_.size() == result_dag_.GetEdgesCount());
   result_dag_.BuildConnections();
-  result_dag_.RemoveCompactGenomes();
-  result_dag_.RemoveEdgeMutations();
 }
 
-MADAG& Merge::GetResult() { return result_dag_; }
-
-const MADAG& Merge::GetResult() const { return result_dag_; }
+MADAG Merge::GetResult() const { return result_dag_; }
 
 const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
   return result_nodes_;
@@ -56,44 +47,26 @@ const std::vector<NodeLabel>& Merge::GetResultNodeLabels() const {
 }
 
 void Merge::ComputeResultEdgeMutations() {
-  std::vector<EdgeMutations> result;
-  result.resize(result_dag_.GetDAG().GetEdgesCount());
-  Assert(result_edges_.size() == result.size());
   for (auto& [label, edge_id] : result_edges_) {
     Assert(label.GetParent().GetCompactGenome());
     Assert(label.GetChild().GetCompactGenome());
     const CompactGenome& parent = *label.GetParent().GetCompactGenome();
     const CompactGenome& child = *label.GetChild().GetCompactGenome();
-    EdgeMutations& muts = result.at(edge_id.value);
-    muts = CompactGenome::ToEdgeMutations(result_dag_.GetReferenceSequence(), parent,
-                                          child);
+    result_dag_.Get(edge_id).GetEdgeMutations() = CompactGenome::ToEdgeMutations(
+        result_dag_.GetReferenceSequence(), parent, child);
   }
-  result_dag_.SetEdgeMutations(std::move(result));
 }
 
 bool Merge::ContainsLeafset(const LeafSet& leafset) const {
   return all_leaf_sets_.find(leafset) != all_leaf_sets_.end();
 }
 
-void Merge::ComputeCompactGenomes(const std::vector<size_t>& tree_idxs) {
-  tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const MADAG& tree = trees_.at(tree_idx).get();
-    std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-    labels.resize(tree.GetDAG().GetNodesCount());
-    std::vector<CompactGenome> computed_cgs = tree.ComputeCompactGenomes();
-    for (size_t node_idx = 0; node_idx < tree.GetDAG().GetNodesCount(); ++node_idx) {
-      auto cg_iter = all_compact_genomes_.insert(std::move(computed_cgs.at(node_idx)));
-      labels.at(node_idx).SetCompactGenome(std::addressof(*cg_iter.first));
-    }
-  });
-}
-
 void Merge::ComputeLeafSets(const std::vector<size_t>& tree_idxs) {
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const MADAG& tree = trees_.at(tree_idx).get();
+    MADAG tree = trees_.at(tree_idx);
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     std::vector<LeafSet> computed_ls = ComputeLeafSets(tree, labels);
-    for (size_t node_idx = 0; node_idx < tree.GetDAG().GetNodesCount(); ++node_idx) {
+    for (size_t node_idx = 0; node_idx < tree.GetNodesCount(); ++node_idx) {
       auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node_idx)));
       labels.at(node_idx).SetLeafSet(std::addressof(*ls_iter.first));
     }
@@ -101,7 +74,7 @@ void Merge::ComputeLeafSets(const std::vector<size_t>& tree_idxs) {
 }
 
 void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
-  NodeId node_id{result_dag_.GetDAG().GetNodesCount()};
+  NodeId node_id{result_dag_.GetNodesCount()};
   std::mutex mtx;
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
@@ -115,9 +88,9 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
   });
   tbb::concurrent_vector<EdgeLabel> added_edges;
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const MADAG& tree = trees_.at(tree_idx).get();
+    MADAG tree = trees_.at(tree_idx);
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-    for (Edge edge : tree.GetDAG().GetEdges()) {
+    for (Edge edge : tree.GetEdges()) {
       auto& parent_label = labels.at(edge.GetParentId().value);
       auto& child_label = labels.at(edge.GetChildId().value);
       auto ins = result_edges_.insert({{parent_label, child_label}, {}});
@@ -127,14 +100,14 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
     }
   });
   result_dag_.InitializeNodes(result_nodes_.size());
-  EdgeId edge_id{result_dag_.GetDAG().GetEdgesCount()};
+  EdgeId edge_id{result_dag_.GetEdgesCount()};
   for (auto edge : added_edges) {
     auto parent = result_nodes_.find(edge.GetParent());
     auto child = result_nodes_.find(edge.GetChild());
     Assert(parent != result_nodes_.end());
     Assert(child != result_nodes_.end());
-    Assert(parent->second.value < result_dag_.GetDAG().GetNodesCount());
-    Assert(child->second.value < result_dag_.GetDAG().GetNodesCount());
+    Assert(parent->second.value < result_dag_.GetNodesCount());
+    Assert(child->second.value < result_dag_.GetNodesCount());
     result_dag_.AddEdge(edge_id, parent->second, child->second, edge.ComputeCladeIdx());
     auto result_edge_it = result_edges_.find(edge);
     Assert(result_edge_it != result_edges_.end());
@@ -146,7 +119,7 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
 std::vector<LeafSet> Merge::ComputeLeafSets(const MADAG& dag,
                                             const std::vector<NodeLabel>& labels) {
   std::vector<LeafSet> result;
-  result.resize(dag.GetDAG().GetNodesCount());
+  result.resize(dag.GetNodesCount());
   auto ComputeLS = [&](auto& self, Node for_node) {
     LeafSet& leaf_set = result.at(for_node.GetId().value);
     if (not leaf_set.empty()) {
@@ -157,7 +130,7 @@ std::vector<LeafSet> Merge::ComputeLeafSets(const MADAG& dag,
     }
     result.at(for_node.GetId().value) = LeafSet{for_node, labels, result};
   };
-  for (Node node : dag.GetDAG().GetNodes()) {
+  for (Node node : dag.GetNodes()) {
     ComputeLS(ComputeLS, node);
   }
   return result;

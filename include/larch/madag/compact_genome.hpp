@@ -11,7 +11,8 @@
 #include <ostream>
 #include <string>
 
-#include "larch/merge/edge_mutations.hpp"
+#include "larch/dag/dag.hpp"
+#include "larch/madag/edge_mutations.hpp"
 
 class CompactGenome {
   std::vector<std::pair<MutationPosition, char>> mutations_ = {};
@@ -20,30 +21,15 @@ class CompactGenome {
  public:
   static const CompactGenome* Empty();
   CompactGenome() = default;
-  CompactGenome(CompactGenome&&) = default;
-  CompactGenome(const CompactGenome&) = delete;
-  CompactGenome& operator=(CompactGenome&&) = default;
-  CompactGenome& operator=(const CompactGenome&) = delete;
-
-  /* CompactGenome(Node root, const std::vector<EdgeMutations>& edge_mutations, */
-  /*               std::string_view reference_sequence); */
-
+  MOVE_ONLY(CompactGenome);
   CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations);
-
-  /**
-   * Apply mutations from `mutations` to the compact genome `parent` to compute
-   * the mutations in this compact genome.
-   */
-  void AddParentEdge(const EdgeMutations& mutations, const CompactGenome& parent,
-                     std::string_view reference_sequence);
 
   bool operator==(const CompactGenome& rhs) const noexcept;
   bool operator<(const CompactGenome& rhs) const noexcept;
-
   [[nodiscard]] size_t Hash() const noexcept;
 
   std::optional<char> operator[](MutationPosition pos) const;
-  std::string ToString();
+  std::string ToString() const;
 
   auto begin() const -> decltype(mutations_.begin());
   auto end() const -> decltype(mutations_.end());
@@ -52,24 +38,40 @@ class CompactGenome {
 
   [[nodiscard]] CompactGenome Copy() const;
 
+  void AddParentEdge(const EdgeMutations& mutations, const CompactGenome& parent,
+                     std::string_view reference_sequence);
+
   [[nodiscard]] static EdgeMutations ToEdgeMutations(
       std::string_view reference_sequence, const CompactGenome& parent,
       const CompactGenome& child);
 
  private:
+  DAG_FEATURE_FRIENDS;
   static size_t ComputeHash(
       const std::vector<std::pair<MutationPosition, char>>& mutations);
 };
 
+template <typename View>
+class FeatureReader<CompactGenome, View> {
+ public:
+  const CompactGenome& GetCompactGenome() const;
+};
+
+template <typename View>
+class FeatureWriter<CompactGenome, View> : public FeatureReader<CompactGenome, View> {
+ public:
+   void SetCompactGenome(CompactGenome&& compact_genome);
+};
+
 template <>
 struct std::hash<CompactGenome> {
-  std::size_t operator()(const CompactGenome& cg) const noexcept { return cg.Hash(); }
+  std::size_t operator()(const CompactGenome& cg) const noexcept;
 };
 
 template <>
 struct std::equal_to<CompactGenome> {
   std::size_t operator()(const CompactGenome& lhs,
-                         const CompactGenome& rhs) const noexcept {
-    return lhs == rhs;
-  }
+                         const CompactGenome& rhs) const noexcept;
 };
+
+#include "larch/impl/madag/compact_genome_impl.hpp"

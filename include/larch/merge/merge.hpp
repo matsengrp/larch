@@ -7,13 +7,14 @@
 #include <shared_mutex>
 #include <thread>
 #include <atomic>
+#include <numeric>
 
 #include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for_each.h>
 
-#include "larch/mutation_annotated_dag.hpp"
+#include "larch/madag/mutation_annotated_dag.hpp"
 #include "larch/merge/leaf_set.hpp"
 #include "larch/merge/node_label.hpp"
 #include "larch/merge/edge_label.hpp"
@@ -27,6 +28,8 @@ using ConcurrentUnorderedMap =
 
 class Merge {
  public:
+  using Node = MADAG::Node;
+  using Edge = MADAG::Edge;
   /**
    * Construct a new Merge object, with the common reference sequence for all input
    * DAGs that will be merged later via the AddDAGs() method. The reference sequence is
@@ -46,15 +49,13 @@ class Merge {
    * Otherwise the compact genomes stored in the DAGs will be used, and will be moved
    * into the Merge object storage to avoid duplication.
    */
-  void AddDAGs(const std::vector<std::reference_wrapper<MADAG>>& dags,
-               bool have_compact_genomes = false);
+  void AddDAGs(const std::vector<MADAG>& dags);
 
   /**
    * Get the DAG resulting from merge
    * @{
    */
-  MADAG& GetResult();
-  const MADAG& GetResult() const;
+  MADAG GetResult() const;
   /** @} */
 
   /**
@@ -72,8 +73,6 @@ class Merge {
   bool ContainsLeafset(const LeafSet& leafset) const;
 
  private:
-  void ComputeCompactGenomes(const std::vector<size_t>& tree_idxs);
-
   void ComputeLeafSets(const std::vector<size_t>& tree_idxs);
 
   void MergeTrees(const std::vector<size_t>& tree_idxs);
@@ -82,7 +81,7 @@ class Merge {
                                               const std::vector<NodeLabel>& labels);
 
   // Vector of externally owned input DAGs.
-  std::vector<std::reference_wrapper<MADAG>> trees_;
+  std::vector<MADAG> trees_;
 
   // Every unique node compact genome, found among all input DAGs.
   ConcurrentUnorderedSet<CompactGenome> all_compact_genomes_;
@@ -102,5 +101,6 @@ class Merge {
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;
 
   // Resulting DAG from merging the input DAGs.
-  MADAG result_dag_;
+  MADAGStorage result_dag_storage_;
+  MutableMADAG result_dag_;
 };

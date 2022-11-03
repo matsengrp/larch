@@ -28,16 +28,6 @@ struct NodeId;
 struct EdgeId;
 struct CladeIdx;
 
-class DAG;
-template <typename>
-class NodeView;
-using Node = NodeView<const DAG&>;
-using MutableNode = NodeView<DAG&>;
-template <typename>
-class EdgeView;
-using Edge = EdgeView<const DAG&>;
-using MutableEdge = EdgeView<DAG&>;
-
 static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
 
 template <typename T, typename Id>
@@ -69,18 +59,19 @@ inline auto GetChild() {
 inline auto GetId() {
   return ranges::views::transform([](auto&& i) { return i.GetId(); });
 }
-inline auto ToNodes(const DAG& dag) {
-  return ranges::views::transform([&](auto&& i) { return Node{dag, i}; });
-}
-inline auto ToNodes(DAG& dag) {
-  return ranges::views::transform([&](auto&& i) { return MutableNode{dag, i}; });
-}
+// inline auto ToNodes(const DAG& dag) {
+//   return ranges::views::transform([&](auto&& i) { return Node{dag, i}; });
+// }
+// inline auto ToNodes(DAG& dag) {
+//   return ranges::views::transform([&](auto&& i) { return MutableNode{dag, i}; });
+// }
+template <typename DAG>
 inline auto ToEdges(const DAG& dag) {
-  return ranges::views::transform([&](auto&& i) { return Edge{dag, i}; });
+  return ranges::views::transform([&](auto&& i) { return typename DAG::Edge{dag, i}; });
 }
-inline auto ToEdges(DAG& dag) {
-  return ranges::views::transform([&](auto&& i) { return MutableEdge{dag, i}; });
-}
+// inline auto ToEdges(DAG& dag) {
+//   return ranges::views::transform([&](auto&& i) { return MutableEdge{dag, i}; });
+// }
 template <typename T>
 inline auto To() {
   return ranges::views::transform([&](auto&& i) { return T{i}; });
@@ -103,3 +94,10 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   }
 
 [[noreturn]] inline void Fail(const char* msg) { throw std::runtime_error(msg); }
+
+#define MOVE_ONLY(x)           \
+  x(x&&) = default;            \
+  x(const x&) = delete;        \
+  x& operator=(x&&) = default; \
+  x& operator=(const x&) = delete
+  

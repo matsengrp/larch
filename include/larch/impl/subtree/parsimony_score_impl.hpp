@@ -3,7 +3,7 @@
 ParsimonyScore::Weight ParsimonyScore::ComputeLeaf(const MADAG&, NodeId) { return 0; }
 
 ParsimonyScore::Weight ParsimonyScore::ComputeEdge(const MADAG& dag, EdgeId edge_id) {
-  return dag.GetEdgeMutations(edge_id).size();
+  return dag.Get(edge_id).GetEdgeMutations().size();
 }
 
 std::pair<ParsimonyScore::Weight, std::vector<size_t>>

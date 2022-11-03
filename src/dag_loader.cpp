@@ -45,30 +45,23 @@ static void Parse(T& data, std::string_view path) {
   }
 }
 
-MADAG LoadDAGFromProtobuf(std::string_view path) {
+MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
   ProtoDAG::data data;
   Parse(data, path);
 
-  MADAG result{data.reference_seq()};
+  MADAGStorage result;
+  result.View().SetReferenceSequence(data.reference_seq());
 
   for (auto& i : data.node_names()) {
-    result.AddNode({static_cast<size_t>(i.node_id())});
+    result.View().AddNode({static_cast<size_t>(i.node_id())});
   }
 
   size_t edge_id = 0;
   for (auto& i : data.edges()) {
-    result.AddEdge({edge_id++}, {static_cast<size_t>(i.parent_node())},
-                   {static_cast<size_t>(i.child_node())},
-                   {static_cast<size_t>(i.parent_clade())});
-  }
-
-  result.BuildConnections();
-
-  std::vector<EdgeMutations> edge_mutations;
-  edge_mutations.resize(result.GetDAG().GetEdgesCount());
-  edge_id = 0;
-  for (auto& i : data.edges()) {
-    EdgeMutations& muts = edge_mutations.at(edge_id++);
+    auto edge = result.View().AddEdge(
+        {edge_id++}, {static_cast<size_t>(i.parent_node())},
+        {static_cast<size_t>(i.child_node())}, {static_cast<size_t>(i.parent_clade())});
+    auto& muts = edge.GetEdgeMutations();
     for (auto& mut : i.edge_mutations()) {
       static const char decode[] = {'A', 'C', 'G', 'T'};
       Assert(mut.position() > 0);
@@ -77,8 +70,8 @@ MADAG LoadDAGFromProtobuf(std::string_view path) {
                                                      decode[mut.mut_nuc().Get(0)]};
     }
   }
-  result.SetEdgeMutations(std::move(edge_mutations));
-  result.AssertUA();
+  result.View().BuildConnections();
+  result.View().AssertUA();
   return result;
 }
 
@@ -90,11 +83,13 @@ static auto DecodeMutation =
           {decode[mut.par_nuc()], decode[mut.mut_nuc().Get(0)]}};
 };
 
-MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_sequence) {
+MADAGStorage LoadTreeFromProtobuf(std::string_view path,
+                                  std::string_view reference_sequence) {
   Parsimony::data data;
   Parse(data, path);
 
-  MADAG result{reference_sequence};
+  MADAGStorage result;
+  result.View().SetReferenceSequence(reference_sequence);
 
   std::unordered_map<size_t, size_t> num_children;
   std::map<size_t, std::optional<std::string>> seq_ids;
@@ -104,41 +99,36 @@ MADAG LoadTreeFromProtobuf(std::string_view path, std::string_view reference_seq
         seq_ids[node_id] = label;
       },
       [&result, &num_children](size_t parent, size_t child) {
-        result.AddEdge({child}, {parent}, {child}, {num_children[parent]++});
+        result.View().AddEdge({child}, {parent}, {child}, {num_children[parent]++});
       });
-  result.InitializeNodes(result.GetDAG().GetEdgesCount() + 1);
-  result.BuildConnections();
+  result.View().InitializeNodes(result.View().GetEdgesCount() + 1);
+  result.View().BuildConnections();
 
-  for (auto node : result.GetDAG().GetNodes()) {
+  for (auto node : result.View().GetNodes()) {
     if (node.IsLeaf()) {
       node.SetSampleId(std::move(seq_ids[node.GetId().value]));
     }
   }
 
-  result.AddUA({});
+  result.View().AddUA({});
 
-  std::vector<EdgeMutations> result_mutations;
-  result_mutations.resize(result.GetDAG().GetEdgesCount());
   Assert(static_cast<size_t>(data.node_mutations_size()) ==
-         result.GetDAG().GetNodesCount() - 1);
+         result.View().GetNodesCount() - 1);
 
-  auto apply_mutations = [](auto& self, Edge edge, const auto& node_mutations,
-                            std::vector<EdgeMutations>& edge_mutations,
-                            size_t& idx) -> void {
+  auto apply_mutations = [](auto& self, MutableMADAG::Edge edge,
+                            const auto& node_mutations, size_t& idx) -> void {
     const auto& pb_muts = node_mutations.Get(static_cast<int>(idx++)).mutation();
-    auto& edge_muts = edge_mutations.at(edge.GetId().value);
     for (auto i : pb_muts | ranges::views::transform(DecodeMutation)) {
-      edge_muts.insert(i);
+      edge.GetEdgeMutations().insert(i);
     }
-    for (Edge child : edge.GetChild().GetChildren()) {
-      self(self, child, node_mutations, edge_mutations, idx);
+    for (MutableMADAG::Edge child : edge.GetChild().GetChildren()) {
+      self(self, child, node_mutations, idx);
     }
   };
   size_t muts_idx = 0;
-  apply_mutations(apply_mutations, result.GetDAG().GetRoot().GetFirstChild(),
-                  data.node_mutations(), result_mutations, muts_idx);
+  apply_mutations(apply_mutations, result.View().GetRoot().GetFirstChild(),
+                  data.node_mutations(), muts_idx);
 
-  result.SetEdgeMutations(std::move(result_mutations));
   return result;
 }
 
@@ -201,22 +191,23 @@ the clade in the parent node's clade_list from which this edge descends.
 
 */
 
-MADAG LoadDAGFromJson(std::string_view path) {
+MADAGStorage LoadDAGFromJson(std::string_view path) {
   nlohmann::json json = LoadJson(path);
-  MADAG result{std::string(json["refseq"][1])};
+  MADAGStorage result;
+  result.View().SetReferenceSequence(std::string(json["refseq"][1]));
 
   size_t id = 0;
   for ([[maybe_unused]] auto& i : json["nodes"]) {
-    result.AddNode({id++});
+    MutableMADAG::Node node = result.View().AddNode({id++});
     size_t compact_genome_index = i[0];
-    result.AppendCompactGenome(GetCompactGenome(json, compact_genome_index));
+    node.SetCompactGenome(GetCompactGenome(json, compact_genome_index));
   }
   id = 0;
   for (auto& i : json["edges"]) {
-    result.AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
+    result.View().AddEdge({id++}, {i[0]}, {i[1]}, {i[2]});
   }
-  result.BuildConnections();
-  result.AssertUA();
+  result.View().BuildConnections();
+  result.View().AssertUA();
   return result;
 }
 
@@ -259,25 +250,24 @@ void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut)
   proto_mut->add_mut_nuc(EncodeBase(mut));
 }
 
-void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
-                        const std::vector<EdgeMutations>& edge_parent_mutations,
-                        std::string_view path) {
+void StoreDAGToProtobuf(MADAG dag, std::string_view path) {
+  dag.AssertUA();
   ProtoDAG::data data;
 
-  data.set_reference_seq(std::string{reference_sequence});
+  data.set_reference_seq(dag.GetReferenceSequence());
 
   for (size_t i = 0; i < dag.GetNodesCount(); ++i) {
     auto* proto_node = data.add_node_names();
     proto_node->set_node_id(static_cast<int64_t>(i));
   }
 
-  for (Edge edge : dag.GetEdges()) {
+  for (MADAG::Edge edge : dag.GetEdges()) {
     auto* proto_edge = data.add_edges();
     proto_edge->set_edge_id(static_cast<int64_t>(edge.GetId().value));
     proto_edge->set_parent_node(static_cast<int64_t>(edge.GetParentId().value));
     proto_edge->set_child_node(static_cast<int64_t>(edge.GetChildId().value));
     proto_edge->set_parent_clade(static_cast<int64_t>(edge.GetClade().value));
-    for (auto [pos, nucs] : edge_parent_mutations.at(edge.GetId().value)) {
+    for (auto [pos, nucs] : edge.GetEdgeMutations()) {
       auto* proto_mut = proto_edge->add_edge_mutations();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
       proto_mut->set_par_nuc(EncodeBase(nucs.first));
@@ -289,29 +279,21 @@ void StoreDAGToProtobuf(const DAG& dag, std::string_view reference_sequence,
   data.SerializeToOstream(&file);
 }
 
-void StoreDAGToProtobuf(const MADAG& dag, std::string_view path) {
-  Assert(not dag.GetEdgeMutations().empty());
+void StoreTreeToProtobuf(MADAG dag, std::string_view path) {
   dag.AssertUA();
-  StoreDAGToProtobuf(dag.GetDAG(), dag.GetReferenceSequence(), dag.GetEdgeMutations(),
-                     path);
-}
-
-void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
-                         const std::vector<EdgeMutations>& edge_mutations,
-                         std::string_view path) {
   Assert(dag.IsTree());
 
   Parsimony::data data;
 
   std::string newick;
-  auto to_newick = [&](auto& self, Node node) -> void {
+  auto to_newick = [&](auto& self, MADAG::Node node) -> void {
     if (not node.IsLeaf()) {
       newick += '(';
     }
     size_t clade_idx = 0;
     for (auto clade : node.GetClades()) {
       Assert(clade.size() == 1);
-      Node i = (*clade.begin()).GetChild();
+      MADAG::Node i = (*clade.begin()).GetChild();
       if (i.IsLeaf()) {
         if (i.GetSampleId()) {
           newick += *i.GetSampleId();
@@ -336,11 +318,10 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
   newick += ';';
   data.set_newick(newick);
 
-  auto store_mutations = [](auto& self, Edge edge,
-                            const std::vector<EdgeMutations>& muts,
-                            Parsimony::data& result, std::string_view ref_seq) -> void {
+  auto store_mutations = [](auto& self, MADAG::Edge edge, Parsimony::data& result,
+                            std::string_view ref_seq) -> void {
     auto* proto = result.add_node_mutations();
-    for (auto [pos, mut] : muts.at(edge.GetId().value)) {
+    for (auto [pos, mut] : edge.GetEdgeMutations()) {
       auto* proto_mut = proto->add_mutation();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
       proto_mut->set_ref_nuc(EncodeBase(ref_seq.at(pos.value - 1)));
@@ -348,28 +329,21 @@ void StoreTreeToProtobuf(const DAG& dag, std::string_view reference_sequence,
       proto_mut->add_mut_nuc(EncodeBase(mut.second));
       proto_mut->set_chromosome("leaf_0");
     }
-    for (Edge child : edge.GetChild().GetChildren()) {
-      self(self, child, muts, result, ref_seq);
+    for (MADAG::Edge child : edge.GetChild().GetChildren()) {
+      self(self, child, result, ref_seq);
     }
   };
-  store_mutations(store_mutations, dag.GetRoot().GetFirstChild(), edge_mutations, data,
-                  reference_sequence);
+  store_mutations(store_mutations, dag.GetRoot().GetFirstChild(), data,
+                  dag.GetReferenceSequence());
 
   std::ofstream file{std::string{path}};
   data.SerializeToOstream(&file);
 }
 
-void StoreTreeToProtobuf(const MADAG& dag, std::string_view path) {
-  dag.AssertUA();
-  Assert(not dag.GetEdgeMutations().empty());
-  StoreTreeToProtobuf(dag.GetDAG(), dag.GetReferenceSequence(), dag.GetEdgeMutations(),
-                      path);
-}
-
-static std::string EdgeMutationsToString(Edge edge, const MADAG& dag) {
+static std::string EdgeMutationsToString(MADAG::Edge edge) {
   std::string result;
   size_t count = 0;
-  for (auto [pos, muts] : dag.GetEdgeMutations(edge)) {
+  for (auto [pos, muts] : edge.GetEdgeMutations()) {
     result += muts.first;
     result += std::to_string(pos.value);
     result += muts.second;
@@ -378,15 +352,14 @@ static std::string EdgeMutationsToString(Edge edge, const MADAG& dag) {
   return result;
 }
 
-static std::string CompactGenomeToString(
-    Node node, const std::vector<CompactGenome>& compact_genomes) {
+static std::string CompactGenomeToString(MADAG::Node node) {
   if (node.IsRoot()) {
     return "p";
   }
   std::string result = std::to_string(node.GetId().value);
   result += "\\n";
   size_t count = 0;
-  for (auto [pos, base] : compact_genomes.at(node.GetId().value)) {
+  for (auto [pos, base] : node.GetCompactGenome()) {
     result += std::to_string(pos.value);
     result += base;
     result += ++count % 3 == 0 ? "\\n" : " ";
@@ -394,26 +367,19 @@ static std::string CompactGenomeToString(
   return result;
 }
 
-void MADAGToDOT(const MADAG& dag, std::ostream& out) {
+void MADAGToDOT(MADAG dag, std::ostream& out) {
   out << "digraph {\n";
   out << "  forcelabels=true\n";
   out << "  nodesep=1.0\n";
   out << "  ranksep=2.0\n";
   out << "  ratio=1.0\n";
-  for (Edge edge : dag.GetDAG().GetEdges()) {
+  for (MADAG::Edge edge : dag.GetEdges()) {
     auto [parent, child] = edge;
-    if (dag.GetCompactGenomes().empty()) {
-      out << parent.GetId().value << " -> " << child.GetId().value;
-    } else {
-      out << "  \"" << CompactGenomeToString(parent, dag.GetCompactGenomes())
-          << "\" -> \"" << CompactGenomeToString(child, dag.GetCompactGenomes())
-          << "\"";
-    }
-    if (not dag.GetEdgeMutations().empty()) {
-      out << "[ xlabel=\"";
-      out << EdgeMutationsToString(edge, dag);
-      out << "\" ]";
-    }
+    out << "  \"" << CompactGenomeToString(parent) << "\" -> \""
+        << CompactGenomeToString(child) << "\"";
+    out << "[ xlabel=\"";
+    out << EdgeMutationsToString(edge);
+    out << "\" ]";
     out << "\n";
   }
   out << "}\n";

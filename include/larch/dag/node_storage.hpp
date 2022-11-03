@@ -1,42 +1,17 @@
-/**
- * NodeStorage objects keep track of vectors of parent edges, and vectors of
- * vectors of child edges, where two child edges are in the same vector iff
- * they descend from the same child clade.
- *
- * Edges are referenced by their EdgeId, which is their index in DAG.edges_.
- */
-#pragma once
+#ifndef DAG_DECLARATIONS
+#error "Don't include this header, use larch/dag/dag.hpp instead"
+#endif
 
-class NodeStorage {
+template <typename... Features>
+class DefaultNodeStorage {
  public:
-  /**
-   * Get vector of parent edges
-   */
-  const std::vector<EdgeId>& GetParents() const;
-  /**
-   * Get vectors of child edges corresponding to child clades
-   */
-  const std::vector<std::vector<EdgeId>>& GetClades() const;
-
-  const std::optional<std::string>& GetSampleId() const;
-  void SetSampleId(std::optional<std::string>&& sample_id);
-
-  /**
-   * Remove all parent and child edges
-   */
-  void ClearConnections();
-  /**
-   * Add a parent or child edge with EdgeId id. If this_node_is_parent is
-   * False, clade is ignored.
-   */
-  void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent);
-  /**
-   * Remove a parent or child edge.
-   */
-  void RemoveEdge(Edge edge, bool this_node_is_parent);
+  template <typename DAG>
+  using ViewType = NodeView<DAG, Features...>;
 
  private:
+  DAG_FEATURE_FRIENDS;
+  DAG_VIEW_FRIENDS;
   std::vector<EdgeId> parents_;
   std::vector<std::vector<EdgeId>> clades_;
-  std::optional<std::string> sample_id_;
+  [[no_unique_address]] std::tuple<Features...> features_;
 };

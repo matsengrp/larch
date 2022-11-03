@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "larch/mutation_annotated_dag.hpp"
+#include "larch/madag/mutation_annotated_dag.hpp"
 
 struct ParsimonyScore {
   using Weight = size_t;

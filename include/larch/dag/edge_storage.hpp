@@ -1,18 +1,18 @@
-#pragma once
+#ifndef DAG_DECLARATIONS
+#error "Don't include this header, use larch/dag/dag.hpp instead"
+#endif
 
-#include "larch/dag/node.hpp"
-#include "larch/dag/edge.hpp"
-
-class EdgeStorage {
+template <typename... Features>
+class DefaultEdgeStorage {
  public:
-  NodeId GetParent() const;
-  NodeId GetChild() const;
-  CladeIdx GetClade() const;
-  void Set(NodeId parent, NodeId child, CladeIdx clade);
-  void Set(NodeId parent, NodeId child);
+  template <typename DAG>
+  using ViewType = EdgeView<DAG, Features...>;
 
  private:
+  DAG_FEATURE_FRIENDS;
+  DAG_VIEW_FRIENDS;
   NodeId parent_;
   NodeId child_;
   CladeIdx clade_;
+  [[no_unique_address]] std::tuple<Features...> features_;
 };

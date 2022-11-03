@@ -38,7 +38,7 @@ one descendant edge.
 #pragma once
 
 #include <boost/multiprecision/cpp_int.hpp>
-#include "larch/mutation_annotated_dag.hpp"
+#include "larch/madag/mutation_annotated_dag.hpp"
 
 using Count = boost::multiprecision::cpp_int;
 

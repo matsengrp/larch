@@ -30,21 +30,25 @@ WithinCladeAccumOptimum(std::vector<Weight>);
 #include <functional>
 #include <random>
 
-#include "larch/mutation_annotated_dag.hpp"
+#include "larch/madag/mutation_annotated_dag.hpp"
 
 template <typename WeightOps>
 class SubtreeWeight {
  public:
-  explicit SubtreeWeight(const MADAG& dag);
+  using Node = MADAG::Node;
+  using Edge = MADAG::Edge;
+  using MutableNode = MutableMADAG::Node;
+  using MutableEdge = MutableMADAG::Edge;
+  explicit SubtreeWeight(MADAG dag);
 
   typename WeightOps::Weight ComputeWeightBelow(Node node, WeightOps&& weight_ops);
 
-  [[nodiscard]] MADAG TrimToMinWeight(WeightOps&& weight_ops);
+  [[nodiscard]] MADAGStorage TrimToMinWeight(WeightOps&& weight_ops);
 
-  [[nodiscard]] std::pair<MADAG, std::vector<NodeId>> SampleTree(
+  [[nodiscard]] std::pair<MADAGStorage, std::vector<NodeId>> SampleTree(
       WeightOps&& weight_ops);
 
-  [[nodiscard]] std::pair<MADAG, std::vector<NodeId>> UniformSampleTree(
+  [[nodiscard]] std::pair<MADAGStorage, std::vector<NodeId>> UniformSampleTree(
       WeightOps&& weight_ops);
 
  private:
@@ -52,15 +56,15 @@ class SubtreeWeight {
   typename WeightOps::Weight CladeWeight(CladeRange&& clade, WeightOps&& weight_ops);
 
   template <typename DistributionMaker>
-  [[nodiscard]] std::pair<MADAG, std::vector<NodeId>> SampleTreeImpl(
+  [[nodiscard]] std::pair<MADAGStorage, std::vector<NodeId>> SampleTreeImpl(
       WeightOps&& weight_ops, DistributionMaker&& distribution_maker);
 
   template <typename EdgeSelector>
-  void ExtractTree(const MADAG& input_dag, Node node, NodeId parent_id,
-                   WeightOps&& weight_ops, EdgeSelector&& edge_selector, MADAG& result,
+  void ExtractTree(Node node, NodeId parent_id, WeightOps&& weight_ops,
+                   EdgeSelector&& edge_selector, MutableMADAG result,
                    std::vector<NodeId>& result_dag_ids);
 
-  const MADAG& dag_;
+  MADAG dag_;
 
   // Indexed by NodeId.
   std::vector<std::optional<typename WeightOps::Weight>> cached_weights_;
