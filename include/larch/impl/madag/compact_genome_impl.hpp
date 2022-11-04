@@ -136,6 +136,11 @@ const CompactGenome& FeatureReader<CompactGenome, View>::GetCompactGenome() cons
 }
 
 template <typename View>
+CompactGenome& FeatureWriter<CompactGenome, View>::GetCompactGenome() {
+  return GetFeatureStorage(this);
+}
+
+template <typename View>
 void FeatureWriter<CompactGenome, View>::SetCompactGenome(
     CompactGenome&& compact_genome) {
   GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);

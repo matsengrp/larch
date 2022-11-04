@@ -54,6 +54,7 @@ class FeatureWriter<ReferenceSequence, View>
   void SetReferenceSequence(std::string_view reference_sequence) const;
   void AddUA(const EdgeMutations& mutations_at_root) const;
   void RecomputeCompactGenomes() const;
+  void RecomputeEdgeMutations() const;
 };
 
 class SampleId {

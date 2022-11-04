@@ -43,6 +43,62 @@ void FeatureWriter<ReferenceSequence, View>::AddUA(
 }
 
 template <typename View>
+void FeatureWriter<ReferenceSequence, View>::RecomputeCompactGenomes() const {
+  const View& dag = static_cast<const View&>(*this);
+  using Node = typename View::Node;
+  using Edge = typename View::Edge;
+
+  for (Node node : dag.GetNodes()) {
+    node.GetCompactGenome() = {};
+  }
+
+  auto ComputeCG = [&](auto& self, Node for_node) {
+    CompactGenome& compact_genome = for_node.GetCompactGenome();
+    if (for_node.IsRoot()) {
+      compact_genome = {};
+      return;
+    }
+    if (not compact_genome.empty()) {
+      return;
+    }
+    Edge edge = *(for_node.GetParents().begin());
+    self(self, edge.GetParent());
+    const EdgeMutations& mutations = edge.GetEdgeMutations();
+    const CompactGenome& parent = edge.GetParent().GetCompactGenome();
+    compact_genome.AddParentEdge(mutations, parent, dag.GetReferenceSequence());
+  };
+  std::unordered_map<CompactGenome, NodeId> leaf_cgs;
+  for (Node node : dag.GetNodes()) {
+    ComputeCG(ComputeCG, node);
+    if (node.IsLeaf()) {
+      bool success =
+          leaf_cgs.emplace(node.GetCompactGenome().Copy(), node.GetId()).second;
+      if (not success) {
+        // std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
+        //           << node.GetId().value << " also seen at "
+        //           << leaf_cgs.at(node.GetCompactGenome().Copy()).value
+        //           << "\nCompact Genome is\n"
+        //           << node.GetCompactGenome().ToString() << "\n"
+        //           << std::flush;
+        Fail("Error in ComputeCompactGenomes: had a non-unique leaf node");
+      }
+    }
+  }
+}
+
+template <typename View>
+void FeatureWriter<ReferenceSequence, View>::RecomputeEdgeMutations() const {
+  const View& dag = static_cast<const View&>(*this);
+  using Edge = typename View::Edge;
+
+  for (Edge edge : dag.GetEdges()) {
+    edge.SetEdgeMutations(CompactGenome::ToEdgeMutations(
+        dag.GetReferenceSequence(), edge.GetParent().GetCompactGenome(),
+        edge.GetChild().GetCompactGenome()));
+  }
+}
+
+template <typename View>
 const std::optional<std::string>& FeatureReader<SampleId, View>::GetSampleId() const {
   return GetFeatureStorage(this).sample_id_;
 }

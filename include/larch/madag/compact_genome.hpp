@@ -60,6 +60,7 @@ class FeatureReader<CompactGenome, View> {
 template <typename View>
 class FeatureWriter<CompactGenome, View> : public FeatureReader<CompactGenome, View> {
  public:
+  CompactGenome& GetCompactGenome();
   void SetCompactGenome(CompactGenome&& compact_genome);
 };
 
