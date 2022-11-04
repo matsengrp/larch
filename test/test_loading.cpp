@@ -9,23 +9,24 @@
 
 namespace MAT = Mutation_Annotated_Tree;
 void fill_static_reference_sequence(std::string_view);
-MAT::Tree mat_from_dag(const MADAG&);
-MADAG build_madag_from_mat(const MAT::Tree&, std::string_view);
+MAT::Tree mat_from_dag(MADAG);
+MADAGStorage build_madag_from_mat(const MAT::Tree&, std::string_view);
+
+using Node = MADAG::Node;
+using Edge = MADAG::Edge;
 
 static void AssertEqual(Node lhs_node, Node rhs_node) {
   // assert_equal(lhs_node.GetId().value, rhs_node.GetId().value, "Node id");
   assert_equal(lhs_node.GetCladesCount(), rhs_node.GetCladesCount(), "Clades count");
 }
 
-static void AssertEqual(Edge lhs_edge, const std::vector<EdgeMutations>& lhs_mutations,
-                        Edge rhs_edge,
-                        const std::vector<EdgeMutations>& rhs_mutations) {
+static void AssertEqual(Edge lhs_edge, Edge rhs_edge) {
   AssertEqual(lhs_edge.GetParent(), rhs_edge.GetParent());
   AssertEqual(lhs_edge.GetChild(), rhs_edge.GetChild());
   // assert_equal(lhs_edge.GetId().value, rhs_edge.GetId().value, "Edge id");
 
-  const EdgeMutations& lhs_muts = lhs_mutations.at(lhs_edge.GetId().value);
-  const EdgeMutations& rhs_muts = rhs_mutations.at(rhs_edge.GetId().value);
+  const EdgeMutations& lhs_muts = lhs_edge.GetEdgeMutations();
+  const EdgeMutations& rhs_muts = rhs_edge.GetEdgeMutations();
   assert_equal(lhs_muts.size(), rhs_muts.size(), "Edge mutations count");
   for (size_t i = 0; i < lhs_muts.size(); ++i) {
     assert_equal(lhs_muts.size(), rhs_muts.size(), "Edge mutation");
@@ -33,43 +34,42 @@ static void AssertEqual(Edge lhs_edge, const std::vector<EdgeMutations>& lhs_mut
 }
 
 static void AssertDAGsEqual(const MADAG& lhs, const MADAG& rhs) {
-  assert_equal(lhs.GetDAG().GetNodesCount(), rhs.GetDAG().GetNodesCount(),
-               "Nodes count");
-  assert_equal(lhs.GetDAG().GetEdgesCount(), rhs.GetDAG().GetEdgesCount(),
-               "Edges count");
+  assert_equal(lhs.GetNodesCount(), rhs.GetNodesCount(), "Nodes count");
+  assert_equal(lhs.GetEdgesCount(), rhs.GetEdgesCount(), "Edges count");
 
-  AssertEqual(lhs.GetDAG().GetRoot().GetFirstChild(), lhs.GetEdgeMutations(),
-              rhs.GetDAG().GetRoot().GetFirstChild(), rhs.GetEdgeMutations());
+  AssertEqual(lhs.GetRoot().GetFirstChild(), rhs.GetRoot().GetFirstChild());
 }
 
 static void test_loading_tree(std::string_view path, std::string_view refseq_path) {
-  MADAG tree0 = LoadTreeFromProtobuf(path, LoadReferenceSequence(refseq_path));
-  StoreTreeToProtobuf(tree0, "temp_tree.pb");
-  MADAG tree1 =
+  MADAGStorage tree0 = LoadTreeFromProtobuf(path, LoadReferenceSequence(refseq_path));
+  StoreTreeToProtobuf(tree0.View(), "temp_tree.pb");
+  MADAGStorage tree1 =
       LoadTreeFromProtobuf("temp_tree.pb", LoadReferenceSequence(refseq_path));
-  AssertDAGsEqual(tree0, tree1);
+  AssertDAGsEqual(tree0.View(), tree1.View());
 
-  fill_static_reference_sequence(tree0.GetReferenceSequence());
-  MADAG tree2 = build_madag_from_mat(mat_from_dag(tree0), tree0.GetReferenceSequence());
-  AssertDAGsEqual(tree0, tree2);
+  fill_static_reference_sequence(tree0.View().GetReferenceSequence());
+  MADAGStorage tree2 = build_madag_from_mat(mat_from_dag(tree0.View()),
+                                            tree0.View().GetReferenceSequence());
+  AssertDAGsEqual(tree0.View(), tree2.View());
 
-  MADAG tree3 = build_madag_from_mat(mat_from_dag(tree1), tree1.GetReferenceSequence());
-  AssertDAGsEqual(tree0, tree3);
+  MADAGStorage tree3 = build_madag_from_mat(mat_from_dag(tree1.View()),
+                                            tree1.View().GetReferenceSequence());
+  AssertDAGsEqual(tree0.View(), tree3.View());
 }
 
 static void test_loading_dag(std::string_view path) {
-  MADAG tree0 = LoadDAGFromProtobuf(path);
-  StoreDAGToProtobuf(tree0, "temp_tree.pb");
-  MADAG tree1 = LoadDAGFromProtobuf("temp_tree.pb");
-  AssertDAGsEqual(tree0, tree1);
+  MADAGStorage tree0 = LoadDAGFromProtobuf(path);
+  StoreDAGToProtobuf(tree0.View(), "temp_tree.pb");
+  MADAGStorage tree1 = LoadDAGFromProtobuf("temp_tree.pb");
+  AssertDAGsEqual(tree0.View(), tree1.View());
 
-  SubtreeWeight<ParsimonyScore> weight(tree0);
-  MADAG sampled0 = weight.SampleTree({}).first;
+  SubtreeWeight<ParsimonyScore> weight(tree0.View());
+  MADAGStorage sampled0 = weight.SampleTree({}).first;
 
-  fill_static_reference_sequence(sampled0.GetReferenceSequence());
-  MADAG sampled1 =
-      build_madag_from_mat(mat_from_dag(sampled0), sampled0.GetReferenceSequence());
-  AssertDAGsEqual(sampled0, sampled1);
+  fill_static_reference_sequence(sampled0.View().GetReferenceSequence());
+  MADAGStorage sampled1 = build_madag_from_mat(mat_from_dag(sampled0.View()),
+                                               sampled0.View().GetReferenceSequence());
+  AssertDAGsEqual(sampled0.View(), sampled1.View());
 }
 
 [[maybe_unused]] static const auto test_added0 =

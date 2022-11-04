@@ -61,7 +61,7 @@ static void mat_from_dag_helper(MADAG::Node dag_node, MAT::Node* mat_par_node,
   }
 }
 
-MAT::Tree mat_from_dag(const MADAG& dag) {
+MAT::Tree mat_from_dag(MADAG dag) {
   dag.AssertUA();
   MAT::Tree tree;
   size_t node_id = 0;
@@ -135,7 +135,7 @@ void compareDAG(const MADAG::Node dag1, const MADAG::Node dag2) {
     compareDAG(edge1.GetChild(), edge2.GetChild());
   }
 }
-void check_MAT_MADAG_Eq(const MAT::Tree& tree, const MADAG& init) {
+void check_MAT_MADAG_Eq(const MAT::Tree& tree, MADAG init) {
   MADAGStorage converted_dag = build_madag_from_mat(tree, init.GetReferenceSequence());
   compareDAG(MADAG{converted_dag}.GetRoot(), init.GetRoot());
 }
@@ -147,7 +147,7 @@ void fill_static_reference_sequence(std::string_view dag_ref) {
   }
 }
 
-MADAGStorage optimize_dag_direct(const MADAG& dag, Move_Found_Callback& callback) {
+MADAGStorage optimize_dag_direct(MADAG dag, Move_Found_Callback& callback) {
   auto dag_ref = dag.GetReferenceSequence();
   fill_static_reference_sequence(dag_ref);
   auto tree = mat_from_dag(dag);
