@@ -23,19 +23,19 @@ class EdgeMutations {
   template <typename T>
   EdgeMutations(T&& view);
 
-  [[nodiscard]] EdgeMutations Copy() const;
-  auto begin() const -> decltype(mutations_.begin());
-  auto end() const -> decltype(mutations_.end());
-  size_t size() const;
-  auto operator[](MutationPosition pos) -> decltype(mutations_[pos]);
-  auto insert(std::pair<MutationPosition, std::pair<char, char>> mut)
+  [[nodiscard]] inline EdgeMutations Copy() const;
+  inline auto begin() const -> decltype(mutations_.begin());
+  inline auto end() const -> decltype(mutations_.end());
+  inline size_t size() const;
+  inline auto operator[](MutationPosition pos) -> decltype(mutations_[pos]);
+  inline auto insert(std::pair<MutationPosition, std::pair<char, char>> mut)
       -> decltype(mutations_.insert(mut));
-  bool operator==(const EdgeMutations& rhs) const;
-  bool operator!=(const EdgeMutations& rhs) const;
+  inline bool operator==(const EdgeMutations& rhs) const;
+  inline bool operator!=(const EdgeMutations& rhs) const;
 
  private:
   DAG_FEATURE_FRIENDS;
-  explicit EdgeMutations(
+  inline explicit EdgeMutations(
       const std::map<MutationPosition, std::pair<char, char>>& mutations);
 };
 

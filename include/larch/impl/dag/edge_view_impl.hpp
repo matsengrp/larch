@@ -3,8 +3,7 @@
 #endif
 
 template <typename DAGType, typename... Features>
-EdgeView<DAGType, Features...>::EdgeView(const DAGType& dag, EdgeId id)
-    : dag_{dag}, id_{id} {}
+EdgeView<DAGType, Features...>::EdgeView(DAGType dag, EdgeId id) : dag_{dag}, id_{id} {}
 
 template <typename DAGType, typename... Features>
 EdgeView<DAGType, Features...>::operator EdgeId() const {

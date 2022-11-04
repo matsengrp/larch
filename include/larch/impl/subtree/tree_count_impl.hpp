@@ -1,8 +1,8 @@
 #include <algorithm>
 
-TreeCount::Weight TreeCount::ComputeLeaf(const MADAG&, NodeId) { return 1; }
+TreeCount::Weight TreeCount::ComputeLeaf(MADAG, NodeId) { return 1; }
 
-TreeCount::Weight TreeCount::ComputeEdge(const MADAG&, EdgeId) {
+TreeCount::Weight TreeCount::ComputeEdge(MADAG, EdgeId) {
   /* This doesn't matter because AboveNode ignores edge weight */
   return 1;
 }

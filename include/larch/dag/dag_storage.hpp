@@ -7,7 +7,7 @@ class DefaultDAGStorage {
  public:
   using NodesContainerType = NodesContainer;
   using EdgesContainerType = EdgesContainer;
-  
+
   DefaultDAGStorage() = default;
   MOVE_ONLY(DefaultDAGStorage);
 
@@ -18,5 +18,7 @@ class DefaultDAGStorage {
   DAG_VIEW_FRIENDS;
   NodesContainer nodes_;
   EdgesContainer edges_;
+  NodeId root_ = {NoId};
+  std::vector<NodeId> leafs_;
   [[no_unique_address]] std::tuple<Features...> features_;
 };

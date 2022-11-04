@@ -59,19 +59,15 @@ inline auto GetChild() {
 inline auto GetId() {
   return ranges::views::transform([](auto&& i) { return i.GetId(); });
 }
-// inline auto ToNodes(const DAG& dag) {
-//   return ranges::views::transform([&](auto&& i) { return Node{dag, i}; });
-// }
-// inline auto ToNodes(DAG& dag) {
-//   return ranges::views::transform([&](auto&& i) { return MutableNode{dag, i}; });
-// }
 template <typename DAG>
-inline auto ToEdges(const DAG& dag) {
+inline auto ToNodes(DAG dag) {
+  return ranges::views::transform([&](auto&& i) { return typename DAG::Node{dag, i}; });
+}
+template <typename DAG>
+inline auto ToEdges(DAG dag) {
   return ranges::views::transform([&](auto&& i) { return typename DAG::Edge{dag, i}; });
 }
-// inline auto ToEdges(DAG& dag) {
-//   return ranges::views::transform([&](auto&& i) { return MutableEdge{dag, i}; });
-// }
+
 template <typename T>
 inline auto To() {
   return ranges::views::transform([&](auto&& i) { return T{i}; });
@@ -100,4 +96,3 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x(const x&) = delete;        \
   x& operator=(x&&) = default; \
   x& operator=(const x&) = delete
-  

@@ -2,13 +2,13 @@
 
 template <typename WeightOps>
 typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::ComputeLeaf(
-    const MADAG& dag, NodeId node_id) {
+    MADAG dag, NodeId node_id) {
   return WeightCounter<WeightOps>({weight_ops_.ComputeLeaf(dag, node_id)}, weight_ops_);
 }
 
 template <typename WeightOps>
 typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::ComputeEdge(
-    const MADAG& dag, EdgeId edge_id) {
+    MADAG dag, EdgeId edge_id) {
   return WeightCounter<WeightOps>({weight_ops_.ComputeEdge(dag, edge_id)}, weight_ops_);
 }
 

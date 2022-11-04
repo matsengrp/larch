@@ -9,7 +9,7 @@ class NodeView
           FeatureReader<Features, NodeView<DAGType, Features...>>>... {
  public:
   constexpr static const bool is_mutable = DAGType::is_mutable;
-  NodeView(const DAGType& dag, NodeId id);
+  NodeView(DAGType dag, NodeId id);
   operator NodeView<typename DAGType::Immutable, Features...>() const;
   operator NodeId() const;
   auto& GetDAG() const;
@@ -34,6 +34,6 @@ class NodeView
  private:
   DAG_FEATURE_FRIENDS;
   auto& GetStorage() const;
-  const DAGType& dag_;
+  DAGType dag_;
   NodeId id_;
 };

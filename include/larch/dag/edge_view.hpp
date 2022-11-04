@@ -10,7 +10,7 @@ class EdgeView
  public:
   constexpr static const bool is_mutable = DAGType::is_mutable;
   using Node = typename DAGType::Node;
-  EdgeView(const DAGType& dag, EdgeId id);
+  EdgeView(DAGType dag, EdgeId id);
   operator EdgeView<typename DAGType::Immutable, Features...>() const;
   operator EdgeId() const;
   operator CladeIdx() const;
@@ -28,7 +28,7 @@ class EdgeView
  private:
   DAG_FEATURE_FRIENDS;
   auto& GetStorage() const;
-  const DAGType& dag_;
+  DAGType dag_;
   EdgeId id_;
 };
 

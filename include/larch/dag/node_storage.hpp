@@ -8,6 +8,9 @@ class DefaultNodeStorage {
   template <typename DAG>
   using ViewType = NodeView<DAG, Features...>;
 
+  void ClearConnections();
+  void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent);
+
  private:
   DAG_FEATURE_FRIENDS;
   DAG_VIEW_FRIENDS;

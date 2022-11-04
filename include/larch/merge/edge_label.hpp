@@ -11,37 +11,31 @@
 class EdgeLabel {
  public:
   EdgeLabel() = default;
-  EdgeLabel(NodeLabel parent, NodeLabel child);
+  inline EdgeLabel(NodeLabel parent, NodeLabel child);
 
-  NodeLabel GetParent() const;
-  NodeLabel GetChild() const;
+  inline NodeLabel GetParent() const;
+  inline NodeLabel GetChild() const;
 
-  bool operator==(const EdgeLabel& rhs) const noexcept;
+  inline bool operator==(const EdgeLabel& rhs) const noexcept;
 
-  [[nodiscard]] size_t Hash() const noexcept;
+  [[nodiscard]] inline size_t Hash() const noexcept;
 
-  [[nodiscard]] CladeIdx ComputeCladeIdx() const;
+  [[nodiscard]] inline CladeIdx ComputeCladeIdx() const;
 
  private:
   NodeLabel parent_;
   NodeLabel child_;
 };
 
-namespace std {
-template <typename>
-struct hash;
-template <typename>
-struct equal_to;
-}  // namespace std
-
 template <>
 struct std::hash<EdgeLabel> {
-  std::size_t operator()(const EdgeLabel& el) const noexcept { return el.Hash(); }
+  inline std::size_t operator()(const EdgeLabel& el) const noexcept;
 };
 
 template <>
 struct std::equal_to<EdgeLabel> {
-  std::size_t operator()(const EdgeLabel& lhs, const EdgeLabel& rhs) const noexcept {
-    return lhs == rhs;
-  }
+  inline std::size_t operator()(const EdgeLabel& lhs,
+                                const EdgeLabel& rhs) const noexcept;
 };
+
+#include "larch/impl/merge/edge_label_impl.hpp"

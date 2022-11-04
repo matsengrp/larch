@@ -19,35 +19,35 @@ class CompactGenome {
   size_t hash_ = {};
 
  public:
-  static const CompactGenome* Empty();
+  inline static const CompactGenome* Empty();
   CompactGenome() = default;
   MOVE_ONLY(CompactGenome);
-  CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations);
+  inline CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations);
 
-  bool operator==(const CompactGenome& rhs) const noexcept;
-  bool operator<(const CompactGenome& rhs) const noexcept;
-  [[nodiscard]] size_t Hash() const noexcept;
+  inline bool operator==(const CompactGenome& rhs) const noexcept;
+  inline bool operator<(const CompactGenome& rhs) const noexcept;
+  [[nodiscard]] inline size_t Hash() const noexcept;
 
-  std::optional<char> operator[](MutationPosition pos) const;
-  std::string ToString() const;
+  inline std::optional<char> operator[](MutationPosition pos) const;
+  inline std::string ToString() const;
 
-  auto begin() const -> decltype(mutations_.begin());
-  auto end() const -> decltype(mutations_.end());
+  inline auto begin() const -> decltype(mutations_.begin());
+  inline auto end() const -> decltype(mutations_.end());
 
-  bool empty() const;
+  inline bool empty() const;
 
-  [[nodiscard]] CompactGenome Copy() const;
+  [[nodiscard]] inline CompactGenome Copy() const;
 
-  void AddParentEdge(const EdgeMutations& mutations, const CompactGenome& parent,
-                     std::string_view reference_sequence);
+  inline void AddParentEdge(const EdgeMutations& mutations, const CompactGenome& parent,
+                            std::string_view reference_sequence);
 
-  [[nodiscard]] static EdgeMutations ToEdgeMutations(
+  [[nodiscard]] inline static EdgeMutations ToEdgeMutations(
       std::string_view reference_sequence, const CompactGenome& parent,
       const CompactGenome& child);
 
  private:
   DAG_FEATURE_FRIENDS;
-  static size_t ComputeHash(
+  inline static size_t ComputeHash(
       const std::vector<std::pair<MutationPosition, char>>& mutations);
 };
 
@@ -60,18 +60,18 @@ class FeatureReader<CompactGenome, View> {
 template <typename View>
 class FeatureWriter<CompactGenome, View> : public FeatureReader<CompactGenome, View> {
  public:
-   void SetCompactGenome(CompactGenome&& compact_genome);
+  void SetCompactGenome(CompactGenome&& compact_genome);
 };
 
 template <>
 struct std::hash<CompactGenome> {
-  std::size_t operator()(const CompactGenome& cg) const noexcept;
+  inline std::size_t operator()(const CompactGenome& cg) const noexcept;
 };
 
 template <>
 struct std::equal_to<CompactGenome> {
-  std::size_t operator()(const CompactGenome& lhs,
-                         const CompactGenome& rhs) const noexcept;
+  inline std::size_t operator()(const CompactGenome& lhs,
+                                const CompactGenome& rhs) const noexcept;
 };
 
 #include "larch/impl/madag/compact_genome_impl.hpp"

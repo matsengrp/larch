@@ -15,8 +15,8 @@ example:
 
   struct TreeWeightOps {
   using Weight = size_t;  // Provide any weight type
-  inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);  // The value assigned to
-each leaf node inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);  // The
+  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);  // The value assigned to
+each leaf node inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);  // The
 value assigned to each edge
   // Describes how to aggregate weights for alternative subtrees below a clade.
   // The returned pair contains the aggregated weight (for example, the optimal
@@ -79,8 +79,8 @@ struct WeightAccumulator {
   WeightAccumulator() : weight_ops_{} {}
   WeightAccumulator(const WeightOps& ops) : weight_ops_{ops} {}
   WeightOps weight_ops_;
-  inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);
-  inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);
+  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
+  inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
 
   /*
    * Given a vector of weights for edges below a clade, compute the minimum

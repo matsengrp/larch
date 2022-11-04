@@ -1,8 +1,8 @@
 #include <algorithm>
 
-ParsimonyScore_::Weight ParsimonyScore_::ComputeLeaf(const MADAG&, NodeId) { return 0; }
+ParsimonyScore_::Weight ParsimonyScore_::ComputeLeaf(MADAG, NodeId) { return 0; }
 
-ParsimonyScore_::Weight ParsimonyScore_::ComputeEdge(const MADAG& dag, EdgeId edge_id) {
+ParsimonyScore_::Weight ParsimonyScore_::ComputeEdge(MADAG dag, EdgeId edge_id) {
   return dag.GetEdgeMutations(edge_id).size();
 }
 

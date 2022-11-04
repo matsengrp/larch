@@ -3,8 +3,7 @@
 #endif
 
 template <typename DAGType, typename... Features>
-NodeView<DAGType, Features...>::NodeView(const DAGType& dag, NodeId id)
-    : dag_{dag}, id_{id} {}
+NodeView<DAGType, Features...>::NodeView(DAGType dag, NodeId id) : dag_{dag}, id_{id} {}
 
 template <typename DAGType, typename... Features>
 NodeView<DAGType, Features...>::operator NodeId() const {

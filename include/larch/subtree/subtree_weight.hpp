@@ -7,8 +7,8 @@ the weight type, including at least the values of this example struct:
 
 struct ExampleWeightOps {
   using Weight = size_t;  // Provide any weight type
-  inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);  // The value assigned to
-each leaf node inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);  // The
+  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);  // The value assigned to
+each leaf node inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);  // The
 value assigned to each edge
   // Describes how to aggregate weights for alternative subtrees below a clade.
   // The returned pair contains the aggregated weight (for example, the optimal

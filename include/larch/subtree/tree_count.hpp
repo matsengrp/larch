@@ -12,8 +12,8 @@
 
 struct TreeCount {
   using Weight = boost::multiprecision::cpp_int;
-  inline Weight ComputeLeaf(const MADAG& dag, NodeId node_id);
-  inline Weight ComputeEdge(const MADAG& dag, EdgeId edge_id);
+  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
+  inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
   /*
    * Given a vector of weights for edges below a clade, compute the minimum
    * weight of them all, and return that minimum weight, and a vector

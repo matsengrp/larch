@@ -35,7 +35,7 @@ class Merge {
    * DAGs that will be merged later via the AddDAGs() method. The reference sequence is
    * externally owned, and should outlive the Merge object.
    */
-  explicit Merge(std::string_view reference_sequence);
+  inline explicit Merge(std::string_view reference_sequence);
 
   Merge(Merge&&) = delete;
   Merge(const Merge&) = delete;
@@ -49,36 +49,36 @@ class Merge {
    * Otherwise the compact genomes stored in the DAGs will be used, and will be moved
    * into the Merge object storage to avoid duplication.
    */
-  void AddDAGs(const std::vector<MADAG>& dags);
+  inline void AddDAGs(const std::vector<MADAG>& dags);
 
   /**
    * Get the DAG resulting from merge
    * @{
    */
-  MADAG GetResult() const;
+  inline MADAG GetResult() const;
   /** @} */
 
   /**
    * Access the labels of the resulting DAG's nodes.
    */
-  const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
+  inline const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
 
-  const std::vector<NodeLabel>& GetResultNodeLabels() const;
+  inline const std::vector<NodeLabel>& GetResultNodeLabels() const;
 
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
    */
-  void ComputeResultEdgeMutations();
+  inline void ComputeResultEdgeMutations();
 
-  bool ContainsLeafset(const LeafSet& leafset) const;
+  inline bool ContainsLeafset(const LeafSet& leafset) const;
 
  private:
-  void ComputeLeafSets(const std::vector<size_t>& tree_idxs);
+  inline void ComputeLeafSets(const std::vector<size_t>& tree_idxs);
 
-  void MergeTrees(const std::vector<size_t>& tree_idxs);
+  inline void MergeTrees(const std::vector<size_t>& tree_idxs);
 
-  static std::vector<LeafSet> ComputeLeafSets(const MADAG& dag,
-                                              const std::vector<NodeLabel>& labels);
+  inline static std::vector<LeafSet> ComputeLeafSets(
+      MADAG dag, const std::vector<NodeLabel>& labels);
 
   // Vector of externally owned input DAGs.
   std::vector<MADAG> trees_;
@@ -104,3 +104,5 @@ class Merge {
   MADAGStorage result_dag_storage_;
   MutableMADAG result_dag_;
 };
+
+#include "larch/impl/merge/merge_impl.hpp"
