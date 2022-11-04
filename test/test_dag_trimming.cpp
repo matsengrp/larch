@@ -9,21 +9,17 @@
 
 #include "larch/dag_loader.hpp"
 
-static void test_dag_trimming(MADAG& dag, size_t expected_edges) {
-  if (dag.GetEdgeMutations().empty()) {
-    dag.RecomputeEdgeMutations();
-  }
-
+static void test_dag_trimming(MADAG dag, size_t expected_edges) {
   SubtreeWeight<ParsimonyScore> weight{dag};
 
-  MADAG trimmed = weight.TrimToMinWeight({});
+  MADAGStorage trimmed = weight.TrimToMinWeight({});
 
-  assert_equal(trimmed.GetDAG().GetEdgesCount(), expected_edges, "Edges count");
+  assert_equal(trimmed.View().GetEdgesCount(), expected_edges, "Edges count");
 }
 
 static void test_dag_trimming(std::string_view path, size_t expected_edges) {
-  MADAG dag = LoadDAGFromProtobuf(path);
-  test_dag_trimming(dag, expected_edges);
+  MADAGStorage dag = LoadDAGFromProtobuf(path);
+  test_dag_trimming(dag.View(), expected_edges);
 }
 
 [[maybe_unused]] static const auto test_added0 =

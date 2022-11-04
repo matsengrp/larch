@@ -10,8 +10,8 @@
 
 namespace MAT = Mutation_Annotated_Tree;
 
-void check_edge_mutations(const MADAG&);
-MADAG optimize_dag_direct(const MADAG&, Move_Found_Callback&);
+void check_edge_mutations(MADAG);
+MADAGStorage optimize_dag_direct(MADAG, Move_Found_Callback&);
 
 struct Test_Move_Found_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
@@ -23,22 +23,22 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 static void test_matOptimize(std::string_view input_dag_path,
                              std::string_view refseq_path, size_t count) {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
-  MADAG input_dag = LoadTreeFromProtobuf(input_dag_path, reference_sequence);
+  MADAGStorage input_dag_storage =
+      LoadTreeFromProtobuf(input_dag_path, reference_sequence);
+  MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
-  std::vector<MADAG> optimized_dags;
+  std::vector<MADAGStorage> optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     auto [sample, dag_ids] = weight.SampleTree({});
     std::ignore = dag_ids;
-    check_edge_mutations(sample);
-    MADAG result;
+    check_edge_mutations(sample.View());
     Test_Move_Found_Callback callback;
-    result = optimize_dag_direct(sample, callback);
-    optimized_dags.push_back(std::move(result));
-    merge.AddDAGs({optimized_dags.back()});
+    optimized_dags.push_back(optimize_dag_direct(sample.View(), callback));
+    merge.AddDAGs({optimized_dags.back().View()});
   }
 }
 

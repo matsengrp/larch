@@ -1,4 +1,4 @@
-#include "larch/mutation_annotated_dag.hpp"
+#include "larch/madag/mutation_annotated_dag.hpp"
 #include "larch/subtree/subtree_weight.hpp"
 #include "larch/subtree/parsimony_score.hpp"
 
@@ -15,35 +15,32 @@
 #include <valgrind/callgrind.h>
 #endif
 
-static void test_sample_tree(MADAG& dag) {
-  if (dag.GetEdgeMutations().empty()) {
-    dag.RecomputeEdgeMutations();
-  }
-
+static void test_sample_tree(MADAG dag) {
   SubtreeWeight<ParsimonyScore> weight(dag);
 
-  MADAG result = weight.SampleTree({}).first;
-  assert_true(result.GetDAG().IsTree(), "Tree");
+  MADAGStorage result = weight.SampleTree({}).first;
+  assert_true(result.View().IsTree(), "Tree");
 
   SubtreeWeight<TreeCount> tree_count{dag};
-  MADAG result2 = tree_count.UniformSampleTree({}).first;
-  assert_true(result2.GetDAG().IsTree(), "Tree");
+  MADAGStorage result2 = tree_count.UniformSampleTree({}).first;
+  assert_true(result2.View().IsTree(), "Tree");
 }
 
 static void test_sample_tree(std::string_view path) {
-  MADAG dag = LoadDAGFromProtobuf(path);
-  test_sample_tree(dag);
+  MADAGStorage dag = LoadDAGFromProtobuf(path);
+  test_sample_tree(dag.View());
 }
 
 static void bench_sampling(std::string_view path, std::string_view refseq_path) {
-  MADAG dag = LoadTreeFromProtobuf(path, LoadReferenceSequence(refseq_path));
+  MADAGStorage dag = LoadTreeFromProtobuf(path, LoadReferenceSequence(refseq_path));
+  dag.View().RecomputeCompactGenomes();
 #if defined(CALLGRIND_START_INSTRUMENTATION)
   CALLGRIND_START_INSTRUMENTATION;
 #endif
   Benchmark bench;
   bench.start();
-  Merge merge{dag.GetReferenceSequence()};
-  merge.AddDAGs({dag});
+  Merge merge{dag.View().GetReferenceSequence()};
+  merge.AddDAGs({dag.View()});
   merge.ComputeResultEdgeMutations();
   SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
   std::ignore = weight.SampleTree({});

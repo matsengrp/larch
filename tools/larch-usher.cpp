@@ -50,7 +50,7 @@ static size_t ParseNumber(std::string_view str) {
   return result;
 }
 
-void check_edge_mutations(const MADAG& madag);
+void check_edge_mutations(MADAG madag);
 
 std::vector<std::vector<const CompactGenome*>> clades_union(
     const std::vector<std::vector<const CompactGenome*>>& lhs,
@@ -231,8 +231,7 @@ int main(int argc, char** argv) {
     std::cout << "Parsimony scores of trees in DAG: " << parsimonyscores << "\n";
 
     SubtreeWeight<TreeCount> treecount{merge.GetResult()};
-    auto ntrees =
-        treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
+    auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     std::cout << "Total trees in DAG: " << ntrees << "\n";
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t'

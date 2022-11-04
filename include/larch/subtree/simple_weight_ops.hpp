@@ -20,7 +20,7 @@ binary operation that respects ordering, e.g. '+'
 
 #pragma once
 
-#include "larch/mutation_annotated_dag.hpp"
+#include "larch/madag/mutation_annotated_dag.hpp"
 
 template <typename BinaryOperatorWeightOps>
 struct SimpleWeightOps {

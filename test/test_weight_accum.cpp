@@ -12,14 +12,10 @@
 
 using Weight = typename WeightAccumulator<ParsimonyScore>::Weight;
 
-static void test_weight_accum(MADAG& dag, Weight expected_score) {
-  if (dag.GetEdgeMutations().empty()) {
-    dag.RecomputeEdgeMutations();
-  }
-
+static void test_weight_accum(MADAG dag, Weight expected_score) {
   SubtreeWeight<WeightAccumulator<ParsimonyScore>> parsimonycount(dag);
 
-  Weight score = parsimonycount.ComputeWeightBelow(dag.GetDAG().GetRoot(), {});
+  Weight score = parsimonycount.ComputeWeightBelow(dag.GetRoot(), {});
 
   /* std::cout << "parsimony score counts\n"; */
   /* std::cout << "score   |   count\n"; */
@@ -30,8 +26,8 @@ static void test_weight_accum(MADAG& dag, Weight expected_score) {
 }
 
 static void test_weight_accum(std::string_view path, Weight expected_score) {
-  MADAG dag = LoadDAGFromProtobuf(path);
-  test_weight_accum(dag, expected_score);
+  MADAGStorage dag = LoadDAGFromProtobuf(path);
+  test_weight_accum(dag.View(), expected_score);
 }
 
 [[maybe_unused]] static const auto test_added0 =

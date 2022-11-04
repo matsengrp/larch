@@ -3,7 +3,7 @@
 ParsimonyScore_::Weight ParsimonyScore_::ComputeLeaf(MADAG, NodeId) { return 0; }
 
 ParsimonyScore_::Weight ParsimonyScore_::ComputeEdge(MADAG dag, EdgeId edge_id) {
-  return dag.GetEdgeMutations(edge_id).size();
+  return dag.Get(edge_id).GetEdgeMutations().size();
 }
 
 bool ParsimonyScore_::Compare(ParsimonyScore_::Weight lhs,

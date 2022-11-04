@@ -106,9 +106,7 @@ function(larch_executable PRODUCT)
 endfunction()
 
 add_library(larch
-    src/check_edge_mutations.cpp
     src/dag_loader.cpp
-    src/produce_mat.cpp
     )
 larch_compile_opts(larch)
 target_compile_options(larch PRIVATE ${STRICT_WARNINGS})
@@ -140,21 +138,17 @@ add_dependencies(larch-usher-glue larch usher)
 
 larch_executable(larch-test
     test/main.cpp
-    #test/synthetic_dags.cpp
-    #test/test_clade_idx.cpp
     test/test_compact_genome.cpp
-    #test/test_dag_trimming.cpp
+    test/test_count_trees.cpp
+    test/test_dag_trimming.cpp
     test/test_loading.cpp
-    #test/test_matOptimize.cpp
+    test/test_matOptimize.cpp
     test/test_merge.cpp
-    #test/test_sample_tree.cpp
-    #test/test_subtree_weight.cpp
-    #test/test_write_parsimony.cpp
-    #test/test_count_trees.cpp
-    #test/test_weight_accum.cpp
-    #test/test_weight_counter.cpp
-    #test/test_synthetic.cpp
-    #test/test_traversal_iterators.cpp
+    test/test_sample_tree.cpp
+    test/test_subtree_weight.cpp
+    test/test_weight_accum.cpp
+    test/test_weight_counter.cpp
+    test/test_write_parsimony.cpp
     )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 target_link_libraries(larch-test PUBLIC larch-usher-glue)

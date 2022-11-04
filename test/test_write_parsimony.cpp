@@ -12,45 +12,46 @@
 
 #include "larch/dag_loader.hpp"
 
-bool compare_treedags(MADAG &dag1, MADAG &dag2) {
+bool compare_treedags(MADAG dag1, MADAG dag2) {
   if (dag1.GetReferenceSequence() != dag2.GetReferenceSequence()) {
     return false;
   }
-  if (dag1.GetDAG().GetNodesCount() != dag2.GetDAG().GetNodesCount()) {
+  if (dag1.GetNodesCount() != dag2.GetNodesCount()) {
     return false;
   }
-  if (dag1.GetDAG().GetEdgesCount() != dag2.GetDAG().GetEdgesCount()) {
+  if (dag1.GetEdgesCount() != dag2.GetEdgesCount()) {
     return false;
   }
 
-  if (not dag1.GetReferenceSequence().empty()) {
-    if (dag1.GetCompactGenomes().empty()) {
-      dag1.RecomputeCompactGenomes();
-      dag2.RecomputeCompactGenomes();
-    }
-    std::unordered_set<CompactGenome> dag1_cgs, dag2_cgs;
-    for (auto &cg : dag1.GetCompactGenomes()) {
-      dag1_cgs.emplace(cg.Copy());
-    }
-    for (auto &cg : dag2.GetCompactGenomes()) {
-      dag2_cgs.emplace(cg.Copy());
-    }
-    if (dag1_cgs != dag2_cgs) {
-      return false;
-    }
+  std::unordered_set<CompactGenome> dag1_cgs, dag2_cgs;
+  for (auto node : dag1.GetNodes()) {
+    dag1_cgs.emplace(node.GetCompactGenome().Copy());
+  }
+  for (auto node : dag2.GetNodes()) {
+    dag2_cgs.emplace(node.GetCompactGenome().Copy());
+  }
+  if (dag1_cgs != dag2_cgs) {
+    return false;
   }
 
-  if (not(dag1.GetEdgeMutations().empty() or dag2.GetEdgeMutations().empty())) {
-    const std::vector<EdgeMutations> &dag1_ems = dag1.GetEdgeMutations();
-    const std::vector<EdgeMutations> &dag2_ems = dag2.GetEdgeMutations();
+  std::vector<EdgeMutations> dag1_ems;
+  std::vector<EdgeMutations> dag2_ems;
 
+  for (auto edge : dag1.GetEdges()) {
+    dag1_ems.emplace_back(edge.GetEdgeMutations().Copy());
+  }
+  for (auto edge : dag2.GetEdges()) {
+    dag2_ems.emplace_back(edge.GetEdgeMutations().Copy());
+  }
+
+  if (not(dag1_ems.empty() or dag2_ems.empty())) {
     for (auto &em : dag1_ems) {
       if (std::count(dag2_ems.begin(), dag2_ems.end(), em) !=
           std::count(dag1_ems.begin(), dag1_ems.end(), em)) {
         return false;
       }
     }
-  } else if (not(dag1.GetEdgeMutations().empty() and dag2.GetEdgeMutations().empty())) {
+  } else if (not(dag1_ems.empty() and dag2_ems.empty())) {
     return false;
   }
   return true;
@@ -64,27 +65,27 @@ static void test_write_protobuf() {
   file.open(filename);
   while (file >> refseq) {
   }
-  MADAG treedag = LoadTreeFromProtobuf(path, refseq);
+  MADAGStorage treedag = LoadTreeFromProtobuf(path, refseq);
 
-  SubtreeWeight<ParsimonyScore> weight{treedag};
-  MADAG sample_tree = weight.SampleTree({}).first;
+  SubtreeWeight<ParsimonyScore> weight{treedag.View()};
+  MADAGStorage sample_tree = weight.SampleTree({}).first;
 
-  StoreTreeToProtobuf(sample_tree, "test_write_protobuf.pb");
-  compare_treedags(treedag, sample_tree);
+  StoreTreeToProtobuf(sample_tree.View(), "test_write_protobuf.pb");
+  compare_treedags(treedag.View(), sample_tree.View());
 
-  sample_tree.RecomputeCompactGenomes();
-  treedag.RecomputeCompactGenomes();
-  compare_treedags(treedag, sample_tree);
+  sample_tree.View().RecomputeCompactGenomes();
+  treedag.View().RecomputeCompactGenomes();
+  compare_treedags(treedag.View(), sample_tree.View());
 
-  treedag.RecomputeEdgeMutations();
-  compare_treedags(treedag, sample_tree);
+  treedag.View().RecomputeEdgeMutations();
+  compare_treedags(treedag.View(), sample_tree.View());
 
-  Merge merge{treedag.GetReferenceSequence()};
-  merge.AddDAGs({treedag, sample_tree});
+  Merge merge{treedag.View().GetReferenceSequence()};
+  merge.AddDAGs({treedag.View(), sample_tree.View()});
   merge.ComputeResultEdgeMutations();
 
-  compare_treedags(treedag, merge.GetResult());
+  compare_treedags(treedag.View(), merge.GetResult());
 }
 
 [[maybe_unused]] static const auto test_added_write =
-    add_test({test_write_protobuf, "test write protobuf"});
+    add_test({test_write_protobuf, "Write protobuf"});
