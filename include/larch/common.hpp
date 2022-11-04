@@ -61,11 +61,15 @@ inline auto GetId() {
 }
 template <typename DAG>
 inline auto ToNodes(DAG dag) {
-  return ranges::views::transform([&](auto&& i) { return typename DAG::Node{dag, i}; });
+  return ranges::views::transform([dag](auto&& i) {
+    return typename DAG::Node{dag, i};
+  });
 }
 template <typename DAG>
 inline auto ToEdges(DAG dag) {
-  return ranges::views::transform([&](auto&& i) { return typename DAG::Edge{dag, i}; });
+  return ranges::views::transform([dag](auto&& i) {
+    return typename DAG::Edge{dag, i};
+  });
 }
 
 template <typename T>
