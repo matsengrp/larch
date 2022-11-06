@@ -64,7 +64,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   return EXIT_SUCCESS;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) try {
   Arguments args = GetArguments(argc, argv);
 
   std::vector<std::string_view> input_filenames;
@@ -100,4 +100,9 @@ int main(int argc, char** argv) {
   }
 
   return MergeTrees(input_filenames, refseq_filename, result_filename, dags);
+} catch (std::exception& e) {
+  std::cerr << "Uncaught exception: " << e.what() << std::endl;
+  std::terminate();
+} catch (...) {
+  std::abort();
 }

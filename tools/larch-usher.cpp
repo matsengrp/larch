@@ -143,7 +143,7 @@ private:
   const std::vector<NodeId>& sample_dag_ids_;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) try {
   Arguments args = GetArguments(argc, argv);
   int ignored{};
   std::string input_dag_path;
@@ -263,4 +263,9 @@ int main(int argc, char** argv) {
   StoreDAGToProtobuf(merge.GetResult(), output_dag_path);
 
   return EXIT_SUCCESS;
+} catch (std::exception& e) {
+  std::cerr << "Uncaught exception: " << e.what() << std::endl;
+  std::terminate();
+} catch (...) {
+  std::abort();
 }

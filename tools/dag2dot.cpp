@@ -41,7 +41,7 @@ static MADAGStorage Load(InputType type, std::string_view path) {
   }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) try {
   Arguments args = GetArguments(argc, argv);
 
   InputType type = InputType::TreePB;
@@ -87,4 +87,9 @@ int main(int argc, char** argv) {
   MADAGToDOT(dag.View(), std::cout);
 
   return EXIT_SUCCESS;
+} catch (std::exception& e) {
+  std::cerr << "Uncaught exception: " << e.what() << std::endl;
+  std::terminate();
+} catch (...) {
+  std::abort();
 }

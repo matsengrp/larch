@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <type_traits>
 
 #include "larch/dag/dag.hpp"
 
@@ -21,7 +22,8 @@ class EdgeMutations {
   EdgeMutations() = default;
   MOVE_ONLY(EdgeMutations);
   template <typename T>
-  EdgeMutations(T&& view);
+  EdgeMutations(T&& mutations_view,
+                std::enable_if_t<not std::is_same_v<T, EdgeMutations>>* = nullptr);
 
   [[nodiscard]] inline EdgeMutations Copy() const;
   inline auto begin() const -> decltype(mutations_.begin());

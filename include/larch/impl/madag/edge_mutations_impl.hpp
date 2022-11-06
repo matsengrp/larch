@@ -7,7 +7,9 @@ bool operator<(MutationPosition lhs, MutationPosition rhs) {
 }
 
 template <typename T>
-EdgeMutations::EdgeMutations(T&& view) : mutations_{view.begin(), view.end()} {}
+EdgeMutations::EdgeMutations(T&& mutations_view,
+                             std::enable_if_t<not std::is_same_v<T, EdgeMutations>>*)
+    : mutations_{mutations_view.begin(), mutations_view.end()} {}
 
 EdgeMutations::EdgeMutations(
     std::map<MutationPosition, std::pair<char, char>>&& mutations)
