@@ -12,6 +12,8 @@
 #include <range/v3/action/sort.hpp>
 #include <range/v3/action/unique.hpp>
 #include <range/v3/algorithm/unique.hpp>
+#include <range/v3/algorithm/for_each.hpp>
+#include <range/v3/algorithm/all_of.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/counted.hpp>
 #include <range/v3/view/drop.hpp>
@@ -32,13 +34,17 @@ static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
 
 template <typename T, typename Id>
 [[nodiscard]] static T& GetOrInsert(std::vector<T>& data, Id id) {
+  size_t idx{};
   if constexpr (std::is_same_v<Id, size_t>) {
-    if (id >= data.size()) data.resize(id + 1);
-    return data[id];
+    idx = id;
   } else {
-    if (id.value >= data.size()) data.resize(id.value + 1);
-    return data[id.value];
+    idx = id.value;
   }
+
+  if (idx >= data.size()) {
+    data.resize(idx + 1);
+  }
+  return data[idx];
 }
 
 template <typename T>
@@ -79,7 +85,10 @@ inline auto To() {
 }  // namespace Transform
 
 inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
-  lhs ^= rhs + 0x9e3779b97f4a7c15 + (lhs << 6) + (lhs >> 2);
+  constexpr const size_t GoldenRatioFractional = 0x9e3779b97f4a7c15;
+  constexpr const size_t LeftShift64 = 12;
+  constexpr const size_t RightShift64 = 4;
+  lhs ^= rhs + GoldenRatioFractional + (lhs << LeftShift64) + (lhs >> RightShift64);
   return lhs;
 };
 
@@ -95,8 +104,9 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 
 [[noreturn]] inline void Fail(const char* msg) { throw std::runtime_error(msg); }
 
-#define MOVE_ONLY(x)           \
-  x(x&&) = default;            \
-  x(const x&) = delete;        \
-  x& operator=(x&&) = default; \
-  x& operator=(const x&) = delete
+#define MOVE_ONLY(x)                    \
+  x(x&&) noexcept = default;            \
+  x(const x&) = delete;                 \
+  x& operator=(x&&) noexcept = default; \
+  x& operator=(const x&) = delete;      \
+  ~x() = default

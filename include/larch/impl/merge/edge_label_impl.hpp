@@ -32,7 +32,7 @@ std::size_t std::hash<EdgeLabel>::operator()(const EdgeLabel& el) const noexcept
   return el.Hash();
 }
 
-std::size_t std::equal_to<EdgeLabel>::operator()(const EdgeLabel& lhs,
-                                                 const EdgeLabel& rhs) const noexcept {
+bool std::equal_to<EdgeLabel>::operator()(const EdgeLabel& lhs,
+                                          const EdgeLabel& rhs) const noexcept {
   return lhs == rhs;
 }

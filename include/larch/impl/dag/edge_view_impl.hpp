@@ -69,6 +69,10 @@ auto& EdgeView<DAGType, Features...>::GetStorage() const {
 template <std::size_t Index, typename DAGType, typename... Features>
 std::tuple_element_t<Index, EdgeView<DAGType, Features...>> get(
     EdgeView<DAGType, Features...> edge) {
-  if constexpr (Index == 0) return edge.GetParent();
-  if constexpr (Index == 1) return edge.GetChild();
+  if constexpr (Index == 0) {
+    return edge.GetParent();
+  }
+  if constexpr (Index == 1) {
+    return edge.GetChild();
+  }
 }

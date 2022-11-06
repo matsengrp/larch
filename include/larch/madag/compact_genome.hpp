@@ -71,8 +71,8 @@ struct std::hash<CompactGenome> {
 
 template <>
 struct std::equal_to<CompactGenome> {
-  inline std::size_t operator()(const CompactGenome& lhs,
-                                const CompactGenome& rhs) const noexcept;
+  inline bool operator()(const CompactGenome& lhs,
+                         const CompactGenome& rhs) const noexcept;
 };
 
 #include "larch/impl/madag/compact_genome_impl.hpp"

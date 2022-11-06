@@ -41,7 +41,7 @@ MADAGStorage optimize_dag_direct(MADAG dag, Move_Found_Callback& callback);
 }
 
 static size_t ParseNumber(std::string_view str) {
-  size_t result;
+  size_t result{};
   std::istringstream stream{std::string{str}};
   stream >> result;
   if (stream.fail()) {
@@ -98,9 +98,9 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     NodeId dst_id = sample_dag_ids_.at(move.dst->node_id);
     NodeId lca_id = sample_dag_ids_.at(move.LCA->node_id);
 
-    auto& src_clades =
+    const auto& src_clades =
         merge_.GetResultNodeLabels().at(src_id.value).GetLeafSet()->GetClades();
-    auto& dst_clades =
+    const auto& dst_clades =
         merge_.GetResultNodeLabels().at(dst_id.value).GetLeafSet()->GetClades();
 
     int new_nodes_count = 0;
@@ -108,13 +108,13 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     MAT::Node* curr_node = move.src;
     while (not(curr_node->node_id == lca_id.value)) {
       MADAG::Node node = merge_.GetResult().Get(NodeId{curr_node->node_id});
-      auto& clades =
+      const auto& clades =
           merge_.GetResultNodeLabels().at(node.GetId().value).GetLeafSet()->GetClades();
       if (not merge_.ContainsLeafset(clades_difference(clades, src_clades))) {
         ++new_nodes_count;
       }
       curr_node = curr_node->parent;
-      if (not curr_node) {
+      if (curr_node == nullptr) {
         break;
       }
     }
@@ -122,13 +122,13 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     curr_node = move.dst;
     while (not(curr_node->node_id == lca_id.value)) {
       MADAG::Node node = merge_.GetResult().Get(NodeId{curr_node->node_id});
-      auto& clades =
+      const auto& clades =
           merge_.GetResultNodeLabels().at(node.GetId().value).GetLeafSet()->GetClades();
       if (not merge_.ContainsLeafset(clades_union(clades, dst_clades))) {
         ++new_nodes_count;
       }
       curr_node = curr_node->parent;
-      if (not curr_node) {
+      if (curr_node == nullptr) {
         break;
       }
     }
@@ -136,6 +136,8 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     move.score_change -= new_nodes_count;
     return true;
   }
+
+private:
   const Merge& merge_;
   MADAG sample_;
   const std::vector<NodeId>& sample_dag_ids_;
@@ -143,12 +145,12 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
 
 int main(int argc, char** argv) {
   Arguments args = GetArguments(argc, argv);
-  int ignored;
-  std::string input_dag_path = "";
-  std::string output_dag_path = "";
+  int ignored{};
+  std::string input_dag_path;
+  std::string output_dag_path;
   std::string matoptimize_path = "matOptimize";
   std::string logfile_path = "logfile.csv";
-  std::string refseq_path = "";
+  std::string refseq_path;
   size_t count = 1;
 
   for (auto [name, params] : args) {

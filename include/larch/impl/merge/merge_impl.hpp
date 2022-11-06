@@ -1,34 +1,33 @@
-Merge::Merge(std::string_view reference_sequence)
-    : result_dag_storage_{}, result_dag_{result_dag_storage_} {
+Merge::Merge(std::string_view reference_sequence) : result_dag_{result_dag_storage_} {
   result_dag_.SetReferenceSequence(reference_sequence);
 }
 
-void Merge::AddDAGs(const std::vector<MADAG>& trees) {
-  for (auto tree : trees) {
-    tree.AssertUA();
+void Merge::AddDAGs(const std::vector<MADAG>& dags) {
+  for (auto dag : dags) {
+    dag.AssertUA();
   }
-  std::vector<size_t> tree_idxs;
-  tree_idxs.resize(trees.size());
-  std::iota(tree_idxs.begin(), tree_idxs.end(), trees_.size());
+  std::vector<size_t> dag_idxs;
+  dag_idxs.resize(dags.size());
+  std::iota(dag_idxs.begin(), dag_idxs.end(), trees_.size());
 
-  for (MADAG i : trees) {
+  for (MADAG i : dags) {
     trees_.emplace_back(i);
   }
   tree_labels_.resize(trees_.size());
 
-  tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    MADAG tree = trees_.at(tree_idx);
-    std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-    labels.resize(tree.GetNodesCount());
-    for (size_t node_idx = 0; node_idx < tree.GetNodesCount(); ++node_idx) {
+  tbb::parallel_for_each(dag_idxs.begin(), dag_idxs.end(), [&](size_t dag_idx) {
+    MADAG dag = trees_.at(dag_idx);
+    std::vector<NodeLabel>& labels = tree_labels_.at(dag_idx);
+    labels.resize(dag.GetNodesCount());
+    for (size_t node_idx = 0; node_idx < dag.GetNodesCount(); ++node_idx) {
       auto cg_iter = all_compact_genomes_.insert(
-          tree.Get(NodeId{node_idx}).GetCompactGenome().Copy());
+          dag.Get(NodeId{node_idx}).GetCompactGenome().Copy());
       labels.at(node_idx).SetCompactGenome(std::addressof(*cg_iter.first));
     }
   });
 
-  ComputeLeafSets(tree_idxs);
-  MergeTrees(tree_idxs);
+  ComputeLeafSets(dag_idxs);
+  MergeTrees(dag_idxs);
   Assert(result_nodes_.size() == result_dag_.GetNodesCount());
   Assert(result_edges_.size() == result_dag_.GetEdgesCount());
   result_dag_.BuildConnections();
@@ -89,8 +88,8 @@ void Merge::MergeTrees(const std::vector<size_t>& tree_idxs) {
     MADAG tree = trees_.at(tree_idx);
     const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
     for (Edge edge : tree.GetEdges()) {
-      auto& parent_label = labels.at(edge.GetParentId().value);
-      auto& child_label = labels.at(edge.GetChildId().value);
+      const auto& parent_label = labels.at(edge.GetParentId().value);
+      const auto& child_label = labels.at(edge.GetChildId().value);
       auto ins = result_edges_.insert({{parent_label, child_label}, {}});
       if (ins.second) {
         added_edges.push_back({parent_label, child_label});

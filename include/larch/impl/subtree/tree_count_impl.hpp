@@ -12,18 +12,17 @@ std::pair<TreeCount::Weight, std::vector<size_t>> TreeCount::WithinCladeAccumOpt
   std::vector<size_t> indices;
   std::iota(indices.begin(), indices.end(), 0);
   return {std::accumulate(inweights.begin(), inweights.end(),
-                          static_cast<TreeCount::Weight>(0),
-                          std::plus<TreeCount::Weight>()),
+                          static_cast<TreeCount::Weight>(0), std::plus<>()),
           indices};
 }
 
-TreeCount::Weight TreeCount::BetweenClades(std::vector<TreeCount::Weight> inweights) {
+TreeCount::Weight TreeCount::BetweenClades(
+    const std::vector<TreeCount::Weight>& inweights) {
   return std::accumulate(inweights.begin(), inweights.end(),
-                         static_cast<TreeCount::Weight>(1),
-                         std::multiplies<TreeCount::Weight>());
+                         static_cast<TreeCount::Weight>(1), std::multiplies<>());
 }
 
-TreeCount::Weight TreeCount::AboveNode(TreeCount::Weight,
+TreeCount::Weight TreeCount::AboveNode(const TreeCount::Weight&,
                                        TreeCount::Weight childnodeweight) {
   return childnodeweight;
 }

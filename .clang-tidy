@@ -1,3 +1,4 @@
-Checks:                '-*,clang-analyzer-*,clang-analyzer-cplusplus*,readability-braces-around-statements'
+Checks:                '-*,clang-analyzer-*,clang-analyzer-cplusplus*,readability-braces-around-statements,cppcoreguidelines-*,modernize-*,misc-*,performance-*,readability-*,-modernize-use-trailing-return-type,-cppcoreguidelines-macro-usage,-modernize-use-nodiscard,-misc-no-recursion,-readability-named-parameter,-cppcoreguidelines-pro-type-reinterpret-cast,-cppcoreguidelines-pro-type-vararg,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-readability-function-cognitive-complexity'
 WarningsAsErrors:      '*'
 FormatStyle:           Google
+HeaderFilterRegex:     'include/larch/.*'

@@ -34,8 +34,7 @@ struct std::hash<EdgeLabel> {
 
 template <>
 struct std::equal_to<EdgeLabel> {
-  inline std::size_t operator()(const EdgeLabel& lhs,
-                                const EdgeLabel& rhs) const noexcept;
+  inline bool operator()(const EdgeLabel& lhs, const EdgeLabel& rhs) const noexcept;
 };
 
 #include "larch/impl/merge/edge_label_impl.hpp"

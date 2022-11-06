@@ -36,7 +36,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   trees.resize(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;
   for (size_t i = 0; i < paths.size(); ++i) {
-    paths_idx.push_back({i, paths.at(i)});
+    paths_idx.emplace_back(i, paths.at(i));
   }
   std::cout << "Loading trees ";
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {

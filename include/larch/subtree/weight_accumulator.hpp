@@ -45,20 +45,23 @@ using Count = boost::multiprecision::cpp_int;
 template <typename WeightOps>
 class WeightCounter {
  public:
-  WeightCounter(const WeightCounter<WeightOps>&);
+  WeightCounter(const WeightCounter<WeightOps>&) = default;
   WeightCounter(WeightOps&& weight_ops);
+  WeightCounter(WeightCounter&&) noexcept = default;
   WeightCounter(const WeightOps& weight_ops) : weight_ops_{weight_ops} {}
   WeightCounter(const std::vector<typename WeightOps::Weight>& weights,
                 const WeightOps& weight_ops);
-  WeightCounter(const std::map<typename WeightOps::Weight, Count>& weights,
+  WeightCounter(std::map<typename WeightOps::Weight, Count>&& weights,
                 const WeightOps& weight_ops);
+  ~WeightCounter() = default;
+
   /* A union of multisets */
   WeightCounter operator+(const WeightCounter& rhs) const;
   /* a cartesian product of multisets, applying
    * weight_ops.BetweenClades to pairs in the product */
   WeightCounter operator*(const WeightCounter& rhs) const;
   WeightCounter<WeightOps>& operator=(const WeightCounter<WeightOps>& rhs);
-  WeightCounter<WeightOps>& operator=(WeightCounter<WeightOps>&& rhs);
+  WeightCounter<WeightOps>& operator=(WeightCounter<WeightOps>&& rhs) noexcept;
   bool operator==(const WeightCounter<WeightOps>& rhs);
   bool operator!=(const WeightCounter<WeightOps>& rhs);
   const std::map<typename WeightOps::Weight, Count>& GetWeights() const;
@@ -76,9 +79,8 @@ std::ostream& operator<<(std::ostream& os,
 template <typename WeightOps>
 struct WeightAccumulator {
   using Weight = WeightCounter<WeightOps>;
-  WeightAccumulator() : weight_ops_{} {}
-  WeightAccumulator(const WeightOps& ops) : weight_ops_{ops} {}
-  WeightOps weight_ops_;
+  WeightAccumulator() = default;
+  WeightAccumulator(const WeightOps& ops);
   inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
   inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
 
@@ -95,6 +97,9 @@ struct WeightAccumulator {
    */
   inline Weight BetweenClades(const std::vector<Weight>&) const;
   inline Weight AboveNode(Weight edgeweight, Weight childnodeweight);
+
+ private:
+  WeightOps weight_ops_ = {};
 };
 
 #include "larch/impl/subtree/weight_accumulator_impl.hpp"

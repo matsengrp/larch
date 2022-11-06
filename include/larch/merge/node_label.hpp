@@ -37,8 +37,7 @@ struct std::hash<NodeLabel> {
 
 template <>
 struct std::equal_to<NodeLabel> {
-  inline std::size_t operator()(const NodeLabel& lhs,
-                                const NodeLabel& rhs) const noexcept;
+  inline bool operator()(const NodeLabel& lhs, const NodeLabel& rhs) const noexcept;
 };
 
 #include "larch/impl/merge/node_label_impl.hpp"

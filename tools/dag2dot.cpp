@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   Arguments args = GetArguments(argc, argv);
 
   InputType type = InputType::TreePB;
-  std::string path = "";
+  std::string path;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {

@@ -63,8 +63,8 @@ const std::vector<std::vector<const CompactGenome*>>& LeafSet::GetClades() const
 size_t LeafSet::ComputeHash(
     const std::vector<std::vector<const CompactGenome*>>& clades) noexcept {
   size_t hash = 0;
-  for (auto& clade : clades) {
-    for (auto leaf : clade) {
+  for (const auto& clade : clades) {
+    for (const auto* leaf : clade) {
       hash = HashCombine(hash, leaf->Hash());
     }
   }
@@ -75,7 +75,7 @@ std::size_t std::hash<LeafSet>::operator()(const LeafSet& ls) const noexcept {
   return ls.Hash();
 }
 
-std::size_t std::equal_to<LeafSet>::operator()(const LeafSet& lhs,
-                                               const LeafSet& rhs) const noexcept {
+bool std::equal_to<LeafSet>::operator()(const LeafSet& lhs,
+                                        const LeafSet& rhs) const noexcept {
   return lhs == rhs;
 }

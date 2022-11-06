@@ -24,9 +24,11 @@
 static bool IsGzipped(std::string_view path) {
   std::ifstream in{std::string{path}};
   Assert(in);
-  unsigned char header[2];
+  std::array<unsigned char, 2> header{};
   in >> header[0] >> header[1];
-  return header[0] == 0x1f and header[1] == 0x8b;
+  constexpr const unsigned char HeaderMagic0 = 0x1f;
+  constexpr const unsigned char HeaderMagic1 = 0x8b;
+  return header[0] == HeaderMagic0 and header[1] == HeaderMagic1;
 }
 
 template <typename T>
@@ -52,22 +54,22 @@ MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
   MADAGStorage result;
   result.View().SetReferenceSequence(data.reference_seq());
 
-  for (auto& i : data.node_names()) {
+  for (const auto& i : data.node_names()) {
     result.View().AddNode({static_cast<size_t>(i.node_id())});
   }
 
   size_t edge_id = 0;
-  for (auto& i : data.edges()) {
+  for (const auto& i : data.edges()) {
     auto edge = result.View().AddEdge(
         {edge_id++}, {static_cast<size_t>(i.parent_node())},
         {static_cast<size_t>(i.child_node())}, {static_cast<size_t>(i.parent_clade())});
     auto& muts = edge.GetEdgeMutations();
-    for (auto& mut : i.edge_mutations()) {
-      static const char decode[] = {'A', 'C', 'G', 'T'};
+    for (const auto& mut : i.edge_mutations()) {
+      static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
       Assert(mut.position() > 0);
       Assert(mut.mut_nuc().size() == 1);
-      muts[{static_cast<size_t>(mut.position())}] = {decode[mut.par_nuc()],
-                                                     decode[mut.mut_nuc().Get(0)]};
+      muts[{static_cast<size_t>(mut.position())}] = {decode.at(mut.par_nuc()),
+                                                     decode.at(mut.mut_nuc().Get(0))};
     }
   }
   result.View().BuildConnections();
@@ -75,12 +77,12 @@ MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
   return result;
 }
 
-static auto DecodeMutation =
+static const auto DecodeMutation =
     [](auto& mut) -> std::pair<MutationPosition, std::pair<char, char>> {
-  static const char decode[] = {'A', 'C', 'G', 'T'};
+  static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
   Assert(mut.mut_nuc().size() == 1);
   return {{static_cast<size_t>(mut.position())},
-          {decode[mut.par_nuc()], decode[mut.mut_nuc().Get(0)]}};
+          {decode.at(mut.par_nuc()), decode.at(mut.mut_nuc().Get(0))}};
 };
 
 MADAGStorage LoadTreeFromProtobuf(std::string_view path,
@@ -95,7 +97,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
   std::map<size_t, std::optional<std::string>> seq_ids;
   ParseNewick(
       data.newick(),
-      [&seq_ids](size_t node_id, std::string label, std::optional<double>) {
+      [&seq_ids](size_t node_id, std::string_view label, std::optional<double>) {
         seq_ids[node_id] = label;
       },
       [&result, &num_children](size_t parent, size_t child) {
@@ -106,7 +108,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
   for (auto node : result.View().GetNodes()) {
     if (node.IsLeaf()) {
-      node.SetSampleId(std::move(seq_ids[node.GetId().value]));
+      node.SetSampleId(seq_ids[node.GetId().value]);
     }
   }
 
@@ -139,27 +141,27 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
     in_compressed.SetCloseOnDelete(true);
     google::protobuf::io::GzipInputStream in{&in_compressed};
     std::vector<char> bytes;
-    const void* data;
-    int size;
+    const void* data{};
+    int size{};
     while (in.Next(&data, &size)) {
       bytes.insert(bytes.end(), static_cast<const char*>(data),
                    static_cast<const char*>(data) + size);
     }
     return nlohmann::json::parse(bytes);
-  } else {
-    nlohmann::json result;
-    std::ifstream in{std::string{path}};
-    Assert(in);
-    in >> result;
-    return result;
   }
+
+  nlohmann::json result;
+  std::ifstream in{std::string{path}};
+  Assert(in);
+  in >> result;
+  return result;
 }
 
 static CompactGenome GetCompactGenome(const nlohmann::json& json,
                                       size_t compact_genome_index) {
   std::vector<std::pair<MutationPosition, char>> result;
   result.reserve(json["compact_genomes"][compact_genome_index].size());
-  for (auto& mutation : json["compact_genomes"][compact_genome_index]) {
+  for (const auto& mutation : json["compact_genomes"][compact_genome_index]) {
     MutationPosition position = {mutation[0]};
     std::string mut_nuc = mutation[1][1].get<std::string>();
     Assert(mut_nuc.size() == 1);

@@ -36,7 +36,7 @@ class EdgeMutations {
  private:
   DAG_FEATURE_FRIENDS;
   inline explicit EdgeMutations(
-      const std::map<MutationPosition, std::pair<char, char>>& mutations);
+      std::map<MutationPosition, std::pair<char, char>>&& mutations);
 };
 
 template <typename View>

@@ -11,7 +11,7 @@ struct ParNuc_Info {
   EdgeId edge_id;
   char nuc;
 };
-typedef std::unordered_map<size_t, ParNuc_Info> all_mutated_t;
+using all_mutated_t = std::unordered_map<size_t, ParNuc_Info>;
 
 template <typename Node>
 void check_edge_mutations_helper(const Node dag_node,
@@ -57,7 +57,6 @@ void check_edge_mutations_helper(const Node dag_node,
 
 void check_edge_mutations(MADAG madag) {
   std::cout << "start_check" << std::endl;
-  const auto ref_req = madag.GetReferenceSequence();
   all_mutated_t init;
   check_edge_mutations_helper(madag.GetRoot(), init);
   std::cout << "end_check" << std::endl;

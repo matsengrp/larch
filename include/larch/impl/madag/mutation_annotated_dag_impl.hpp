@@ -17,10 +17,7 @@ bool FeatureReader<ReferenceSequence, View>::HaveUA() const {
   const View& dag = static_cast<const View&>(*this);
   Assert(dag.HaveRoot());
   typename View::Node ua = dag.GetRoot();
-  if (ua.GetCladesCount() != 1) {
-    return false;
-  }
-  return true;
+  return ua.GetCladesCount() == 1;
 }
 
 template <typename View>

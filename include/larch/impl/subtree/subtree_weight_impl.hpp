@@ -6,7 +6,6 @@ SubtreeWeight<WeightOps>::SubtreeWeight(MADAG dag)
     : dag_{dag},
       cached_weights_(dag_.GetNodesCount()),
       cached_min_weight_edges_(dag_.GetNodesCount()),
-      random_device_{},
       random_generator_{random_device_()} {}
 
 /*
@@ -90,7 +89,7 @@ template <typename WeightOps>
 template <typename CladeRange>
 typename WeightOps::Weight SubtreeWeight<WeightOps>::CladeWeight(
     CladeRange&& clade, WeightOps&& weight_ops) {
-  assert(not clade.empty());
+  Assert(not clade.empty());
   std::vector<typename WeightOps::Weight> edge_weights;
   for (auto edge_id : clade) {
     edge_weights.push_back(

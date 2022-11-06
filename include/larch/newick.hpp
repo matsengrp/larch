@@ -14,7 +14,7 @@
 template <typename T, typename N, typename E>
 void ParseNewick(const T& source, N&& on_node, E&& on_edge) {
   struct NewickNode {
-    size_t id;
+    size_t id = {};
     std::string label;
   };
   std::stack<std::vector<NewickNode>> nodes;
@@ -40,8 +40,10 @@ void ParseNewick(const T& source, N&& on_node, E&& on_edge) {
         have_branch_length = true;
         break;
       }
-      if ((i < '0' || i > '9') && i != '.') break;
-      branch_length = i + branch_length;
+      if ((i < '0' || i > '9') && i != '.') {
+        break;
+      }
+      branch_length.insert(branch_length.begin(), i);
     }
     if (have_branch_length) {
       label.erase(label.size() - branch_length.size() - 1);

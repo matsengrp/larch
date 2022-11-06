@@ -69,12 +69,8 @@ bool NodeView<DAGType, Features...>::IsRoot() const {
 
 template <typename DAGType, typename... Features>
 bool NodeView<DAGType, Features...>::IsLeaf() const {
-  for (auto& clade : GetStorage().clades_) {
-    if (not clade.empty()) {
-      return false;
-    }
-  }
-  return true;
+  return ranges::all_of(GetStorage().clades_,
+                        [](const auto& clade) { return clade.empty(); });
 }
 
 template <typename DAGType, typename... Features>

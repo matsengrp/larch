@@ -19,10 +19,7 @@ class LeafSet {
  public:
   inline static const LeafSet* Empty();
   LeafSet() = default;
-  LeafSet(LeafSet&&) = default;
-  LeafSet(const LeafSet&) = delete;
-  LeafSet& operator=(LeafSet&&) = default;
-  LeafSet& operator=(const LeafSet&) = delete;
+  MOVE_ONLY(LeafSet);
 
   template <typename Node>
   LeafSet(Node node, const std::vector<NodeLabel>& labels,
@@ -55,7 +52,7 @@ struct std::hash<LeafSet> {
 
 template <>
 struct std::equal_to<LeafSet> {
-  inline std::size_t operator()(const LeafSet& lhs, const LeafSet& rhs) const noexcept;
+  inline bool operator()(const LeafSet& lhs, const LeafSet& rhs) const noexcept;
 };
 
 #include "larch/impl/merge/leaf_set_impl.hpp"

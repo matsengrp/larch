@@ -17,7 +17,7 @@ bool add_test(const Test& test) noexcept {
 }
 
 int main(int argc, char* argv[]) {
-  int ignored;
+  int ignored{};
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
   bool no_catch = false;
   std::regex regex{".*"};
@@ -61,11 +61,11 @@ int main(int argc, char* argv[]) {
       }
     }
   }
-  if (failed) {
+  if (failed > 0) {
     std::cerr << "Failed tests: " << failed << "/" << num_tests << std::endl;
     return EXIT_FAILURE;
-  } else {
-    std::cout << "All tests passed" << std::endl;
-    return EXIT_SUCCESS;
   }
+
+  std::cout << "All tests passed" << std::endl;
+  return EXIT_SUCCESS;
 }

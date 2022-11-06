@@ -59,9 +59,8 @@ std::optional<char> CompactGenome::operator[](MutationPosition pos) const {
                                 MutationPosition rhs) { return lhs.first < rhs; });
   if (it != mutations_.end() and it->first == pos) {
     return it->second;
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 auto CompactGenome::begin() const -> decltype(mutations_.begin()) {
@@ -151,7 +150,7 @@ std::size_t std::hash<CompactGenome>::operator()(
   return cg.Hash();
 }
 
-std::size_t std::equal_to<CompactGenome>::operator()(
-    const CompactGenome& lhs, const CompactGenome& rhs) const noexcept {
+bool std::equal_to<CompactGenome>::operator()(const CompactGenome& lhs,
+                                              const CompactGenome& rhs) const noexcept {
   return lhs == rhs;
 }

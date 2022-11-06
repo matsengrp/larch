@@ -43,7 +43,7 @@ std::size_t std::hash<NodeLabel>::operator()(const NodeLabel& nl) const noexcept
   return nl.Hash();
 }
 
-std::size_t std::equal_to<NodeLabel>::operator()(const NodeLabel& lhs,
-                                                 const NodeLabel& rhs) const noexcept {
+bool std::equal_to<NodeLabel>::operator()(const NodeLabel& lhs,
+                                          const NodeLabel& rhs) const noexcept {
   return lhs == rhs;
 }

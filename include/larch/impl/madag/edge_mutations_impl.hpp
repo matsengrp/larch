@@ -10,8 +10,8 @@ template <typename T>
 EdgeMutations::EdgeMutations(T&& view) : mutations_{view.begin(), view.end()} {}
 
 EdgeMutations::EdgeMutations(
-    const std::map<MutationPosition, std::pair<char, char>>& mutations)
-    : mutations_{mutations} {}
+    std::map<MutationPosition, std::pair<char, char>>&& mutations)
+    : mutations_{std::forward<decltype(mutations_)>(mutations)} {}
 
 EdgeMutations EdgeMutations::Copy() const { return EdgeMutations{mutations_}; }
 

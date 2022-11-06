@@ -7,7 +7,8 @@ ParsimonyScore::Weight ParsimonyScore::ComputeEdge(MADAG dag, EdgeId edge_id) {
 }
 
 std::pair<ParsimonyScore::Weight, std::vector<size_t>>
-ParsimonyScore::WithinCladeAccumOptimum(std::vector<ParsimonyScore::Weight> inweights) {
+ParsimonyScore::WithinCladeAccumOptimum(
+    const std::vector<ParsimonyScore::Weight>& inweights) {
   ParsimonyScore::Weight optimal_weight = std::numeric_limits<size_t>::max();
   std::vector<size_t> optimal_indices;
   size_t inweight_idx = 0;
@@ -25,7 +26,7 @@ ParsimonyScore::WithinCladeAccumOptimum(std::vector<ParsimonyScore::Weight> inwe
 }
 
 ParsimonyScore::Weight ParsimonyScore::BetweenClades(
-    const std::vector<ParsimonyScore::Weight>& inweights) const {
+    const std::vector<ParsimonyScore::Weight>& inweights) {
   return std::accumulate(inweights.begin(), inweights.end(),
                          static_cast<ParsimonyScore::Weight>(0));
 }

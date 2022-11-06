@@ -41,6 +41,7 @@ class Merge {
   Merge(const Merge&) = delete;
   Merge& operator=(Merge&&) = delete;
   Merge& operator=(const Merge&) = delete;
+  ~Merge() = default;
 
   /**
    * Add DAGs to be merged. The input DAGs are externally owned, and should outlive the
