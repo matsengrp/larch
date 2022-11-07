@@ -14,8 +14,7 @@ struct ParNuc_Info {
 using all_mutated_t = std::unordered_map<size_t, ParNuc_Info>;
 
 template <typename Node>
-void check_edge_mutations_helper(const Node dag_node,
-                                 const all_mutated_t& all_mutated) {
+void check_edge_mutations_helper(Node dag_node, const all_mutated_t& all_mutated) {
   for (auto child : dag_node.GetChildren()) {
     auto edge_id = child.GetId();
     all_mutated_t this_mutated(all_mutated);

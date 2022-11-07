@@ -42,19 +42,19 @@ class ReferenceSequence {
 template <typename View>
 class FeatureReader<ReferenceSequence, View> {
  public:
-  const std::string& GetReferenceSequence() const;
-  void AssertUA() const;
-  bool HaveUA() const;
+  const std::string& GetReferenceSequence();
+  void AssertUA();
+  bool HaveUA();
 };
 
 template <typename View>
 class FeatureWriter<ReferenceSequence, View>
     : public FeatureReader<ReferenceSequence, View> {
  public:
-  void SetReferenceSequence(std::string_view reference_sequence) const;
-  void AddUA(const EdgeMutations& mutations_at_root) const;
-  void RecomputeCompactGenomes() const;
-  void RecomputeEdgeMutations() const;
+  void SetReferenceSequence(std::string_view reference_sequence);
+  void AddUA(const EdgeMutations& mutations_at_root);
+  void RecomputeCompactGenomes();
+  void RecomputeEdgeMutations();
 };
 
 class SampleId {
@@ -67,13 +67,13 @@ class SampleId {
 template <typename View>
 class FeatureReader<SampleId, View> {
  public:
-  const std::optional<std::string>& GetSampleId() const;
+  const std::optional<std::string>& GetSampleId();
 };
 
 template <typename View>
 class FeatureWriter<SampleId, View> : public FeatureReader<SampleId, View> {
  public:
-  void SetSampleId(const std::optional<std::string>& sample_id) const;
+  void SetSampleId(const std::optional<std::string>& sample_id);
 };
 
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"

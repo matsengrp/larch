@@ -11,20 +11,20 @@ DAGView<Storage, Features...>::operator Immutable() const {
 }
 
 template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::AddNode(NodeId id) const -> Node {
+auto DAGView<Storage, Features...>::AddNode(NodeId id) -> Node {
   Assert(id.value != NoId);
   std::ignore = GetOrInsert(storage_.nodes_.nodes_, id);
   return {*this, id};
 }
 
 template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::AppendNode() const -> Node {
+auto DAGView<Storage, Features...>::AppendNode() -> Node {
   return AddNode({GetNodesCount()});
 }
 
 template <typename Storage, typename... Features>
 auto DAGView<Storage, Features...>::AddEdge(EdgeId id, NodeId parent, NodeId child,
-                                            CladeIdx clade) const -> Edge {
+                                            CladeIdx clade) -> Edge {
   Assert(id.value != NoId);
   Assert(parent.value != NoId);
   Assert(child.value != NoId);
@@ -38,17 +38,17 @@ auto DAGView<Storage, Features...>::AddEdge(EdgeId id, NodeId parent, NodeId chi
 
 template <typename Storage, typename... Features>
 auto DAGView<Storage, Features...>::AppendEdge(NodeId parent, NodeId child,
-                                               CladeIdx clade) const -> Edge {
+                                               CladeIdx clade) -> Edge {
   return AddEdge({GetEdgesCount()}, parent, child, clade);
 }
 
 template <typename Storage, typename... Features>
-void DAGView<Storage, Features...>::InitializeNodes(size_t nodes_count) const {
+void DAGView<Storage, Features...>::InitializeNodes(size_t nodes_count) {
   storage_.nodes_.nodes_.resize(nodes_count);
 }
 
 template <typename Storage, typename... Features>
-void DAGView<Storage, Features...>::BuildConnections() const {
+void DAGView<Storage, Features...>::BuildConnections() {
   storage_.root_ = {NoId};
   storage_.leafs_ = {};
   BuildConnectionsRaw();
@@ -67,7 +67,7 @@ void DAGView<Storage, Features...>::BuildConnections() const {
 }
 
 template <typename Storage, typename... Features>
-void DAGView<Storage, Features...>::BuildConnectionsRaw() const {
+void DAGView<Storage, Features...>::BuildConnectionsRaw() {
   for (auto& node : storage_.nodes_.nodes_) {
     node.ClearConnections();
   }
@@ -85,7 +85,7 @@ void DAGView<Storage, Features...>::BuildConnectionsRaw() const {
 }
 
 template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::GetNodes() const {
+auto DAGView<Storage, Features...>::GetNodes() {
   return storage_.nodes_.nodes_ |
          ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
            return Node{*this, {idx++}};
@@ -93,7 +93,7 @@ auto DAGView<Storage, Features...>::GetNodes() const {
 }
 
 template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::GetEdges() const {
+auto DAGView<Storage, Features...>::GetEdges() {
   return storage_.edges_.edges_ |
          ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
            return Edge{*this, {idx++}};
@@ -101,42 +101,42 @@ auto DAGView<Storage, Features...>::GetEdges() const {
 }
 
 template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::Get(NodeId id) const {
+auto DAGView<Storage, Features...>::Get(NodeId id) {
   return Node{*this, id};
 }
 
 template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::Get(EdgeId id) const {
+auto DAGView<Storage, Features...>::Get(EdgeId id) {
   return Edge{*this, id};
 }
 
 template <typename Storage, typename... Features>
-size_t DAGView<Storage, Features...>::GetNodesCount() const {
+size_t DAGView<Storage, Features...>::GetNodesCount() {
   return storage_.nodes_.nodes_.size();
 }
 
 template <typename Storage, typename... Features>
-size_t DAGView<Storage, Features...>::GetEdgesCount() const {
+size_t DAGView<Storage, Features...>::GetEdgesCount() {
   return storage_.edges_.edges_.size();
 }
 
 template <typename Storage, typename... Features>
-bool DAGView<Storage, Features...>::IsTree() const {
+bool DAGView<Storage, Features...>::IsTree() {
   return GetNodesCount() == GetEdgesCount() + 1;
 }
 
 template <typename Storage, typename... Features>
-bool DAGView<Storage, Features...>::HaveRoot() const {
+bool DAGView<Storage, Features...>::HaveRoot() {
   return storage_.root_.value != NoId;
 }
 
 template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::GetRoot() const {
+auto DAGView<Storage, Features...>::GetRoot() {
   return Node{*this, storage_.root_};
 }
 
 template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::GetLeafs() const {
+auto DAGView<Storage, Features...>::GetLeafs() {
   return storage_.nodes_.leafs_ |
          ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
            return Node{*this, {idx++}};

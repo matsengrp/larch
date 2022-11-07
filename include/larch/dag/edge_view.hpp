@@ -11,19 +11,19 @@ class EdgeView
   constexpr static const bool is_mutable = DAGType::is_mutable;
   using Node = typename DAGType::Node;
   EdgeView(DAGType dag, EdgeId id);
-  operator EdgeView<typename DAGType::Immutable, Features...>() const;
-  operator EdgeId() const;
-  operator CladeIdx() const;
-  auto& GetDAG() const;
-  EdgeId GetId() const;
-  auto GetParent() const;
-  auto GetChild() const;
-  CladeIdx GetClade() const;
-  NodeId GetParentId() const;
-  NodeId GetChildId() const;
-  std::pair<NodeId, NodeId> GetNodeIds() const;
-  bool IsRoot() const;
-  bool IsLeaf() const;
+  operator EdgeView<typename DAGType::Immutable, Features...>();
+  operator EdgeId();
+  operator CladeIdx();
+  auto& GetDAG();
+  EdgeId GetId();
+  auto GetParent();
+  auto GetChild();
+  CladeIdx GetClade();
+  NodeId GetParentId();
+  NodeId GetChildId();
+  std::pair<NodeId, NodeId> GetNodeIds();
+  bool IsRoot();
+  bool IsLeaf();
 
  private:
   DAG_FEATURE_FRIENDS;

@@ -118,7 +118,7 @@ std::vector<LeafSet> Merge::ComputeLeafSets(MADAG dag,
   std::vector<LeafSet> result;
   result.resize(dag.GetNodesCount());
   auto ComputeLS = [&](auto& self, Node for_node) {
-    LeafSet& leaf_set = result.at(for_node.GetId().value);
+    const LeafSet& leaf_set = result.at(for_node.GetId().value);
     if (not leaf_set.empty()) {
       return;
     }

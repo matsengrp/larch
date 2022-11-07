@@ -44,7 +44,7 @@ class EdgeMutations {
 template <typename View>
 class FeatureReader<EdgeMutations, View> {
  public:
-  const EdgeMutations& GetEdgeMutations() const;
+  const EdgeMutations& GetEdgeMutations();
 };
 
 template <typename View>

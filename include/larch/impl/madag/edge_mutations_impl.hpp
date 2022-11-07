@@ -47,7 +47,7 @@ bool EdgeMutations::operator!=(const EdgeMutations& rhs) const {
 }
 
 template <typename View>
-const EdgeMutations& FeatureReader<EdgeMutations, View>::GetEdgeMutations() const {
+const EdgeMutations& FeatureReader<EdgeMutations, View>::GetEdgeMutations() {
   return GetFeatureStorage(this);
 }
 

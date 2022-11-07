@@ -1,20 +1,19 @@
 template <typename View>
-const std::string& FeatureReader<ReferenceSequence, View>::GetReferenceSequence()
-    const {
+const std::string& FeatureReader<ReferenceSequence, View>::GetReferenceSequence() {
   return GetFeatureStorage(this).reference_sequence_;
 }
 
 template <typename View>
-void FeatureReader<ReferenceSequence, View>::AssertUA() const {
-  const View& dag = static_cast<const View&>(*this);
+void FeatureReader<ReferenceSequence, View>::AssertUA() {
+  View& dag = static_cast<View&>(*this);
   Assert(dag.HaveRoot());
   typename View::Node ua = dag.GetRoot();
   Assert(ua.GetCladesCount() == 1);
 }
 
 template <typename View>
-bool FeatureReader<ReferenceSequence, View>::HaveUA() const {
-  const View& dag = static_cast<const View&>(*this);
+bool FeatureReader<ReferenceSequence, View>::HaveUA() {
+  View& dag = static_cast<View&>(*this);
   Assert(dag.HaveRoot());
   typename View::Node ua = dag.GetRoot();
   return ua.GetCladesCount() == 1;
@@ -22,14 +21,14 @@ bool FeatureReader<ReferenceSequence, View>::HaveUA() const {
 
 template <typename View>
 void FeatureWriter<ReferenceSequence, View>::SetReferenceSequence(
-    std::string_view reference_sequence) const {
+    std::string_view reference_sequence) {
   GetFeatureStorage(this).reference_sequence_ = reference_sequence;
 }
 
 template <typename View>
 void FeatureWriter<ReferenceSequence, View>::AddUA(
-    const EdgeMutations& mutations_at_root) const {
-  const View& dag = static_cast<const View&>(*this);
+    const EdgeMutations& mutations_at_root) {
+  View& dag = static_cast<View&>(*this);
   Assert(not dag.HaveUA());
   typename View::Node root = dag.GetRoot();
   typename View::Node ua_node = dag.AppendNode();
@@ -40,8 +39,8 @@ void FeatureWriter<ReferenceSequence, View>::AddUA(
 }
 
 template <typename View>
-void FeatureWriter<ReferenceSequence, View>::RecomputeCompactGenomes() const {
-  const View& dag = static_cast<const View&>(*this);
+void FeatureWriter<ReferenceSequence, View>::RecomputeCompactGenomes() {
+  View& dag = static_cast<View&>(*this);
   using Node = typename View::Node;
   using Edge = typename View::Edge;
 
@@ -84,8 +83,8 @@ void FeatureWriter<ReferenceSequence, View>::RecomputeCompactGenomes() const {
 }
 
 template <typename View>
-void FeatureWriter<ReferenceSequence, View>::RecomputeEdgeMutations() const {
-  const View& dag = static_cast<const View&>(*this);
+void FeatureWriter<ReferenceSequence, View>::RecomputeEdgeMutations() {
+  View& dag = static_cast<View&>(*this);
   using Edge = typename View::Edge;
 
   for (Edge edge : dag.GetEdges()) {
@@ -96,12 +95,12 @@ void FeatureWriter<ReferenceSequence, View>::RecomputeEdgeMutations() const {
 }
 
 template <typename View>
-const std::optional<std::string>& FeatureReader<SampleId, View>::GetSampleId() const {
+const std::optional<std::string>& FeatureReader<SampleId, View>::GetSampleId() {
   return GetFeatureStorage(this).sample_id_;
 }
 
 template <typename View>
 void FeatureWriter<SampleId, View>::SetSampleId(
-    const std::optional<std::string>& sample_id) const {
+    const std::optional<std::string>& sample_id) {
   GetFeatureStorage(this).sample_id_ = sample_id;
 }

@@ -87,6 +87,7 @@ std::vector<std::vector<const CompactGenome*>> clades_difference(
   return result;
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
 struct Larch_Move_Found_Callback : public Move_Found_Callback {
   Larch_Move_Found_Callback(const Merge& merge, MADAG sample,
                             const std::vector<NodeId>& sample_dag_ids)
@@ -137,7 +138,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     return true;
   }
 
-private:
+ private:
   const Merge& merge_;
   MADAG sample_;
   const std::vector<NodeId>& sample_dag_ids_;

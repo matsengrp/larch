@@ -119,7 +119,7 @@ MADAGStorage build_madag_from_mat(const MAT::Tree& tree,
   return result;
 }
 
-void compareDAG(const MADAG::Node dag1, const MADAG::Node dag2) {
+void compareDAG(MADAG::Node dag1, MADAG::Node dag2) {
   if (dag1.GetCladesCount() != dag2.GetCladesCount()) {
     fprintf(stderr, "Node %zu have %zu clades,but Node %zu have %zu\n",
             dag1.GetId().value, dag1.GetCladesCount(), dag2.GetId().value,

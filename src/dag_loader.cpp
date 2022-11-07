@@ -68,8 +68,9 @@ MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
       static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
       Assert(mut.position() > 0);
       Assert(mut.mut_nuc().size() == 1);
-      muts[{static_cast<size_t>(mut.position())}] = {decode.at(mut.par_nuc()),
-                                                     decode.at(mut.mut_nuc().Get(0))};
+      muts[{static_cast<size_t>(mut.position())}] = {
+          decode.at(static_cast<size_t>(mut.par_nuc())),
+          decode.at(static_cast<size_t>(mut.mut_nuc().Get(0)))};
     }
   }
   result.View().BuildConnections();
@@ -82,7 +83,8 @@ static const auto DecodeMutation =
   static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
   Assert(mut.mut_nuc().size() == 1);
   return {{static_cast<size_t>(mut.position())},
-          {decode.at(mut.par_nuc()), decode.at(mut.mut_nuc().Get(0))}};
+          {decode.at(static_cast<size_t>(mut.par_nuc())),
+           decode.at(static_cast<size_t>(mut.mut_nuc().Get(0)))}};
 };
 
 MADAGStorage LoadTreeFromProtobuf(std::string_view path,
@@ -376,9 +378,8 @@ void MADAGToDOT(MADAG dag, std::ostream& out) {
   out << "  ranksep=2.0\n";
   out << "  ratio=1.0\n";
   for (MADAG::Edge edge : dag.GetEdges()) {
-    auto [parent, child] = edge;
-    out << "  \"" << CompactGenomeToString(parent) << "\" -> \""
-        << CompactGenomeToString(child) << "\"";
+    out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
+        << CompactGenomeToString(edge.GetChild()) << "\"";
     out << "[ xlabel=\"";
     out << EdgeMutationsToString(edge);
     out << "\" ]";

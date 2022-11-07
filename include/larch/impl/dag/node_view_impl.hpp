@@ -6,27 +6,27 @@ template <typename DAGType, typename... Features>
 NodeView<DAGType, Features...>::NodeView(DAGType dag, NodeId id) : dag_{dag}, id_{id} {}
 
 template <typename DAGType, typename... Features>
-NodeView<DAGType, Features...>::operator NodeId() const {
+NodeView<DAGType, Features...>::operator NodeId() {
   return id_;
 }
 
 template <typename DAGType, typename... Features>
-auto& NodeView<DAGType, Features...>::GetDAG() const {
+auto& NodeView<DAGType, Features...>::GetDAG() {
   return dag_;
 }
 
 template <typename DAGType, typename... Features>
-NodeId NodeView<DAGType, Features...>::GetId() const {
+NodeId NodeView<DAGType, Features...>::GetId() {
   return id_;
 }
 
 template <typename DAGType, typename... Features>
-auto NodeView<DAGType, Features...>::GetParents() const {
+auto NodeView<DAGType, Features...>::GetParents() {
   return GetStorage().parents_ | Transform::ToEdges(dag_);
 }
 
 template <typename DAGType, typename... Features>
-auto NodeView<DAGType, Features...>::GetClades() const {
+auto NodeView<DAGType, Features...>::GetClades() {
   return GetStorage().clades_ |
          ranges::views::transform([*this](const std::vector<EdgeId>& clade) {
            return clade | Transform::ToEdges(dag_);
@@ -34,41 +34,44 @@ auto NodeView<DAGType, Features...>::GetClades() const {
 }
 
 template <typename DAGType, typename... Features>
-auto NodeView<DAGType, Features...>::GetClade(CladeIdx clade) const {
+auto NodeView<DAGType, Features...>::GetClade(CladeIdx clade) {
   return GetStorage().clades_.at(clade.value) | Transform::ToEdges(dag_);
 }
 
 template <typename DAGType, typename... Features>
-size_t NodeView<DAGType, Features...>::GetCladesCount() const {
+size_t NodeView<DAGType, Features...>::GetCladesCount() {
   return GetStorage().clades_.size();
 }
 
 template <typename DAGType, typename... Features>
-auto NodeView<DAGType, Features...>::GetChildren() const {
+auto NodeView<DAGType, Features...>::GetChildren() {
   return GetClades() | ranges::views::join;
 }
 
-// template <typename DAGType, typename... Features>
-// auto NodeView<DAGType, Features...>::GetSingleParent() const;
+template <typename DAGType, typename... Features>
+auto NodeView<DAGType, Features...>::GetSingleParent() {
+  Assert(GetStorage().parents_.size() == 1);
+  return *GetParents().begin();
+}
 
 template <typename DAGType, typename... Features>
-auto NodeView<DAGType, Features...>::GetFirstChild() const {
+auto NodeView<DAGType, Features...>::GetFirstChild() {
   Assert(not IsLeaf());
   return *GetChildren().begin();
 }
 
 template <typename DAGType, typename... Features>
-auto NodeView<DAGType, Features...>::GetFirstClade() const {
+auto NodeView<DAGType, Features...>::GetFirstClade() {
   return GetClade({0});
 }
 
 template <typename DAGType, typename... Features>
-bool NodeView<DAGType, Features...>::IsRoot() const {
+bool NodeView<DAGType, Features...>::IsRoot() {
   return GetStorage().parents_.empty();
 }
 
 template <typename DAGType, typename... Features>
-bool NodeView<DAGType, Features...>::IsLeaf() const {
+bool NodeView<DAGType, Features...>::IsLeaf() {
   return ranges::all_of(GetStorage().clades_,
                         [](const auto& clade) { return clade.empty(); });
 }

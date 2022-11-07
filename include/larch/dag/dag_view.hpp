@@ -17,23 +17,23 @@ class DAGView : public std::conditional_t<
 
   explicit DAGView(Storage& storage);
   operator Immutable() const;
-  auto AddNode(NodeId id) const -> Node;
-  auto AppendNode() const -> Node;
-  auto AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade) const -> Edge;
-  auto AppendEdge(NodeId parent, NodeId child, CladeIdx clade) const -> Edge;
-  void InitializeNodes(size_t nodes_count) const;
-  void BuildConnections() const;
-  void BuildConnectionsRaw() const;
-  auto GetNodes() const;
-  auto GetEdges() const;
-  auto Get(NodeId id) const;
-  auto Get(EdgeId id) const;
-  size_t GetNodesCount() const;
-  size_t GetEdgesCount() const;
-  bool IsTree() const;
-  bool HaveRoot() const;
-  auto GetRoot() const;
-  auto GetLeafs() const;
+  auto AddNode(NodeId id) -> Node;
+  auto AppendNode() -> Node;
+  auto AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade) -> Edge;
+  auto AppendEdge(NodeId parent, NodeId child, CladeIdx clade) -> Edge;
+  void InitializeNodes(size_t nodes_count);
+  void BuildConnections();
+  void BuildConnectionsRaw();
+  auto GetNodes();
+  auto GetEdges();
+  auto Get(NodeId id);
+  auto Get(EdgeId id);
+  size_t GetNodesCount();
+  size_t GetEdgesCount();
+  bool IsTree();
+  bool HaveRoot();
+  auto GetRoot();
+  auto GetLeafs();
 
  private:
   DAG_FEATURE_FRIENDS;

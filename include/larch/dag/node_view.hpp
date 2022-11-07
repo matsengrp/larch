@@ -10,26 +10,26 @@ class NodeView
  public:
   constexpr static const bool is_mutable = DAGType::is_mutable;
   NodeView(DAGType dag, NodeId id);
-  operator NodeView<typename DAGType::Immutable, Features...>() const;
-  operator NodeId() const;
-  auto& GetDAG() const;
-  NodeId GetId() const;
-  auto GetParents() const;
-  auto GetClades() const;
-  auto GetClade(CladeIdx clade) const;
-  size_t GetCladesCount() const;
-  auto GetChildren() const;
-  auto GetSingleParent() const;
-  auto GetFirstChild() const;
-  auto GetFirstClade() const;
-  bool IsRoot() const;
-  bool IsLeaf() const;
+  operator NodeView<typename DAGType::Immutable, Features...>();
+  operator NodeId();
+  auto& GetDAG();
+  NodeId GetId();
+  auto GetParents();
+  auto GetClades();
+  auto GetClade(CladeIdx clade);
+  size_t GetCladesCount();
+  auto GetChildren();
+  auto GetSingleParent();
+  auto GetFirstChild();
+  auto GetFirstClade();
+  bool IsRoot();
+  bool IsLeaf();
   template <typename EdgeView>
-  void AddParentEdge(EdgeView edge) const;
+  void AddParentEdge(EdgeView edge);
   template <typename EdgeView>
-  void AddChildEdge(EdgeView edge) const;
+  void AddChildEdge(EdgeView edge);
   template <typename EdgeView>
-  void RemoveParentEdge(EdgeView edge) const;
+  void RemoveParentEdge(EdgeView edge);
 
  private:
   DAG_FEATURE_FRIENDS;

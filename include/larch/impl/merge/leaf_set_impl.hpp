@@ -1,5 +1,5 @@
 const LeafSet* LeafSet::Empty() {
-  static LeafSet empty = {};
+  static const LeafSet empty = {};
   return &empty;
 }
 

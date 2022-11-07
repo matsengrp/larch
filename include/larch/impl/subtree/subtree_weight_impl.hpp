@@ -100,6 +100,7 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::CladeWeight(
   auto clade_result = weight_ops.WithinCladeAccumOptimum(edge_weights);
 
   std::vector<EdgeId> optimum_edgeids;
+  optimum_edgeids.reserve(clade_result.second.size());
   for (auto i : clade_result.second) {
     optimum_edgeids.push_back(
         clade.at(static_cast<ranges::range_difference_t<decltype(clade)>>(i)));

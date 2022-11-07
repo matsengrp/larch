@@ -33,7 +33,7 @@ static void AssertEqual(Edge lhs_edge, Edge rhs_edge) {
   }
 }
 
-static void AssertDAGsEqual(const MADAG& lhs, const MADAG& rhs) {
+static void AssertDAGsEqual(MADAG lhs, MADAG rhs) {
   assert_equal(lhs.GetNodesCount(), rhs.GetNodesCount(), "Nodes count");
   assert_equal(lhs.GetEdgesCount(), rhs.GetEdgesCount(), "Edges count");
 

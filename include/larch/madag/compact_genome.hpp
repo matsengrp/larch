@@ -54,7 +54,7 @@ class CompactGenome {
 template <typename View>
 class FeatureReader<CompactGenome, View> {
  public:
-  const CompactGenome& GetCompactGenome() const;
+  const CompactGenome& GetCompactGenome();
 };
 
 template <typename View>

@@ -1,5 +1,5 @@
 const CompactGenome* CompactGenome::Empty() {
-  static CompactGenome empty = {};
+  static const CompactGenome empty = {};
   return &empty;
 }
 
@@ -130,7 +130,7 @@ size_t CompactGenome::ComputeHash(
 }
 
 template <typename View>
-const CompactGenome& FeatureReader<CompactGenome, View>::GetCompactGenome() const {
+const CompactGenome& FeatureReader<CompactGenome, View>::GetCompactGenome() {
   return GetFeatureStorage(this);
 }
 
