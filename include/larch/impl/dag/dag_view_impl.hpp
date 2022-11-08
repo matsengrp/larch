@@ -2,29 +2,29 @@
 #error "Don't include this header"
 #endif
 
-template <typename Storage, typename... Features>
-DAGView<Storage, Features...>::DAGView(Storage& storage) : storage_{storage} {}
+template <typename Storage>
+DAGView<Storage>::DAGView(Storage& storage) : storage_{storage} {}
 
-template <typename Storage, typename... Features>
-DAGView<Storage, Features...>::operator Immutable() const {
+template <typename Storage>
+DAGView<Storage>::operator Immutable() const {
   return Immutable{storage_};
 }
 
-template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::AddNode(NodeId id) -> Node {
+template <typename Storage>
+auto DAGView<Storage>::AddNode(NodeId id) -> Node {
   Assert(id.value != NoId);
   std::ignore = GetOrInsert(storage_.nodes_.nodes_, id);
   return {*this, id};
 }
 
-template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::AppendNode() -> Node {
+template <typename Storage>
+auto DAGView<Storage>::AppendNode() -> Node {
   return AddNode({GetNodesCount()});
 }
 
-template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::AddEdge(EdgeId id, NodeId parent, NodeId child,
-                                            CladeIdx clade) -> Edge {
+template <typename Storage>
+auto DAGView<Storage>::AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade)
+    -> Edge {
   Assert(id.value != NoId);
   Assert(parent.value != NoId);
   Assert(child.value != NoId);
@@ -36,19 +36,18 @@ auto DAGView<Storage, Features...>::AddEdge(EdgeId id, NodeId parent, NodeId chi
   return {*this, id};
 }
 
-template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::AppendEdge(NodeId parent, NodeId child,
-                                               CladeIdx clade) -> Edge {
+template <typename Storage>
+auto DAGView<Storage>::AppendEdge(NodeId parent, NodeId child, CladeIdx clade) -> Edge {
   return AddEdge({GetEdgesCount()}, parent, child, clade);
 }
 
-template <typename Storage, typename... Features>
-void DAGView<Storage, Features...>::InitializeNodes(size_t nodes_count) {
+template <typename Storage>
+void DAGView<Storage>::InitializeNodes(size_t nodes_count) {
   storage_.nodes_.nodes_.resize(nodes_count);
 }
 
-template <typename Storage, typename... Features>
-void DAGView<Storage, Features...>::BuildConnections() {
+template <typename Storage>
+void DAGView<Storage>::BuildConnections() {
   storage_.root_ = {NoId};
   storage_.leafs_ = {};
   BuildConnectionsRaw();
@@ -66,8 +65,8 @@ void DAGView<Storage, Features...>::BuildConnections() {
   }
 }
 
-template <typename Storage, typename... Features>
-void DAGView<Storage, Features...>::BuildConnectionsRaw() {
+template <typename Storage>
+void DAGView<Storage>::BuildConnectionsRaw() {
   for (auto& node : storage_.nodes_.nodes_) {
     node.ClearConnections();
   }
@@ -84,66 +83,72 @@ void DAGView<Storage, Features...>::BuildConnectionsRaw() {
   }
 }
 
-template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::GetNodes() {
+template <typename Storage>
+auto DAGView<Storage>::GetNodes() {
   return storage_.nodes_.nodes_ |
          ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
            return Node{*this, {idx++}};
          });
 }
 
-template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::GetEdges() {
+template <typename Storage>
+auto DAGView<Storage>::GetEdges() {
   return storage_.edges_.edges_ |
          ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
            return Edge{*this, {idx++}};
          });
 }
 
-template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::Get(NodeId id) {
+template <typename Storage>
+auto DAGView<Storage>::Get(NodeId id) {
   return Node{*this, id};
 }
 
-template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::Get(EdgeId id) {
+template <typename Storage>
+auto DAGView<Storage>::Get(EdgeId id) {
   return Edge{*this, id};
 }
 
-template <typename Storage, typename... Features>
-size_t DAGView<Storage, Features...>::GetNodesCount() {
+template <typename Storage>
+size_t DAGView<Storage>::GetNodesCount() {
   return storage_.nodes_.nodes_.size();
 }
 
-template <typename Storage, typename... Features>
-size_t DAGView<Storage, Features...>::GetEdgesCount() {
+template <typename Storage>
+size_t DAGView<Storage>::GetEdgesCount() {
   return storage_.edges_.edges_.size();
 }
 
-template <typename Storage, typename... Features>
-bool DAGView<Storage, Features...>::IsTree() {
+template <typename Storage>
+bool DAGView<Storage>::IsTree() {
   return GetNodesCount() == GetEdgesCount() + 1;
 }
 
-template <typename Storage, typename... Features>
-bool DAGView<Storage, Features...>::HaveRoot() {
+template <typename Storage>
+bool DAGView<Storage>::HaveRoot() {
   return storage_.root_.value != NoId;
 }
 
-template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::GetRoot() {
+template <typename Storage>
+auto DAGView<Storage>::GetRoot() {
   return Node{*this, storage_.root_};
 }
 
-template <typename Storage, typename... Features>
-auto DAGView<Storage, Features...>::GetLeafs() {
+template <typename Storage>
+auto DAGView<Storage>::GetLeafs() {
   return storage_.nodes_.leafs_ |
          ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
            return Node{*this, {idx++}};
          });
 }
 
-template <typename Storage, typename... Features>
-auto& DAGView<Storage, Features...>::GetStorage() const {
+template <typename Storage>
+auto& DAGView<Storage>::GetStorage() const {
   return storage_;
+}
+
+template <typename Storage>
+template <typename Feature>
+auto& DAGView<Storage>::GetFeatureStorage() const {
+  return std::get<Feature>(storage_.features_);
 }

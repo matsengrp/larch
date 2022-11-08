@@ -4,6 +4,5 @@
 
 template <typename NodesContainer, typename EdgesContainer, typename... Features>
 auto DefaultDAGStorage<NodesContainer, EdgesContainer, Features...>::View() {
-  return DAGView<DefaultDAGStorage<NodesContainer, EdgesContainer, Features...>,
-                 Features...>{*this};
+  return DAGView<DefaultDAGStorage<NodesContainer, EdgesContainer, Features...>>{*this};
 }

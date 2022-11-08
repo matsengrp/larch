@@ -18,5 +18,5 @@ bool operator<(CladeIdx lhs, CladeIdx rhs) { return lhs.value < rhs.value; }
 
 template <typename Feature, typename View>
 auto& GetFeatureStorage(const FeatureReader<Feature, View>* reader) {
-  return std::get<Feature>(static_cast<const View&>(*reader).GetStorage().features_);
+  return static_cast<const View&>(*reader).template GetFeatureStorage<Feature>();
 }

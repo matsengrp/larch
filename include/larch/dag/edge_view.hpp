@@ -2,16 +2,15 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
-template <typename DAGType, typename... Features>
+template <typename DAG>
 class EdgeView
-    : public std::conditional_t<
-          DAGType::is_mutable, FeatureWriter<Features, EdgeView<DAGType, Features...>>,
-          FeatureReader<Features, EdgeView<DAGType, Features...>>>... {
+    : public DAG::StorageType::EdgesContainerType::StorageType::template ViewBase<DAG>,
+      public DAG::StorageType::EdgesContainerType::template ViewBase<DAG> {
  public:
-  constexpr static const bool is_mutable = DAGType::is_mutable;
-  using Node = typename DAGType::Node;
-  EdgeView(DAGType dag, EdgeId id);
-  operator EdgeView<typename DAGType::Immutable, Features...>();
+  constexpr static const bool is_mutable = DAG::is_mutable;
+  using Node = typename DAG::Node;
+  EdgeView(DAG dag, EdgeId id);
+  operator EdgeView<typename DAG::Immutable>();
   operator EdgeId();
   operator CladeIdx();
   auto& GetDAG();
@@ -28,19 +27,20 @@ class EdgeView
  private:
   DAG_FEATURE_FRIENDS;
   auto& GetStorage() const;
-  DAGType dag_;
+  template <typename Feature>
+  auto& GetFeatureStorage() const;
+  DAG dag_;
   EdgeId id_;
 };
 
 namespace std {
-template <typename DAGType, typename... Features>
-struct tuple_size<::EdgeView<DAGType, Features...>> : integral_constant<size_t, 2> {};
+template <typename DAG>
+struct tuple_size<::EdgeView<DAG>> : integral_constant<size_t, 2> {};
 
-template <size_t Index, typename DAGType, typename... Features>
-struct tuple_element<Index, ::EdgeView<DAGType, Features...>>
-    : tuple_element<Index, tuple<typename DAGType::Node, typename DAGType::Node>> {};
+template <size_t Index, typename DAG>
+struct tuple_element<Index, ::EdgeView<DAG>>
+    : tuple_element<Index, tuple<typename DAG::Node, typename DAG::Node>> {};
 }  // namespace std
 
-template <std::size_t Index, typename DAGType, typename... Features>
-std::tuple_element_t<Index, EdgeView<DAGType, Features...>> get(
-    EdgeView<DAGType, Features...> edge);
+template <std::size_t Index, typename DAG>
+std::tuple_element_t<Index, EdgeView<DAG>> get(EdgeView<DAG> edge);

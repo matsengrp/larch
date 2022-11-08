@@ -46,10 +46,10 @@ inline auto& GetFeatureStorage(const FeatureReader<Feature, View>* reader);
   template <typename, typename>                                            \
   friend class FeatureWriter
 
-#define DAG_VIEW_FRIENDS           \
-  template <typename, typename...> \
-  friend class NodeView;           \
-  template <typename, typename...> \
-  friend class EdgeView;           \
-  template <typename, typename...> \
+#define DAG_VIEW_FRIENDS \
+  template <typename>    \
+  friend class NodeView; \
+  template <typename>    \
+  friend class EdgeView; \
+  template <typename>    \
   friend class DAGView

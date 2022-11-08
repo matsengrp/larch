@@ -6,7 +6,13 @@ template <typename... Features>
 class DefaultEdgeStorage {
  public:
   template <typename DAG>
-  using ViewType = EdgeView<DAG, Features...>;
+  using ViewType = EdgeView<DAG>;
+
+  template <typename DAG>
+  class ViewBase
+      : public std::conditional_t<DAG::is_mutable,
+                                  FeatureWriter<Features, EdgeView<DAG>>,
+                                  FeatureReader<Features, EdgeView<DAG>>>... {};
 
  private:
   DAG_FEATURE_FRIENDS;

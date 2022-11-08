@@ -2,18 +2,18 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
-template <typename Storage, typename... Features>
-class DAGView : public std::conditional_t<
-                    std::is_const_v<Storage>,
-                    FeatureReader<Features, DAGView<Storage, Features...>>,
-                    FeatureWriter<Features, DAGView<Storage, Features...>>>... {
+template <typename Storage>
+class DAGView : public Storage::template ViewBase<Storage> {
  public:
   constexpr static const bool is_mutable = not std::is_const_v<Storage>;
-  using Immutable = DAGView<const Storage, Features...>;
+  using Immutable = DAGView<const Storage>;
+  using StorageType = Storage;
   using Node = typename Storage::NodesContainerType::StorageType::template ViewType<
-      DAGView<Storage, Features...>>;
+      DAGView<Storage>>;
   using Edge = typename Storage::EdgesContainerType::StorageType::template ViewType<
-      DAGView<Storage, Features...>>;
+      DAGView<Storage>>;
+  using NodesContainerFeatures = typename Storage::NodesContainerType::FeaturesType;
+  using EdgesContainerFeatures = typename Storage::EdgesContainerType::FeaturesType;
 
   explicit DAGView(Storage& storage);
   operator Immutable() const;
@@ -39,5 +39,7 @@ class DAGView : public std::conditional_t<
   DAG_FEATURE_FRIENDS;
   DAG_VIEW_FRIENDS;
   auto& GetStorage() const;
+  template <typename Feature>
+  auto& GetFeatureStorage() const;
   Storage& storage_;
 };

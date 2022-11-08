@@ -2,15 +2,14 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
-template <typename DAGType, typename... Features>
+template <typename DAG>
 class NodeView
-    : public std::conditional_t<
-          DAGType::is_mutable, FeatureWriter<Features, NodeView<DAGType, Features...>>,
-          FeatureReader<Features, NodeView<DAGType, Features...>>>... {
+    : public DAG::StorageType::NodesContainerType::StorageType::template ViewBase<DAG>,
+      public DAG::StorageType::NodesContainerType::template ViewBase<DAG> {
  public:
-  constexpr static const bool is_mutable = DAGType::is_mutable;
-  NodeView(DAGType dag, NodeId id);
-  operator NodeView<typename DAGType::Immutable, Features...>();
+  constexpr static const bool is_mutable = DAG::is_mutable;
+  NodeView(DAG dag, NodeId id);
+  operator NodeView<typename DAG::Immutable>();
   operator NodeId();
   auto& GetDAG();
   NodeId GetId();
@@ -34,6 +33,8 @@ class NodeView
  private:
   DAG_FEATURE_FRIENDS;
   auto& GetStorage() const;
-  DAGType dag_;
+  template <typename Feature>
+  auto& GetFeatureStorage() const;
+  DAG dag_;
   NodeId id_;
 };

@@ -2,77 +2,86 @@
 #error "Don't include this header"
 #endif
 
-template <typename DAGType, typename... Features>
-EdgeView<DAGType, Features...>::EdgeView(DAGType dag, EdgeId id) : dag_{dag}, id_{id} {}
+template <typename DAG>
+EdgeView<DAG>::EdgeView(DAG dag, EdgeId id) : dag_{dag}, id_{id} {}
 
-template <typename DAGType, typename... Features>
-EdgeView<DAGType, Features...>::operator EdgeId() {
+template <typename DAG>
+EdgeView<DAG>::operator EdgeId() {
   return id_;
 }
 
-template <typename DAGType, typename... Features>
-EdgeView<DAGType, Features...>::operator CladeIdx() {
+template <typename DAG>
+EdgeView<DAG>::operator CladeIdx() {
   return GetStorage().clade_;
 }
 
-template <typename DAGType, typename... Features>
-auto& EdgeView<DAGType, Features...>::GetDAG() {
+template <typename DAG>
+auto& EdgeView<DAG>::GetDAG() {
   return dag_;
 }
 
-template <typename DAGType, typename... Features>
-EdgeId EdgeView<DAGType, Features...>::GetId() {
+template <typename DAG>
+EdgeId EdgeView<DAG>::GetId() {
   return id_;
 }
 
-template <typename DAGType, typename... Features>
-auto EdgeView<DAGType, Features...>::GetParent() {
+template <typename DAG>
+auto EdgeView<DAG>::GetParent() {
   return Node{dag_, GetParentId()};
 }
 
-template <typename DAGType, typename... Features>
-auto EdgeView<DAGType, Features...>::GetChild() {
+template <typename DAG>
+auto EdgeView<DAG>::GetChild() {
   return Node{dag_, GetChildId()};
 }
 
-template <typename DAGType, typename... Features>
-CladeIdx EdgeView<DAGType, Features...>::GetClade() {
+template <typename DAG>
+CladeIdx EdgeView<DAG>::GetClade() {
   return GetStorage().clade_;
 }
 
-template <typename DAGType, typename... Features>
-NodeId EdgeView<DAGType, Features...>::GetParentId() {
+template <typename DAG>
+NodeId EdgeView<DAG>::GetParentId() {
   return GetStorage().parent_;
 }
 
-template <typename DAGType, typename... Features>
-NodeId EdgeView<DAGType, Features...>::GetChildId() {
+template <typename DAG>
+NodeId EdgeView<DAG>::GetChildId() {
   return GetStorage().child_;
 }
 
-template <typename DAGType, typename... Features>
-std::pair<NodeId, NodeId> EdgeView<DAGType, Features...>::GetNodeIds() {
+template <typename DAG>
+std::pair<NodeId, NodeId> EdgeView<DAG>::GetNodeIds() {
   return {GetStorage().parent_, GetStorage().child_};
 }
 
-template <typename DAGType, typename... Features>
-bool EdgeView<DAGType, Features...>::IsRoot() {
+template <typename DAG>
+bool EdgeView<DAG>::IsRoot() {
   return GetParent().IsRoot();
 }
 
-template <typename DAGType, typename... Features>
-bool EdgeView<DAGType, Features...>::IsLeaf() {
+template <typename DAG>
+bool EdgeView<DAG>::IsLeaf() {
   return GetChild().IsLeaf();
 }
 
-template <typename DAGType, typename... Features>
-auto& EdgeView<DAGType, Features...>::GetStorage() const {
+template <typename DAG>
+auto& EdgeView<DAG>::GetStorage() const {
   return dag_.storage_.edges_.edges_.at(id_.value);
 }
 
-template <std::size_t Index, typename DAGType, typename... Features>
-std::tuple_element_t<Index, EdgeView<DAGType, Features...>> get(
-    EdgeView<DAGType, Features...> edge) {
+template <typename DAG>
+template <typename Feature>
+auto& EdgeView<DAG>::GetFeatureStorage() const {
+  if constexpr (tuple_contians_v<typename DAG::EdgesContainerFeatures, Feature>) {
+    return std::get<Feature>(dag_.storage_.edges_.features_).at(id_.value);
+  } else {
+    return std::get<Feature>(dag_.storage_.edges_.edges_.at(id_.value).features_);
+  }
+}
+
+template <std::size_t Index, typename DAG>
+std::tuple_element_t<Index, EdgeView<DAG>> get(EdgeView<DAG> edge) {
   if constexpr (Index == 0) {
     return edge.GetParent();
   }

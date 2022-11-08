@@ -3,27 +3,14 @@
 #include <cstddef>
 #include <limits>
 #include <vector>
+#include <type_traits>
+#include <tuple>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wstack-usage="
-#include <range/v3/action/push_back.hpp>
-#include <range/v3/action/sort.hpp>
-#include <range/v3/action/unique.hpp>
-#include <range/v3/algorithm/unique.hpp>
-#include <range/v3/algorithm/for_each.hpp>
-#include <range/v3/algorithm/all_of.hpp>
-#include <range/v3/range/conversion.hpp>
-#include <range/v3/view/counted.hpp>
-#include <range/v3/view/drop.hpp>
-#include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/group_by.hpp>
-#include <range/v3/view/join.hpp>
-#include <range/v3/view/reverse.hpp>
-#include <range/v3/view/subrange.hpp>
-#include <range/v3/view/transform.hpp>
-#include <range/v3/view/zip.hpp>
+#include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
 
 struct NodeId;
@@ -110,3 +97,13 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x& operator=(x&&) noexcept = default; \
   x& operator=(const x&) = delete;      \
   ~x() = default
+
+template <typename, typename>
+struct tuple_contians {};
+
+template <typename... Types, typename Type>
+struct tuple_contians<std::tuple<Types...>, Type>
+    : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
+
+template <typename Tuple, typename Type>
+inline constexpr bool tuple_contians_v = tuple_contians<Tuple, Type>::value;

@@ -82,5 +82,5 @@ using MADAGStorage = DefaultDAGStorage<
     DefaultNodesContainer<DefaultNodeStorage<CompactGenome, SampleId>>,
     DefaultEdgesContainer<DefaultEdgeStorage<EdgeMutations>>, ReferenceSequence>;
 
-using MADAG = DAGView<const MADAGStorage, ReferenceSequence>;
-using MutableMADAG = DAGView<MADAGStorage, ReferenceSequence>;
+using MADAG = DAGView<const MADAGStorage>;
+using MutableMADAG = DAGView<MADAGStorage>;

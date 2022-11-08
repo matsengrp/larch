@@ -12,23 +12,23 @@ struct CladeIdx;
 template <typename... Features>
 class DefaultNodeStorage;
 
-template <typename Storage>
+template <typename Storage, typename... Features>
 class DefaultNodesContainer;
 
 template <typename... Features>
 class DefaultEdgeStorage;
 
-template <typename Storage>
+template <typename Storage, typename... Features>
 class DefaultEdgesContainer;
 
 template <typename NodesContainer, typename EdgesContainer, typename... Features>
 class DefaultDAGStorage;
 
-template <typename Storage, typename... Features>
+template <typename Storage>
 class DAGView;
-template <typename DAG, typename... Features>
+template <typename DAG>
 class NodeView;
-template <typename DAG, typename... Features>
+template <typename DAG>
 class EdgeView;
 
 template <typename Feature, typename View>

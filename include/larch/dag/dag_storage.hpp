@@ -8,6 +8,12 @@ class DefaultDAGStorage {
   using NodesContainerType = NodesContainer;
   using EdgesContainerType = EdgesContainer;
 
+  template <typename Storage>
+  class ViewBase
+      : public std::conditional_t<std::is_const_v<Storage>,
+                                  FeatureReader<Features, DAGView<Storage>>,
+                                  FeatureWriter<Features, DAGView<Storage>>>... {};
+
   DefaultDAGStorage() = default;
   MOVE_ONLY(DefaultDAGStorage);
 
