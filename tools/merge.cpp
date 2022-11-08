@@ -4,8 +4,8 @@
 #include <algorithm>
 
 #include "arguments.hpp"
-#include "merge.hpp"
-#include "dag_loader.hpp"
+#include "larch/merge/merge.hpp"
+#include "larch/dag_loader.hpp"
 #include "benchmark.hpp"
 
 [[noreturn]] static void Usage() {
@@ -29,14 +29,14 @@
 static int MergeTrees(const std::vector<std::string_view>& paths,
                       std::string_view refseq_json_path, std::string_view out_path,
                       bool dags) {
-  std::vector<MADAG> trees;
+  std::vector<MADAGStorage> trees;
   std::string reference_sequence =
-      std::string{LoadDAGFromJson(refseq_json_path).GetReferenceSequence()};
+      std::string{LoadDAGFromJson(refseq_json_path).View().GetReferenceSequence()};
 
   trees.resize(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;
   for (size_t i = 0; i < paths.size(); ++i) {
-    paths_idx.push_back({i, paths.at(i)});
+    paths_idx.emplace_back(i, paths.at(i));
   }
   std::cout << "Loading trees ";
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
@@ -50,22 +50,21 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
 
   Benchmark merge_time;
   Merge merge(reference_sequence);
-  std::vector<std::reference_wrapper<MADAG>> tree_refs{trees.begin(), trees.end()};
+  std::vector<MADAG> tree_refs{trees.begin(), trees.end()};
   merge_time.start();
   merge.AddDAGs(tree_refs);
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
 
-  std::cout << "DAG nodes: " << merge.GetResult().GetDAG().GetNodesCount() << "\n";
-  std::cout << "DAG edges: " << merge.GetResult().GetDAG().GetEdgesCount() << "\n";
+  std::cout << "DAG nodes: " << merge.GetResult().GetNodesCount() << "\n";
+  std::cout << "DAG edges: " << merge.GetResult().GetEdgesCount() << "\n";
 
-  StoreDAGToProtobuf(merge.GetResult().GetDAG(), reference_sequence,
-                     merge.GetResult().GetEdgeMutations(), out_path);
+  StoreDAGToProtobuf(merge.GetResult(), out_path);
 
   return EXIT_SUCCESS;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) try {
   Arguments args = GetArguments(argc, argv);
 
   std::vector<std::string_view> input_filenames;
@@ -101,4 +100,9 @@ int main(int argc, char** argv) {
   }
 
   return MergeTrees(input_filenames, refseq_filename, result_filename, dags);
+} catch (std::exception& e) {
+  std::cerr << "Uncaught exception: " << e.what() << std::endl;
+  std::terminate();
+} catch (...) {
+  std::abort();
 }

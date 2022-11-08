@@ -21,5 +21,5 @@ inline void assert_false(bool expr, const std::string& what) {
 
 template <typename L, typename R>
 inline void assert_equal(L&& l, R&& r, const std::string& what) {
-  if (l != r) throw std::runtime_error(what);
+  if (not(l == r)) throw std::runtime_error(what);
 }

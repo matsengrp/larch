@@ -1,17 +1,17 @@
 #include <tuple>
 #include "test_common.hpp"
 
-#include "dag_loader.hpp"
-#include "merge.hpp"
-#include "subtree_weight.hpp"
-#include "parsimony_score.hpp"
+#include "larch/dag_loader.hpp"
+#include "larch/merge/merge.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score.hpp"
 
-#include "usher_glue.hpp"
+#include "larch/usher_glue.hpp"
 
 namespace MAT = Mutation_Annotated_Tree;
 
-void check_edge_mutations(const MADAG&);
-MADAG optimize_dag_direct(const MADAG&, Move_Found_Callback&);
+void check_edge_mutations(MADAG);
+MADAGStorage optimize_dag_direct(MADAG, Move_Found_Callback&);
 
 struct Test_Move_Found_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
@@ -23,35 +23,37 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 static void test_matOptimize(std::string_view input_dag_path,
                              std::string_view refseq_path, size_t count) {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
-  MADAG input_dag = LoadTreeFromProtobuf(input_dag_path, reference_sequence);
+  MADAGStorage input_dag_storage =
+      LoadTreeFromProtobuf(input_dag_path, reference_sequence);
+  input_dag_storage.View().RecomputeCompactGenomes();
+  MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
-  std::vector<MADAG> optimized_dags;
+  std::vector<MADAGStorage> optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
     auto [sample, dag_ids] = weight.SampleTree({});
     std::ignore = dag_ids;
-    check_edge_mutations(sample);
-    MADAG result;
+    check_edge_mutations(sample.View());
     Test_Move_Found_Callback callback;
-    result = optimize_dag_direct(sample, callback);
-    optimized_dags.push_back(std::move(result));
-    merge.AddDAGs({optimized_dags.back()});
+    optimized_dags.push_back(optimize_dag_direct(sample.View(), callback));
+    optimized_dags.back().View().RecomputeCompactGenomes();
+    merge.AddDAGs({optimized_dags.back().View()});
   }
 }
 
 [[maybe_unused]] static const auto test_added0 =
     add_test({[] {
                 test_matOptimize("data/startmat/startmat_no_ancestral.pb.gz",
-                                 "data/startmat/refseq.txt.gz", 3);
+                                 "data/startmat/refseq.txt.gz", 2);
               },
               "matOptimize: tree startmat"});
 
 [[maybe_unused]] static const auto test_added1 =
     add_test({[] {
                 test_matOptimize("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
-                                 "data/20D_from_fasta/refseq.txt.gz", 3);
+                                 "data/20D_from_fasta/refseq.txt.gz", 2);
               },
               "matOptimize: tree 20D_from_fasta"});

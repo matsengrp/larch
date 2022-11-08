@@ -1,3 +1,4 @@
 [submodule "deps/usher"]
 	path = deps/usher
 	url = git@github.com:matsengrp/usher.git
+	branch = add-usher-callback

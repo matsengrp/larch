@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (larch)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
+
 include(FetchContent)
 FetchContent_Declare(oneTBB-src
   GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
@@ -38,12 +40,12 @@ ExternalProject_Add(range-v3
 )
 find_package(ZLIB)
 
-add_library(larch_autogen OBJECT
+add_library(larch-autogen OBJECT
     ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
     ${PROTO_SRCS} ${PROTO_HDRS}
     ${DETAILED_MUTATIONS_PROTO_SRCS} ${DETAILED_MUTATIONS_PROTO_HDRS}
 )
-set_target_properties(larch_autogen
+set_target_properties(larch-autogen
     PROPERTIES CXX_CLANG_TIDY ""
 )
 
@@ -86,7 +88,7 @@ file(GLOB MATOPTIMIZE_SRC
     )
 
 function(larch_link_opts PRODUCT)
-    target_link_libraries(${PRODUCT} PUBLIC larch_autogen)
+    target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
     if (${USE_ASAN})
         target_link_libraries(${PRODUCT} PUBLIC -lasan -lubsan)
     endif()
@@ -106,23 +108,14 @@ function(larch_executable PRODUCT)
 endfunction()
 
 add_library(larch
-    src/compact_genome.cpp
-    src/dag.cpp
     src/dag_loader.cpp
-    src/edge_label.cpp
-    src/edge_mutations.cpp
-    src/edge_storage.cpp
-    src/edge.cpp
-    src/leaf_set.cpp
-    src/merge.cpp
-    src/mutation_annotated_dag.cpp
-    src/node_label.cpp
-    src/node_storage.cpp
-    src/post_order_iterator.cpp
-    src/pre_order_iterator.cpp)
+    )
 larch_compile_opts(larch)
 target_compile_options(larch PRIVATE ${STRICT_WARNINGS})
+if (${USE_ASAN})
+else()
 target_compile_options(larch PRIVATE -Wstack-usage=2048)
+endif()
 larch_link_opts(larch)
 
 add_library(usher
@@ -135,6 +128,9 @@ target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
 target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 larch_link_opts(usher)
 target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+set_target_properties(usher
+    PROPERTIES CXX_CLANG_TIDY ""
+)
 
 add_library(larch-usher-glue
     src/produce_mat.cpp
@@ -144,27 +140,30 @@ target_compile_options(larch-usher-glue PRIVATE ${STRICT_WARNINGS})
 larch_link_opts(larch-usher-glue)
 target_link_libraries(larch-usher-glue PUBLIC usher)
 add_dependencies(larch-usher-glue larch usher)
+set_target_properties(larch-usher-glue
+    PROPERTIES CXX_CLANG_TIDY ""
+)
 
 larch_executable(larch-test
     test/main.cpp
-    test/synthetic_dags.cpp
-    test/test_clade_idx.cpp
     test/test_compact_genome.cpp
+    test/test_count_trees.cpp
     test/test_dag_trimming.cpp
     test/test_loading.cpp
     test/test_matOptimize.cpp
     test/test_merge.cpp
     test/test_sample_tree.cpp
     test/test_subtree_weight.cpp
-    test/test_write_parsimony.cpp
-    test/test_count_trees.cpp
     test/test_weight_accum.cpp
     test/test_weight_counter.cpp
-    test/test_synthetic.cpp
-    test/test_traversal_iterators.cpp)
+    test/test_write_parsimony.cpp
+    )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
-target_link_libraries(larch-test PUBLIC larch-usher-glue)
+target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
 add_dependencies(larch-test larch-usher-glue)
+set_target_properties(larch-test
+    PROPERTIES CXX_CLANG_TIDY ""
+)
 
 larch_executable(merge
     tools/merge.cpp)

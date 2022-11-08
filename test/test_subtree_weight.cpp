@@ -1,28 +1,24 @@
-#include "subtree_weight.hpp"
-#include "parsimony_score_binary.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score_binary.hpp"
 
 #include <iostream>
 #include <string_view>
 
 #include "test_common.hpp"
 
-#include "dag_loader.hpp"
+#include "larch/dag_loader.hpp"
 
-static void test_subtree_weight(MADAG& dag, size_t expected_score) {
-  if (dag.GetEdgeMutations().empty()) {
-    dag.RecomputeEdgeMutations();
-  }
-
+static void test_subtree_weight(MADAG dag, size_t expected_score) {
   SubtreeWeight<ParsimonyScore> weight(dag);
 
-  size_t score = weight.ComputeWeightBelow(dag.GetDAG().GetRoot(), {});
+  size_t score = weight.ComputeWeightBelow(dag.GetRoot(), {});
 
   assert_equal(score, expected_score, "Parsimony score");
 }
 
 static void test_subtree_weight(std::string_view path, size_t expected_score) {
-  MADAG dag = LoadDAGFromProtobuf(path);
-  test_subtree_weight(dag, expected_score);
+  MADAGStorage dag = LoadDAGFromProtobuf(path);
+  test_subtree_weight(dag.View(), expected_score);
 }
 
 [[maybe_unused]] static const auto test_added0 =

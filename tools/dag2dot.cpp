@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "arguments.hpp"
-#include "dag_loader.hpp"
+#include "larch/dag_loader.hpp"
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
@@ -12,7 +12,6 @@
   std::cout << "  -t,--tree-pb   Input protobuf tree filename\n";
   std::cout << "  -d,--dag-pb    Input protobuf DAG filename\n";
   std::cout << "  -j,--dag-json  Input json DAG filename\n";
-  std::cout << "  -c,--cgs       Compute compact genomes\n";
 
   std::exit(EXIT_SUCCESS);
 }
@@ -25,12 +24,28 @@
 
 enum class InputType { TreePB, DagPB, DagJson };
 
-int main(int argc, char** argv) {
+static MADAGStorage Load(InputType type, std::string_view path) {
+  switch (type) {
+    case InputType::TreePB:
+      return LoadTreeFromProtobuf(path, "");
+    case InputType::DagPB: {
+      MADAGStorage dag = LoadDAGFromProtobuf(path);
+      dag.View().RecomputeCompactGenomes();
+      return dag;
+    }
+    case InputType::DagJson:
+      return LoadDAGFromJson(path);
+    default:
+      std::cerr << "Unknown input type\n";
+      Fail();
+  }
+}
+
+int main(int argc, char** argv) try {
   Arguments args = GetArguments(argc, argv);
 
   InputType type = InputType::TreePB;
-  std::string path = "";
-  bool cgs = false;
+  std::string path;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -56,8 +71,6 @@ int main(int argc, char** argv) {
       }
       type = InputType::DagJson;
       path = *params.begin();
-    } else if (name == "-c" or name == "--cgs") {
-      cgs = true;
     } else {
       std::cerr << "Unknown argument.\n";
       Fail();
@@ -69,23 +82,14 @@ int main(int argc, char** argv) {
     Fail();
   }
 
-  MADAG dag;
-  switch (type) {
-    case InputType::TreePB:
-      dag = LoadTreeFromProtobuf(path, "");
-      break;
-    case InputType::DagPB:
-      dag = LoadDAGFromProtobuf(path);
-      if (cgs) {
-        Assert(not dag.GetReferenceSequence().empty());
-        dag.RecomputeCompactGenomes();
-      }
-      break;
-    case InputType::DagJson:
-      dag = LoadDAGFromJson(path);
-      break;
-  }
-  MADAGToDOT(dag, std::cout);
+  MADAGStorage dag = Load(type, path);
+
+  MADAGToDOT(dag.View(), std::cout);
 
   return EXIT_SUCCESS;
+} catch (std::exception& e) {
+  std::cerr << "Uncaught exception: " << e.what() << std::endl;
+  std::terminate();
+} catch (...) {
+  std::abort();
 }
