@@ -186,6 +186,7 @@ MADAGStorage optimize_dag_direct(MADAG dag, Move_Found_Callback& callback) {
   // }
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
   MADAGStorage result = build_madag_from_mat(tree, dag.GetReferenceSequence());
+  result.View().RecomputeCompactGenomes();
   tree.delete_nodes();
   return result;
 }

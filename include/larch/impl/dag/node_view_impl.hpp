@@ -84,8 +84,9 @@ auto& NodeView<DAG>::GetStorage() const {
 template <typename DAG>
 template <typename Feature>
 auto& NodeView<DAG>::GetFeatureStorage() const {
-  if constexpr (tuple_contians_v<typename DAG::NodesContainerFeatures, Feature>) {
-    return std::get<Feature>(dag_.storage_.nodes_.features_).at(id_.value);
+  if constexpr (DAG::StorageType::NodesContainerType::template contains_feature<
+                    Feature>) {
+    return dag_.storage_.nodes_.template GetFeatureAt<Feature>(id_);
   } else {
     return std::get<Feature>(dag_.storage_.nodes_.nodes_.at(id_.value).features_);
   }

@@ -73,8 +73,8 @@ auto& EdgeView<DAG>::GetStorage() const {
 template <typename DAG>
 template <typename Feature>
 auto& EdgeView<DAG>::GetFeatureStorage() const {
-  if constexpr (tuple_contians_v<typename DAG::EdgesContainerFeatures, Feature>) {
-    return std::get<Feature>(dag_.storage_.edges_.features_).at(id_.value);
+  if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<Feature>) {
+    return dag_.storage_.edges_.template GetFeatureAt<Feature>(id_);
   } else {
     return std::get<Feature>(dag_.storage_.edges_.edges_.at(id_.value).features_);
   }

@@ -6,7 +6,11 @@ template <typename Storage, typename... Features>
 class DefaultEdgesContainer {
  public:
   using StorageType = Storage;
-  using FeaturesType = std::tuple<Features...>;
+  using FeaturesType = std::tuple<std::vector<Features>...>;
+
+  template <typename Feature>
+  static inline constexpr bool contains_feature =
+      tuple_contians_v<FeaturesType, std::vector<Feature>>;
 
   template <typename DAG>
   class ViewBase
@@ -14,8 +18,14 @@ class DefaultEdgesContainer {
                                   FeatureWriter<Features, EdgeView<DAG>>,
                                   FeatureReader<Features, EdgeView<DAG>>>... {};
 
+  template <typename Feature, typename Id>
+  Feature& GetFeatureAt(Id id);
+
+  template <typename Feature, typename Id>
+  const Feature& GetFeatureAt(Id id) const;
+
  private:
   DAG_VIEW_FRIENDS;
   std::vector<Storage> edges_;
-  [[no_unique_address]] std::tuple<Features...> features_;
+  [[no_unique_address]] std::tuple<std::vector<Features>...> features_;
 };
