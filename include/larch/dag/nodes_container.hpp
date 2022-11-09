@@ -18,11 +18,19 @@ class DefaultNodesContainer {
                                   FeatureWriter<Features, NodeView<DAG>>,
                                   FeatureReader<Features, NodeView<DAG>>>... {};
 
-  template <typename Feature, typename Id>
-  Feature& GetFeatureAt(Id id);
+  template <typename Feature>
+  Feature& GetFeatureAt(NodeId id);
 
-  template <typename Feature, typename Id>
-  const Feature& GetFeatureAt(Id id) const;
+  template <typename Feature>
+  const Feature& GetFeatureAt(NodeId id) const;
+
+  Storage& AddNode(NodeId id);
+  void InitializeNodes(size_t nodes_count);
+  auto View();
+  auto View() const;
+  Storage& NodeAt(NodeId id);
+  const Storage& NodeAt(NodeId id) const;
+  size_t Count() const;
 
  private:
   DAG_VIEW_FRIENDS;

@@ -17,10 +17,10 @@ class DAGView : public Storage::template ViewBase<Storage> {
 
   explicit DAGView(Storage& storage);
   operator Immutable() const;
-  auto AddNode(NodeId id) -> Node;
-  auto AppendNode() -> Node;
-  auto AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade) -> Edge;
-  auto AppendEdge(NodeId parent, NodeId child, CladeIdx clade) -> Edge;
+  Node AddNode(NodeId id);
+  Node AppendNode();
+  Edge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
+  Edge AppendEdge(NodeId parent, NodeId child, CladeIdx clade);
   void InitializeNodes(size_t nodes_count);
   void BuildConnections();
   void BuildConnectionsRaw();

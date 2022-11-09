@@ -18,11 +18,18 @@ class DefaultEdgesContainer {
                                   FeatureWriter<Features, EdgeView<DAG>>,
                                   FeatureReader<Features, EdgeView<DAG>>>... {};
 
-  template <typename Feature, typename Id>
-  Feature& GetFeatureAt(Id id);
+  template <typename Feature>
+  Feature& GetFeatureAt(EdgeId id);
 
-  template <typename Feature, typename Id>
-  const Feature& GetFeatureAt(Id id) const;
+  template <typename Feature>
+  const Feature& GetFeatureAt(EdgeId id) const;
+
+  Storage& AddEdge(EdgeId id);
+  auto View();
+  auto View() const;
+  size_t Count() const;
+  Storage& EdgeAt(EdgeId id);
+  const Storage& EdgeAt(EdgeId id) const;
 
  private:
   DAG_VIEW_FRIENDS;

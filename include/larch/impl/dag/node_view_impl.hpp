@@ -78,7 +78,7 @@ bool NodeView<DAG>::IsLeaf() {
 
 template <typename DAG>
 auto& NodeView<DAG>::GetStorage() const {
-  return dag_.storage_.nodes_.nodes_.at(id_.value);
+  return dag_.storage_.nodes_.NodeAt(id_);
 }
 
 template <typename DAG>
@@ -88,6 +88,6 @@ auto& NodeView<DAG>::GetFeatureStorage() const {
                     Feature>) {
     return dag_.storage_.nodes_.template GetFeatureAt<Feature>(id_);
   } else {
-    return std::get<Feature>(dag_.storage_.nodes_.nodes_.at(id_.value).features_);
+    return std::get<Feature>(dag_.storage_.nodes_.NodeAt(id_).features_);
   }
 }

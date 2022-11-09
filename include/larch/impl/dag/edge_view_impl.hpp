@@ -67,16 +67,17 @@ bool EdgeView<DAG>::IsLeaf() {
 
 template <typename DAG>
 auto& EdgeView<DAG>::GetStorage() const {
-  return dag_.storage_.edges_.edges_.at(id_.value);
+  return dag_.storage_.edges_.EdgeAt(id_);
 }
 
 template <typename DAG>
 template <typename Feature>
 auto& EdgeView<DAG>::GetFeatureStorage() const {
-  if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<Feature>) {
+  if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<
+                    Feature>) {
     return dag_.storage_.edges_.template GetFeatureAt<Feature>(id_);
   } else {
-    return std::get<Feature>(dag_.storage_.edges_.edges_.at(id_.value).features_);
+    return std::get<Feature>(dag_.storage_.edges_.EdgeAt(id_).features_);
   }
 }
 
