@@ -26,8 +26,10 @@ template <typename BinaryOperatorWeightOps>
 struct SimpleWeightOps {
   using Weight = typename BinaryOperatorWeightOps::Weight;
   BinaryOperatorWeightOps&& binary_operator_weight_ops_ = BinaryOperatorWeightOps();
-  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
-  inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
+  template <typename Node>
+  Weight ComputeLeaf(Node node);
+  template <typename Edge>
+  Weight ComputeEdge(Edge edge);
   inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(
       std::vector<Weight>);
   inline Weight BetweenClades(std::vector<Weight>);

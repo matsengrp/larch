@@ -13,7 +13,7 @@
 using Weight = typename WeightAccumulator<ParsimonyScore>::Weight;
 
 static void test_weight_accum(MADAG dag, Weight expected_score) {
-  SubtreeWeight<WeightAccumulator<ParsimonyScore>> parsimonycount(dag);
+  SubtreeWeight<MADAG, WeightAccumulator<ParsimonyScore>> parsimonycount(dag);
 
   Weight score = parsimonycount.ComputeWeightBelow(dag.GetRoot(), {});
 

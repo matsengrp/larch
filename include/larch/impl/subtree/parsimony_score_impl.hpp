@@ -1,9 +1,13 @@
 #include <algorithm>
 
-ParsimonyScore::Weight ParsimonyScore::ComputeLeaf(MADAG, NodeId) { return 0; }
+template <typename Node>
+ParsimonyScore::Weight ParsimonyScore::ComputeLeaf(Node) {
+  return 0;
+}
 
-ParsimonyScore::Weight ParsimonyScore::ComputeEdge(MADAG dag, EdgeId edge_id) {
-  return dag.Get(edge_id).GetEdgeMutations().size();
+template <typename Edge>
+ParsimonyScore::Weight ParsimonyScore::ComputeEdge(Edge edge) {
+  return edge.GetEdgeMutations().size();
 }
 
 std::pair<ParsimonyScore::Weight, std::vector<size_t>>

@@ -3,19 +3,6 @@
 #endif
 
 template <typename Storage, typename... Features>
-template <typename Feature>
-Feature& DefaultEdgesContainer<Storage, Features...>::GetFeatureAt(EdgeId id) {
-  return std::get<std::vector<Feature>>(features_).at(id.value);
-}
-
-template <typename Storage, typename... Features>
-template <typename Feature>
-const Feature& DefaultEdgesContainer<Storage, Features...>::GetFeatureAt(
-    EdgeId id) const {
-  return std::get<std::vector<Feature>>(features_).at(id.value);
-}
-
-template <typename Storage, typename... Features>
 Storage& DefaultEdgesContainer<Storage, Features...>::AddEdge(EdgeId id) {
   return GetOrInsert(edges_, id);
 }

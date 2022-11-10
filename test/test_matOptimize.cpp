@@ -33,7 +33,7 @@ static void test_matOptimize(std::string_view input_dag_path,
 
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();
-    SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
+    SubtreeWeight<MergeDAG, ParsimonyScore> weight{merge.GetResult()};
     auto [sample, dag_ids] = weight.SampleTree({});
     std::ignore = dag_ids;
     check_edge_mutations(sample.View());

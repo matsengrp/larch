@@ -32,14 +32,13 @@ WithinCladeAccumOptimum(std::vector<Weight>);
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 
-template <typename WeightOps>
+template <typename DAG, typename WeightOps>
 class SubtreeWeight {
  public:
-  using Node = MADAG::Node;
-  using Edge = MADAG::Edge;
-  using MutableNode = MutableMADAG::Node;
-  using MutableEdge = MutableMADAG::Edge;
-  explicit SubtreeWeight(MADAG dag);
+  using Node = typename DAG::Node;
+  using Edge = typename DAG::Edge;
+
+  explicit SubtreeWeight(DAG dag);
 
   typename WeightOps::Weight ComputeWeightBelow(Node node, WeightOps&& weight_ops);
 
@@ -64,7 +63,7 @@ class SubtreeWeight {
                    EdgeSelector&& edge_selector, MutableMADAG result,
                    std::vector<NodeId>& result_dag_ids);
 
-  MADAG dag_;
+  DAG dag_;
 
   // Indexed by NodeId.
   std::vector<std::optional<typename WeightOps::Weight>> cached_weights_;

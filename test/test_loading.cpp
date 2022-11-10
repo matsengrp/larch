@@ -63,7 +63,7 @@ static void test_loading_dag(std::string_view path) {
   MADAGStorage tree1 = LoadDAGFromProtobuf("temp_tree.pb");
   AssertDAGsEqual(tree0.View(), tree1.View());
 
-  SubtreeWeight<ParsimonyScore> weight(tree0.View());
+  SubtreeWeight<MADAG, ParsimonyScore> weight(tree0.View());
   MADAGStorage sampled0 = weight.SampleTree({}).first;
 
   fill_static_reference_sequence(sampled0.View().GetReferenceSequence());

@@ -81,8 +81,10 @@ struct WeightAccumulator {
   using Weight = WeightCounter<WeightOps>;
   WeightAccumulator() = default;
   WeightAccumulator(const WeightOps& ops);
-  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
-  inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
+  template <typename Node>
+  Weight ComputeLeaf(Node node);
+  template <typename Edge>
+  Weight ComputeEdge(Edge edge);
 
   /*
    * Given a vector of weights for edges below a clade, compute the minimum

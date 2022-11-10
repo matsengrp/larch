@@ -16,12 +16,12 @@
 #endif
 
 static void test_sample_tree(MADAG dag) {
-  SubtreeWeight<ParsimonyScore> weight(dag);
+  SubtreeWeight<MADAG, ParsimonyScore> weight(dag);
 
   MADAGStorage result = weight.SampleTree({}).first;
   assert_true(result.View().IsTree(), "Tree");
 
-  SubtreeWeight<TreeCount> tree_count{dag};
+  SubtreeWeight<MADAG, TreeCount> tree_count{dag};
   MADAGStorage result2 = tree_count.UniformSampleTree({}).first;
   assert_true(result2.View().IsTree(), "Tree");
 }
@@ -42,7 +42,7 @@ static void bench_sampling(std::string_view path, std::string_view refseq_path) 
   Merge merge{dag.View().GetReferenceSequence()};
   merge.AddDAGs({dag.View()});
   merge.ComputeResultEdgeMutations();
-  SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
+  SubtreeWeight<MergeDAG, ParsimonyScore> weight{merge.GetResult()};
   std::ignore = weight.SampleTree({});
   bench.stop();
 #if defined(CALLGRIND_START_INSTRUMENTATION)

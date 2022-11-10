@@ -14,8 +14,10 @@ struct ParsimonyScore_ {
   using Weight = size_t;
   constexpr static Weight MaxWeight = std::numeric_limits<size_t>::max();
   constexpr static Weight Identity = 0;
-  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
-  inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
+  template <typename Node>
+  Weight ComputeLeaf(Node node);
+  template <typename Edge>
+  Weight ComputeEdge(Edge edge);
   inline bool Compare(Weight lhs, Weight rhs);
   inline bool CompareEqual(Weight lhs, Weight rhs);
   inline bool IsIdentity(Weight weight);

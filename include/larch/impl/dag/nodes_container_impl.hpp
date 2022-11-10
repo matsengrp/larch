@@ -3,19 +3,6 @@
 #endif
 
 template <typename Storage, typename... Features>
-template <typename Feature>
-Feature& DefaultNodesContainer<Storage, Features...>::GetFeatureAt(NodeId id) {
-  return std::get<std::vector<Feature>>(features_).at(id.value);
-}
-
-template <typename Storage, typename... Features>
-template <typename Feature>
-const Feature& DefaultNodesContainer<Storage, Features...>::GetFeatureAt(
-    NodeId id) const {
-  return std::get<std::vector<Feature>>(features_).at(id.value);
-}
-
-template <typename Storage, typename... Features>
 Storage& DefaultNodesContainer<Storage, Features...>::AddNode(NodeId id) {
   return GetOrInsert(nodes_, id);
 }

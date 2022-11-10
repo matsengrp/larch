@@ -53,3 +53,14 @@ inline auto& GetFeatureStorage(const FeatureReader<Feature, View>* reader);
   friend class EdgeView; \
   template <typename>    \
   friend class DAGView
+
+template <typename Feature>
+class NoGlobalData {
+};
+
+template <typename, typename = void>
+constexpr bool has_global_data{};
+
+template <typename Feature>
+constexpr bool has_global_data<Feature, std::void_t<typename Feature::GlobalData> > =
+    true;

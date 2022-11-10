@@ -33,7 +33,7 @@ void Merge::AddDAGs(const std::vector<MADAG>& dags) {
   result_dag_.BuildConnections();
 }
 
-MADAG Merge::GetResult() const { return result_dag_; }
+MergeDAG Merge::GetResult() const { return result_dag_; }
 
 const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
   return result_nodes_;

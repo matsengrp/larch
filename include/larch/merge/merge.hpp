@@ -26,6 +26,15 @@ template <typename K, typename V>
 using ConcurrentUnorderedMap =
     tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
+using MergeDAGStorage =
+    DefaultDAGStorage<DefaultNodesContainer<DefaultNodeStorage<CompactGenome, SampleId>,
+                                            Deduplicate<NodeId, LeafSet>>,
+                      DefaultEdgesContainer<DefaultEdgeStorage<EdgeMutations>>,
+                      ReferenceSequence>;
+
+using MergeDAG = DAGView<const MergeDAGStorage>;
+using MutableMergeDAG = DAGView<MergeDAGStorage>;
+
 class Merge {
  public:
   using Node = MADAG::Node;
@@ -56,7 +65,7 @@ class Merge {
    * Get the DAG resulting from merge
    * @{
    */
-  inline MADAG GetResult() const;
+  inline MergeDAG GetResult() const;
   /** @} */
 
   /**
@@ -102,8 +111,8 @@ class Merge {
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;
 
   // Resulting DAG from merging the input DAGs.
-  MADAGStorage result_dag_storage_;
-  MutableMADAG result_dag_;
+  MergeDAGStorage result_dag_storage_;
+  MutableMergeDAG result_dag_;
 };
 
 #include "larch/impl/merge/merge_impl.hpp"
