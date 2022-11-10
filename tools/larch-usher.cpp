@@ -108,7 +108,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
 
     MAT::Node* curr_node = move.src;
     while (not(curr_node->node_id == lca_id.value)) {
-      MADAG::Node node = merge_.GetResult().Get(NodeId{curr_node->node_id});
+      MergeDAG::Node node = merge_.GetResult().Get(NodeId{curr_node->node_id});
       const auto& clades =
           merge_.GetResultNodeLabels().at(node.GetId().value).GetLeafSet()->GetClades();
       if (not merge_.ContainsLeafset(clades_difference(clades, src_clades))) {
@@ -122,7 +122,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
 
     curr_node = move.dst;
     while (not(curr_node->node_id == lca_id.value)) {
-      MADAG::Node node = merge_.GetResult().Get(NodeId{curr_node->node_id});
+      MergeDAG::Node node = merge_.GetResult().Get(NodeId{curr_node->node_id});
       const auto& clades =
           merge_.GetResultNodeLabels().at(node.GetId().value).GetLeafSet()->GetClades();
       if (not merge_.ContainsLeafset(clades_union(clades, dst_clades))) {
@@ -226,14 +226,15 @@ int main(int argc, char** argv) {
   std::vector<MADAGStorage> optimized_dags;
 
   auto logger = [&merge, &logfile](size_t iteration) {
-    SubtreeWeight<WeightAccumulator<ParsimonyScore>> weightcounter{merge.GetResult()};
+    SubtreeWeight<MergeDAG, WeightAccumulator<ParsimonyScore>> weightcounter{
+        merge.GetResult()};
     merge.ComputeResultEdgeMutations();
     auto parsimonyscores =
         weightcounter.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
 
     std::cout << "Parsimony scores of trees in DAG: " << parsimonyscores << "\n";
 
-    SubtreeWeight<TreeCount> treecount{merge.GetResult()};
+    SubtreeWeight<MergeDAG, TreeCount> treecount{merge.GetResult()};
     auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     std::cout << "Total trees in DAG: " << ntrees << "\n";
     logfile << '\n'
@@ -248,7 +249,7 @@ int main(int argc, char** argv) {
               << " #######\n";
 
     merge.ComputeResultEdgeMutations();
-    SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
+    SubtreeWeight<MergeDAG, ParsimonyScore> weight{merge.GetResult()};
     auto [sample, dag_ids] = weight.SampleTree({});
     check_edge_mutations(sample.View());
     Larch_Move_Found_Callback callback{merge, sample.View(), dag_ids};
