@@ -25,6 +25,21 @@ FILE* movalbe_src_log;
 bool changing_radius = false;
 bool use_bound = true;
 
+static uint8_t EncodeBase(char base) {
+  switch (base) {
+    case 'A':
+      return 1;
+    case 'C':
+      return 2;
+    case 'G':
+      return 4;
+    case 'T':
+      return 8;
+    default:
+      Fail("Invalid base");
+  };
+}
+
 static void mat_from_dag_helper(MADAG::Node dag_node, MAT::Node* mat_par_node,
                                 size_t& node_id, MAT::Tree& new_tree) {
   mat_par_node->children.reserve(dag_node.GetCladesCount());

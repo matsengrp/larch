@@ -5,7 +5,8 @@
 template <typename DAG>
 class EdgeView
     : public DAG::StorageType::EdgesContainerType::StorageType::template ViewBase<DAG>,
-      public DAG::StorageType::EdgesContainerType::template ViewBase<DAG> {
+      public DAG::StorageType::EdgesContainerType::template ViewBase<DAG>,
+      public DAG::StorageType::template EdgeViewBaseType<DAG> {
  public:
   constexpr static const bool is_mutable = DAG::is_mutable;
   using Node = typename DAG::Node;
@@ -13,6 +14,10 @@ class EdgeView
   operator EdgeView<typename DAG::Immutable>();
   operator EdgeId();
   operator CladeIdx();
+  template <typename Feature>
+  auto& Get();
+  template <typename Feature>
+  void Set(Feature&& feature);
   auto& GetDAG();
   EdgeId GetId();
   auto GetParent();
@@ -27,8 +32,6 @@ class EdgeView
  private:
   DAG_FEATURE_FRIENDS;
   auto& GetStorage() const;
-  template <typename Feature>
-  auto& GetFeatureStorage() const;
   DAG dag_;
   EdgeId id_;
 };

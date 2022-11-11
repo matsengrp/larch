@@ -15,9 +15,6 @@
 #include "larch/madag/edge_mutations.hpp"
 
 class CompactGenome {
-  std::vector<std::pair<MutationPosition, char>> mutations_ = {};
-  size_t hash_ = {};
-
  public:
   inline static const CompactGenome* Empty();
   CompactGenome() = default;
@@ -31,8 +28,8 @@ class CompactGenome {
   inline std::optional<char> operator[](MutationPosition pos) const;
   inline std::string ToString() const;
 
-  inline auto begin() const -> decltype(mutations_.begin());
-  inline auto end() const -> decltype(mutations_.end());
+  inline auto begin() const;
+  inline auto end() const;
 
   inline bool empty() const;
 
@@ -49,6 +46,8 @@ class CompactGenome {
   DAG_FEATURE_FRIENDS;
   inline static size_t ComputeHash(
       const std::vector<std::pair<MutationPosition, char>>& mutations);
+  std::vector<std::pair<MutationPosition, char>> mutations_ = {};
+  size_t hash_ = {};
 };
 
 template <typename View>
@@ -60,7 +59,6 @@ class FeatureReader<CompactGenome, View> {
 template <typename View>
 class FeatureWriter<CompactGenome, View> : public FeatureReader<CompactGenome, View> {
  public:
-  CompactGenome& GetCompactGenome();
   void SetCompactGenome(CompactGenome&& compact_genome);
 };
 

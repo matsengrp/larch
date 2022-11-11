@@ -23,6 +23,30 @@ static void Parse(T& data, std::string_view path) {
     Assert(parsed);
   }
 }
+#include <iostream>
+static char DecodeBase(int base) {
+  switch (base) {
+    case 0:
+      return 'A';
+    case 1:
+      return 'C';
+    case 2:
+      return 'G';
+    case 3:
+      return 'T';
+    default:
+      std::cout << "\nBase " << base << "\n";
+      Fail("Invalid base");
+  };
+}
+
+static const auto DecodeMutation =
+    [](auto& mut) -> std::pair<MutationPosition, std::pair<char, char>> {
+  Assert(mut.position() > 0);
+  Assert(mut.mut_nuc().size() == 1);
+  return {{static_cast<size_t>(mut.position())},
+          {DecodeBase(mut.par_nuc()), DecodeBase(mut.mut_nuc().Get(0))}};
+};
 
 MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
   ProtoDAG::data data;
@@ -40,7 +64,7 @@ MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
     auto edge = result.View().AddEdge(
         {edge_id++}, {static_cast<size_t>(i.parent_node())},
         {static_cast<size_t>(i.child_node())}, {static_cast<size_t>(i.parent_clade())});
-    auto& muts = edge.GetEdgeMutations();
+    EdgeMutations muts;
     for (const auto& mut : i.edge_mutations()) {
       static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
       Assert(mut.position() > 0);
@@ -49,20 +73,13 @@ MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
           decode.at(static_cast<size_t>(mut.par_nuc())),
           decode.at(static_cast<size_t>(mut.mut_nuc().Get(0)))};
     }
+    edge.SetEdgeMutations(std::move(muts));
   }
+
   result.View().BuildConnections();
   result.View().AssertUA();
   return result;
 }
-
-static const auto DecodeMutation =
-    [](auto& mut) -> std::pair<MutationPosition, std::pair<char, char>> {
-  static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
-  Assert(mut.mut_nuc().size() == 1);
-  return {{static_cast<size_t>(mut.position())},
-          {decode.at(static_cast<size_t>(mut.par_nuc())),
-           decode.at(static_cast<size_t>(mut.mut_nuc().Get(0)))}};
-};
 
 MADAGStorage LoadTreeFromProtobuf(std::string_view path,
                                   std::string_view reference_sequence) {
@@ -87,7 +104,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
   for (auto node : result.View().GetNodes()) {
     if (node.IsLeaf()) {
-      node.SetSampleId(seq_ids[node.GetId().value]);
+      node.SetSampleId(std::move(seq_ids[node.GetId().value]));
     }
   }
 
@@ -99,9 +116,11 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
   auto apply_mutations = [](auto& self, MutableMADAG::Edge edge,
                             const auto& node_mutations, size_t& idx) -> void {
     const auto& pb_muts = node_mutations.Get(static_cast<int>(idx++)).mutation();
+    EdgeMutations muts;
     for (auto i : pb_muts | ranges::views::transform(DecodeMutation)) {
-      edge.GetEdgeMutations().insert(i);
+      muts.insert(i);
     }
+    edge.SetEdgeMutations(std::move(muts));
     for (MutableMADAG::Edge child : edge.GetChild().GetChildren()) {
       self(self, child, node_mutations, idx);
     }
@@ -181,7 +200,7 @@ MADAGStorage LoadDAGFromJson(std::string_view path) {
   for ([[maybe_unused]] auto& i : json["nodes"]) {
     MutableMADAG::Node node = result.View().AddNode({id++});
     size_t compact_genome_index = i[0];
-    node.SetCompactGenome(GetCompactGenome(json, compact_genome_index));
+    node.Set<CompactGenome>(GetCompactGenome(json, compact_genome_index));
   }
   id = 0;
   for (auto& i : json["edges"]) {
@@ -192,16 +211,16 @@ MADAGStorage LoadDAGFromJson(std::string_view path) {
   return result;
 }
 
-static uint8_t EncodeBase(char base) {
+static uint8_t EncodeBaseProto(char base) {
   switch (base) {
     case 'A':
-      return 1;
+      return 0;
     case 'C':
-      return 2;
+      return 1;
     case 'G':
-      return 4;
+      return 2;
     case 'T':
-      return 8;
+      return 3;
     default:
       Fail("Invalid base");
   };
@@ -226,9 +245,9 @@ std::string LoadReferenceSequence(std::string_view path) {
 template <typename Mutation>
 void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut) {
   proto_mut->set_position(static_cast<int32_t>(pos));
-  proto_mut->set_ref_nuc(EncodeBase(ref));
-  proto_mut->set_par_nuc(EncodeBase(par));
-  proto_mut->add_mut_nuc(EncodeBase(mut));
+  proto_mut->set_ref_nuc(EncodeBaseProto(ref));
+  proto_mut->set_par_nuc(EncodeBaseProto(par));
+  proto_mut->add_mut_nuc(EncodeBaseProto(mut));
 }
 
 template <typename DAG>
@@ -252,8 +271,8 @@ void StoreDAGToProtobuf(DAG dag, std::string_view path) {
     for (auto [pos, nucs] : edge.GetEdgeMutations()) {
       auto* proto_mut = proto_edge->add_edge_mutations();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
-      proto_mut->set_par_nuc(EncodeBase(nucs.first));
-      proto_mut->add_mut_nuc(EncodeBase(nucs.second));
+      proto_mut->set_par_nuc(EncodeBaseProto(nucs.first));
+      proto_mut->add_mut_nuc(EncodeBaseProto(nucs.second));
     }
   }
 
@@ -306,9 +325,9 @@ void StoreTreeToProtobuf(MADAG dag, std::string_view path) {
     for (auto [pos, mut] : edge.GetEdgeMutations()) {
       auto* proto_mut = proto->add_mutation();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
-      proto_mut->set_ref_nuc(EncodeBase(ref_seq.at(pos.value - 1)));
-      proto_mut->set_par_nuc(EncodeBase(mut.first));
-      proto_mut->add_mut_nuc(EncodeBase(mut.second));
+      proto_mut->set_ref_nuc(EncodeBaseProto(ref_seq.at(pos.value - 1)));
+      proto_mut->set_par_nuc(EncodeBaseProto(mut.first));
+      proto_mut->add_mut_nuc(EncodeBaseProto(mut.second));
       proto_mut->set_chromosome("leaf_0");
     }
     for (MADAG::Edge child : edge.GetChild().GetChildren()) {
@@ -341,7 +360,7 @@ static std::string CompactGenomeToString(MADAG::Node node) {
   std::string result = std::to_string(node.GetId().value);
   result += "\\n";
   size_t count = 0;
-  for (auto [pos, base] : node.GetCompactGenome()) {
+  for (auto [pos, base] : node.Get<CompactGenome>()) {
     result += std::to_string(pos.value);
     result += base;
     result += ++count % 3 == 0 ? "\\n" : " ";

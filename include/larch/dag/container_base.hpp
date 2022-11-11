@@ -25,17 +25,7 @@ class DefaultContainerBase {
   template <typename Feature>
   const Feature& GetFeatureAt(Id id) const;
 
-  template <typename Feature>
-  typename Feature::GlobalData& GetGlobalData();
-
-  template <typename Feature>
-  const typename Feature::GlobalData& GetGlobalData() const;
-
  private:
   DAG_VIEW_FRIENDS;
   [[no_unique_address]] std::tuple<std::vector<Features>...> features_;
-  [[no_unique_address]] std::tuple<
-      std::conditional_t<has_global_data<Features>, typename Features::GlobalData,
-                         NoGlobalData<Features>>...>
-      global_data_;
 };

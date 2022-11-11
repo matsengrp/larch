@@ -5,12 +5,17 @@
 template <typename DAG>
 class NodeView
     : public DAG::StorageType::NodesContainerType::StorageType::template ViewBase<DAG>,
-      public DAG::StorageType::NodesContainerType::template ViewBase<DAG> {
+      public DAG::StorageType::NodesContainerType::template ViewBase<DAG>,
+      public DAG::StorageType::template NodeViewBaseType<DAG> {
  public:
   constexpr static const bool is_mutable = DAG::is_mutable;
   NodeView(DAG dag, NodeId id);
   operator NodeView<typename DAG::Immutable>();
   operator NodeId();
+  template <typename Feature>
+  auto& Get();
+  template <typename Feature>
+  void Set(Feature&& feature);
   auto& GetDAG();
   NodeId GetId();
   auto GetParents();
@@ -33,8 +38,6 @@ class NodeView
  private:
   DAG_FEATURE_FRIENDS;
   auto& GetStorage() const;
-  template <typename Feature>
-  auto& GetFeatureStorage() const;
   DAG dag_;
   NodeId id_;
 };

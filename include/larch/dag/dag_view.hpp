@@ -3,20 +3,22 @@
 #endif
 
 template <typename Storage>
-class DAGView : public Storage::template ViewBase<Storage> {
+class DAGView : public Storage::template DAGViewBaseType<Storage> {
  public:
   constexpr static const bool is_mutable = not std::is_const_v<Storage>;
   using Immutable = DAGView<const Storage>;
   using StorageType = Storage;
-  using Node = typename Storage::NodesContainerType::StorageType::template ViewType<
-      DAGView<Storage>>;
-  using Edge = typename Storage::EdgesContainerType::StorageType::template ViewType<
-      DAGView<Storage>>;
+  using Node = NodeView<DAGView<Storage>>;
+  using Edge = EdgeView<DAGView<Storage>>;
   using NodesContainerFeatures = typename Storage::NodesContainerType::FeaturesType;
   using EdgesContainerFeatures = typename Storage::EdgesContainerType::FeaturesType;
 
   explicit DAGView(Storage& storage);
   operator Immutable() const;
+  template <typename Feature>
+  auto& Get();
+  template <typename Feature>
+  void Set(Feature&& feature);
   Node AddNode(NodeId id);
   Node AppendNode();
   Edge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
@@ -39,7 +41,5 @@ class DAGView : public Storage::template ViewBase<Storage> {
   DAG_FEATURE_FRIENDS;
   DAG_VIEW_FRIENDS;
   auto& GetStorage() const;
-  template <typename Feature>
-  auto& GetFeatureStorage() const;
   Storage& storage_;
 };

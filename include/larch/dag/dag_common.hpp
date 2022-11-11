@@ -35,15 +35,10 @@ class FeatureReader {};
 template <typename Feature, typename View>
 class FeatureWriter {};
 
-template <typename Feature, typename View>
-inline auto& GetFeatureStorage(const FeatureReader<Feature, View>* reader);
-
-#define DAG_FEATURE_FRIENDS                                                \
-  template <typename _Feature_, typename _View_>                           \
-  friend auto& GetFeatureStorage(const FeatureReader<_Feature_, _View_>*); \
-  template <typename, typename>                                            \
-  friend class FeatureReader;                                              \
-  template <typename, typename>                                            \
+#define DAG_FEATURE_FRIENDS     \
+  template <typename, typename> \
+  friend class FeatureReader;   \
+  template <typename, typename> \
   friend class FeatureWriter
 
 #define DAG_VIEW_FRIENDS \
@@ -54,13 +49,14 @@ inline auto& GetFeatureStorage(const FeatureReader<Feature, View>* reader);
   template <typename>    \
   friend class DAGView
 
-template <typename Feature>
-class NoGlobalData {
-};
-
-template <typename, typename = void>
-constexpr bool has_global_data{};
+template <typename Feature, typename View>
+inline auto& GetFeature(FeatureReader<Feature, View>* reader);
 
 template <typename Feature>
-constexpr bool has_global_data<Feature, std::void_t<typename Feature::GlobalData> > =
-    true;
+struct feature_is_per_dag : std::is_same<typename Feature::AttachTo, void> {};
+
+template <typename Feature>
+struct feature_is_per_node : std::is_same<typename Feature::AttachTo, NodeId> {};
+
+template <typename Feature>
+struct feature_is_per_edge : std::is_same<typename Feature::AttachTo, EdgeId> {};

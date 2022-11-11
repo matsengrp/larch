@@ -13,9 +13,6 @@ class NodeLabel;
  * CompactGenomes.
  */
 class LeafSet {
-  std::vector<std::vector<const CompactGenome*>> clades_ = {};
-  size_t hash_ = {};
-
  public:
   inline static const LeafSet* Empty();
   LeafSet() = default;
@@ -31,8 +28,8 @@ class LeafSet {
 
   [[nodiscard]] inline size_t Hash() const noexcept;
 
-  inline auto begin() const -> decltype(clades_.begin());
-  inline auto end() const -> decltype(clades_.end());
+  inline auto begin() const;
+  inline auto end() const;
   inline bool empty() const;
   inline size_t size() const;
 
@@ -43,6 +40,20 @@ class LeafSet {
  private:
   inline static size_t ComputeHash(
       const std::vector<std::vector<const CompactGenome*>>& clades) noexcept;
+  std::vector<std::vector<const CompactGenome*>> clades_ = {};
+  size_t hash_ = {};
+};
+
+template <typename View>
+class FeatureReader<LeafSet, View> {
+ public:
+  const LeafSet& GetLeafSet();
+};
+
+template <typename View>
+class FeatureWriter<LeafSet, View> : public FeatureReader<LeafSet, View> {
+ public:
+  void SetLeafSet(LeafSet&& leaf_set);
 };
 
 template <>

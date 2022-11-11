@@ -98,6 +98,8 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x& operator=(const x&) = delete;      \
   ~x() = default
 
+// tuple_contians
+
 template <typename, typename>
 struct tuple_contians {};
 
@@ -107,3 +109,35 @@ struct tuple_contians<std::tuple<Types...>, Type>
 
 template <typename Tuple, typename Type>
 inline constexpr bool tuple_contians_v = tuple_contians<Tuple, Type>::value;
+
+// filter
+
+template <template <typename> typename Predicate,
+          template <typename...> typename Result, typename... Ts>
+struct filter;
+
+template <template <typename> typename Predicate,
+          template <typename...> typename Result, typename... Ts>
+using filter_t = typename filter<Predicate, Result, Ts...>::type;
+
+template <template <typename> typename Predicate,
+          template <typename...> typename Result>
+struct filter<Predicate, Result> {
+  using type = Result<>;
+};
+
+template <template <typename> typename Predicate,
+          template <typename...> typename Result, typename T, typename... Ts>
+struct filter<Predicate, Result, T, Ts...> {
+  template <typename, typename>
+  struct append;
+  template <typename Head, typename... Tail>
+  struct append<Head, Result<Tail...>> {
+    using type = Result<Head, Tail...>;
+  };
+
+  using type = std::conditional_t<
+      Predicate<T>::value,
+      typename append<T, typename filter<Predicate, Result, Ts...>::type>::type,
+      typename filter<Predicate, Result, Ts...>::type>;
+};

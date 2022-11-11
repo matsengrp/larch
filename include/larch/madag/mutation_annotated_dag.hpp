@@ -34,6 +34,8 @@ class Node;
 
 class ReferenceSequence {
  public:
+  using AttachTo = void;
+
  private:
   DAG_FEATURE_FRIENDS;
   std::string reference_sequence_;
@@ -73,7 +75,7 @@ class FeatureReader<SampleId, View> {
 template <typename View>
 class FeatureWriter<SampleId, View> : public FeatureReader<SampleId, View> {
  public:
-  void SetSampleId(const std::optional<std::string>& sample_id);
+  void SetSampleId(std::optional<std::string>&& sample_id);
 };
 
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"

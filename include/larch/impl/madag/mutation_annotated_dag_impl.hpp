@@ -1,6 +1,7 @@
+#include <vector>
 template <typename View>
 const std::string& FeatureReader<ReferenceSequence, View>::GetReferenceSequence() {
-  return GetFeatureStorage(this).reference_sequence_;
+  return GetFeature(this).reference_sequence_;
 }
 
 template <typename View>
@@ -22,7 +23,7 @@ bool FeatureReader<ReferenceSequence, View>::HaveUA() {
 template <typename View>
 void FeatureWriter<ReferenceSequence, View>::SetReferenceSequence(
     std::string_view reference_sequence) {
-  GetFeatureStorage(this).reference_sequence_ = reference_sequence;
+  GetFeature(this).reference_sequence_ = reference_sequence;
 }
 
 template <typename View>
@@ -44,12 +45,11 @@ void FeatureWriter<ReferenceSequence, View>::RecomputeCompactGenomes() {
   using Node = typename View::Node;
   using Edge = typename View::Edge;
 
-  for (Node node : dag.GetNodes()) {
-    node.GetCompactGenome() = {};
-  }
+  std::vector<CompactGenome> result_cgs;
+  result_cgs.resize(dag.GetNodesCount());
 
-  auto ComputeCG = [&](auto& self, Node for_node) {
-    CompactGenome& compact_genome = for_node.GetCompactGenome();
+  auto ComputeCG = [&](auto& self, Node for_node, std::vector<CompactGenome>& result) {
+    CompactGenome& compact_genome = result.at(for_node.GetId().value);
     if (for_node.IsRoot()) {
       compact_genome = {};
       return;
@@ -58,14 +58,19 @@ void FeatureWriter<ReferenceSequence, View>::RecomputeCompactGenomes() {
       return;
     }
     Edge edge = *(for_node.GetParents().begin());
-    self(self, edge.GetParent());
+    self(self, edge.GetParent(), result);
     const EdgeMutations& mutations = edge.GetEdgeMutations();
-    const CompactGenome& parent = edge.GetParent().GetCompactGenome();
+    const CompactGenome& parent = result.at(edge.GetParentId().value);
     compact_genome.AddParentEdge(mutations, parent, dag.GetReferenceSequence());
   };
+  for (Node node : dag.GetNodes()) {
+    ComputeCG(ComputeCG, node, result_cgs);
+  }
+  for (Node node : dag.GetNodes()) {
+    node.SetCompactGenome(std::move(result_cgs.at(node.GetId().value)));
+  }
   std::unordered_map<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {
-    ComputeCG(ComputeCG, node);
     if (node.IsLeaf()) {
       bool success =
           leaf_cgs.emplace(node.GetCompactGenome().Copy(), node.GetId()).second;
@@ -96,11 +101,11 @@ void FeatureWriter<ReferenceSequence, View>::RecomputeEdgeMutations() {
 
 template <typename View>
 const std::optional<std::string>& FeatureReader<SampleId, View>::GetSampleId() {
-  return GetFeatureStorage(this).sample_id_;
+  return GetFeature(this).sample_id_;
 }
 
 template <typename View>
 void FeatureWriter<SampleId, View>::SetSampleId(
-    const std::optional<std::string>& sample_id) {
-  GetFeatureStorage(this).sample_id_ = sample_id;
+    std::optional<std::string>&& sample_id) {
+  GetFeature(this).sample_id_ = sample_id;
 }

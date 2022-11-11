@@ -17,6 +17,6 @@ bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs.value == rhs.value; }
 bool operator<(CladeIdx lhs, CladeIdx rhs) { return lhs.value < rhs.value; }
 
 template <typename Feature, typename View>
-auto& GetFeatureStorage(const FeatureReader<Feature, View>* reader) {
-  return static_cast<const View&>(*reader).template GetFeatureStorage<Feature>();
+auto& GetFeature(FeatureReader<Feature, View>* reader) {
+  return static_cast<View&>(*reader).template Get<Feature>();
 }

@@ -63,13 +63,9 @@ std::optional<char> CompactGenome::operator[](MutationPosition pos) const {
   return std::nullopt;
 }
 
-auto CompactGenome::begin() const -> decltype(mutations_.begin()) {
-  return mutations_.begin();
-}
+auto CompactGenome::begin() const { return mutations_.begin(); }
 
-auto CompactGenome::end() const -> decltype(mutations_.end()) {
-  return mutations_.end();
-}
+auto CompactGenome::end() const { return mutations_.end(); }
 
 bool CompactGenome::empty() const { return mutations_.empty(); }
 
@@ -131,18 +127,13 @@ size_t CompactGenome::ComputeHash(
 
 template <typename View>
 const CompactGenome& FeatureReader<CompactGenome, View>::GetCompactGenome() {
-  return GetFeatureStorage(this);
-}
-
-template <typename View>
-CompactGenome& FeatureWriter<CompactGenome, View>::GetCompactGenome() {
-  return GetFeatureStorage(this);
+  return GetFeature(this);
 }
 
 template <typename View>
 void FeatureWriter<CompactGenome, View>::SetCompactGenome(
     CompactGenome&& compact_genome) {
-  GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);
+  GetFeature(this) = std::forward<CompactGenome>(compact_genome);
 }
 
 std::size_t std::hash<CompactGenome>::operator()(

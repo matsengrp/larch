@@ -16,6 +16,34 @@ EdgeView<DAG>::operator CladeIdx() {
 }
 
 template <typename DAG>
+template <typename Feature>
+auto& EdgeView<DAG>::Get() {
+  if constexpr (DAG::StorageType::template contains_edge_feature<Feature>) {
+    return std::get<Feature>(dag_.storage_.features_);
+  } else if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<
+                           Feature>) {
+    return dag_.storage_.edges_.template GetFeatureAt<Feature>(id_);
+  } else {
+    return std::get<Feature>(dag_.storage_.edges_.EdgeAt(id_).features_);
+  }
+}
+
+template <typename DAG>
+template <typename Feature>
+void EdgeView<DAG>::Set(Feature&& feature) {
+  if constexpr (DAG::StorageType::template contains_node_feature<Feature>) {
+    std::get<Feature>(dag_.storage_.features_) = std::forward<Feature>(feature);
+  } else if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<
+                           Feature>) {
+    dag_.storage_.edges_.template GetFeatureAt<Feature>(id_) =
+        std::forward<Feature>(feature);
+  } else {
+    std::get<Feature>(dag_.storage_.edges_.EdgeAt(id_).features_) =
+        std::forward<Feature>(feature);
+  }
+}
+
+template <typename DAG>
 auto& EdgeView<DAG>::GetDAG() {
   return dag_;
 }
@@ -68,17 +96,6 @@ bool EdgeView<DAG>::IsLeaf() {
 template <typename DAG>
 auto& EdgeView<DAG>::GetStorage() const {
   return dag_.storage_.edges_.EdgeAt(id_);
-}
-
-template <typename DAG>
-template <typename Feature>
-auto& EdgeView<DAG>::GetFeatureStorage() const {
-  if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<
-                    Feature>) {
-    return dag_.storage_.edges_.template GetFeatureAt<Feature>(id_);
-  } else {
-    return std::get<Feature>(dag_.storage_.edges_.EdgeAt(id_).features_);
-  }
 }
 
 template <std::size_t Index, typename DAG>

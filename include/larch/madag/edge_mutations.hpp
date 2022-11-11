@@ -50,7 +50,6 @@ class FeatureReader<EdgeMutations, View> {
 template <typename View>
 class FeatureWriter<EdgeMutations, View> : public FeatureReader<EdgeMutations, View> {
  public:
-  EdgeMutations& GetEdgeMutations();
   void SetEdgeMutations(EdgeMutations&& edge_mutations);
 };
 

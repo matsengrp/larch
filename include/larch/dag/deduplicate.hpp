@@ -7,17 +7,13 @@
 template <typename Id, typename Feature>
 class Deduplicate {
  public:
+  using AttachTo = Id;
   using Map =
       tbb::concurrent_unordered_map<Id, Feature, std::hash<Id>, std::equal_to<Id>>;
 
-  class GlobalData {
-   public:
-   private:
-    Map map_;
-  };
-
  private:
-  Feature* feature_;
+  Map map_;
+  std::vector<const Feature*> per_element_data_;
 };
 
 template <typename Id, typename Feature, typename View>

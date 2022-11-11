@@ -48,16 +48,11 @@ bool EdgeMutations::operator!=(const EdgeMutations& rhs) const {
 
 template <typename View>
 const EdgeMutations& FeatureReader<EdgeMutations, View>::GetEdgeMutations() {
-  return GetFeatureStorage(this);
-}
-
-template <typename View>
-EdgeMutations& FeatureWriter<EdgeMutations, View>::GetEdgeMutations() {
-  return GetFeatureStorage(this);
+  return GetFeature(this);
 }
 
 template <typename View>
 void FeatureWriter<EdgeMutations, View>::SetEdgeMutations(
     EdgeMutations&& edge_mutations) {
-  GetFeatureStorage(this) = std::forward<EdgeMutations>(edge_mutations);
+  GetFeature(this) = std::forward<EdgeMutations>(edge_mutations);
 }

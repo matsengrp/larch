@@ -49,8 +49,8 @@ void Merge::ComputeResultEdgeMutations() {
     Assert(label.GetChild().GetCompactGenome());
     const CompactGenome& parent = *label.GetParent().GetCompactGenome();
     const CompactGenome& child = *label.GetChild().GetCompactGenome();
-    result_dag_.Get(edge_id).GetEdgeMutations() = CompactGenome::ToEdgeMutations(
-        result_dag_.GetReferenceSequence(), parent, child);
+    result_dag_.Get(edge_id).SetEdgeMutations(CompactGenome::ToEdgeMutations(
+        result_dag_.GetReferenceSequence(), parent, child));
   }
 }
 

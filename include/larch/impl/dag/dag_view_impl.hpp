@@ -11,6 +11,18 @@ DAGView<Storage>::operator Immutable() const {
 }
 
 template <typename Storage>
+template <typename Feature>
+auto& DAGView<Storage>::Get() {
+  return std::get<Feature>(storage_.features_);
+}
+
+template <typename Storage>
+template <typename Feature>
+void DAGView<Storage>::Set(Feature&& feature) {
+  std::get<Feature>(storage_.features_) = std::forward<Feature>(feature);
+}
+
+template <typename Storage>
 typename DAGView<Storage>::Node DAGView<Storage>::AddNode(NodeId id) {
   Assert(id.value != NoId);
   storage_.nodes_.AddNode(id);
@@ -148,10 +160,4 @@ auto DAGView<Storage>::GetLeafs() {
 template <typename Storage>
 auto& DAGView<Storage>::GetStorage() const {
   return storage_;
-}
-
-template <typename Storage>
-template <typename Feature>
-auto& DAGView<Storage>::GetFeatureStorage() const {
-  return std::get<Feature>(storage_.features_);
 }

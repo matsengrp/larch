@@ -41,9 +41,9 @@ bool LeafSet::operator==(const LeafSet& rhs) const noexcept {
 
 size_t LeafSet::Hash() const noexcept { return hash_; }
 
-auto LeafSet::begin() const -> decltype(clades_.begin()) { return clades_.begin(); }
+auto LeafSet::begin() const { return clades_.begin(); }
 
-auto LeafSet::end() const -> decltype(clades_.end()) { return clades_.end(); }
+auto LeafSet::end() const { return clades_.end(); }
 
 bool LeafSet::empty() const { return clades_.empty(); }
 
