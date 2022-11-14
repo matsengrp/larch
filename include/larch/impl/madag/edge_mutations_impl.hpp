@@ -54,5 +54,5 @@ const EdgeMutations& FeatureReader<EdgeMutations, View>::GetEdgeMutations() {
 template <typename View>
 void FeatureWriter<EdgeMutations, View>::SetEdgeMutations(
     EdgeMutations&& edge_mutations) {
-  GetFeature(this) = std::forward<EdgeMutations>(edge_mutations);
+  SetFeature(this, std::forward<EdgeMutations>(edge_mutations));
 }

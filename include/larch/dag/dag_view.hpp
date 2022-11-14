@@ -3,7 +3,7 @@
 #endif
 
 template <typename Storage>
-class DAGView : public Storage::template DAGViewBaseType<Storage> {
+class DAGView : public Storage::template DAGViewBase<Storage> {
  public:
   constexpr static const bool is_mutable = not std::is_const_v<Storage>;
   using Immutable = DAGView<const Storage>;

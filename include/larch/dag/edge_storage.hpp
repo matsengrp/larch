@@ -10,9 +10,9 @@ class DefaultEdgeStorage {
 
   template <typename DAG>
   class ViewBase
-      : public std::conditional_t<DAG::is_mutable,
-                                  FeatureWriter<Features, EdgeView<DAG>>,
-                                  FeatureReader<Features, EdgeView<DAG>>>... {};
+      : public std::conditional_t<
+            DAG::is_mutable, typename FeatureTraits<Features, ViewType<DAG>>::Writer,
+            typename FeatureTraits<Features, ViewType<DAG>>::Reader>... {};
 
  private:
   DAG_FEATURE_FRIENDS;

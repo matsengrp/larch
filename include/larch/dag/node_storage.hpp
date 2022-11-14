@@ -10,9 +10,9 @@ class DefaultNodeStorage {
 
   template <typename DAG>
   class ViewBase
-      : public std::conditional_t<DAG::is_mutable,
-                                  FeatureWriter<Features, NodeView<DAG>>,
-                                  FeatureReader<Features, NodeView<DAG>>>... {};
+      : public std::conditional_t<
+            DAG::is_mutable, typename FeatureTraits<Features, ViewType<DAG>>::Writer,
+            typename FeatureTraits<Features, ViewType<DAG>>::Reader>... {};
 
   void ClearConnections();
   void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent);

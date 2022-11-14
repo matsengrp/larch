@@ -35,6 +35,14 @@ class FeatureReader {};
 template <typename Feature, typename View>
 class FeatureWriter {};
 
+template <typename Feature, typename View>
+struct FeatureTraits {
+  using Reader = FeatureReader<Feature, View>;
+  using Writer = FeatureWriter<Feature, View>;
+  template <typename Id>
+  using GlobalData = void;
+};
+
 #define DAG_FEATURE_FRIENDS     \
   template <typename, typename> \
   friend class FeatureReader;   \
@@ -50,13 +58,7 @@ class FeatureWriter {};
   friend class DAGView
 
 template <typename Feature, typename View>
-inline auto& GetFeature(FeatureReader<Feature, View>* reader);
+inline const auto& GetFeature(FeatureReader<Feature, View>* reader);
 
-template <typename Feature>
-struct feature_is_per_dag : std::is_same<typename Feature::AttachTo, void> {};
-
-template <typename Feature>
-struct feature_is_per_node : std::is_same<typename Feature::AttachTo, NodeId> {};
-
-template <typename Feature>
-struct feature_is_per_edge : std::is_same<typename Feature::AttachTo, EdgeId> {};
+template <typename Feature, typename View>
+inline void SetFeature(FeatureWriter<Feature, View>* writer, Feature&& feature);

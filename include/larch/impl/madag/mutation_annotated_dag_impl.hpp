@@ -1,4 +1,7 @@
-#include <vector>
+
+ReferenceSequence::ReferenceSequence(std::string_view reference_sequence)
+    : reference_sequence_{reference_sequence} {}
+
 template <typename View>
 const std::string& FeatureReader<ReferenceSequence, View>::GetReferenceSequence() {
   return GetFeature(this).reference_sequence_;
@@ -23,7 +26,7 @@ bool FeatureReader<ReferenceSequence, View>::HaveUA() {
 template <typename View>
 void FeatureWriter<ReferenceSequence, View>::SetReferenceSequence(
     std::string_view reference_sequence) {
-  GetFeature(this).reference_sequence_ = reference_sequence;
+  SetFeature(this, {reference_sequence});
 }
 
 template <typename View>
@@ -99,6 +102,9 @@ void FeatureWriter<ReferenceSequence, View>::RecomputeEdgeMutations() {
   }
 }
 
+SampleId::SampleId(std::optional<std::string>&& sample_id)
+    : sample_id_{std::forward<decltype(sample_id)>(sample_id)} {}
+
 template <typename View>
 const std::optional<std::string>& FeatureReader<SampleId, View>::GetSampleId() {
   return GetFeature(this).sample_id_;
@@ -107,5 +113,5 @@ const std::optional<std::string>& FeatureReader<SampleId, View>::GetSampleId() {
 template <typename View>
 void FeatureWriter<SampleId, View>::SetSampleId(
     std::optional<std::string>&& sample_id) {
-  GetFeature(this).sample_id_ = sample_id;
+  SetFeature(this, SampleId{std::forward<decltype(sample_id)>(sample_id)});
 }

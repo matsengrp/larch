@@ -5,8 +5,7 @@
 template <typename DAG>
 class EdgeView
     : public DAG::StorageType::EdgesContainerType::StorageType::template ViewBase<DAG>,
-      public DAG::StorageType::EdgesContainerType::template ViewBase<DAG>,
-      public DAG::StorageType::template EdgeViewBaseType<DAG> {
+      public DAG::StorageType::EdgesContainerType::template ViewBase<DAG> {
  public:
   constexpr static const bool is_mutable = DAG::is_mutable;
   using Node = typename DAG::Node;

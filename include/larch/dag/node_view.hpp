@@ -5,8 +5,7 @@
 template <typename DAG>
 class NodeView
     : public DAG::StorageType::NodesContainerType::StorageType::template ViewBase<DAG>,
-      public DAG::StorageType::NodesContainerType::template ViewBase<DAG>,
-      public DAG::StorageType::template NodeViewBaseType<DAG> {
+      public DAG::StorageType::NodesContainerType::template ViewBase<DAG> {
  public:
   constexpr static const bool is_mutable = DAG::is_mutable;
   NodeView(DAG dag, NodeId id);

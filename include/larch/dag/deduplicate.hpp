@@ -2,27 +2,42 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
-#include <tbb/concurrent_unordered_map.h>
+#include <tbb/concurrent_unordered_set.h>
 
-template <typename Id, typename Feature>
+template <typename Feature>
 class Deduplicate {
  public:
-  using AttachTo = Id;
-  using Map =
-      tbb::concurrent_unordered_map<Id, Feature, std::hash<Id>, std::equal_to<Id>>;
+  inline static const Feature Empty = {};
+
+  template <typename Id>
+  class GlobalData {
+   public:
+    using DeduplicatedStorage =
+        tbb::concurrent_unordered_set<Feature, std::hash<Feature>,
+                                      std::equal_to<Feature>>;
+
+    GlobalData(const GlobalData&) = delete;
+    GlobalData(GlobalData&&) = default;
+    GlobalData& operator=(const GlobalData&) = delete;
+    GlobalData& operator=(GlobalData&&) = default;
+
+    GlobalData();
+
+    const Feature& Get(const Deduplicate<Feature>& self, Id id) const;
+    void Set(Deduplicate<Feature>& self, Id id, Feature&& feature);
+
+   private:
+    DeduplicatedStorage deduplicated_storage_;
+  };
 
  private:
-  Map map_;
-  std::vector<const Feature*> per_element_data_;
+  const Feature* feature_ = &Empty;
 };
 
-template <typename Id, typename Feature, typename View>
-class FeatureReader<Deduplicate<Id, Feature>, View> {
- public:
-};
-
-template <typename Id, typename Feature, typename View>
-class FeatureWriter<Deduplicate<Id, Feature>, View>
-    : public FeatureReader<Deduplicate<Id, Feature>, View> {
- public:
+template <typename Feature, typename View>
+struct FeatureTraits<Deduplicate<Feature>, View> {
+  using Reader = FeatureReader<Feature, View>;
+  using Writer = FeatureWriter<Feature, View>;
+  template <typename Id>
+  using GlobalData = typename Deduplicate<Feature>::GlobalData<Id>;
 };

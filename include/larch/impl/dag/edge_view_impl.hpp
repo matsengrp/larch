@@ -18,10 +18,8 @@ EdgeView<DAG>::operator CladeIdx() {
 template <typename DAG>
 template <typename Feature>
 auto& EdgeView<DAG>::Get() {
-  if constexpr (DAG::StorageType::template contains_edge_feature<Feature>) {
-    return std::get<Feature>(dag_.storage_.features_);
-  } else if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<
-                           Feature>) {
+  if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<
+                    Feature>) {
     return dag_.storage_.edges_.template GetFeatureAt<Feature>(id_);
   } else {
     return std::get<Feature>(dag_.storage_.edges_.EdgeAt(id_).features_);
@@ -31,12 +29,10 @@ auto& EdgeView<DAG>::Get() {
 template <typename DAG>
 template <typename Feature>
 void EdgeView<DAG>::Set(Feature&& feature) {
-  if constexpr (DAG::StorageType::template contains_node_feature<Feature>) {
-    std::get<Feature>(dag_.storage_.features_) = std::forward<Feature>(feature);
-  } else if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<
-                           Feature>) {
-    dag_.storage_.edges_.template GetFeatureAt<Feature>(id_) =
-        std::forward<Feature>(feature);
+  if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<
+                    Feature>) {
+    dag_.storage_.edges_.template SetFeatureAt<Feature>(id_,
+                                                        std::forward<Feature>(feature));
   } else {
     std::get<Feature>(dag_.storage_.edges_.EdgeAt(id_).features_) =
         std::forward<Feature>(feature);

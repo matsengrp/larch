@@ -34,7 +34,8 @@ class Node;
 
 class ReferenceSequence {
  public:
-  using AttachTo = void;
+  ReferenceSequence() = default;
+  inline ReferenceSequence(std::string_view reference_sequence);
 
  private:
   DAG_FEATURE_FRIENDS;
@@ -61,6 +62,9 @@ class FeatureWriter<ReferenceSequence, View>
 
 class SampleId {
  public:
+  SampleId() = default;
+  inline SampleId(std::optional<std::string>&& sample_id);
+
  private:
   DAG_FEATURE_FRIENDS;
   std::optional<std::string> sample_id_;

@@ -133,7 +133,7 @@ const CompactGenome& FeatureReader<CompactGenome, View>::GetCompactGenome() {
 template <typename View>
 void FeatureWriter<CompactGenome, View>::SetCompactGenome(
     CompactGenome&& compact_genome) {
-  GetFeature(this) = std::forward<CompactGenome>(compact_genome);
+  SetFeature(this, std::forward<CompactGenome>(compact_genome));
 }
 
 std::size_t std::hash<CompactGenome>::operator()(
