@@ -30,6 +30,12 @@ class DefaultContainerBase {
   template <typename Feature>
   void SetFeatureAt(Id id, Feature&& feature);
 
+  template <typename Feature>
+  auto& GetFeatureGlobalData();
+
+  template <typename Feature>
+  const auto& GetFeatureGlobalData() const;
+
  private:
   template <typename Feature>
   static inline constexpr bool contains_global_data =

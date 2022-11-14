@@ -18,6 +18,7 @@ class DefaultDAGStorage {
   MOVE_ONLY(DefaultDAGStorage);
 
   auto View();
+  auto View() const;
 
  private:
   DAG_FEATURE_FRIENDS;

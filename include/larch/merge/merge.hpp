@@ -96,9 +96,6 @@ class Merge {
   // Every unique node compact genome, found among all input DAGs.
   ConcurrentUnorderedSet<CompactGenome> all_compact_genomes_;
 
-  // Every unique node leaf set, found among all input DAGs.
-  ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
-
   // Node labels for all input DAGs. Outer vector is indexed by input tree idx, inner
   // vector is indexed by node id.
   std::vector<std::vector<NodeLabel>> tree_labels_;
@@ -112,7 +109,6 @@ class Merge {
 
   // Resulting DAG from merging the input DAGs.
   MergeDAGStorage result_dag_storage_;
-  MutableMergeDAG result_dag_;
 };
 
 #include "larch/impl/merge/merge_impl.hpp"

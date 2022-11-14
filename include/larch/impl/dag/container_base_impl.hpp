@@ -29,3 +29,24 @@ void DefaultContainerBase<Id, ViewType, Storage, Features...>::SetFeatureAt(
         std::forward<Feature>(feature);
   }
 }
+
+template <typename Id, template <typename> typename ViewType, typename Storage,
+          typename... Features>
+template <typename Feature>
+auto& DefaultContainerBase<Id, ViewType, Storage, Features...>::GetFeatureGlobalData() {
+  using Type =
+      typename FeatureTraits<Feature,
+                             ViewType<DAGView<Storage>>>::template GlobalData<Id>;
+  return std::get<Type>(features_global_data_);
+}
+
+template <typename Id, template <typename> typename ViewType, typename Storage,
+          typename... Features>
+template <typename Feature>
+const auto&
+DefaultContainerBase<Id, ViewType, Storage, Features...>::GetFeatureGlobalData() const {
+  using Type =
+      typename FeatureTraits<Feature,
+                             ViewType<DAGView<Storage>>>::template GlobalData<Id>;
+  return std::get<Type>(features_global_data_);
+}

@@ -12,13 +12,13 @@ DAGView<Storage>::operator Immutable() const {
 
 template <typename Storage>
 template <typename Feature>
-auto& DAGView<Storage>::Get() {
+auto& DAGView<Storage>::GetFeature() {
   return std::get<Feature>(storage_.features_);
 }
 
 template <typename Storage>
 template <typename Feature>
-void DAGView<Storage>::Set(Feature&& feature) {
+void DAGView<Storage>::SetFeature(Feature&& feature) {
   std::get<Feature>(storage_.features_) = std::forward<Feature>(feature);
 }
 
@@ -155,6 +155,16 @@ auto DAGView<Storage>::GetLeafs() {
          ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
            return Node{*this, {idx++}};
          });
+}
+
+template <typename Storage>
+auto& DAGView<Storage>::GetNodesContainer() {
+  return storage_.nodes_;
+}
+
+template <typename Storage>
+auto& DAGView<Storage>::GetEdgesContainer() {
+  return storage_.edges_;
 }
 
 template <typename Storage>

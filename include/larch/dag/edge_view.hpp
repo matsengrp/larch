@@ -14,9 +14,9 @@ class EdgeView
   operator EdgeId();
   operator CladeIdx();
   template <typename Feature>
-  auto& Get();
+  auto& GetFeature();
   template <typename Feature>
-  void Set(Feature&& feature);
+  void SetFeature(Feature&& feature);
   auto& GetDAG();
   EdgeId GetId();
   auto GetParent();

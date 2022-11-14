@@ -12,9 +12,9 @@ class NodeView
   operator NodeView<typename DAG::Immutable>();
   operator NodeId();
   template <typename Feature>
-  auto& Get();
+  auto& GetFeature();
   template <typename Feature>
-  void Set(Feature&& feature);
+  void SetFeature(Feature&& feature);
   auto& GetDAG();
   NodeId GetId();
   auto GetParents();

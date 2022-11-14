@@ -17,7 +17,7 @@ EdgeView<DAG>::operator CladeIdx() {
 
 template <typename DAG>
 template <typename Feature>
-auto& EdgeView<DAG>::Get() {
+auto& EdgeView<DAG>::GetFeature() {
   if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<
                     Feature>) {
     return dag_.storage_.edges_.template GetFeatureAt<Feature>(id_);
@@ -28,7 +28,7 @@ auto& EdgeView<DAG>::Get() {
 
 template <typename DAG>
 template <typename Feature>
-void EdgeView<DAG>::Set(Feature&& feature) {
+void EdgeView<DAG>::SetFeature(Feature&& feature) {
   if constexpr (DAG::StorageType::EdgesContainerType::template contains_feature<
                     Feature>) {
     dag_.storage_.edges_.template SetFeatureAt<Feature>(id_,

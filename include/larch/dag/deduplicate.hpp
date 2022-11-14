@@ -26,6 +26,9 @@ class Deduplicate {
     const Feature& Get(const Deduplicate<Feature>& self, Id id) const;
     void Set(Deduplicate<Feature>& self, Id id, Feature&& feature);
 
+    const Feature* ContainsUnique(const Feature& feature) const;
+    const Feature* AddUnique(Feature&& feature);
+
    private:
     DeduplicatedStorage deduplicated_storage_;
   };

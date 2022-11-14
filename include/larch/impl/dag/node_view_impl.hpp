@@ -12,7 +12,7 @@ NodeView<DAG>::operator NodeId() {
 
 template <typename DAG>
 template <typename Feature>
-auto& NodeView<DAG>::Get() {
+auto& NodeView<DAG>::GetFeature() {
   if constexpr (DAG::StorageType::NodesContainerType::template contains_feature<
                     Feature>) {
     return dag_.storage_.nodes_.template GetFeatureAt<Feature>(id_);
@@ -23,7 +23,7 @@ auto& NodeView<DAG>::Get() {
 
 template <typename DAG>
 template <typename Feature>
-void NodeView<DAG>::Set(Feature&& feature) {
+void NodeView<DAG>::SetFeature(Feature&& feature) {
   if constexpr (DAG::StorageType::NodesContainerType::template contains_feature<
                     Feature>) {
     dag_.storage_.nodes_.template SetFeatureAt<Feature>(id_,

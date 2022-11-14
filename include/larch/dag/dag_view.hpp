@@ -16,9 +16,9 @@ class DAGView : public Storage::template DAGViewBase<Storage> {
   explicit DAGView(Storage& storage);
   operator Immutable() const;
   template <typename Feature>
-  auto& Get();
+  auto& GetFeature();
   template <typename Feature>
-  void Set(Feature&& feature);
+  void SetFeature(Feature&& feature);
   Node AddNode(NodeId id);
   Node AppendNode();
   Edge AddEdge(EdgeId id, NodeId parent, NodeId child, CladeIdx clade);
@@ -36,6 +36,8 @@ class DAGView : public Storage::template DAGViewBase<Storage> {
   bool HaveRoot();
   auto GetRoot();
   auto GetLeafs();
+  auto& GetNodesContainer();
+  auto& GetEdgesContainer();
 
  private:
   DAG_FEATURE_FRIENDS;

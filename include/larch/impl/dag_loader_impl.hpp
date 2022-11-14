@@ -200,7 +200,7 @@ MADAGStorage LoadDAGFromJson(std::string_view path) {
   for ([[maybe_unused]] auto& i : json["nodes"]) {
     MutableMADAG::Node node = result.View().AddNode({id++});
     size_t compact_genome_index = i[0];
-    node.Set<CompactGenome>(GetCompactGenome(json, compact_genome_index));
+    node.SetCompactGenome(GetCompactGenome(json, compact_genome_index));
   }
   id = 0;
   for (auto& i : json["edges"]) {
@@ -360,7 +360,7 @@ static std::string CompactGenomeToString(MADAG::Node node) {
   std::string result = std::to_string(node.GetId().value);
   result += "\\n";
   size_t count = 0;
-  for (auto [pos, base] : node.Get<CompactGenome>()) {
+  for (auto [pos, base] : node.GetCompactGenome()) {
     result += std::to_string(pos.value);
     result += base;
     result += ++count % 3 == 0 ? "\\n" : " ";

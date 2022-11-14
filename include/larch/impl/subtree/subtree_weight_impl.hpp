@@ -158,7 +158,7 @@ void SubtreeWeight<DAG, WeightOps>::ExtractTree(Node input_node, NodeId parent_i
 
   GetOrInsert(result_dag_ids, parent_id) = input_node.GetId();
 
-  result.Get(parent_id).Set<CompactGenome>(input_node.GetCompactGenome().Copy());
+  result.Get(parent_id).SetCompactGenome(input_node.GetCompactGenome().Copy());
 
   for (auto clade : input_node.GetClades()) {
     Assert(not clade.empty());
