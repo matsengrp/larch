@@ -27,8 +27,8 @@ using ConcurrentUnorderedMap =
     tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
 using MergeDAGStorage = DefaultDAGStorage<
-    DefaultNodesContainer<DefaultNodeStorage<SampleId>, Deduplicate<CompactGenome>,
-                          Deduplicate<LeafSet>>,
+    DefaultNodesContainer<DefaultNodeStorage<SampleId, NodeLabel>,
+                          Deduplicate<CompactGenome>, Deduplicate<LeafSet>>,
     DefaultEdgesContainer<DefaultEdgeStorage<EdgeMutations>>, ReferenceSequence>;
 
 using MergeDAG = DAGView<const MergeDAGStorage>;
@@ -54,7 +54,7 @@ class Merge {
   /**
    * Add DAGs to be merged. The input DAGs are externally owned, and should outlive the
    * Merge object. If the have_compact_genomes parameter is false, the per-node compact
-   * genomes of the input trees will be computed in parallel during the call to AddDAGs.
+   * genomes of the input dags will be computed in parallel during the call to AddDAGs.
    * Otherwise the compact genomes stored in the DAGs will be used, and will be moved
    * into the Merge object storage to avoid duplication.
    */
@@ -72,8 +72,6 @@ class Merge {
    */
   inline const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
 
-  inline const std::vector<NodeLabel>& GetResultNodeLabels() const;
-
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
    */
@@ -82,26 +80,22 @@ class Merge {
   inline bool ContainsLeafset(const LeafSet& leafset) const;
 
  private:
-  inline void ComputeLeafSets(const std::vector<size_t>& tree_idxs);
+  inline void ComputeLeafSets(const std::vector<size_t>& dag_idxs);
 
-  inline void MergeTrees(const std::vector<size_t>& tree_idxs);
+  inline void MergeDAGs(const std::vector<size_t>& dag_idxs);
 
   inline static std::vector<LeafSet> ComputeLeafSets(
       MADAG dag, const std::vector<NodeLabel>& labels);
 
   // Vector of externally owned input DAGs.
-  std::vector<MADAG> trees_;
+  std::vector<MADAG> dags_;
 
-  // Every unique node compact genome, found among all input DAGs.
-  ConcurrentUnorderedSet<CompactGenome> all_compact_genomes_;
-
-  // Node labels for all input DAGs. Outer vector is indexed by input tree idx, inner
+  // Node labels for all input DAGs. Outer vector is indexed by input dag idx, inner
   // vector is indexed by node id.
-  std::vector<std::vector<NodeLabel>> tree_labels_;
+  std::vector<std::vector<NodeLabel>> dags_node_labels_;
 
   // Node ids of the resulting DAG's nodes.
   std::unordered_map<NodeLabel, NodeId> result_nodes_;
-  std::vector<NodeLabel> result_node_labels_;
 
   // Edge ids of the resulting DAG's edges.
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;

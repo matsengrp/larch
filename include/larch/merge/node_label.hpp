@@ -30,6 +30,18 @@ class NodeLabel {
   const LeafSet* leaf_set_;
 };
 
+template <typename View>
+class FeatureReader<NodeLabel, View> {
+ public:
+  const NodeLabel& GetNodeLabel();
+};
+
+template <typename View>
+class FeatureWriter<NodeLabel, View> : public FeatureReader<NodeLabel, View> {
+ public:
+  void SetNodeLabel(NodeLabel&& node_label);
+};
+
 template <>
 struct std::hash<NodeLabel> {
   inline std::size_t operator()(const NodeLabel& nl) const noexcept;

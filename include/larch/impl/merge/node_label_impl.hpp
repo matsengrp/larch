@@ -47,3 +47,14 @@ bool std::equal_to<NodeLabel>::operator()(const NodeLabel& lhs,
                                           const NodeLabel& rhs) const noexcept {
   return lhs == rhs;
 }
+
+template <typename View>
+const NodeLabel& FeatureReader<NodeLabel, View>::GetNodeLabel() {
+  return GetFeature(this);
+}
+
+template <typename View>
+
+void FeatureWriter<NodeLabel, View>::SetNodeLabel(NodeLabel&& node_label) {
+  SetFeature(this, std::forward<NodeLabel>(node_label));
+}
