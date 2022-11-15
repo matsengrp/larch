@@ -6,6 +6,7 @@ template <typename Storage, typename... Features>
 class DefaultNodesContainer
     : public DefaultContainerBase<NodeId, NodeView, Storage, Features...> {
  public:
+  using Base = DefaultContainerBase<NodeId, NodeView, Storage, Features...>;
   Storage& AddNode(NodeId id);
   void InitializeNodes(size_t nodes_count);
   auto View();

@@ -6,6 +6,7 @@ template <typename Storage, typename... Features>
 class DefaultEdgesContainer
     : public DefaultContainerBase<EdgeId, EdgeView, Storage, Features...> {
  public:
+  using Base = DefaultContainerBase<EdgeId, EdgeView, Storage, Features...>;
   Storage& AddEdge(EdgeId id);
   auto View();
   auto View() const;

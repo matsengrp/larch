@@ -4,11 +4,13 @@
 
 template <typename Storage, typename... Features>
 Storage& DefaultNodesContainer<Storage, Features...>::AddNode(NodeId id) {
+  Base::EnsureFeaturesSize(id.value + 1);
   return GetOrInsert(nodes_, id);
 }
 
 template <typename Storage, typename... Features>
 void DefaultNodesContainer<Storage, Features...>::InitializeNodes(size_t nodes_count) {
+  Base::EnsureFeaturesSize(nodes_count);
   nodes_.resize(nodes_count);
 }
 

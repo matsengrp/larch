@@ -16,6 +16,9 @@ class Deduplicate {
         tbb::concurrent_unordered_set<Feature, std::hash<Feature>,
                                       std::equal_to<Feature>>;
 
+    using FeatureType = Feature;
+    using OuterType = Deduplicate<Feature>;
+
     GlobalData(const GlobalData&) = delete;
     GlobalData(GlobalData&&) = default;
     GlobalData& operator=(const GlobalData&) = delete;

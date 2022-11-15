@@ -1,3 +1,4 @@
+#include <type_traits>
 #ifndef DAG_DECLARATIONS
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
@@ -15,8 +16,12 @@ class DefaultContainerBase {
                    Features, ViewType<DAGView<Storage>>>::template GlobalData<Id>...>;
 
   template <typename Feature>
+  using GlobalDataForFeature = decltype(GlobalDataFor<Feature, FeaturesGlobalData>());
+
+  template <typename Feature>
   static inline constexpr bool contains_feature =
-      tuple_contians_v<FeaturesType, std::vector<Feature>>;
+      tuple_contians_v<FeaturesType, std::vector<Feature>> or
+      not std::is_same_v<nullptr_t, GlobalDataForFeature<Feature>>;
 
   template <typename DAG>
   class ViewBase
@@ -36,11 +41,10 @@ class DefaultContainerBase {
   template <typename Feature>
   const auto& GetFeatureGlobalData() const;
 
- private:
-  template <typename Feature>
-  static inline constexpr bool contains_global_data =
-      tuple_contians_v<FeaturesGlobalData, Feature>;
+  template <size_t I = 0>
+  void EnsureFeaturesSize(size_t size);
 
+ private:
   DAG_VIEW_FRIENDS;
   [[no_unique_address]] std::tuple<std::vector<Features>...> features_;
   [[no_unique_address]] FeaturesGlobalData features_global_data_;

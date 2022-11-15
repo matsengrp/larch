@@ -26,11 +26,10 @@ template <typename K, typename V>
 using ConcurrentUnorderedMap =
     tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
-using MergeDAGStorage =
-    DefaultDAGStorage<DefaultNodesContainer<DefaultNodeStorage<CompactGenome, SampleId>,
-                                            Deduplicate<LeafSet>>,
-                      DefaultEdgesContainer<DefaultEdgeStorage<EdgeMutations>>,
-                      ReferenceSequence>;
+using MergeDAGStorage = DefaultDAGStorage<
+    DefaultNodesContainer<DefaultNodeStorage<SampleId>, Deduplicate<CompactGenome>,
+                          Deduplicate<LeafSet>>,
+    DefaultEdgesContainer<DefaultEdgeStorage<EdgeMutations>>, ReferenceSequence>;
 
 using MergeDAG = DAGView<const MergeDAGStorage>;
 using MutableMergeDAG = DAGView<MergeDAGStorage>;

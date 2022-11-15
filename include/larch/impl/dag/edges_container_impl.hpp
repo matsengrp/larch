@@ -4,6 +4,7 @@
 
 template <typename Storage, typename... Features>
 Storage& DefaultEdgesContainer<Storage, Features...>::AddEdge(EdgeId id) {
+  Base::EnsureFeaturesSize(id.value + 1);
   return GetOrInsert(edges_, id);
 }
 
