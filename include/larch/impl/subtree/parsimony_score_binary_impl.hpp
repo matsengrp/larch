@@ -24,3 +24,8 @@ ParsimonyScore_::Weight ParsimonyScore_::Combine(ParsimonyScore_::Weight lhs,
                                                  ParsimonyScore_::Weight rhs) {
   return lhs + rhs;
 }
+
+bool MaxParsimonyScore_::Compare(MaxParsimonyScore_::Weight lhs,
+                            MaxParsimonyScore_::Weight rhs) {
+    return lhs > rhs;
+}

@@ -11,12 +11,15 @@
 #include "larch/subtree/subtree_weight.hpp"
 #include "larch/subtree/weight_accumulator.hpp"
 #include "larch/subtree/tree_count.hpp"
+#include "larch/subtree/parsimony_score_binary.hpp"
 #include "larch/subtree/parsimony_score.hpp"
 #include "larch/merge/merge.hpp"
 #include "benchmark.hpp"
 #include <mpi.h>
 
 #include "larch/usher_glue.hpp"
+
+
 
 MADAGStorage optimize_dag_direct(MADAG dag, Move_Found_Callback& callback);
 [[noreturn]] static void Usage() {
@@ -213,7 +216,7 @@ int main(int argc, char** argv) try {
 
   std::ofstream logfile;
   logfile.open(logfile_path);
-  logfile << "Iteration\tNTrees\tMaxParsimony\tNTreesMaxParsimony";
+  logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWorstParsimony";
 
   MADAGStorage input_dag =
       refseq_path.empty()
@@ -226,20 +229,26 @@ int main(int argc, char** argv) try {
   std::vector<MADAGStorage> optimized_dags;
 
   auto logger = [&merge, &logfile](size_t iteration) {
-    SubtreeWeight<WeightAccumulator<ParsimonyScore>> weightcounter{merge.GetResult()};
+    SubtreeWeight<BinaryParsimonyScore> parsimonyscorer{merge.GetResult()};
+    SubtreeWeight<MaxBinaryParsimonyScore> maxparsimonyscorer{merge.GetResult()};
     merge.ComputeResultEdgeMutations();
-    auto parsimonyscores =
-        weightcounter.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-
-    std::cout << "Parsimony scores of trees in DAG: " << parsimonyscores << "\n";
-
+    auto minparsimony = parsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
+    auto minparsimonytrees = parsimonyscorer.MinWeightCount(merge.GetResult().GetRoot(), {});
+    auto maxparsimony = maxparsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     SubtreeWeight<TreeCount> treecount{merge.GetResult()};
     auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
+    std::cout << "Best parsimony score in DAG: " << minparsimony << "\n";
+    std::cout << "Worst parsimony score in DAG: " << maxparsimony << "\n";
     std::cout << "Total trees in DAG: " << ntrees << "\n";
+    std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t'
-            << parsimonyscores.GetWeights().begin()->first << '\t'
-            << parsimonyscores.GetWeights().begin()->second << '\t';
+            << merge.GetResult().GetNodesCount() << '\t'
+            << merge.GetResult().GetEdgesCount() << '\t'
+            << minparsimony << '\t'
+            << minparsimonytrees << '\t'
+            << maxparsimony
+            << std::flush;
   };
   logger(0);
 
@@ -248,7 +257,7 @@ int main(int argc, char** argv) try {
               << " #######\n";
 
     merge.ComputeResultEdgeMutations();
-    SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
+    SubtreeWeight<BinaryParsimonyScore> weight{merge.GetResult()};
     auto [sample, dag_ids] = weight.SampleTree({});
     check_edge_mutations(sample.View());
     Larch_Move_Found_Callback callback{merge, sample.View(), dag_ids};

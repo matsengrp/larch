@@ -5,6 +5,7 @@ template <typename WeightOps>
 SubtreeWeight<WeightOps>::SubtreeWeight(MADAG dag)
     : dag_{dag},
       cached_weights_(dag_.GetNodesCount()),
+      cached_subtree_counts_(dag_.GetNodesCount()),
       cached_min_weight_edges_(dag_.GetNodesCount()),
       random_generator_{random_device_()} {}
 
@@ -32,6 +33,33 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(
 
   cached = weight_ops.BetweenClades(cladeweights);
   return *cached;
+}
+
+template <typename WeightOps>
+ArbitraryInt SubtreeWeight<WeightOps>::MinWeightCount(Node node, WeightOps&& weight_ops){
+    NodeId node_id = node.GetId();
+    auto& cached = cached_subtree_counts_.at(node_id.value);
+    if (cached) {
+        return *cached;
+    }
+    if (node.IsLeaf()) {
+        cached = 1;
+        return *cached;
+    }
+    ArbitraryInt nodecount = 1;
+    ArbitraryInt cladecount = 0;
+    // This populates cached_min_weight_edges_:
+    SubtreeWeight<WeightOps>::ComputeWeightBelow(node, std::forward<WeightOps>(weight_ops));
+    for (auto clade : cached_min_weight_edges_.at(node_id.value)) {
+        cladecount = 0;
+        for (auto child_edge_id : clade) {
+            Node child = dag_.Get(child_edge_id).GetChild();
+            cladecount += SubtreeWeight<WeightOps>::MinWeightCount(child, std::forward<WeightOps>(weight_ops));
+        }
+        nodecount *= cladecount;
+    }
+    cached = nodecount;
+    return *cached;
 }
 
 template <typename WeightOps>
