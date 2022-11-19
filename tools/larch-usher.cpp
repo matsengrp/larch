@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -29,7 +30,7 @@ MADAGStorage optimize_dag_direct(MADAG dag, Move_Found_Callback& callback);
   std::cout << "  -i,--input   Path to input DAG\n";
   std::cout << "  -o,--output  Path to output DAG\n";
   std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
-  std::cout << "  -l,--logfile  Name for logging csv file. Default: logfile.csv\n";
+  std::cout << "  -l,--logpath Path for logging\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
   std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
                "reference sequence\nif input points to MAT protobuf\n";
@@ -153,7 +154,7 @@ int main(int argc, char** argv) try {
   std::string input_dag_path;
   std::string output_dag_path;
   std::string matoptimize_path = "matOptimize";
-  std::string logfile_path = "logfile.csv";
+  std::string logfile_path = "optimization_log";
   std::string refseq_path;
   size_t count = 1;
 
@@ -184,9 +185,9 @@ int main(int argc, char** argv) try {
         Fail();
       }
       count = ParseNumber(*params.begin());
-    } else if (name == "-l" or name == "--logfile") {
+    } else if (name == "-l" or name == "--logpath") {
       if (params.empty()) {
-        std::cerr << "Logfile name not specified.\n";
+        std::cerr << "log path name not specified.\n";
         Fail();
       }
       logfile_path = *params.begin();
@@ -211,11 +212,13 @@ int main(int argc, char** argv) try {
     std::cerr << "Path to output DAG not specified.\n";
     Fail();
   }
+  std::filesystem::create_directory(logfile_path);
+  std::string logfile_name = logfile_path + "/logfile.csv";
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
 
   std::ofstream logfile;
-  logfile.open(logfile_path);
+  logfile.open(logfile_name);
   logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWorstParsimony";
 
   MADAGStorage input_dag =
@@ -261,11 +264,14 @@ int main(int argc, char** argv) try {
     auto [sample, dag_ids] = weight.SampleTree({});
     check_edge_mutations(sample.View());
     Larch_Move_Found_Callback callback{merge, sample.View(), dag_ids};
-    StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb");
+    /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
     MADAGStorage result = optimize_dag_direct(sample.View(), callback);
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back().View()});
 
+    if (i % 10 == 0){
+        StoreDAGToProtobuf(merge.GetResult(), logfile_path + "/intermediate_dag.pb");
+    }
     logger(i + 1);
   }
 
