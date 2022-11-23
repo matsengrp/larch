@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+#include <chrono>
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -34,6 +35,7 @@ MADAGStorage optimize_dag_direct(MADAG dag, Move_Found_Callback& callback);
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
   std::cout << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
   std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. Default: 1\n";
+  std::cout << "  --sample-best-tree   Only sample trees with best achieved parsimony score.\n";
   std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
                "reference sequence\nif input points to MAT protobuf\n";
 
@@ -165,6 +167,7 @@ int main(int argc, char** argv) try {
   std::string matoptimize_path = "matOptimize";
   std::string logfile_path = "optimization_log";
   std::string refseq_path;
+  bool sample_best_tree = false;
   size_t count = 1;
   int move_coeff_nodes = 1;
   int move_coeff_pscore = 1;
@@ -204,16 +207,18 @@ int main(int argc, char** argv) try {
       logfile_path = *params.begin();
     } else if (name == "--move-coeff-pscore") {
       if (params.empty()) {
-        std::cerr << "log path name not specified.\n";
+        std::cerr << "parsimony score move coefficient not specified\n";
         Fail();
       }
       move_coeff_pscore = ParseNumber(*params.begin());
     } else if (name == "--move-coeff-nodes") {
       if (params.empty()) {
-        std::cerr << "log path name not specified.\n";
+        std::cerr <<  "parsimony score move coefficient not specified\n";
         Fail();
       }
       move_coeff_nodes = ParseNumber(*params.begin());
+    } else if (name == "--sample-best-tree") {
+      sample_best_tree = true;
     } else if (name == "-r" or name == "--MAT-refseq-file") {
       if (params.empty()) {
         std::cerr << "Mutation annotated tree refsequence fasta path not specified.\n";
@@ -242,7 +247,7 @@ int main(int argc, char** argv) try {
 
   std::ofstream logfile;
   logfile.open(logfile_name);
-  logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWorstParsimony";
+  logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWorstParsimony\tSecondsElapsed";
 
   MADAGStorage input_dag =
       refseq_path.empty()
@@ -254,7 +259,13 @@ int main(int argc, char** argv) try {
   merge.AddDAGs({input_dag.View()});
   std::vector<MADAGStorage> optimized_dags;
 
-  auto logger = [&merge, &logfile](size_t iteration) {
+  auto start_time = std::chrono::high_resolution_clock::now();
+  auto time_elapsed = [&start_time]() {
+      auto now = std::chrono::high_resolution_clock::now();
+      return std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
+  };
+
+  auto logger = [&merge, &logfile, &time_elapsed](size_t iteration) {
     SubtreeWeight<BinaryParsimonyScore> parsimonyscorer{merge.GetResult()};
     SubtreeWeight<MaxBinaryParsimonyScore> maxparsimonyscorer{merge.GetResult()};
     merge.ComputeResultEdgeMutations();
@@ -273,10 +284,12 @@ int main(int argc, char** argv) try {
             << merge.GetResult().GetEdgesCount() << '\t'
             << minparsimony << '\t'
             << minparsimonytrees << '\t'
-            << maxparsimony
+            << maxparsimony << '\t'
+            << time_elapsed()
             << std::flush;
   };
   logger(0);
+
 
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)
@@ -284,7 +297,7 @@ int main(int argc, char** argv) try {
 
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<BinaryParsimonyScore> weight{merge.GetResult()};
-    auto [sample, dag_ids] = weight.SampleTree({});
+    auto [sample, dag_ids] = sample_best_tree ? weight.MinWeightSampleTree({}) : weight.SampleTree({});
     check_edge_mutations(sample.View());
     Larch_Move_Found_Callback callback{merge, sample.View(), dag_ids, {move_coeff_nodes, move_coeff_pscore}};
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */

@@ -114,6 +114,28 @@ SubtreeWeight<WeightOps>::UniformSampleTree(WeightOps&& weight_ops) {
 }
 
 template <typename WeightOps>
+std::pair<MADAGStorage, std::vector<NodeId>>
+SubtreeWeight<WeightOps>::MinWeightSampleTree(WeightOps&& weight_ops) {
+  // Ensure cache is filled
+  ComputeWeightBelow(dag_.GetRoot(), std::forward<WeightOps>(weight_ops));
+  return SampleTreeImpl(std::forward<WeightOps>(weight_ops), [this](auto clade) {
+    EdgeView first_edge = dag_.Get(clade.at(0));
+    auto cached_clade = cached_min_weight_edges_.at(first_edge.GetParentId().value).at(first_edge.GetClade().value);
+    std::set<EdgeId> min_weight_edges(cached_clade.begin(), cached_clade.end());
+    std::vector<double> probabilities;
+    for (EdgeId child_edge : clade) {
+      if (min_weight_edges.count(child_edge)) {
+      probabilities.push_back(1);
+      } else {
+      probabilities.push_back(0);
+      }
+    }
+    return std::discrete_distribution<size_t>{probabilities.begin(),
+                                              probabilities.end()};
+  });
+}
+
+template <typename WeightOps>
 template <typename CladeRange>
 typename WeightOps::Weight SubtreeWeight<WeightOps>::CladeWeight(
     CladeRange&& clade, WeightOps&& weight_ops) {
