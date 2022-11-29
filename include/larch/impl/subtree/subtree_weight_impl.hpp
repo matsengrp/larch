@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <type_traits>
+#include <set>
 
 template <typename WeightOps>
 SubtreeWeight<WeightOps>::SubtreeWeight(MADAG dag)
