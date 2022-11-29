@@ -22,6 +22,12 @@ struct ParsimonyScore_ {
   inline Weight Combine(Weight lhs, Weight rhs);
 };
 
-using ParsimonyScore = SimpleWeightOps<ParsimonyScore_>;
+struct MaxParsimonyScore_ : ParsimonyScore_ {
+  constexpr static Weight MaxWeight = std::numeric_limits<size_t>::min();
+  inline bool Compare(Weight lhs, Weight rhs);
+};
+
+using BinaryParsimonyScore = SimpleWeightOps<ParsimonyScore_>;
+using MaxBinaryParsimonyScore = SimpleWeightOps<MaxParsimonyScore_>;
 
 #include "larch/impl/subtree/parsimony_score_binary_impl.hpp"
