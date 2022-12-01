@@ -21,8 +21,6 @@
 
 #include "larch/usher_glue.hpp"
 
-
-
 MADAGStorage optimize_dag_direct(MADAG dag, Move_Found_Callback& callback);
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
@@ -33,9 +31,12 @@ MADAGStorage optimize_dag_direct(MADAG dag, Move_Found_Callback& callback);
   std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
   std::cout << "  -l,--logpath Path for logging\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
-  std::cout << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
-  std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. Default: 1\n";
-  std::cout << "  --sample-best-tree   Only sample trees with best achieved parsimony score.\n";
+  std::cout
+      << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
+  std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
+               "Default: 1\n";
+  std::cout << "  --sample-best-tree   Only sample trees with best achieved parsimony "
+               "score.\n";
   std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
                "reference sequence\nif input points to MAT protobuf\n";
 
@@ -99,56 +100,66 @@ std::vector<std::vector<const CompactGenome*>> clades_difference(
 struct Larch_Move_Found_Callback : public Move_Found_Callback {
   Larch_Move_Found_Callback(const Merge& merge, MADAG sample,
                             const std::vector<NodeId>& sample_dag_ids)
-      : merge_{merge}, sample_{sample}, sample_dag_ids_{sample_dag_ids}, move_score_coeffs_{1,1} {}
+      : merge_{merge},
+        sample_{sample},
+        sample_dag_ids_{sample_dag_ids},
+        move_score_coeffs_{1, 1} {}
   Larch_Move_Found_Callback(const Merge& merge, MADAG sample,
                             const std::vector<NodeId>& sample_dag_ids,
                             std::pair<int, int> move_score_coeffs)
-      : merge_{merge}, sample_{sample}, sample_dag_ids_{sample_dag_ids}, move_score_coeffs_{move_score_coeffs} {}
+      : merge_{merge},
+        sample_{sample},
+        sample_dag_ids_{sample_dag_ids},
+        move_score_coeffs_{move_score_coeffs} {}
   bool operator()(Profitable_Moves& move, int /* best_score_change */,
                   std::vector<Node_With_Major_Allele_Set_Change>&
                   /* node_with_major_allele_set_change */) override {
     int new_nodes_count = 0;
-    if (move_score_coeffs_.first != 0){
-        NodeId src_id = sample_dag_ids_.at(move.src->node_id);
-        NodeId dst_id = sample_dag_ids_.at(move.dst->node_id);
-        NodeId lca_id = sample_dag_ids_.at(move.LCA->node_id);
+    if (move_score_coeffs_.first != 0) {
+      NodeId src_id = sample_dag_ids_.at(move.src->node_id);
+      NodeId dst_id = sample_dag_ids_.at(move.dst->node_id);
+      NodeId lca_id = sample_dag_ids_.at(move.LCA->node_id);
 
-        const auto& src_clades =
-            merge_.GetResultNodeLabels().at(src_id.value).GetLeafSet()->GetClades();
-        const auto& dst_clades =
-            merge_.GetResultNodeLabels().at(dst_id.value).GetLeafSet()->GetClades();
+      const auto& src_clades =
+          merge_.GetResultNodeLabels().at(src_id.value).GetLeafSet()->GetClades();
+      const auto& dst_clades =
+          merge_.GetResultNodeLabels().at(dst_id.value).GetLeafSet()->GetClades();
 
-
-        MAT::Node* curr_node = move.src;
-        while (not(curr_node->node_id == lca_id.value)) {
-          MADAG::Node node = merge_.GetResult().Get(NodeId{curr_node->node_id});
-          const auto& clades =
-              merge_.GetResultNodeLabels().at(node.GetId().value).GetLeafSet()->GetClades();
-          if (not merge_.ContainsLeafset(clades_difference(clades, src_clades))) {
-            ++new_nodes_count;
-          }
-          curr_node = curr_node->parent;
-          if (curr_node == nullptr) {
-            break;
-          }
+      MAT::Node* curr_node = move.src;
+      while (not(curr_node->node_id == lca_id.value)) {
+        MADAG::NodeView node = merge_.GetResult().Get(NodeId{curr_node->node_id});
+        const auto& clades = merge_.GetResultNodeLabels()
+                                 .at(node.GetId().value)
+                                 .GetLeafSet()
+                                 ->GetClades();
+        if (not merge_.ContainsLeafset(clades_difference(clades, src_clades))) {
+          ++new_nodes_count;
         }
-
-        curr_node = move.dst;
-        while (not(curr_node->node_id == lca_id.value)) {
-          MADAG::Node node = merge_.GetResult().Get(NodeId{curr_node->node_id});
-          const auto& clades =
-              merge_.GetResultNodeLabels().at(node.GetId().value).GetLeafSet()->GetClades();
-          if (not merge_.ContainsLeafset(clades_union(clades, dst_clades))) {
-            ++new_nodes_count;
-          }
-          curr_node = curr_node->parent;
-          if (curr_node == nullptr) {
-            break;
-          }
+        curr_node = curr_node->parent;
+        if (curr_node == nullptr) {
+          break;
         }
+      }
+
+      curr_node = move.dst;
+      while (not(curr_node->node_id == lca_id.value)) {
+        MADAG::NodeView node = merge_.GetResult().Get(NodeId{curr_node->node_id});
+        const auto& clades = merge_.GetResultNodeLabels()
+                                 .at(node.GetId().value)
+                                 .GetLeafSet()
+                                 ->GetClades();
+        if (not merge_.ContainsLeafset(clades_union(clades, dst_clades))) {
+          ++new_nodes_count;
+        }
+        curr_node = curr_node->parent;
+        if (curr_node == nullptr) {
+          break;
+        }
+      }
     }
 
-    move.score_change = move_score_coeffs_.second * move.score_change - move_score_coeffs_.first * new_nodes_count;
+    move.score_change = move_score_coeffs_.second * move.score_change -
+                        move_score_coeffs_.first * new_nodes_count;
     return move.score_change <= 0;
   }
 
@@ -213,7 +224,7 @@ int main(int argc, char** argv) try {
       move_coeff_pscore = ParseNumber(*params.begin());
     } else if (name == "--move-coeff-nodes") {
       if (params.empty()) {
-        std::cerr <<  "parsimony score move coefficient not specified\n";
+        std::cerr << "parsimony score move coefficient not specified\n";
         Fail();
       }
       move_coeff_nodes = ParseNumber(*params.begin());
@@ -247,7 +258,8 @@ int main(int argc, char** argv) try {
 
   std::ofstream logfile;
   logfile.open(logfile_name);
-  logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWorstParsimony\tSecondsElapsed";
+  logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWors"
+             "tParsimony\tSecondsElapsed";
 
   MADAGStorage input_dag =
       refseq_path.empty()
@@ -261,17 +273,20 @@ int main(int argc, char** argv) try {
 
   auto start_time = std::chrono::high_resolution_clock::now();
   auto time_elapsed = [&start_time]() {
-      auto now = std::chrono::high_resolution_clock::now();
-      return std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
+    auto now = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
   };
 
   auto logger = [&merge, &logfile, &time_elapsed](size_t iteration) {
     SubtreeWeight<BinaryParsimonyScore> parsimonyscorer{merge.GetResult()};
     SubtreeWeight<MaxBinaryParsimonyScore> maxparsimonyscorer{merge.GetResult()};
     merge.ComputeResultEdgeMutations();
-    auto minparsimony = parsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-    auto minparsimonytrees = parsimonyscorer.MinWeightCount(merge.GetResult().GetRoot(), {});
-    auto maxparsimony = maxparsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
+    auto minparsimony =
+        parsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
+    auto minparsimonytrees =
+        parsimonyscorer.MinWeightCount(merge.GetResult().GetRoot(), {});
+    auto maxparsimony =
+        maxparsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     SubtreeWeight<TreeCount> treecount{merge.GetResult()};
     auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     std::cout << "Best parsimony score in DAG: " << minparsimony << "\n";
@@ -279,17 +294,12 @@ int main(int argc, char** argv) try {
     std::cout << "Total trees in DAG: " << ntrees << "\n";
     std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
     logfile << '\n'
-            << iteration << '\t' << ntrees << '\t'
-            << merge.GetResult().GetNodesCount() << '\t'
-            << merge.GetResult().GetEdgesCount() << '\t'
-            << minparsimony << '\t'
-            << minparsimonytrees << '\t'
-            << maxparsimony << '\t'
-            << time_elapsed()
+            << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
+            << '\t' << merge.GetResult().GetEdgesCount() << '\t' << minparsimony << '\t'
+            << minparsimonytrees << '\t' << maxparsimony << '\t' << time_elapsed()
             << std::flush;
   };
   logger(0);
-
 
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)
@@ -297,16 +307,18 @@ int main(int argc, char** argv) try {
 
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<BinaryParsimonyScore> weight{merge.GetResult()};
-    auto [sample, dag_ids] = sample_best_tree ? weight.MinWeightSampleTree({}) : weight.SampleTree({});
+    auto [sample, dag_ids] =
+        sample_best_tree ? weight.MinWeightSampleTree({}) : weight.SampleTree({});
     check_edge_mutations(sample.View());
-    Larch_Move_Found_Callback callback{merge, sample.View(), dag_ids, {move_coeff_nodes, move_coeff_pscore}};
+    Larch_Move_Found_Callback callback{
+        merge, sample.View(), dag_ids, {move_coeff_nodes, move_coeff_pscore}};
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
     MADAGStorage result = optimize_dag_direct(sample.View(), callback);
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back().View()});
 
-    if (i % 10 == 0){
-        StoreDAGToProtobuf(merge.GetResult(), logfile_path + "/intermediate_dag.pb");
+    if (i % 10 == 0) {
+      StoreDAGToProtobuf(merge.GetResult(), logfile_path + "/intermediate_dag.pb");
     }
     logger(i + 1);
   }

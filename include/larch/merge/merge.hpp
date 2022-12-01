@@ -28,8 +28,8 @@ using ConcurrentUnorderedMap =
 
 class Merge {
  public:
-  using Node = MADAG::Node;
-  using Edge = MADAG::Edge;
+  using Node = MADAG::NodeView;
+  using Edge = MADAG::EdgeView;
   /**
    * Construct a new Merge object, with the common reference sequence for all input
    * DAGs that will be merged later via the AddDAGs() method. The reference sequence is

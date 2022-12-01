@@ -46,22 +46,20 @@ class CompactGenome {
       const CompactGenome& child);
 
  private:
-  DAG_FEATURE_FRIENDS;
   inline static size_t ComputeHash(
       const std::vector<std::pair<MutationPosition, char>>& mutations);
 };
 
-template <typename View>
-class FeatureReader<CompactGenome, View> {
- public:
-  const CompactGenome& GetCompactGenome();
+template <typename CRTP, typename Tag>
+struct FeatureConstView<CompactGenome, CRTP, Tag> {
+  const CompactGenome& GetCompactGenome() const { return GetFeatureStorage(this); }
 };
 
-template <typename View>
-class FeatureWriter<CompactGenome, View> : public FeatureReader<CompactGenome, View> {
- public:
-  CompactGenome& GetCompactGenome();
-  void SetCompactGenome(CompactGenome&& compact_genome);
+template <typename CRTP, typename Tag>
+struct FeatureMutableView<CompactGenome, CRTP, Tag> {
+  void SetCompactGenome(CompactGenome&& compact_genome) const {
+    GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);
+  }
 };
 
 template <>

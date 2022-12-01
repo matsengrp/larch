@@ -1,4 +1,5 @@
-Merge::Merge(std::string_view reference_sequence) : result_dag_{result_dag_storage_} {
+Merge::Merge(std::string_view reference_sequence)
+    : result_dag_{result_dag_storage_.View()} {
   result_dag_.SetReferenceSequence(reference_sequence);
 }
 
@@ -49,8 +50,8 @@ void Merge::ComputeResultEdgeMutations() {
     Assert(label.GetChild().GetCompactGenome());
     const CompactGenome& parent = *label.GetParent().GetCompactGenome();
     const CompactGenome& child = *label.GetChild().GetCompactGenome();
-    result_dag_.Get(edge_id).GetEdgeMutations() = CompactGenome::ToEdgeMutations(
-        result_dag_.GetReferenceSequence(), parent, child);
+    result_dag_.Get(edge_id).SetEdgeMutations(CompactGenome::ToEdgeMutations(
+        result_dag_.GetReferenceSequence(), parent, child));
   }
 }
 

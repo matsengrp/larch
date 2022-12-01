@@ -38,10 +38,10 @@ using ArbitraryInt = boost::multiprecision::cpp_int;
 template <typename WeightOps>
 class SubtreeWeight {
  public:
-  using Node = MADAG::Node;
-  using Edge = MADAG::Edge;
-  using MutableNode = MutableMADAG::Node;
-  using MutableEdge = MutableMADAG::Edge;
+  using Node = MADAG::NodeView;
+  using Edge = MADAG::EdgeView;
+  using MutableNode = MutableMADAG::NodeView;
+  using MutableEdge = MutableMADAG::EdgeView;
   explicit SubtreeWeight(MADAG dag);
 
   typename WeightOps::Weight ComputeWeightBelow(Node node, WeightOps&& weight_ops);

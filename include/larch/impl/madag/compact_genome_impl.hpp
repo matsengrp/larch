@@ -81,13 +81,13 @@ CompactGenome CompactGenome::Copy() const {
 }
 
 std::string CompactGenome::ToString() const {
-  std::string result = "\n<";
+  std::string result = "<";
   for (auto mutpair : mutations_) {
     result += std::to_string(mutpair.first.value);
     result += mutpair.second;
     result += ",";
   }
-  result += ">\n";
+  result += ">";
   return result;
 }
 
@@ -127,22 +127,6 @@ size_t CompactGenome::ComputeHash(
     result = HashCombine(result, static_cast<size_t>(base));
   }
   return result;
-}
-
-template <typename View>
-const CompactGenome& FeatureReader<CompactGenome, View>::GetCompactGenome() {
-  return GetFeatureStorage(this);
-}
-
-template <typename View>
-CompactGenome& FeatureWriter<CompactGenome, View>::GetCompactGenome() {
-  return GetFeatureStorage(this);
-}
-
-template <typename View>
-void FeatureWriter<CompactGenome, View>::SetCompactGenome(
-    CompactGenome&& compact_genome) {
-  GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);
 }
 
 std::size_t std::hash<CompactGenome>::operator()(
