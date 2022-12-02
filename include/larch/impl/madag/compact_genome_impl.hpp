@@ -138,3 +138,15 @@ bool std::equal_to<CompactGenome>::operator()(const CompactGenome& lhs,
                                               const CompactGenome& rhs) const noexcept {
   return lhs == rhs;
 }
+
+template <typename CRTP, typename Tag>
+const CompactGenome& FeatureConstView<CompactGenome, CRTP, Tag>::GetCompactGenome()
+    const {
+  return GetFeatureStorage(this);
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<CompactGenome, CRTP, Tag>::SetCompactGenome(
+    CompactGenome&& compact_genome) const {
+  GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);
+}

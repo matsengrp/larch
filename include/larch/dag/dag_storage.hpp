@@ -2,6 +2,11 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+/**
+ * Owning storage for an entire DAG. All views (DAG, node or edge) are
+ * internally pointing to an instance of DAGStorage or classes providing
+ * the same interface, like ExtendDAGStorage.
+ */
 template <typename NC, typename EC, typename... Fs>
 struct DAGStorage {
  public:

@@ -2,6 +2,11 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+/**
+ * Stores packed features per-element (node or edge). Additional
+ * per-element features may be also stored in the corresponding
+ * ElementsContainer.
+ */
 template <typename... Fs>
 struct ElementStorage {
  public:

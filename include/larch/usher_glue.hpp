@@ -15,3 +15,8 @@
 #include "src/matOptimize/tree_rearrangement_internal.hpp"
 #include "src/matOptimize/Profitable_Moves_Enumerators/Profitable_Moves_Enumerators.hpp"
 #pragma GCC diagnostic pop
+
+namespace Mutation_Annotated_Tree {
+class Tree;
+class Node;
+}  // namespace Mutation_Annotated_Tree

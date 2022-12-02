@@ -15,9 +15,16 @@ struct element_view_base {
 template <typename Id, typename DV>
 using element_view_base_t = typename element_view_base<Id, DV>::type;
 
+/**
+ * A view into a single node or edge of a DAG.
+ */
 template <typename Id, typename DV>
 struct ElementView : element_view_base_t<Id, std::decay_t<DV>> {
  public:
+  /**
+   * This operator= is used for setting specailly handles per-element
+   * features, like Deduplicate.
+   */
   using element_view_base_t<Id, DV>::operator=;
 
   ElementView(DV dag_view, Id id);

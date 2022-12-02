@@ -2,6 +2,10 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+/**
+ * Stores a collection of elements (nodes or edges, distinguished by the `Id`
+ * parameter).
+ */
 template <typename Id, typename ES, typename... Fs>
 struct ElementsContainer {
  public:

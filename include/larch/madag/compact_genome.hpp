@@ -50,18 +50,6 @@ class CompactGenome {
       const std::vector<std::pair<MutationPosition, char>>& mutations);
 };
 
-template <typename CRTP, typename Tag>
-struct FeatureConstView<CompactGenome, CRTP, Tag> {
-  const CompactGenome& GetCompactGenome() const { return GetFeatureStorage(this); }
-};
-
-template <typename CRTP, typename Tag>
-struct FeatureMutableView<CompactGenome, CRTP, Tag> {
-  void SetCompactGenome(CompactGenome&& compact_genome) const {
-    GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);
-  }
-};
-
 template <>
 struct std::hash<CompactGenome> {
   inline std::size_t operator()(const CompactGenome& cg) const noexcept;
@@ -71,6 +59,16 @@ template <>
 struct std::equal_to<CompactGenome> {
   inline bool operator()(const CompactGenome& lhs,
                          const CompactGenome& rhs) const noexcept;
+};
+
+template <typename CRTP, typename Tag>
+struct FeatureConstView<CompactGenome, CRTP, Tag> {
+  const CompactGenome& GetCompactGenome() const;
+};
+
+template <typename CRTP, typename Tag>
+struct FeatureMutableView<CompactGenome, CRTP, Tag> {
+  void SetCompactGenome(CompactGenome&& compact_genome) const;
 };
 
 #include "larch/impl/madag/compact_genome_impl.hpp"

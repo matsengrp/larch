@@ -2,6 +2,9 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+/**
+ * Basic per-node feature.
+ */
 struct Neighbors {
   std::vector<EdgeId> parents_;
   std::vector<std::vector<EdgeId>> clades_;

@@ -2,22 +2,41 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+/**
+ * Used by specialization on the Feature parameter to add functions to
+ * an attachable feature. Functions declared in FeatureConstView are
+ * for read-only access to the Feature's storage, and in FeatureMutableView
+ * are for modifying access.
+ * @{
+ */
 template <typename Feature, typename CRTP, typename Tag = Feature>
 struct FeatureConstView;
 template <typename Feature, typename CRTP, typename Tag = Feature>
 struct FeatureMutableView;
+/** @} */
 
+/**
+ * Used by specialization on the Feature parameter to add extra storage for
+ * features that are attached to node or edge (not the DAG itself). Extra storage
+ * is not per-element, but global for the entire DAG.
+ */
 template <typename Feature>
 struct ExtraFeatureStorage {};
 
 template <typename DS>
 struct DAGView;
 
+/**
+ * Called by functions in FeatureConstView and FeatureMutableView specializations
+ * to access the actual storage of the feature. Accepting `this` as sole parameter.
+ * @{
+ */
 template <typename CRTP, typename Feature, typename Tag>
 auto& GetFeatureStorage(const FeatureMutableView<Feature, CRTP, Tag>* feature);
 
 template <typename CRTP, typename Feature, typename Tag>
 const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* feature);
+/** @} */
 
 struct NodeId {
   size_t value = NoId;

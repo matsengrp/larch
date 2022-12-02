@@ -2,6 +2,15 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+/**
+ * Helper types for use with ExtendDAGStorage to add more features
+ * to an existing DAG. Example use:
+ *
+ *     ExtendDAGStorage my_extended_dag{existing_dag_view,
+ *         Extend::Nodes<Deduplicate<MyNewNodeFeature>>{},
+ *         Extend::Edges<MyNewEdgeFeature1, MyNewEdgeFeatur2>{}};
+ *
+ */
 namespace Extend {
 
 template <typename... Fs>
@@ -47,6 +56,9 @@ struct Empty {
 };
 }  // namespace Extend
 
+/**
+ * Adds new features to an existing DAG. See `namespace Extend` for more info.
+ */
 template <typename DV, typename Arg0 = Extend::Empty<>, typename Arg1 = Extend::Empty<>,
           typename Arg2 = Extend::Empty<>>
 struct ExtendDAGStorage {

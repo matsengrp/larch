@@ -54,14 +54,12 @@ class EdgeMutations {
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<EdgeMutations, CRTP, Tag> {
-  const EdgeMutations& GetEdgeMutations() const { return GetFeatureStorage(this); }
+  const EdgeMutations& GetEdgeMutations() const;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<EdgeMutations, CRTP, Tag> {
-  void SetEdgeMutations(EdgeMutations&& edge_mutations) const {
-    GetFeatureStorage(this) = std::forward<EdgeMutations>(edge_mutations);
-  }
+  void SetEdgeMutations(EdgeMutations&& edge_mutations) const;
 };
 
 #include "larch/impl/madag/edge_mutations_impl.hpp"

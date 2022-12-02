@@ -2,6 +2,9 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+/**
+ * Basic per-edge feature.
+ */
 struct Endpoints {
   NodeId parent_;
   NodeId child_;

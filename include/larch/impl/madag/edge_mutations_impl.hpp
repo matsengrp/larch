@@ -45,3 +45,15 @@ bool EdgeMutations::operator==(const EdgeMutations& rhs) const {
 bool EdgeMutations::operator!=(const EdgeMutations& rhs) const {
   return mutations_ != rhs.mutations_;
 }
+
+template <typename CRTP, typename Tag>
+const EdgeMutations& FeatureConstView<EdgeMutations, CRTP, Tag>::GetEdgeMutations()
+    const {
+  return GetFeatureStorage(this);
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<EdgeMutations, CRTP, Tag>::SetEdgeMutations(
+    EdgeMutations&& edge_mutations) const {
+  GetFeatureStorage(this) = std::forward<EdgeMutations>(edge_mutations);
+}
