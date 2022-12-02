@@ -104,9 +104,9 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
         sample_{sample},
         sample_dag_ids_{sample_dag_ids},
         move_score_coeffs_{1, 1} {}
-  Larch_Move_Found_Callback(const Merge& merge, MADAG sample,
-                            const std::vector<NodeId>& sample_dag_ids,
-                            std::pair<int, int> move_score_coeffs)
+  Larch_Move_Found_Callback(
+      const Merge& merge, MADAG sample, const std::vector<NodeId>& sample_dag_ids,
+      std::pair<int, int> move_score_coeffs)  // NOLINT(modernize-pass-by-value)
       : merge_{merge},
         sample_{sample},
         sample_dag_ids_{sample_dag_ids},
@@ -317,7 +317,7 @@ int main(int argc, char** argv) try {
     optimized_dags.push_back(std::move(result));
     merge.AddDAGs({optimized_dags.back().View()});
 
-    if (i % 10 == 0) {
+    if (i % 10 == 0) {  // NOLINT
       StoreDAGToProtobuf(merge.GetResult(), logfile_path + "/intermediate_dag.pb");
     }
     logger(i + 1);

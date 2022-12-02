@@ -25,13 +25,15 @@ binary operation that respects ordering, e.g. '+'
 template <typename BinaryOperatorWeightOps>
 struct SimpleWeightOps {
   using Weight = typename BinaryOperatorWeightOps::Weight;
-  BinaryOperatorWeightOps&& binary_operator_weight_ops_ = BinaryOperatorWeightOps();
   inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
   inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
   inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(
       std::vector<Weight>);
   inline Weight BetweenClades(std::vector<Weight>);
-  inline Weight AboveNode(Weight eddgeweight, Weight childnodeweight);
+  inline Weight AboveNode(Weight edgeweight, Weight childnodeweight);
+
+ private:
+  BinaryOperatorWeightOps binary_operator_weight_ops_ = BinaryOperatorWeightOps();
 };
 
 #include "larch/impl/subtree/simple_weight_ops_impl.hpp"

@@ -14,17 +14,17 @@ struct ParsimonyScore_ {
   using Weight = size_t;
   constexpr static Weight MaxWeight = std::numeric_limits<size_t>::max();
   constexpr static Weight Identity = 0;
-  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
-  inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
-  inline bool Compare(Weight lhs, Weight rhs);
-  inline bool CompareEqual(Weight lhs, Weight rhs);
-  inline bool IsIdentity(Weight weight);
-  inline Weight Combine(Weight lhs, Weight rhs);
+  static inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
+  static inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
+  static inline bool Compare(Weight lhs, Weight rhs);
+  static inline bool CompareEqual(Weight lhs, Weight rhs);
+  static inline bool IsIdentity(Weight weight);
+  static inline Weight Combine(Weight lhs, Weight rhs);
 };
 
 struct MaxParsimonyScore_ : ParsimonyScore_ {
   constexpr static Weight MaxWeight = std::numeric_limits<size_t>::min();
-  inline bool Compare(Weight lhs, Weight rhs);
+  static inline bool Compare(Weight lhs, Weight rhs);
 };
 
 using BinaryParsimonyScore = SimpleWeightOps<ParsimonyScore_>;

@@ -53,7 +53,7 @@ ArbitraryInt SubtreeWeight<WeightOps>::MinWeightCount(Node node,
   // This populates cached_min_weight_edges_:
   SubtreeWeight<WeightOps>::ComputeWeightBelow(node,
                                                std::forward<WeightOps>(weight_ops));
-  for (auto clade : cached_min_weight_edges_.at(node_id.value)) {
+  for (auto& clade : cached_min_weight_edges_.at(node_id.value)) {
     cladecount = 0;
     for (auto child_edge_id : clade) {
       Node child = dag_.Get(child_edge_id).GetChild();
