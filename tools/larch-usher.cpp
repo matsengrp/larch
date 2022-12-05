@@ -35,6 +35,7 @@ MADAGStorage optimize_dag_direct(MADAG dag, Move_Found_Callback& callback);
       << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
   std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
                "Default: 1\n";
+  std::cout << "  --sample-uniform     Sample trees according to a uniform distribution, instead of the distribution naturally induced by the DAG topology.\n";
   std::cout << "  --sample-best-tree   Only sample trees with best achieved parsimony "
                "score.\n";
   std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
@@ -178,6 +179,7 @@ int main(int argc, char** argv) try {
   std::string matoptimize_path = "matOptimize";
   std::string logfile_path = "optimization_log";
   std::string refseq_path;
+  bool sample_uniform = false;
   bool sample_best_tree = false;
   size_t count = 1;
   int move_coeff_nodes = 1;
@@ -228,6 +230,8 @@ int main(int argc, char** argv) try {
         Fail();
       }
       move_coeff_nodes = ParseNumber(*params.begin());
+    } else if (name == "--sample-uniform") {
+      sample_uniform = true;
     } else if (name == "--sample-best-tree") {
       sample_best_tree = true;
     } else if (name == "-r" or name == "--MAT-refseq-file") {
@@ -306,9 +310,21 @@ int main(int argc, char** argv) try {
               << " #######\n";
 
     merge.ComputeResultEdgeMutations();
-    SubtreeWeight<BinaryParsimonyScore> weight{merge.GetResult()};
-    auto [sample, dag_ids] =
-        sample_best_tree ? weight.MinWeightSampleTree({}) : weight.SampleTree({});
+    auto [sample, dag_ids] = [&sample_best_tree, &sample_uniform, &merge](){
+        if (sample_uniform and !sample_best_tree) {
+            SubtreeWeight<TreeCount> weight{merge.GetResult()};
+            return weight.UniformSampleTree({});
+        } else {
+            SubtreeWeight<BinaryParsimonyScore> weight{merge.GetResult()};
+            if (sample_best_tree and sample_uniform) {
+                return weight.MinWeightUniformSampleTree({});
+            } else if (sample_best_tree and !sample_uniform) {
+                return weight.MinWeightSampleTree({});
+            } else {
+                return weight.SampleTree({});
+            }
+        }
+    }();
     check_edge_mutations(sample.View());
     Larch_Move_Found_Callback callback{
         merge, sample.View(), dag_ids, {move_coeff_nodes, move_coeff_pscore}};
