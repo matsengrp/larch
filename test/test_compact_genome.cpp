@@ -7,8 +7,8 @@
 [[maybe_unused]] static void test_edge_mutations(std::string_view path) {
   MADAGStorage dag_storage = LoadDAGFromProtobuf(path);
   MutableMADAG dag = dag_storage.View();
-  using Node = MutableMADAG::Node;
-  using Edge = MutableMADAG::Edge;
+  using Node = MutableMADAG::NodeView;
+  using Edge = MutableMADAG::EdgeView;
 
   std::vector<EdgeMutations> loaded_edge_mutatons;
   for (Edge edge : dag.GetEdges()) {

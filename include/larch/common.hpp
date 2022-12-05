@@ -56,28 +56,6 @@ void MoveElements(std::vector<T>&& source, std::vector<T>& destination) {
 }
 
 namespace Transform {
-inline auto GetParent() {
-  return ranges::views::transform([](auto&& i) { return i.GetParent(); });
-}
-inline auto GetChild() {
-  return ranges::views::transform([](auto&& i) { return i.GetChild(); });
-}
-inline auto GetId() {
-  return ranges::views::transform([](auto&& i) { return i.GetId(); });
-}
-template <typename DAG>
-inline auto ToNodes(DAG dag) {
-  return ranges::views::transform([dag](auto&& i) {
-    return typename DAG::Node{dag, i};
-  });
-}
-template <typename DAG>
-inline auto ToEdges(DAG dag) {
-  return ranges::views::transform([dag](auto&& i) {
-    return typename DAG::Edge{dag, i};
-  });
-}
-
 template <typename T>
 inline auto To() {
   return ranges::views::transform([&](auto&& i) { return T{i}; });
@@ -110,3 +88,28 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x& operator=(x&&) noexcept = default; \
   x& operator=(const x&) = delete;      \
   ~x() = default
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+template <typename, template <typename...> typename>
+struct is_specialization : std::false_type {};
+
+template <template <typename...> typename Template, typename... Args>
+struct is_specialization<Template<Args...>, Template> : std::true_type {};
+
+template <typename L, template <typename...> typename R>
+constexpr bool is_specialization_v = is_specialization<L, R>::value;
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+template <typename, typename>
+struct tuple_contains {};
+
+template <typename... Types, typename Type>
+struct tuple_contains<std::tuple<Types...>, Type>
+    : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
+
+template <typename Tuple, typename Type>
+inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
+
+//////////////////////////////////////////////////////////////////////////////////////

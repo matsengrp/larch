@@ -46,22 +46,8 @@ class CompactGenome {
       const CompactGenome& child);
 
  private:
-  DAG_FEATURE_FRIENDS;
   inline static size_t ComputeHash(
       const std::vector<std::pair<MutationPosition, char>>& mutations);
-};
-
-template <typename View>
-class FeatureReader<CompactGenome, View> {
- public:
-  const CompactGenome& GetCompactGenome();
-};
-
-template <typename View>
-class FeatureWriter<CompactGenome, View> : public FeatureReader<CompactGenome, View> {
- public:
-  CompactGenome& GetCompactGenome();
-  void SetCompactGenome(CompactGenome&& compact_genome);
 };
 
 template <>
@@ -73,6 +59,16 @@ template <>
 struct std::equal_to<CompactGenome> {
   inline bool operator()(const CompactGenome& lhs,
                          const CompactGenome& rhs) const noexcept;
+};
+
+template <typename CRTP, typename Tag>
+struct FeatureConstView<CompactGenome, CRTP, Tag> {
+  const CompactGenome& GetCompactGenome() const;
+};
+
+template <typename CRTP, typename Tag>
+struct FeatureMutableView<CompactGenome, CRTP, Tag> {
+  void SetCompactGenome(CompactGenome&& compact_genome) const;
 };
 
 #include "larch/impl/madag/compact_genome_impl.hpp"

@@ -35,23 +35,31 @@ class EdgeMutations {
   inline bool operator==(const EdgeMutations& rhs) const;
   inline bool operator!=(const EdgeMutations& rhs) const;
 
+  std::string ToString() const {
+    std::string result = "<";
+    for (auto [pos, muts] : mutations_) {
+      result += muts.first;
+      result += std::to_string(pos.value);
+      result += muts.second;
+      result += ",";
+    }
+    result += ">";
+    return result;
+  }
+
  private:
-  DAG_FEATURE_FRIENDS;
   inline explicit EdgeMutations(
       std::map<MutationPosition, std::pair<char, char>>&& mutations);
 };
 
-template <typename View>
-class FeatureReader<EdgeMutations, View> {
- public:
-  const EdgeMutations& GetEdgeMutations();
+template <typename CRTP, typename Tag>
+struct FeatureConstView<EdgeMutations, CRTP, Tag> {
+  const EdgeMutations& GetEdgeMutations() const;
 };
 
-template <typename View>
-class FeatureWriter<EdgeMutations, View> : public FeatureReader<EdgeMutations, View> {
- public:
-  EdgeMutations& GetEdgeMutations();
-  void SetEdgeMutations(EdgeMutations&& edge_mutations);
+template <typename CRTP, typename Tag>
+struct FeatureMutableView<EdgeMutations, CRTP, Tag> {
+  void SetEdgeMutations(EdgeMutations&& edge_mutations) const;
 };
 
 #include "larch/impl/madag/edge_mutations_impl.hpp"

@@ -12,8 +12,8 @@ void fill_static_reference_sequence(std::string_view);
 MAT::Tree mat_from_dag(MADAG);
 MADAGStorage build_madag_from_mat(const MAT::Tree&, std::string_view);
 
-using Node = MADAG::Node;
-using Edge = MADAG::Edge;
+using Node = MADAG::NodeView;
+using Edge = MADAG::EdgeView;
 
 static void AssertEqual(Node lhs_node, Node rhs_node) {
   // assert_equal(lhs_node.GetId().value, rhs_node.GetId().value, "Node id");
