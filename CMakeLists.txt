@@ -157,6 +157,7 @@ larch_executable(larch-test
     test/test_matOptimize.cpp
     test/test_merge.cpp
     test/test_sample_tree.cpp
+    test/test_sample_best_tree.cpp
     test/test_subtree_weight.cpp
     test/test_weight_accum.cpp
     test/test_weight_counter.cpp
