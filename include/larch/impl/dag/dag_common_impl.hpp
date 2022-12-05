@@ -12,15 +12,15 @@ const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* featur
   return static_cast<const CRTP&>(*feature).template GetFeatureStorage<Tag>();
 }
 
-bool operator==(NodeId lhs, NodeId rhs) { return lhs == rhs; }
-bool operator<(NodeId lhs, NodeId rhs) { return lhs < rhs; }
+bool operator==(NodeId lhs, NodeId rhs) { return lhs.value == rhs.value; }
+bool operator<(NodeId lhs, NodeId rhs) { return lhs.value < rhs.value; }
 size_t std::hash<NodeId>::operator()(NodeId id) const noexcept { return id.value; }
 
-bool operator==(EdgeId lhs, EdgeId rhs) { return lhs == rhs; }
-bool operator<(EdgeId lhs, EdgeId rhs) { return lhs < rhs; }
+bool operator==(EdgeId lhs, EdgeId rhs) { return lhs.value == rhs.value; }
+bool operator<(EdgeId lhs, EdgeId rhs) { return lhs.value < rhs.value; }
 
-bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs == rhs; }
-bool operator<(CladeIdx lhs, CladeIdx rhs) { return lhs < rhs; }
+bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs.value == rhs.value; }
+bool operator<(CladeIdx lhs, CladeIdx rhs) { return lhs.value < rhs.value; }
 
 namespace Transform {
 
