@@ -25,8 +25,12 @@ binary operation that respects ordering, e.g. '+'
 template <typename BinaryOperatorWeightOps>
 struct SimpleWeightOps {
   using Weight = typename BinaryOperatorWeightOps::Weight;
-  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
-  inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
+
+  template <typename DAG>
+  Weight ComputeLeaf(DAG dag, NodeId node_id);
+
+  template <typename DAG>
+  Weight ComputeEdge(DAG dag, EdgeId edge_id);
   inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(
       std::vector<Weight>);
   inline Weight BetweenClades(std::vector<Weight>);

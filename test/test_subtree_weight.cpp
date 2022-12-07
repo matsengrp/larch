@@ -9,7 +9,7 @@
 #include "larch/dag_loader.hpp"
 
 static void test_subtree_weight(MADAG dag, size_t expected_score) {
-  SubtreeWeight<BinaryParsimonyScore> weight(dag);
+  SubtreeWeight<BinaryParsimonyScore, MADAG> weight(dag);
 
   size_t score = weight.ComputeWeightBelow(dag.GetRoot(), {});
 

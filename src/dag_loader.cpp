@@ -207,7 +207,7 @@ MADAGStorage LoadDAGFromJson(std::string_view path) {
   for ([[maybe_unused]] auto& i : json["nodes"]) {
     auto node = result.View().AddNode({id++});
     size_t compact_genome_index = i[0];
-    node.SetCompactGenome(GetCompactGenome(json, compact_genome_index));
+    node = GetCompactGenome(json, compact_genome_index);
   }
   id = 0;
   for (auto& i : json["edges"]) {

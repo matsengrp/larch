@@ -10,7 +10,7 @@
 #include "larch/dag_loader.hpp"
 
 static void test_tree_count(MADAG dag, TreeCount::Weight expected_score) {
-  SubtreeWeight<TreeCount> treecount(dag);
+  SubtreeWeight<TreeCount, MADAG> treecount(dag);
 
   TreeCount::Weight score = treecount.ComputeWeightBelow(dag.GetRoot(), {});
 

@@ -30,6 +30,7 @@ struct DAGView
   using NodeView = ElementView<NodeId, DAGView<DS>>;
   using EdgeView = ElementView<EdgeId, DAGView<DS>>;
   using StorageType = DS;
+  using MutableType = DAGView<std::remove_const_t<DS>>;
 
   template <typename Id, typename CRTP>
   using ConstElementViewBase = typename DS::template ConstElementViewBase<Id, CRTP>;

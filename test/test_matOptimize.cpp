@@ -8,11 +8,6 @@
 
 #include "larch/usher_glue.hpp"
 
-namespace MAT = Mutation_Annotated_Tree;
-
-void check_edge_mutations(MADAG);
-MADAGStorage optimize_dag_direct(MADAG, Move_Found_Callback&);
-
 struct Test_Move_Found_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&) override {
@@ -27,13 +22,13 @@ static void test_matOptimize(std::string_view input_dag_path,
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
   input_dag_storage.View().RecomputeCompactGenomes();
   MADAG input_dag = input_dag_storage.View();
-  Merge merge{input_dag.GetReferenceSequence()};
+  Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
   std::vector<MADAGStorage> optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();
-    SubtreeWeight<ParsimonyScore> weight{merge.GetResult()};
+    SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
     auto [sample, dag_ids] = weight.SampleTree({});
     std::ignore = dag_ids;
     check_edge_mutations(sample.View());

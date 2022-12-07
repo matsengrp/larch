@@ -19,7 +19,7 @@ auto DAGStorage<NC, EC, Fs...>::View() {
 
 template <typename NC, typename EC, typename... Fs>
 auto DAGStorage<NC, EC, Fs...>::View() const {
-  return DAGView<DAGStorage<NC, EC, Fs...>>{*this};
+  return DAGView<const DAGStorage<NC, EC, Fs...>>{*this};
 }
 
 template <typename NC, typename EC, typename... Fs>

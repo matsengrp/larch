@@ -21,7 +21,6 @@
 
 #include "larch/usher_glue.hpp"
 
-MADAGStorage optimize_dag_direct(MADAG dag, Move_Found_Callback& callback);
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
   std::cout << "larch-usher -i,--input file -o,--output file [-m,--matopt file] "

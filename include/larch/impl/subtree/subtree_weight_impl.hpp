@@ -2,8 +2,8 @@
 #include <type_traits>
 #include <set>
 
-template <typename WeightOps>
-SubtreeWeight<WeightOps>::SubtreeWeight(MADAG dag)
+template <typename WeightOps, typename DAG>
+SubtreeWeight<WeightOps, DAG>::SubtreeWeight(DAG dag)
     : dag_{dag},
       cached_weights_(dag_.GetNodesCount()),
       cached_subtree_counts_(dag_.GetNodesCount()),
@@ -14,8 +14,8 @@ SubtreeWeight<WeightOps>::SubtreeWeight(MADAG dag)
  * Compute the Weight for the optimal subtree below `node`.
  *
  */
-template <typename WeightOps>
-typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(
+template <typename WeightOps, typename DAG>
+typename WeightOps::Weight SubtreeWeight<WeightOps, DAG>::ComputeWeightBelow(
     Node node, WeightOps&& weight_ops) {
   NodeId node_id = node.GetId();
   auto& cached = cached_weights_.at(node_id.value);
@@ -28,7 +28,7 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(
   }
   std::vector<typename WeightOps::Weight> cladeweights;
   for (auto clade : node.GetClades()) {
-    cladeweights.push_back(SubtreeWeight<WeightOps>::CladeWeight(
+    cladeweights.push_back(SubtreeWeight<WeightOps, DAG>::CladeWeight(
         clade, std::forward<WeightOps>(weight_ops)));
   }
 
@@ -36,9 +36,9 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::ComputeWeightBelow(
   return *cached;
 }
 
-template <typename WeightOps>
-ArbitraryInt SubtreeWeight<WeightOps>::MinWeightCount(Node node,
-                                                      WeightOps&& weight_ops) {
+template <typename WeightOps, typename DAG>
+ArbitraryInt SubtreeWeight<WeightOps, DAG>::MinWeightCount(Node node,
+                                                           WeightOps&& weight_ops) {
   NodeId node_id = node.GetId();
   auto& cached = cached_subtree_counts_.at(node_id.value);
   if (cached) {
@@ -51,13 +51,13 @@ ArbitraryInt SubtreeWeight<WeightOps>::MinWeightCount(Node node,
   ArbitraryInt nodecount = 1;
   ArbitraryInt cladecount = 0;
   // This populates cached_min_weight_edges_:
-  SubtreeWeight<WeightOps>::ComputeWeightBelow(node,
-                                               std::forward<WeightOps>(weight_ops));
+  SubtreeWeight<WeightOps, DAG>::ComputeWeightBelow(
+      node, std::forward<WeightOps>(weight_ops));
   for (auto& clade : cached_min_weight_edges_.at(node_id.value)) {
     cladecount = 0;
     for (auto child_edge_id : clade) {
       Node child = dag_.Get(child_edge_id).GetChild();
-      cladecount += SubtreeWeight<WeightOps>::MinWeightCount(
+      cladecount += SubtreeWeight<WeightOps, DAG>::MinWeightCount(
           child, std::forward<WeightOps>(weight_ops));
     }
     nodecount *= cladecount;
@@ -66,9 +66,10 @@ ArbitraryInt SubtreeWeight<WeightOps>::MinWeightCount(Node node,
   return *cached;
 }
 
-template <typename WeightOps>
-MADAGStorage SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
-  MADAGStorage result;
+template <typename WeightOps, typename DAG>
+typename SubtreeWeight<WeightOps, DAG>::Storage
+SubtreeWeight<WeightOps, DAG>::TrimToMinWeight(WeightOps&& weight_ops) {
+  Storage result;
   result.View().SetReferenceSequence(dag_.GetReferenceSequence());
   std::vector<NodeId> result_dag_ids;
 
@@ -84,18 +85,18 @@ MADAGStorage SubtreeWeight<WeightOps>::TrimToMinWeight(WeightOps&& weight_ops) {
   return result;
 }
 
-template <typename WeightOps>
-std::pair<MADAGStorage, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTree(
-    WeightOps&& weight_ops) {
+template <typename WeightOps, typename DAG>
+std::pair<typename SubtreeWeight<WeightOps, DAG>::Storage, std::vector<NodeId>>
+SubtreeWeight<WeightOps, DAG>::SampleTree(WeightOps&& weight_ops) {
   return SampleTreeImpl(std::forward<WeightOps>(weight_ops), [](auto clade) {
     return std::uniform_int_distribution<size_t>{0, clade.size() - 1};
   });
 }
 
 struct TreeCount;
-template <typename WeightOps>
-std::pair<MADAGStorage, std::vector<NodeId>>
-SubtreeWeight<WeightOps>::UniformSampleTree(WeightOps&& weight_ops) {
+template <typename WeightOps, typename DAG>
+std::pair<typename SubtreeWeight<WeightOps, DAG>::Storage, std::vector<NodeId>>
+SubtreeWeight<WeightOps, DAG>::UniformSampleTree(WeightOps&& weight_ops) {
   static_assert(std::is_same_v<std::decay_t<WeightOps>, TreeCount>,
                 "UniformSampleTree needs TreeCount");
   // Ensure cache is filled
@@ -117,9 +118,9 @@ SubtreeWeight<WeightOps>::UniformSampleTree(WeightOps&& weight_ops) {
   });
 }
 
-template <typename WeightOps>
-std::pair<MADAGStorage, std::vector<NodeId>>
-SubtreeWeight<WeightOps>::MinWeightSampleTree(WeightOps&& weight_ops) {
+template <typename WeightOps, typename DAG>
+std::pair<typename SubtreeWeight<WeightOps, DAG>::Storage, std::vector<NodeId>>
+SubtreeWeight<WeightOps, DAG>::MinWeightSampleTree(WeightOps&& weight_ops) {
   // Ensure cache is filled
   ComputeWeightBelow(dag_.GetRoot(), std::forward<WeightOps>(weight_ops));
   return SampleTreeImpl(std::forward<WeightOps>(weight_ops), [this](auto clade) {
@@ -140,9 +141,9 @@ SubtreeWeight<WeightOps>::MinWeightSampleTree(WeightOps&& weight_ops) {
   });
 }
 
-template <typename WeightOps>
+template <typename WeightOps, typename DAG>
 template <typename CladeRange>
-typename WeightOps::Weight SubtreeWeight<WeightOps>::CladeWeight(
+typename WeightOps::Weight SubtreeWeight<WeightOps, DAG>::CladeWeight(
     CladeRange&& clade, WeightOps&& weight_ops) {
   Assert(not clade.empty());
   std::vector<typename WeightOps::Weight> edge_weights;
@@ -166,12 +167,13 @@ typename WeightOps::Weight SubtreeWeight<WeightOps>::CladeWeight(
   return clade_result.first;
 }
 
-template <typename WeightOps>
+template <typename WeightOps, typename DAG>
 template <typename DistributionMaker>
-std::pair<MADAGStorage, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTreeImpl(
-    WeightOps&& weight_ops, DistributionMaker&& distribution_maker) {
+std::pair<typename SubtreeWeight<WeightOps, DAG>::Storage, std::vector<NodeId>>
+SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
+                                              DistributionMaker&& distribution_maker) {
   dag_.AssertUA();
-  MADAGStorage result;
+  Storage result;
   result.View().SetReferenceSequence(dag_.GetReferenceSequence());
   std::vector<NodeId> result_dag_ids;
 
@@ -189,7 +191,7 @@ std::pair<MADAGStorage, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTre
 
   result.View().BuildConnections();
 
-  for (MutableNode node : result.View().GetNodes()) {
+  for (typename MutableDAG::NodeView node : result.View().GetNodes()) {
     const std::optional<std::string>& old_sample_id =
         dag_.Get(result_dag_ids.at(node.GetId().value)).GetSampleId();
     if (node.IsLeaf() and old_sample_id.has_value()) {
@@ -200,19 +202,19 @@ std::pair<MADAGStorage, std::vector<NodeId>> SubtreeWeight<WeightOps>::SampleTre
   return {std::move(result), std::move(result_dag_ids)};
 }
 
-template <typename WeightOps>
+template <typename WeightOps, typename DAG>
 template <typename EdgeSelector>
-void SubtreeWeight<WeightOps>::ExtractTree(Node input_node, NodeId parent_id,
-                                           WeightOps&& weight_ops,
-                                           EdgeSelector&& edge_selector,
-                                           MutableMADAG result,
-                                           std::vector<NodeId>& result_dag_ids) {
+void SubtreeWeight<WeightOps, DAG>::ExtractTree(Node input_node, NodeId parent_id,
+                                                WeightOps&& weight_ops,
+                                                EdgeSelector&& edge_selector,
+                                                MutableDAG result,
+                                                std::vector<NodeId>& result_dag_ids) {
   ComputeWeightBelow(input_node, std::forward<WeightOps>(weight_ops));
   CladeIdx clade_idx{0};
 
   GetOrInsert(result_dag_ids, parent_id) = input_node.GetId();
 
-  result.Get(parent_id).SetCompactGenome(input_node.GetCompactGenome().Copy());
+  result.Get(parent_id) = input_node.GetCompactGenome().Copy();
 
   for (auto clade : input_node.GetClades()) {
     Assert(not clade.empty());
@@ -221,7 +223,7 @@ void SubtreeWeight<WeightOps>::ExtractTree(Node input_node, NodeId parent_id,
     ++clade_idx.value;
 
     NodeId child_id = result.AppendNode();
-    MutableEdge result_edge =
+    typename MutableDAG::EdgeView result_edge =
         result.AppendEdge(parent_id, child_id, input_edge.GetClade());
 
     result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());

@@ -34,6 +34,7 @@ struct FeatureConstView<Deduplicate<Feature>, CRTP>
  * fully replace the feature by the assignment operator.
  */
 template <typename Feature, typename CRTP>
-struct FeatureMutableView<Deduplicate<Feature>, CRTP> {
+struct FeatureMutableView<Deduplicate<Feature>, CRTP>
+    : FeatureConstView<Feature, CRTP, Deduplicate<Feature>> {
   auto& operator=(Feature&& feature);
 };

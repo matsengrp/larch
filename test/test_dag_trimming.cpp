@@ -10,7 +10,7 @@
 #include "larch/dag_loader.hpp"
 
 static void test_dag_trimming(MADAG dag, size_t expected_edges) {
-  SubtreeWeight<BinaryParsimonyScore> weight{dag};
+  SubtreeWeight<BinaryParsimonyScore, MADAG> weight{dag};
 
   MADAGStorage trimmed = weight.TrimToMinWeight({});
 

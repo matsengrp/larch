@@ -35,28 +35,28 @@ WithinCladeAccumOptimum(std::vector<Weight>);
 
 using ArbitraryInt = boost::multiprecision::cpp_int;
 
-template <typename WeightOps>
+template <typename WeightOps, typename DAG>
 class SubtreeWeight {
  public:
-  using Node = MADAG::NodeView;
-  using Edge = MADAG::EdgeView;
-  using MutableNode = MutableMADAG::NodeView;
-  using MutableEdge = MutableMADAG::EdgeView;
-  explicit SubtreeWeight(MADAG dag);
+  using Storage = std::remove_const_t<typename DAG::StorageType>;
+  using MutableDAG = typename DAG::MutableType;
+  using Node = typename DAG::NodeView;
+  using Edge = typename DAG::EdgeView;
+  explicit SubtreeWeight(DAG dag);
 
   typename WeightOps::Weight ComputeWeightBelow(Node node, WeightOps&& weight_ops);
 
   ArbitraryInt MinWeightCount(Node node, WeightOps&& weight_ops);
 
-  [[nodiscard]] MADAGStorage TrimToMinWeight(WeightOps&& weight_ops);
+  [[nodiscard]] Storage TrimToMinWeight(WeightOps&& weight_ops);
 
-  [[nodiscard]] std::pair<MADAGStorage, std::vector<NodeId>> SampleTree(
+  [[nodiscard]] std::pair<Storage, std::vector<NodeId>> SampleTree(
       WeightOps&& weight_ops);
 
-  [[nodiscard]] std::pair<MADAGStorage, std::vector<NodeId>> UniformSampleTree(
+  [[nodiscard]] std::pair<Storage, std::vector<NodeId>> UniformSampleTree(
       WeightOps&& weight_ops);
 
-  [[nodiscard]] std::pair<MADAGStorage, std::vector<NodeId>> MinWeightSampleTree(
+  [[nodiscard]] std::pair<Storage, std::vector<NodeId>> MinWeightSampleTree(
       WeightOps&& weight_ops);
 
  private:
@@ -64,15 +64,15 @@ class SubtreeWeight {
   typename WeightOps::Weight CladeWeight(CladeRange&& clade, WeightOps&& weight_ops);
 
   template <typename DistributionMaker>
-  [[nodiscard]] std::pair<MADAGStorage, std::vector<NodeId>> SampleTreeImpl(
+  [[nodiscard]] std::pair<Storage, std::vector<NodeId>> SampleTreeImpl(
       WeightOps&& weight_ops, DistributionMaker&& distribution_maker);
 
   template <typename EdgeSelector>
   void ExtractTree(Node node, NodeId parent_id, WeightOps&& weight_ops,
-                   EdgeSelector&& edge_selector, MutableMADAG result,
+                   EdgeSelector&& edge_selector, MutableDAG result,
                    std::vector<NodeId>& result_dag_ids);
 
-  MADAG dag_;
+  DAG dag_;
 
   // Indexed by NodeId.
   std::vector<std::optional<typename WeightOps::Weight>> cached_weights_;

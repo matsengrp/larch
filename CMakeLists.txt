@@ -123,11 +123,13 @@ endif()
 larch_link_opts(larch)
 
 add_library(usher
-    ${MATOPTIMIZE_SRC})
+    ${MATOPTIMIZE_SRC}
+    src/usher_globals.cpp)
 target_compile_options(usher PRIVATE -march=native -std=c++17 -w)
 if (${USE_ASAN})
     target_compile_options(usher PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover)
 endif()
+target_include_directories(usher PUBLIC include)
 target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
 target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 larch_link_opts(usher)
@@ -137,8 +139,7 @@ set_target_properties(usher
 )
 
 add_library(larch-usher-glue
-    src/produce_mat.cpp
-    src/check_edge_mutations.cpp)
+    src/usher_glue.cpp)
 larch_compile_opts(larch-usher-glue)
 target_compile_options(larch-usher-glue PRIVATE ${STRICT_WARNINGS})
 larch_link_opts(larch-usher-glue)

@@ -5,7 +5,7 @@
 template <typename CRTP, typename Feature>
 auto& GetFeatureStorage(
     const FeatureConstView<Feature, CRTP, Deduplicate<Feature>>* feature) {
-  const Feature* result = static_cast<CRTP&>(*feature)
+  const Feature* result = static_cast<const CRTP&>(*feature)
                               .template GetFeatureStorage<Deduplicate<Feature>>()
                               .feature_;
   Assert(result);

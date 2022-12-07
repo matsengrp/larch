@@ -11,8 +11,12 @@
 
 struct ParsimonyScore {
   using Weight = size_t;
-  inline static Weight ComputeLeaf(MADAG dag, NodeId node_id);
-  inline static Weight ComputeEdge(MADAG dag, EdgeId edge_id);
+
+  template <typename DAG>
+  static Weight ComputeLeaf(DAG dag, NodeId node_id);
+
+  template <typename DAG>
+  static Weight ComputeEdge(DAG dag, EdgeId edge_id);
   /*
    * Given a vector of weights for edges below a clade, compute the minimum
    * weight of them all, and return that minimum weight, and a vector

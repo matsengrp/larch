@@ -68,7 +68,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes()
     ComputeCG(ComputeCG, node);
   }
   for (Node node : dag.GetNodes()) {
-    node.SetCompactGenome(std::move(new_cgs.at(node.GetId().value)));
+    node = std::move(new_cgs.at(node.GetId().value));
   }
   std::unordered_map<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {

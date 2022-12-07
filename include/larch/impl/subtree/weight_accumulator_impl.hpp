@@ -5,14 +5,16 @@ WeightAccumulator<WeightOps>::WeightAccumulator(const WeightOps& ops)
     : weight_ops_{ops} {}
 
 template <typename WeightOps>
+template <typename DAG>
 typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::ComputeLeaf(
-    MADAG dag, NodeId node_id) {
+    DAG dag, NodeId node_id) {
   return WeightCounter<WeightOps>({weight_ops_.ComputeLeaf(dag, node_id)}, weight_ops_);
 }
 
 template <typename WeightOps>
+template <typename DAG>
 typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::ComputeEdge(
-    MADAG dag, EdgeId edge_id) {
+    DAG dag, EdgeId edge_id) {
   return WeightCounter<WeightOps>({weight_ops_.ComputeEdge(dag, edge_id)}, weight_ops_);
 }
 
