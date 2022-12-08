@@ -96,9 +96,6 @@ class Merge {
   // Vector of externally owned input DAGs.
   std::vector<DAG> trees_;
 
-  // Every unique node compact genome, found among all input DAGs.
-  ConcurrentUnorderedSet<CompactGenome> all_compact_genomes_;
-
   // Every unique node leaf set, found among all input DAGs.
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
 

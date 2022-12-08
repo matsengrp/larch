@@ -40,7 +40,7 @@ const Feature* ExtraFeatureConstView<Deduplicate<Feature>, CRTP>::FindDeduplicat
   auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<Id, Deduplicate<Feature>>()
                            .deduplicated_;
-  auto result = deduplicated.find(feature);
+  auto result = deduplicated.find(feature);  // TODO Lock?
   if (result == deduplicated.end()) {
     return nullptr;
   }

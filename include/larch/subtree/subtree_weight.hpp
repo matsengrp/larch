@@ -44,6 +44,8 @@ class SubtreeWeight {
   using Edge = typename DAG::EdgeView;
   explicit SubtreeWeight(DAG dag);
 
+  DAG GetDAG() const;
+
   typename WeightOps::Weight ComputeWeightBelow(Node node, WeightOps&& weight_ops);
 
   ArbitraryInt MinWeightCount(Node node, WeightOps&& weight_ops);
@@ -51,13 +53,13 @@ class SubtreeWeight {
   [[nodiscard]] Storage TrimToMinWeight(WeightOps&& weight_ops);
 
   [[nodiscard]] std::pair<Storage, std::vector<NodeId>> SampleTree(
-      WeightOps&& weight_ops);
+      WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
 
   [[nodiscard]] std::pair<Storage, std::vector<NodeId>> UniformSampleTree(
-      WeightOps&& weight_ops);
+      WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
 
   [[nodiscard]] std::pair<Storage, std::vector<NodeId>> MinWeightSampleTree(
-      WeightOps&& weight_ops);
+      WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
 
  private:
   template <typename CladeRange>
@@ -65,7 +67,7 @@ class SubtreeWeight {
 
   template <typename DistributionMaker>
   [[nodiscard]] std::pair<Storage, std::vector<NodeId>> SampleTreeImpl(
-      WeightOps&& weight_ops, DistributionMaker&& distribution_maker);
+      WeightOps&& weight_ops, DistributionMaker&& distribution_maker, Node below);
 
   template <typename EdgeSelector>
   void ExtractTree(Node node, NodeId parent_id, WeightOps&& weight_ops,
