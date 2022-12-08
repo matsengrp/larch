@@ -15,6 +15,11 @@ template <typename Feature, typename CRTP, typename Tag = Feature>
 struct FeatureMutableView;
 /** @} */
 
+template <typename Feature, typename CRTP>
+struct ExtraFeatureConstView {};
+template <typename Feature, typename CRTP>
+struct ExtraFeatureMutableView {};
+
 /**
  * Used by specialization on the Feature parameter to add extra storage for
  * features that are attached to node or edge (not the DAG itself). Extra storage

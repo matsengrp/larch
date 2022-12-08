@@ -23,6 +23,11 @@ struct ElementStorage {
     using FeatureMutableView<Fs, CRTP>::operator=...;
   };
 
+  template <typename CRTP>
+  struct ExtraConstElementViewBase : ExtraFeatureConstView<Fs, CRTP>... {};
+  template <typename CRTP>
+  struct ExtraMutableElementViewBase : ExtraFeatureMutableView<Fs, CRTP>... {};
+
   ElementStorage() = default;
   MOVE_ONLY(ElementStorage);
 

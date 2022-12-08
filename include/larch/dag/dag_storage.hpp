@@ -25,10 +25,16 @@ struct DAGStorage {
   static const bool contains_element_feature;
 
   template <typename CRTP>
-  struct ConstDAGViewBase : FeatureConstView<Fs, CRTP>... {};
+  struct ConstDAGViewBase : FeatureConstView<Fs, CRTP>...,
+                            ExtraFeatureConstView<Fs, CRTP>...,
+                            NC::template ExtraConstElementViewBase<CRTP>,
+                            EC::template ExtraConstElementViewBase<CRTP> {};
   template <typename CRTP>
   struct MutableDAGViewBase : ConstDAGViewBase<CRTP>,
-                              FeatureMutableView<Fs, CRTP>... {};
+                              FeatureMutableView<Fs, CRTP>...,
+                              ExtraFeatureMutableView<Fs, CRTP>...,
+                              NC::template ExtraMutableElementViewBase<CRTP>,
+                              EC::template ExtraMutableElementViewBase<CRTP> {};
 
   DAGStorage() = default;
   MOVE_ONLY(DAGStorage);

@@ -22,9 +22,9 @@ void Merge<DAG>::AddDAGs(const std::vector<DAG>& dags) {
     std::vector<NodeLabel>& labels = tree_labels_.at(dag_idx);
     labels.resize(dag.GetNodesCount());
     for (size_t node_idx = 0; node_idx < dag.GetNodesCount(); ++node_idx) {
-      auto cg_iter = all_compact_genomes_.insert(
+      auto cg_iter = ResultDAG().AddDeduplicated(
           dag.Get(NodeId{node_idx}).GetCompactGenome().Copy());
-      labels.at(node_idx).SetCompactGenome(std::addressof(*cg_iter.first));
+      labels.at(node_idx).SetCompactGenome(cg_iter.first);
     }
   });
 

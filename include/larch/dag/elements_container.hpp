@@ -22,6 +22,13 @@ struct ElementsContainer {
     using FeatureMutableView<Fs, CRTP>::operator=...;
   };
 
+  template <typename CRTP>
+  struct ExtraConstElementViewBase : ES::template ExtraConstElementViewBase<CRTP>,
+                                     ExtraFeatureConstView<Fs, CRTP>... {};
+  template <typename CRTP>
+  struct ExtraMutableElementViewBase : ES::template ExtraMutableElementViewBase<CRTP>,
+                                       ExtraFeatureMutableView<Fs, CRTP>... {};
+
   ElementsContainer() = default;
   MOVE_ONLY(ElementsContainer);
 

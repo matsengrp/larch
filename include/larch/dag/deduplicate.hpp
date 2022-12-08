@@ -18,7 +18,10 @@ struct Deduplicate {
 
 template <typename Feature>
 struct ExtraFeatureStorage<Deduplicate<Feature>> {
+  ExtraFeatureStorage() = default;
+  MOVE_ONLY(ExtraFeatureStorage);
   ConcurrentUnorderedSet<Feature> deduplicated_;
+  static const Feature empty_;
 };
 
 template <typename CRTP, typename Feature>
@@ -37,4 +40,15 @@ template <typename Feature, typename CRTP>
 struct FeatureMutableView<Deduplicate<Feature>, CRTP>
     : FeatureConstView<Feature, CRTP, Deduplicate<Feature>> {
   auto& operator=(Feature&& feature);
+};
+
+template <typename Feature, typename CRTP>
+struct ExtraFeatureConstView<Deduplicate<Feature>, CRTP> {
+  const Feature* FindDeduplicated(const Feature& feature) const;
+};
+
+template <typename Feature, typename CRTP>
+struct ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>
+    : FeatureConstView<Feature, CRTP, Deduplicate<Feature>> {
+  std::pair<const Feature*, bool> AddDeduplicated(Feature&& feature);
 };
