@@ -33,8 +33,7 @@ typename WeightOps::Weight SubtreeWeight<WeightOps, DAG>::ComputeWeightBelow(
   }
   std::vector<typename WeightOps::Weight> cladeweights;
   for (auto clade : node.GetClades()) {
-    cladeweights.push_back(SubtreeWeight<WeightOps, DAG>::CladeWeight(
-        clade, std::forward<WeightOps>(weight_ops)));
+    cladeweights.push_back(CladeWeight(clade, std::forward<WeightOps>(weight_ops)));
   }
 
   cached = weight_ops.BetweenClades(cladeweights);
@@ -221,7 +220,10 @@ SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
   }
 
   if (not below.IsRoot()) {
-    result.View().AddUA({});
+    EdgeMutations muts = CompactGenome::ToEdgeMutations(dag_.GetReferenceSequence(), {},
+                                                        below.GetCompactGenome());
+
+    result.View().AddUA(muts);
   }
 
   return {std::move(result), std::move(result_dag_ids)};
