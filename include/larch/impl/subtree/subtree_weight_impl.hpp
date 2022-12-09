@@ -124,8 +124,8 @@ SubtreeWeight<WeightOps>::MinWeightSampleTree(WeightOps&& weight_ops) {
   ComputeWeightBelow(dag_.GetRoot(), std::forward<WeightOps>(weight_ops));
   return SampleTreeImpl(std::forward<WeightOps>(weight_ops), [this](auto clade) {
     Edge first_edge = dag_.Get(clade.at(0));
-    auto cached_clade = cached_min_weight_edges_.at(first_edge.GetParentId().value)
-                            .at(first_edge.GetClade().value);
+    auto& cached_clade = cached_min_weight_edges_.at(first_edge.GetParentId().value)
+                             .at(first_edge.GetClade().value);
     std::set<EdgeId> min_weight_edges(cached_clade.begin(), cached_clade.end());
     std::vector<double> probabilities;
     for (EdgeId child_edge : clade) {
@@ -148,8 +148,8 @@ SubtreeWeight<WeightOps>::MinWeightUniformSampleTree(WeightOps&& weight_ops) {
   ComputeWeightBelow(dag_.GetRoot(), std::forward<WeightOps>(weight_ops));
   return SampleTreeImpl(std::forward<WeightOps>(weight_ops), [this, &weight_ops](auto clade) {
     Edge first_edge = dag_.Get(clade.at(0));
-    auto cached_clade = cached_min_weight_edges_.at(first_edge.GetParentId().value)
-                            .at(first_edge.GetClade().value);
+    auto& cached_clade = cached_min_weight_edges_.at(first_edge.GetParentId().value)
+                             .at(first_edge.GetClade().value);
     std::set<EdgeId> min_weight_edges(cached_clade.begin(), cached_clade.end());
     std::vector<ArbitraryInt> min_weight_counts;
     ArbitraryInt sum = 0;
@@ -165,7 +165,7 @@ SubtreeWeight<WeightOps>::MinWeightUniformSampleTree(WeightOps&& weight_ops) {
 
     std::vector<double> probabilities;
     for (auto count : min_weight_counts) {
-        probabilities.push_back(static_cast<double>(count / sum));
+      probabilities.push_back(static_cast<double>(count / sum));
     }
     return std::discrete_distribution<size_t>{probabilities.begin(),
                                               probabilities.end()};
