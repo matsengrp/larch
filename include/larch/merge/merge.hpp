@@ -62,6 +62,8 @@ class Merge {
    */
   inline void AddDAGs(const std::vector<DAG>& dags);
 
+  inline void AddSubtree(DAG subtree, NodeId below);
+
   /**
    * Get the DAG resulting from merge
    * @{

@@ -36,6 +36,67 @@ void Merge<DAG>::AddDAGs(const std::vector<DAG>& dags) {
 }
 
 template <typename DAG>
+void Merge<DAG>::AddSubtree(DAG subtree, NodeId below_id) {
+  trees_.emplace_back(subtree);
+  tree_labels_.resize(trees_.size());
+  std::vector<NodeLabel>& labels = tree_labels_.back();
+  labels.resize(subtree.GetNodesCount());
+  for (auto node : subtree.GetNodes()) {
+    auto cg = ResultDAG().AddDeduplicated(node.GetCompactGenome().Copy()).first;
+    labels.at(node.GetId().value).SetCompactGenome(cg);
+  }
+  std::vector<LeafSet> computed_ls = ComputeLeafSets(subtree, labels);
+  for (auto node : subtree.GetNodes()) {
+    auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node.GetId().value)));
+    labels.at(node.GetId().value).SetLeafSet(std::addressof(*ls_iter.first));
+  }
+  NodeId node_id{ResultDAG().GetNodesCount()};
+  for (auto label : labels) {
+    if (result_nodes_.try_emplace(label, node_id).second) {
+      GetOrInsert(result_node_labels_, node_id) = label;
+      ++node_id.value;
+    }
+  }
+  std::vector<EdgeLabel> added_edges;
+  for (Edge edge : subtree.GetEdges()) {
+    const auto& parent_label = labels.at(edge.GetParentId().value);
+    const auto& child_label = labels.at(edge.GetChildId().value);
+    auto ins = result_edges_.insert({{parent_label, child_label}, {}});
+    if (ins.second) {
+      added_edges.push_back({parent_label, child_label});
+    }
+  }
+  EdgeLabel below_edge = {result_node_labels_.at(below_id.value),
+                          labels.at(subtree.GetRoot().GetId().value)};
+  added_edges.push_back(below_edge);
+  result_edges_.insert({below_edge, {}});
+  ResultDAG().InitializeNodes(result_nodes_.size());
+  EdgeId edge_id{ResultDAG().GetEdgesCount()};
+  for (auto edge : added_edges) {
+    auto parent = result_nodes_.find(edge.GetParent());
+    auto child = result_nodes_.find(edge.GetChild());
+    Assert(parent != result_nodes_.end());
+    Assert(child != result_nodes_.end());
+    Assert(parent->second.value < ResultDAG().GetNodesCount());
+    Assert(child->second.value < ResultDAG().GetNodesCount());
+    CladeIdx clade_idx = edge.ComputeCladeIdx();
+    if (clade_idx.value == NoId) {
+      clade_idx.value = 0; //TODO
+    }
+    ResultDAG().AddEdge(edge_id, parent->second, child->second, clade_idx);
+    ResultDAG().Get(parent->second) = parent->first.GetCompactGenome();
+    ResultDAG().Get(child->second) = child->first.GetCompactGenome();
+    auto result_edge_it = result_edges_.find(edge);
+    Assert(result_edge_it != result_edges_.end());
+    result_edge_it->second = edge_id;
+    ++edge_id.value;
+  }
+  Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
+  Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
+  ResultDAG().BuildConnections();
+}
+
+template <typename DAG>
 MergeDAG Merge<DAG>::GetResult() const {
   return result_dag_storage_.View();
 }
@@ -122,6 +183,8 @@ void Merge<DAG>::MergeTrees(const std::vector<size_t>& tree_idxs) {
     Assert(parent->second.value < ResultDAG().GetNodesCount());
     Assert(child->second.value < ResultDAG().GetNodesCount());
     ResultDAG().AddEdge(edge_id, parent->second, child->second, edge.ComputeCladeIdx());
+    ResultDAG().Get(parent->second) = parent->first.GetCompactGenome();
+    ResultDAG().Get(child->second) = child->first.GetCompactGenome();
     auto result_edge_it = result_edges_.find(edge);
     Assert(result_edge_it != result_edges_.end());
     result_edge_it->second = edge_id;

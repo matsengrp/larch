@@ -192,15 +192,14 @@ std::pair<typename SubtreeWeight<WeightOps, DAG>::Storage, std::vector<NodeId>>
 SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
                                               DistributionMaker&& distribution_maker,
                                               Node below) {
+  Assert(not below.IsLeaf());
   dag_.AssertUA();
   Storage result;
   result.View().SetReferenceSequence(dag_.GetReferenceSequence());
   std::vector<NodeId> result_dag_ids;
 
-  NodeId parent_id = result.View().AppendNode();
-
   ExtractTree(
-      below, parent_id, std::forward<WeightOps>(weight_ops),
+      below, result.View().AppendNode(), std::forward<WeightOps>(weight_ops),
       [this, &distribution_maker](Node node, CladeIdx clade_idx) {
         auto clade = node.GetClade(clade_idx);
         Assert(not clade.empty());
@@ -220,9 +219,9 @@ SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
   }
 
   if (not below.IsRoot()) {
+    Assert(not below.GetCompactGenome().empty());
     EdgeMutations muts = CompactGenome::ToEdgeMutations(dag_.GetReferenceSequence(), {},
                                                         below.GetCompactGenome());
-
     result.View().AddUA(muts);
   }
 
@@ -231,31 +230,32 @@ SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
 
 template <typename WeightOps, typename DAG>
 template <typename EdgeSelector>
-void SubtreeWeight<WeightOps, DAG>::ExtractTree(Node input_node, NodeId parent_id,
+void SubtreeWeight<WeightOps, DAG>::ExtractTree(Node input_node, NodeId result_node_id,
                                                 WeightOps&& weight_ops,
                                                 EdgeSelector&& edge_selector,
                                                 MutableDAG result,
                                                 std::vector<NodeId>& result_dag_ids) {
   ComputeWeightBelow(input_node, std::forward<WeightOps>(weight_ops));
+
+  GetOrInsert(result_dag_ids, result_node_id) = input_node.GetId();
+
+  result.Get(result_node_id) = input_node.GetCompactGenome().Copy();
+
   CladeIdx clade_idx{0};
-
-  GetOrInsert(result_dag_ids, parent_id) = input_node.GetId();
-
-  result.Get(parent_id) = input_node.GetCompactGenome().Copy();
-
   for (auto clade : input_node.GetClades()) {
     Assert(not clade.empty());
 
     Edge input_edge = edge_selector(input_node, clade_idx);
     ++clade_idx.value;
 
-    NodeId child_id = result.AppendNode();
+    NodeId result_child_id = result.AppendNode();
     typename MutableDAG::EdgeView result_edge =
-        result.AppendEdge(parent_id, child_id, input_edge.GetClade());
+        result.AppendEdge(result_node_id, result_child_id, input_edge.GetClade());
 
     result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
 
-    ExtractTree(input_edge.GetChild(), child_id, std::forward<WeightOps>(weight_ops),
+    ExtractTree(input_edge.GetChild(), result_child_id,
+                std::forward<WeightOps>(weight_ops),
                 std::forward<EdgeSelector>(edge_selector), result, result_dag_ids);
   }
 }

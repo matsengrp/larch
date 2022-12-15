@@ -45,6 +45,12 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetSingleParent() const {
 }
 
 template <typename CRTP, typename Tag>
+auto FeatureConstView<Neighbors, CRTP, Tag>::GetFirstParent() const {
+  Assert(not IsRoot());
+  return *GetParents().begin();
+}
+
+template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetFirstChild() const {
   Assert(not IsLeaf());
   return *GetChildren().begin();

@@ -30,6 +30,7 @@
   std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
   std::cout << "  -l,--logpath Path for logging\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
+  std::cout << "  -s,--subtree Optimize subtrees\n";
   std::cout
       << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
   std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
@@ -96,15 +97,17 @@ std::vector<std::vector<const CompactGenome*>> clades_difference(
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
+template <typename SampleDAG>
 struct Larch_Move_Found_Callback : public Move_Found_Callback {
-  Larch_Move_Found_Callback(const Merge& merge, MADAG sample,
+  Larch_Move_Found_Callback(const Merge<MADAG>& merge, SampleDAG sample,
                             const std::vector<NodeId>& sample_dag_ids)
       : merge_{merge},
         sample_{sample},
         sample_dag_ids_{sample_dag_ids},
         move_score_coeffs_{1, 1} {}
   Larch_Move_Found_Callback(
-      const Merge& merge, MADAG sample, const std::vector<NodeId>& sample_dag_ids,
+      const Merge<MADAG>& merge, SampleDAG sample,
+      const std::vector<NodeId>& sample_dag_ids,
       std::pair<int, int> move_score_coeffs)  // NOLINT(modernize-pass-by-value)
       : merge_{merge},
         sample_{sample},
@@ -126,7 +129,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
 
       MAT::Node* curr_node = move.src;
       while (not(curr_node->node_id == lca_id.value)) {
-        MADAG::NodeView node = merge_.GetResult().Get(NodeId{curr_node->node_id});
+        MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{curr_node->node_id});
         const auto& clades = merge_.GetResultNodeLabels()
                                  .at(node.GetId().value)
                                  .GetLeafSet()
@@ -142,7 +145,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
 
       curr_node = move.dst;
       while (not(curr_node->node_id == lca_id.value)) {
-        MADAG::NodeView node = merge_.GetResult().Get(NodeId{curr_node->node_id});
+        MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{curr_node->node_id});
         const auto& clades = merge_.GetResultNodeLabels()
                                  .at(node.GetId().value)
                                  .GetLeafSet()
@@ -163,13 +166,13 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
   }
 
  private:
-  const Merge& merge_;
-  MADAG sample_;
+  const Merge<MADAG>& merge_;
+  SampleDAG sample_;
   const std::vector<NodeId>& sample_dag_ids_;
   const std::pair<int, int> move_score_coeffs_;
 };
 
-int main(int argc, char** argv) try {
+int main(int argc, char** argv) {
   Arguments args = GetArguments(argc, argv);
   int ignored{};
   std::string input_dag_path;
@@ -181,6 +184,7 @@ int main(int argc, char** argv) try {
   size_t count = 1;
   int move_coeff_nodes = 1;
   int move_coeff_pscore = 1;
+  bool subtrees = false;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -209,6 +213,8 @@ int main(int argc, char** argv) try {
         Fail();
       }
       count = static_cast<size_t>(ParseNumber(*params.begin()));
+    } else if (name == "-s" or name == "--subtrees") {
+      subtrees = true;
     } else if (name == "-l" or name == "--logpath") {
       if (params.empty()) {
         std::cerr << "log path name not specified.\n";
@@ -266,7 +272,7 @@ int main(int argc, char** argv) try {
           : LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path));
 
   input_dag.View().RecomputeCompactGenomes();
-  Merge merge{input_dag.View().GetReferenceSequence()};
+  Merge<MADAG> merge{input_dag.View().GetReferenceSequence()};
   merge.AddDAGs({input_dag.View()});
   std::vector<MADAGStorage> optimized_dags;
 
@@ -277,8 +283,9 @@ int main(int argc, char** argv) try {
   };
 
   auto logger = [&merge, &logfile, &time_elapsed](size_t iteration) {
-    SubtreeWeight<BinaryParsimonyScore> parsimonyscorer{merge.GetResult()};
-    SubtreeWeight<MaxBinaryParsimonyScore> maxparsimonyscorer{merge.GetResult()};
+    SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{merge.GetResult()};
+    SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> maxparsimonyscorer{
+        merge.GetResult()};
     merge.ComputeResultEdgeMutations();
     auto minparsimony =
         parsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
@@ -286,11 +293,11 @@ int main(int argc, char** argv) try {
         parsimonyscorer.MinWeightCount(merge.GetResult().GetRoot(), {});
     auto maxparsimony =
         maxparsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-    SubtreeWeight<TreeCount> treecount{merge.GetResult()};
+    SubtreeWeight<TreeCount, MergeDAG> treecount{merge.GetResult()};
     auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     std::cout << "Best parsimony score in DAG: " << minparsimony << "\n";
     std::cout << "Worst parsimony score in DAG: " << maxparsimony << "\n";
-    std::cout << "Total trees in DAG: " << ntrees << "\n";
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << ntrees << "\n";
     std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
@@ -305,16 +312,43 @@ int main(int argc, char** argv) try {
               << " #######\n";
 
     merge.ComputeResultEdgeMutations();
-    SubtreeWeight<BinaryParsimonyScore> weight{merge.GetResult()};
-    auto [sample, dag_ids] =
-        sample_best_tree ? weight.MinWeightSampleTree({}) : weight.SampleTree({});
+    SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
+    std::optional<NodeId> subtree_node;
+    auto [sample, dag_ids] = [&] {
+      if (subtrees) {
+        subtree_node = [&] {
+          std::random_device random_device;
+          std::mt19937 random_generator(random_device());
+          NodeId node;
+          do {
+            node = {std::uniform_int_distribution<size_t>{
+                weight.GetDAG().GetNodesCount() - 5000, weight.GetDAG().GetNodesCount()}(random_generator)};
+          } while (not weight.GetDAG().Get(node).IsLeaf());
+          std::cout << ">>>>>>>>>>>>>>>>> Chosen node: " << node.value << "\n";
+          return node;
+        }();
+        return weight.SampleTree({}, subtree_node.value());
+      } else {
+        if (sample_best_tree) {
+          return weight.MinWeightSampleTree({});
+        } else {
+          return weight.SampleTree({});
+        }
+      }
+    }();
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Sample nodes: " << sample.GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
     Larch_Move_Found_Callback callback{
         merge, sample.View(), dag_ids, {move_coeff_nodes, move_coeff_pscore}};
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
     MADAGStorage result = optimize_dag_direct(sample.View(), callback);
     optimized_dags.push_back(std::move(result));
-    merge.AddDAGs({optimized_dags.back().View()});
+    if (subtrees) {
+      merge.AddSubtree(optimized_dags.back().View(),
+                       optimized_dags.back().View().Get(subtree_node.value()));
+    } else {
+      merge.AddDAGs({optimized_dags.back().View()});
+    }
 
     if (i % 10 == 0) {  // NOLINT
       StoreDAGToProtobuf(merge.GetResult(), logfile_path + "/intermediate_dag.pb");
@@ -328,9 +362,4 @@ int main(int argc, char** argv) try {
   StoreDAGToProtobuf(merge.GetResult(), output_dag_path);
 
   return EXIT_SUCCESS;
-} catch (std::exception& e) {
-  std::cerr << "Uncaught exception: " << e.what() << std::endl;
-  std::terminate();
-} catch (...) {
-  std::abort();
 }

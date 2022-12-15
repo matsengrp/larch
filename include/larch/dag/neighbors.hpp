@@ -19,6 +19,7 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
   size_t GetCladesCount() const;
   auto GetChildren() const;
   auto GetSingleParent() const;
+  auto GetFirstParent() const;
   auto GetFirstChild() const;
   auto GetFirstClade() const;
   bool IsRoot() const;

@@ -32,6 +32,15 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(Feature&& featur
 }
 
 template <typename Feature, typename CRTP>
+auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
+    const Feature* feature) {
+  static_cast<CRTP&>(*this)
+      .template GetFeatureStorage<Deduplicate<Feature>>()
+      .feature_ = feature;
+  return *this;
+}
+
+template <typename Feature, typename CRTP>
 const Feature* ExtraFeatureConstView<Deduplicate<Feature>, CRTP>::FindDeduplicated(
     const Feature& feature) const {
   using Id = std::conditional_t<

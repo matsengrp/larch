@@ -15,7 +15,7 @@
 #include "larch/usher_glue.hpp"
 #include <tbb/task_scheduler_init.h>
 
-static uint8_t EncodeBase(char base) {
+static uint8_t EncodeBaseMAT(char base) {
   switch (base) {
     case 'A':
       return 1;
@@ -44,8 +44,8 @@ static void mat_from_dag_helper(typename DAG::NodeView dag_node,
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
       Assert(pos.value != NoId);
-      MAT::Mutation mat_mut("ref", static_cast<int>(pos.value), EncodeBase(muts.second),
-                            EncodeBase(muts.first), EncodeBase(muts.second));
+      MAT::Mutation mat_mut("ref", static_cast<int>(pos.value), EncodeBaseMAT(muts.second),
+                            EncodeBaseMAT(muts.first), EncodeBaseMAT(muts.second));
       node->mutations.push_back(mat_mut);
     }
     node->parent = mat_par_node;
@@ -66,8 +66,8 @@ MAT::Tree mat_from_dag(DAG dag) {
   mat_root_node->mutations.reserve(tree_root_mutations.size());
   for (auto [pos, muts] : tree_root_mutations) {
     Assert(pos.value != NoId);
-    MAT::Mutation mat_mut("ref", static_cast<int>(pos.value), EncodeBase(muts.second),
-                          EncodeBase(muts.first), EncodeBase(muts.second));
+    MAT::Mutation mat_mut("ref", static_cast<int>(pos.value), EncodeBaseMAT(muts.second),
+                          EncodeBaseMAT(muts.first), EncodeBaseMAT(muts.second));
     mat_root_node->mutations.push_back(mat_mut);
   }
 
@@ -141,7 +141,7 @@ void check_MAT_MADAG_Eq(const MAT::Tree& tree, DAG init) {
 void fill_static_reference_sequence(std::string_view dag_ref) {
   MAT::Mutation::refs.resize(dag_ref.size() + 1);
   for (size_t ref_idx = 0; ref_idx < dag_ref.size(); ref_idx++) {
-    MAT::Mutation::refs[ref_idx + 1] = EncodeBase(dag_ref[ref_idx]);
+    MAT::Mutation::refs[ref_idx + 1] = EncodeBaseMAT(dag_ref[ref_idx]);
   }
 }
 

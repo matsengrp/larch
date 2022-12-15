@@ -218,21 +218,6 @@ MADAGStorage LoadDAGFromJson(std::string_view path) {
   return result;
 }
 
-static int32_t EncodeBase(char base) {
-  switch (base) {
-    case 'A':
-      return 0;
-    case 'C':
-      return 1;
-    case 'G':
-      return 2;
-    case 'T':
-      return 3;
-    default:
-      Fail("Invalid base");
-  };
-}
-
 std::string LoadReferenceSequence(std::string_view path) {
   std::string result;
   if (IsGzipped(path)) {
@@ -252,38 +237,9 @@ std::string LoadReferenceSequence(std::string_view path) {
 template <typename Mutation>
 void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut) {
   proto_mut->set_position(static_cast<int32_t>(pos));
-  proto_mut->set_ref_nuc(EncodeBase(ref));
-  proto_mut->set_par_nuc(EncodeBase(par));
-  proto_mut->add_mut_nuc(EncodeBase(mut));
-}
-
-void StoreDAGToProtobuf(MADAG dag, std::string_view path) {
-  dag.AssertUA();
-  ProtoDAG::data data;
-
-  data.set_reference_seq(dag.GetReferenceSequence());
-
-  for (size_t i = 0; i < dag.GetNodesCount(); ++i) {
-    auto* proto_node = data.add_node_names();
-    proto_node->set_node_id(static_cast<int64_t>(i));
-  }
-
-  for (MADAG::EdgeView edge : dag.GetEdges()) {
-    auto* proto_edge = data.add_edges();
-    proto_edge->set_edge_id(static_cast<int64_t>(edge.GetId().value));
-    proto_edge->set_parent_node(static_cast<int64_t>(edge.GetParentId().value));
-    proto_edge->set_child_node(static_cast<int64_t>(edge.GetChildId().value));
-    proto_edge->set_parent_clade(static_cast<int64_t>(edge.GetClade().value));
-    for (auto [pos, nucs] : edge.GetEdgeMutations()) {
-      auto* proto_mut = proto_edge->add_edge_mutations();
-      proto_mut->set_position(static_cast<int32_t>(pos.value));
-      proto_mut->set_par_nuc(EncodeBase(nucs.first));
-      proto_mut->add_mut_nuc(EncodeBase(nucs.second));
-    }
-  }
-
-  std::ofstream file{std::string{path}};
-  data.SerializeToOstream(&file);
+  proto_mut->set_ref_nuc(EncodeBasePB(ref));
+  proto_mut->set_par_nuc(EncodeBasePB(par));
+  proto_mut->add_mut_nuc(EncodeBasePB(mut));
 }
 
 void StoreTreeToProtobuf(MADAG dag, std::string_view path) {
@@ -331,9 +287,9 @@ void StoreTreeToProtobuf(MADAG dag, std::string_view path) {
     for (auto [pos, mut] : edge.GetEdgeMutations()) {
       auto* proto_mut = proto->add_mutation();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
-      proto_mut->set_ref_nuc(EncodeBase(ref_seq.at(pos.value - 1)));
-      proto_mut->set_par_nuc(EncodeBase(mut.first));
-      proto_mut->add_mut_nuc(EncodeBase(mut.second));
+      proto_mut->set_ref_nuc(EncodeBasePB(ref_seq.at(pos.value - 1)));
+      proto_mut->set_par_nuc(EncodeBasePB(mut.first));
+      proto_mut->add_mut_nuc(EncodeBasePB(mut.second));
       proto_mut->set_chromosome("leaf_0");
     }
     for (MADAG::EdgeView child : edge.GetChild().GetChildren()) {
