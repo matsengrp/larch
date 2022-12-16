@@ -19,22 +19,22 @@ static auto choose_root = [](const auto& subtree_weight) {
   return subtree_weight.GetDAG().GetRoot();
 };
 
-static auto choose_random = [](const auto& subtree_weight) {
+static auto choose_random = [](const auto& weight) {
   std::random_device random_device;
   std::mt19937 random_generator(random_device());
 
   NodeId node_id;
   do {
-    Assert(subtree_weight.GetDAG().GetNodesCount() > 0);
+    Assert(weight.GetDAG().GetNodesCount() > 0);
     node_id = {std::uniform_int_distribution<size_t>{
-        0, subtree_weight.GetDAG().GetNodesCount() - 1}(random_generator)};
-    auto node = subtree_weight.GetDAG().Get(node_id);
+        0, weight.GetDAG().GetNodesCount() - 1}(random_generator)};
+    auto node = weight.GetDAG().Get(node_id);
     if (node.IsLeaf() or node.GetCompactGenome().empty()) {
       continue;
     }
     break;
   } while (true);
-  return subtree_weight.GetDAG().Get(node_id);
+  return weight.GetDAG().Get(node_id);
 };
 
 template <typename ChooseNode>
@@ -62,7 +62,7 @@ static void test_matOptimize(std::string_view input_dag_path,
     Test_Move_Found_Callback callback;
     optimized_dags.push_back(optimize_dag_direct(sample.View(), callback));
     optimized_dags.back().View().RecomputeCompactGenomes();
-    merge.AddSubtree(optimized_dags.back().View(), chosen_node);
+    merge.AddDAG(optimized_dags.back().View(), chosen_node);
   }
 }
 

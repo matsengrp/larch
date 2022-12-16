@@ -151,6 +151,34 @@ static void test_add_trees() {
                "Edges count");
 }
 
+static void test_subtree() {
+  std::string_view correct_path = "data/test_5_trees/full_dag.json.gz";
+  std::vector<std::string> paths = {
+      "data/test_5_trees/tree_0.pb.gz", "data/test_5_trees/tree_1.pb.gz",
+      "data/test_5_trees/tree_2.pb.gz", "data/test_5_trees/tree_3.pb.gz",
+      "data/test_5_trees/tree_4.pb.gz"};
+
+  MADAGStorage correct_result = LoadDAGFromJson(correct_path);
+  correct_result.View().RecomputeEdgeMutations();
+  Merge<MADAG> merge(correct_result.View().GetReferenceSequence());
+
+  std::vector<MADAGStorage> trees;
+  for (auto& path : paths) {
+    trees.push_back(LoadDAGFromProtobuf(path));
+    trees.back().View().RecomputeCompactGenomes();
+  }
+
+  for (auto& tree : trees) {
+    merge.AddDAG(tree.View(), merge.GetResult().GetRoot());
+  }
+
+  assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
+               "Nodes count");
+
+  assert_equal(correct_result.View().GetEdgesCount(), merge.GetResult().GetEdgesCount(),
+               "Edges count");
+}
+
 [[maybe_unused]] static const auto test0_added =
     add_test({test_case_2, "Merge: Test case 2"});
 
@@ -165,3 +193,6 @@ static void test_add_trees() {
 
 [[maybe_unused]] static const auto test4_added =
     add_test({test_add_trees, "Merge: Add trees"});
+
+[[maybe_unused]] static const auto test5_added =
+    add_test({test_subtree, "Merge: Subtree"});

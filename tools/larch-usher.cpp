@@ -297,7 +297,8 @@ int main(int argc, char** argv) {
     auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     std::cout << "Best parsimony score in DAG: " << minparsimony << "\n";
     std::cout << "Worst parsimony score in DAG: " << maxparsimony << "\n";
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << ntrees << "\n";
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << ntrees
+              << "\n";
     std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
@@ -319,13 +320,19 @@ int main(int argc, char** argv) {
         subtree_node = [&] {
           std::random_device random_device;
           std::mt19937 random_generator(random_device());
-          NodeId node;
+
+          NodeId node_id;
           do {
-            node = {std::uniform_int_distribution<size_t>{
-                weight.GetDAG().GetNodesCount() - 5000, weight.GetDAG().GetNodesCount()}(random_generator)};
-          } while (not weight.GetDAG().Get(node).IsLeaf());
-          std::cout << ">>>>>>>>>>>>>>>>> Chosen node: " << node.value << "\n";
-          return node;
+            Assert(weight.GetDAG().GetNodesCount() > 0);
+            node_id = {std::uniform_int_distribution<size_t>{
+                0, weight.GetDAG().GetNodesCount() - 1}(random_generator)};
+            auto node = weight.GetDAG().Get(node_id);
+            if (node.IsLeaf() or node.GetCompactGenome().empty()) {
+              continue;
+            }
+            break;
+          } while (true);
+          return weight.GetDAG().Get(node_id);
         }();
         return weight.SampleTree({}, subtree_node.value());
       } else {
@@ -336,7 +343,8 @@ int main(int argc, char** argv) {
         }
       }
     }();
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Sample nodes: " << sample.GetNodesCount() << "\n";
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Sampled nodes: "
+              << sample.GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
     Larch_Move_Found_Callback callback{
         merge, sample.View(), dag_ids, {move_coeff_nodes, move_coeff_pscore}};
@@ -344,8 +352,8 @@ int main(int argc, char** argv) {
     MADAGStorage result = optimize_dag_direct(sample.View(), callback);
     optimized_dags.push_back(std::move(result));
     if (subtrees) {
-      merge.AddSubtree(optimized_dags.back().View(),
-                       optimized_dags.back().View().Get(subtree_node.value()));
+      merge.AddDAG(optimized_dags.back().View(),
+                   merge.GetResult().Get(subtree_node.value()));
     } else {
       merge.AddDAGs({optimized_dags.back().View()});
     }

@@ -36,29 +36,46 @@ void Merge<DAG>::AddDAGs(const std::vector<DAG>& dags) {
 }
 
 template <typename DAG>
-void Merge<DAG>::AddSubtree(DAG subtree, NodeId below_id) {
-  trees_.emplace_back(subtree);
-  tree_labels_.resize(trees_.size());
+template <typename D, typename N>
+void Merge<DAG>::AddDAG(D dag, N below) {
+  dag.AssertUA();
+  tree_labels_.push_back({});
   std::vector<NodeLabel>& labels = tree_labels_.back();
-  labels.resize(subtree.GetNodesCount());
-  for (auto node : subtree.GetNodes()) {
-    auto cg = ResultDAG().AddDeduplicated(node.GetCompactGenome().Copy()).first;
-    labels.at(node.GetId().value).SetCompactGenome(cg);
+  const bool is_subtree = not below.IsRoot();
+  labels.resize(dag.GetNodesCount());
+  for (auto node : dag.GetNodes()) {
+    if (is_subtree and node.IsRoot()) {
+      continue;
+    }
+    auto cg_iter = ResultDAG().AddDeduplicated(node.GetCompactGenome().Copy());
+    labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
   }
-  std::vector<LeafSet> computed_ls = ComputeLeafSets(subtree, labels);
-  for (auto node : subtree.GetNodes()) {
+
+  std::vector<LeafSet> computed_ls = ComputeLeafSets(dag, labels);
+  for (auto node : dag.GetNodes()) {
+    if (is_subtree and node.IsRoot()) {
+      continue;
+    }
     auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node.GetId().value)));
     labels.at(node.GetId().value).SetLeafSet(std::addressof(*ls_iter.first));
   }
+
   NodeId node_id{ResultDAG().GetNodesCount()};
   for (auto label : labels) {
+    if (is_subtree and label == NodeLabel{}) {
+      continue;
+    }
     if (result_nodes_.try_emplace(label, node_id).second) {
       GetOrInsert(result_node_labels_, node_id) = label;
       ++node_id.value;
     }
   }
+
   std::vector<EdgeLabel> added_edges;
-  for (Edge edge : subtree.GetEdges()) {
+  for (auto edge : dag.GetEdges()) {
+    if (is_subtree and edge.IsRoot()) {
+      continue;
+    }
     const auto& parent_label = labels.at(edge.GetParentId().value);
     const auto& child_label = labels.at(edge.GetChildId().value);
     auto ins = result_edges_.insert({{parent_label, child_label}, {}});
@@ -66,10 +83,17 @@ void Merge<DAG>::AddSubtree(DAG subtree, NodeId below_id) {
       added_edges.push_back({parent_label, child_label});
     }
   }
-  EdgeLabel below_edge = {result_node_labels_.at(below_id.value),
-                          labels.at(subtree.GetRoot().GetId().value)};
-  added_edges.push_back(below_edge);
-  result_edges_.insert({below_edge, {}});
+
+  if (is_subtree) {
+    EdgeLabel below_edge = {
+        result_node_labels_.at(below.GetFirstParent().GetParent().GetId().value),
+        labels.at(dag.GetRoot().GetFirstChild().GetChild().GetId().value)};
+    auto ins = result_edges_.insert({below_edge, {}});
+    if (ins.second) {
+      added_edges.push_back(below_edge);
+    }
+  }
+
   ResultDAG().InitializeNodes(result_nodes_.size());
   EdgeId edge_id{ResultDAG().GetEdgesCount()};
   for (auto edge : added_edges) {
@@ -79,20 +103,17 @@ void Merge<DAG>::AddSubtree(DAG subtree, NodeId below_id) {
     Assert(child != result_nodes_.end());
     Assert(parent->second.value < ResultDAG().GetNodesCount());
     Assert(child->second.value < ResultDAG().GetNodesCount());
-    CladeIdx clade_idx = edge.ComputeCladeIdx();
-    if (clade_idx.value == NoId) {
-      clade_idx.value = 0; //TODO
-    }
-    ResultDAG().AddEdge(edge_id, parent->second, child->second, clade_idx);
+    ResultDAG().AddEdge(edge_id, parent->second, child->second, edge.ComputeCladeIdx());
     ResultDAG().Get(parent->second) = parent->first.GetCompactGenome();
     ResultDAG().Get(child->second) = child->first.GetCompactGenome();
     auto result_edge_it = result_edges_.find(edge);
     Assert(result_edge_it != result_edges_.end());
     result_edge_it->second = edge_id;
-    ++edge_id.value;
+    edge_id.value++;
   }
+
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
-  Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
+  // TODO Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
   ResultDAG().BuildConnections();
 }
 
