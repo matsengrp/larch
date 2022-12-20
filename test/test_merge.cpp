@@ -169,7 +169,7 @@ static void test_subtree() {
   }
 
   for (auto& tree : trees) {
-    merge.AddDAG(tree.View(), merge.GetResult().GetRoot());
+    merge.AddDAG(tree.View());
   }
 
   assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),

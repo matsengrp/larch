@@ -44,8 +44,9 @@ static void mat_from_dag_helper(typename DAG::NodeView dag_node,
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
       Assert(pos.value != NoId);
-      MAT::Mutation mat_mut("ref", static_cast<int>(pos.value), EncodeBaseMAT(muts.second),
-                            EncodeBaseMAT(muts.first), EncodeBaseMAT(muts.second));
+      MAT::Mutation mat_mut("ref", static_cast<int>(pos.value),
+                            EncodeBaseMAT(muts.second), EncodeBaseMAT(muts.first),
+                            EncodeBaseMAT(muts.second));
       node->mutations.push_back(mat_mut);
     }
     node->parent = mat_par_node;
@@ -66,8 +67,9 @@ MAT::Tree mat_from_dag(DAG dag) {
   mat_root_node->mutations.reserve(tree_root_mutations.size());
   for (auto [pos, muts] : tree_root_mutations) {
     Assert(pos.value != NoId);
-    MAT::Mutation mat_mut("ref", static_cast<int>(pos.value), EncodeBaseMAT(muts.second),
-                          EncodeBaseMAT(muts.first), EncodeBaseMAT(muts.second));
+    MAT::Mutation mat_mut("ref", static_cast<int>(pos.value),
+                          EncodeBaseMAT(muts.second), EncodeBaseMAT(muts.first),
+                          EncodeBaseMAT(muts.second));
     mat_root_node->mutations.push_back(mat_mut);
   }
 
@@ -163,25 +165,25 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback) {
   std::cout << "maximum radius is " << std::to_string(ddepth) << "\n";
   size_t rad_exp = 1;
   for (; static_cast<size_t>(1) << rad_exp <= ddepth; rad_exp++) {
-  auto all_nodes = tree.depth_first_expansion();
-  std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
+    auto all_nodes = tree.depth_first_expansion();
+    std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
 
-  optimize_inner_loop(all_nodes,     // nodes to search
-                      tree,          // tree
-                      1 << rad_exp,  // radius
-                      callback,
-                      true,                  // allow drift
-                      true,                  // search all directions
-                      5,                     // minutes between save
-                      true,                  // do not write intermediate files
-                      end_time,              // search end time
-                      start_time,            // start time
-                      false,                 // log moves
-                      1,                     // current iteration
-                      "intermediate",        // intermediate template
-                      "intermediate_base",   // intermediate base name
-                      "intermediate_newick"  // intermediate newick name
-  );
+    optimize_inner_loop(all_nodes,     // nodes to search
+                        tree,          // tree
+                        1 << rad_exp,  // radius
+                        callback,
+                        true,                  // allow drift
+                        true,                  // search all directions
+                        5,                     // minutes between save
+                        true,                  // do not write intermediate files
+                        end_time,              // search end time
+                        start_time,            // start time
+                        false,                 // log moves
+                        1,                     // current iteration
+                        "intermediate",        // intermediate template
+                        "intermediate_base",   // intermediate base name
+                        "intermediate_newick"  // intermediate newick name
+    );
   }
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
   MADAGStorage result = build_madag_from_mat(tree, dag.GetReferenceSequence());

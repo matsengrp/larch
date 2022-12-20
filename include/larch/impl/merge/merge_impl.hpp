@@ -1,3 +1,5 @@
+#include <mutex>
+
 template <typename DAG>
 Merge<DAG>::Merge(std::string_view reference_sequence) {
   ResultDAG().SetReferenceSequence(reference_sequence);
@@ -41,7 +43,13 @@ void Merge<DAG>::AddDAG(D dag, N below) {
   dag.AssertUA();
   tree_labels_.push_back({});
   std::vector<NodeLabel>& labels = tree_labels_.back();
-  const bool is_subtree = not below.IsRoot();
+  const bool is_subtree = [=] {
+    if constexpr (std::is_same_v<N, std::nullopt_t>) {
+      return false;
+    } else {
+      return not below.IsRoot();
+    }
+  }();
   labels.resize(dag.GetNodesCount());
   for (auto node : dag.GetNodes()) {
     if (is_subtree and node.IsRoot()) {
@@ -84,13 +92,15 @@ void Merge<DAG>::AddDAG(D dag, N below) {
     }
   }
 
-  if (is_subtree) {
-    EdgeLabel below_edge = {
-        result_node_labels_.at(below.GetFirstParent().GetParent().GetId().value),
-        labels.at(dag.GetRoot().GetFirstChild().GetChild().GetId().value)};
-    auto ins = result_edges_.insert({below_edge, {}});
-    if (ins.second) {
-      added_edges.push_back(below_edge);
+  if constexpr (not std::is_same_v<N, std::nullopt_t>) {
+    if (is_subtree) {
+      EdgeLabel below_edge = {
+          result_node_labels_.at(below.GetFirstParent().GetParent().GetId().value),
+          labels.at(dag.GetRoot().GetFirstChild().GetChild().GetId().value)};
+      auto ins = result_edges_.insert({below_edge, {}});
+      if (ins.second) {
+        added_edges.push_back(below_edge);
+      }
     }
   }
 
