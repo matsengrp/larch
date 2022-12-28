@@ -9,7 +9,7 @@ iterations=$4
 numruns=50
 
 
-for option1 in {'','-s',}; do
+for option1 in "--sample-best-tree" "--sample-best-tree -s 0" "--sample-best-tree -s 2" "--sample-best-tree -s 10"; do
     logfilepath=$logprefix/option_$option1
     echo $logfilepath
     mkdir -p $logfilepath
@@ -18,5 +18,3 @@ for option1 in {'','-s',}; do
         sbatch -c 4 -J rn$jobnum -o $logfilepath/log$jobnum.log ../run-larch-usher.sh $larch_usher_options
     done
 done
-
-
