@@ -11,10 +11,12 @@ import sys
 from matplotlib.patches import Patch
 sys.set_int_max_str_digits(10000)
 
-prefix='20D/log/'
+prefix='20D_intermediate/'
 directories = [
-    'option_',
-    'option_-s',
+    "option_--sample-best-tree",
+    "option_--sample-best-tree-s10",
+    "option_--sample-best-tree-s0",
+    "option_--sample-best-tree-s2",
 ]
 
 logtransform = (lambda n: statistics.log(n, 10), "Log10")
@@ -75,7 +77,7 @@ for color, directory in zip(colors, directories):
         data_dict = dict(zip(fields, data))
         for ax, (plot_field, (vertical_transform, vertical_transform_name)) in zip(axarr, plot_fields):
             ax.plot(data_dict["SecondsElapsed"],
-                    data_dict[plot_field],
+                    [vertical_transform(el) for el in data_dict[plot_field]],
                     color=color,
                     alpha=0.6)
             ax.set_ylabel(vertical_transform_name + ' ' + plot_field)

@@ -30,7 +30,7 @@
   std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
   std::cout << "  -l,--logpath Path for logging\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
-  std::cout << "  -s,--subtree Optimize subtrees\n";
+  std::cout << "  -s,--switch-subtree Switch to optimizing subtrees after the specified number of iterations (default never)\n";
   std::cout
       << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
   std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
   size_t count = 1;
   int move_coeff_nodes = 1;
   int move_coeff_pscore = 1;
-  bool subtrees = false;
+  size_t switch_subtrees = std::numeric_limits<size_t>::max();
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -213,8 +213,12 @@ int main(int argc, char** argv) {
         Fail();
       }
       count = static_cast<size_t>(ParseNumber(*params.begin()));
-    } else if (name == "-s" or name == "--subtrees") {
-      subtrees = true;
+    } else if (name == "-s" or name == "--switch-subtrees") {
+      if (params.empty()) {
+        std::cerr << "Count not specified.\n";
+        Fail();
+      }
+      switch_subtrees = ParseNumber(*params.begin());
     } else if (name == "-l" or name == "--logpath") {
       if (params.empty()) {
         std::cerr << "log path name not specified.\n";
@@ -308,40 +312,42 @@ int main(int argc, char** argv) {
   };
   logger(0);
 
+  bool subtrees = false;
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)
               << " #######\n";
+    subtrees = (i >= switch_subtrees);
 
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
     std::optional<NodeId> subtree_node;
     auto [sample, dag_ids] = [&] {
-      if (subtrees) {
-        subtree_node = [&] {
-          std::random_device random_device;
-          std::mt19937 random_generator(random_device());
+        subtree_node = [&] () -> std::optional<NodeId> {
+          if (subtrees) {
+              std::random_device random_device;
+              std::mt19937 random_generator(random_device());
 
-          NodeId node_id;
-          do {
-            Assert(weight.GetDAG().GetNodesCount() > 0);
-            node_id = {std::uniform_int_distribution<size_t>{
-                0, weight.GetDAG().GetNodesCount() - 1}(random_generator)};
-            auto node = weight.GetDAG().Get(node_id);
-            if (node.IsLeaf() or node.GetCompactGenome().empty()) {
-              continue;
-            }
-            break;
-          } while (true);
-          return weight.GetDAG().Get(node_id);
+              NodeId node_id;
+              do {
+                Assert(weight.GetDAG().GetNodesCount() > 0);
+                node_id = {std::uniform_int_distribution<size_t>{
+                    0, weight.GetDAG().GetNodesCount() - 1}(random_generator)};
+                auto node = weight.GetDAG().Get(node_id);
+                if (node.IsLeaf() or node.GetCompactGenome().empty()) {
+                  continue;
+                }
+                break;
+              } while (true);
+              return weight.GetDAG().Get(node_id);
+          } else {
+              return std::nullopt;
+          }
         }();
-        return weight.SampleTree({}, subtree_node.value());
-      } else {
-        if (sample_best_tree) {
-          return weight.MinWeightSampleTree({});
-        } else {
-          return weight.SampleTree({});
-        }
-      }
+    if (sample_best_tree) {
+      return weight.MinWeightSampleTree({}, subtree_node);
+    } else {
+      return weight.SampleTree({}, subtree_node);
+    }
     }();
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Sampled nodes: "
               << sample.GetNodesCount() << "\n";

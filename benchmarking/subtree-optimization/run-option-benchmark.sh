@@ -10,7 +10,8 @@ numruns=50
 
 
 for option1 in "--sample-best-tree" "--sample-best-tree -s 0" "--sample-best-tree -s 2" "--sample-best-tree -s 10"; do
-    logfilepath=$logprefix/option_$option1
+    optionid=${option1//[[:blank:]]/}
+    logfilepath=$logprefix/option_$optionid
     echo $logfilepath
     mkdir -p $logfilepath
     for jobnum in $(seq $numruns); do
