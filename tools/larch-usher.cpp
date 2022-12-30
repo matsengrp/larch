@@ -324,14 +324,33 @@ int main(int argc, char** argv) {
     auto [sample, dag_ids] = [&] {
         subtree_node = [&] () -> std::optional<NodeId> {
           if (subtrees) {
+              std::vector<NodeId> options;
+              std::set<NodeId> visited;
+              auto node_filter = [&] (NodeId start_node, auto& node_filter_ref) -> void {
+                  auto node_instance = weight.GetDAG().Get(start_node);
+                  if (visited.count(start_node)) {
+                      return;
+                  } else {
+                      visited.insert(start_node);
+                      if (node_instance.GetLabel().GetLeafSet().ParentCladeSize() < 100) {
+                          return;
+                      } else {
+                          options.push_back(start_node);
+                          for (auto child_edge : node_instance.GetChildren()) {
+                              node_filter_ref(child_edge.GetChild().GetId());
+                          }
+                      }
+                  }
+              };
+              node_filter(weight.GetDAG().GetRoot().GetId(), node_filter);
               std::random_device random_device;
               std::mt19937 random_generator(random_device());
 
               NodeId node_id;
               do {
-                Assert(weight.GetDAG().GetNodesCount() > 0);
-                node_id = {std::uniform_int_distribution<size_t>{
-                    0, weight.GetDAG().GetNodesCount() - 1}(random_generator)};
+                Assert(options.size() > 0);
+                node_id = options.at({std::uniform_int_distribution<size_t>{
+                    0, options.size() - 1}(random_generator)});
                 auto node = weight.GetDAG().Get(node_id);
                 if (node.IsLeaf() or node.GetCompactGenome().empty()) {
                   continue;
