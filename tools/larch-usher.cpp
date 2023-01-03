@@ -373,7 +373,7 @@ int main(int argc, char** argv) {
                 return;
               } else {
                 // Add any other required conditions here
-                if (not is_root and clade_size <= max_subtree_clade_size) {
+                if (not is_root and clade_size <= max_subtree_clade_size and not node_instance.IsLeaf() and not node_instance.GetCompactGenome().empty()) {
                   if (uniform_subtree_root) {
                     weights.push_back(1);
                   } else {

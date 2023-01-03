@@ -11,13 +11,13 @@ import sys
 from matplotlib.patches import Patch
 sys.set_int_max_str_digits(10000)
 
-prefix='20D_intermediate/'
+prefix='20D_constrained_size/'
+
 directories = [
-    "option_--sample-best-tree",
-    "option_--sample-best-tree-s10",
-    "option_--sample-best-tree-s0",
-    "option_--sample-best-tree-s2",
+    str(file.name) for file in Path(prefix).glob('*') if file.is_dir()
 ]
+
+print(directories)
 
 logtransform = (lambda n: statistics.log(n, 10), "Log10")
 notransform = (lambda n: n, "")
@@ -61,7 +61,8 @@ handles = []
 for color, directory in zip(colors, directories):
     handles.append(Patch(color=color, label=directory))
     p = Path(prefix + directory)
-    for logfile in p.glob('log*/logfile.csv'):
+    logfiles = list(p.glob('log*/logfile.csv'))
+    for logfile in logfiles:
         data = [
             [] for _ in range(len(fields))
         ]
