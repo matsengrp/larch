@@ -329,23 +329,22 @@ int main(int argc, char** argv) {
               auto node_filter = [&] (NodeId start_node, auto& node_filter_ref) -> void {
                   auto node_instance = weight.GetDAG().Get(start_node);
                   if (visited.count(start_node)) {
-                      std::cout << "skipped" << std::flush;
                       return;
                   } else {
                       visited.insert(start_node);
-                      if (merge.GetResultNodeLabels().at(node_instance.GetId().value).GetLeafSet()->ParentCladeSize() < 100) {
-                          std::cout << "filtered" << std::flush;
+                      if (merge.GetResultNodeLabels().at(node_instance.GetId().value).GetLeafSet()->ParentCladeSize() < 2) {
                           return;
                       } else {
                           options.push_back(start_node);
-                          std::cout << "recorded" << std::flush;
                           for (auto child_edge : node_instance.GetChildren()) {
                               node_filter_ref(child_edge.GetChild().GetId(), node_filter_ref);
                           }
                       }
                   }
               };
-              node_filter(weight.GetDAG().GetRoot().GetId(), node_filter);
+              for (auto rootchild : weight.GetDAG().GetRoot().GetChildren()) {
+                  node_filter(rootchild.GetChild().GetId(), node_filter);
+              }
               std::random_device random_device;
               std::mt19937 random_generator(random_device());
 
