@@ -32,20 +32,25 @@
   std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
   std::cout << "  -l,--logpath Path for logging\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
-  std::cout << "  -s,--switch-subtree           Switch to optimizing subtrees after the specified "
-      "number of iterations (default never)\n";
+  std::cout << "  -s,--switch-subtree           Switch to optimizing subtrees after "
+               "the specified "
+               "number of iterations (default never)\n";
   std::cout << "  --min-subtree-clade-size      The minimum number of leaves in a "
-      "subtree sampled for optimization (default 100, ignored without option `-s`)\n";
+               "subtree sampled for optimization (default 100, ignored without option "
+               "`-s`)\n";
   std::cout << "  --max-subtree-clade-size      The maximum number of leaves in a "
-      "subtree sampled for optimization (default 1000, ignored without option `-s`)\n";
+               "subtree sampled for optimization (default 1000, ignored without option "
+               "`-s`)\n";
   std::cout << "  --uniform-subtree-root        Choose subtree root node uniformly"
-      "from allowed options. Default choice is weighted by (1 + m^2) where m is minimum "
-      "mutations on a node's parent edge\n";
+               "from allowed options. Default choice is weighted by (1 + m^2) where m "
+               "is minimum "
+               "mutations on a node's parent edge\n";
   std::cout
       << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
   std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
                "Default: 1\n";
-  std::cout << "  --sample-any-tree    Sample any tree for optimization, rather than requiring "
+  std::cout << "  --sample-any-tree    Sample any tree for optimization, rather than "
+               "requiring "
                "the sampled tree to maximize parsimony.\n";
 
   std::exit(EXIT_SUCCESS);
@@ -347,65 +352,70 @@ int main(int argc, char** argv) {
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
     std::optional<NodeId> subtree_node;
     auto [sample, dag_ids] = [&] {
-        subtree_node = [&] () -> std::optional<NodeId> {
-          if (subtrees) {
-              std::vector<NodeId> options;
-              std::vector<size_t> weights;
-              std::set<NodeId> visited;
-              auto node_filter = [&] (NodeId start_node, auto& node_filter_ref) -> void {
-                  auto node_instance = weight.GetDAG().Get(start_node);
-                  if (not visited.count(start_node)) {
-                      visited.insert(start_node);
-                      bool is_root = node_instance.IsRoot();
-                      size_t clade_size = merge.GetResultNodeLabels().at(node_instance.GetId().value).GetLeafSet()->ParentCladeSize();
+      subtree_node = [&]() -> std::optional<NodeId> {
+        if (subtrees) {
+          std::vector<NodeId> options;
+          std::vector<size_t> weights;
+          std::set<NodeId> visited;
+          auto node_filter = [&](NodeId start_node, auto& node_filter_ref) -> void {
+            auto node_instance = weight.GetDAG().Get(start_node);
+            if (not visited.count(start_node)) {
+              visited.insert(start_node);
+              bool is_root = node_instance.IsRoot();
+              size_t clade_size = merge.GetResultNodeLabels()
+                                      .at(node_instance.GetId().value)
+                                      .GetLeafSet()
+                                      ->ParentCladeSize();
 
-                      if (not is_root and clade_size < min_subtree_clade_size) {
-                          // terminate recursion because clade size only
-                          // decreases in children
-                          return;
-                      } else {
-                          // Add any other required conditions here
-                          if (not is_root and clade_size <= max_subtree_clade_size) {
-                              if (uniform_subtree_root) {
-                                  weights.push_back(1);
-                              } else {
-                                  size_t min_parent_mutations = std::numeric_limits<size_t>::max();
-                                  for (auto parent_edge : node_instance.GetParents()){
-                                      auto n_edge_muts = parent_edge.GetEdgeMutations().size();
-                                      if (min_parent_mutations > n_edge_muts) {
-                                          min_parent_mutations = n_edge_muts;
-                                      }
-                                  }
-                                  // increase preference for many parent mutations,
-                                  // and ensure weights cannot not be zero:
-                                  weights.push_back(1 + min_parent_mutations * min_parent_mutations);
-                              }
-                              options.push_back(start_node);
-                          }
-                          for (auto child_edge : node_instance.GetChildren()) {
-                              node_filter_ref(child_edge.GetChild().GetId(), node_filter_ref);
-                          }
-                      }
-                  }
-              };
-              node_filter(weight.GetDAG().GetRoot().GetId(), node_filter);
-              if (options.size() > 0) {
-                  std::random_device random_device;
-                  std::mt19937 random_generator(random_device());
-                  size_t option_idx = {std::discrete_distribution<size_t>{
-                          weights.begin(), weights.end()
-                          }(random_generator)};
-                  NodeId chosen_node = options.at(option_idx);
-                  std::cout << "Chose node " << chosen_node.value
-                      << " as subtree root, with score "
-                      << weights.at(option_idx) << "\n" << std::flush;
-                  return weight.GetDAG().Get(chosen_node);
+              if (not is_root and clade_size < min_subtree_clade_size) {
+                // terminate recursion because clade size only
+                // decreases in children
+                return;
               } else {
-                  std::cout << "Warning: No suitable subtree root nodes found. Optimizing an entire tree.\n" << std::flush;
+                // Add any other required conditions here
+                if (not is_root and clade_size <= max_subtree_clade_size) {
+                  if (uniform_subtree_root) {
+                    weights.push_back(1);
+                  } else {
+                    size_t min_parent_mutations = std::numeric_limits<size_t>::max();
+                    for (auto parent_edge : node_instance.GetParents()) {
+                      auto n_edge_muts = parent_edge.GetEdgeMutations().size();
+                      if (min_parent_mutations > n_edge_muts) {
+                        min_parent_mutations = n_edge_muts;
+                      }
+                    }
+                    // increase preference for many parent mutations,
+                    // and ensure weights cannot not be zero:
+                    weights.push_back(1 + min_parent_mutations * min_parent_mutations);
+                  }
+                  options.push_back(start_node);
+                }
+                for (auto child_edge : node_instance.GetChildren()) {
+                  node_filter_ref(child_edge.GetChild().GetId(), node_filter_ref);
+                }
               }
+            }
+          };
+          node_filter(weight.GetDAG().GetRoot().GetId(), node_filter);
+          if (options.size() > 0) {
+            std::random_device random_device;
+            std::mt19937 random_generator(random_device());
+            size_t option_idx = {std::discrete_distribution<size_t>{
+                weights.begin(), weights.end()}(random_generator)};
+            NodeId chosen_node = options.at(option_idx);
+            std::cout << "Chose node " << chosen_node.value
+                      << " as subtree root, with score " << weights.at(option_idx)
+                      << "\n"
+                      << std::flush;
+            return weight.GetDAG().Get(chosen_node);
+          } else {
+            std::cout << "Warning: No suitable subtree root nodes found. Optimizing an "
+                         "entire tree.\n"
+                      << std::flush;
           }
-          return std::nullopt;
-        }();
+        }
+        return std::nullopt;
+      }();
 
       if (sample_best_tree) {
         return weight.MinWeightSampleTree({}, subtree_node);
