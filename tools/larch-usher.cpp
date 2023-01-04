@@ -234,7 +234,7 @@ int main(int argc, char** argv) {
         std::cerr << "Count not specified.\n";
         Fail();
       }
-      switch_subtrees = ParseNumber(*params.begin());
+      switch_subtrees = static_cast<size_t>(ParseNumber(*params.begin()));
     } else if (name == "-l" or name == "--logpath") {
       if (params.empty()) {
         std::cerr << "log path name not specified.\n";
@@ -252,13 +252,13 @@ int main(int argc, char** argv) {
         std::cerr << "minimum subtree clade size not specified\n";
         Fail();
       }
-      min_subtree_clade_size = ParseNumber(*params.begin());
+      min_subtree_clade_size = static_cast<size_t>(ParseNumber(*params.begin()));
     } else if (name == "--max-subtree-clade-size") {
       if (params.empty()) {
         std::cerr << "maximum subtree clade size not specified\n";
         Fail();
       }
-      max_subtree_clade_size = ParseNumber(*params.begin());
+      max_subtree_clade_size = static_cast<size_t>(ParseNumber(*params.begin()));
     } else if (name == "--move-coeff-nodes") {
       if (params.empty()) {
         std::cerr << "parsimony score move coefficient not specified\n";
@@ -373,7 +373,9 @@ int main(int argc, char** argv) {
                 return;
               } else {
                 // Add any other required conditions here
-                if (not is_root and clade_size <= max_subtree_clade_size and not node_instance.IsLeaf() and not node_instance.GetCompactGenome().empty()) {
+                if (not is_root and clade_size <= max_subtree_clade_size and
+                    not node_instance.IsLeaf() and
+                    not node_instance.GetCompactGenome().empty()) {
                   if (uniform_subtree_root) {
                     weights.push_back(1);
                   } else {

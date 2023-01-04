@@ -15,7 +15,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   }
 };
 
-static auto choose_root = [](const auto& subtree_weight) {
+[[maybe_unused]] static auto choose_root = [](const auto& subtree_weight) {
   return subtree_weight.GetDAG().GetRoot();
 };
 

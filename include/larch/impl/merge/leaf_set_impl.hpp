@@ -58,8 +58,8 @@ std::vector<const CompactGenome*> LeafSet::ToParentClade() const {
 
 size_t LeafSet::ParentCladeSize() const {
   size_t result = 0;
-  for (auto clade : clades_) {
-      result += clade.size();
+  for (const auto& clade : clades_) {
+    result += clade.size();
   }
   return result;
 }
