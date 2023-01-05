@@ -12,7 +12,8 @@
 
 #include "larch/dag_loader.hpp"
 
-bool compare_treedags(MADAG dag1, MADAG dag2) {
+template <typename DAG1, typename DAG2>
+bool compare_treedags(DAG1 dag1, DAG2 dag2) {
   if (dag1.GetReferenceSequence() != dag2.GetReferenceSequence()) {
     return false;
   }
@@ -67,7 +68,7 @@ static void test_write_protobuf() {
   }
   MADAGStorage treedag = LoadTreeFromProtobuf(path, refseq);
 
-  SubtreeWeight<BinaryParsimonyScore> weight{treedag.View()};
+  SubtreeWeight<BinaryParsimonyScore, MADAG> weight{treedag.View()};
   MADAGStorage sample_tree = weight.SampleTree({}).first;
 
   StoreTreeToProtobuf(sample_tree.View(), "test_write_protobuf.pb");
@@ -80,7 +81,7 @@ static void test_write_protobuf() {
   treedag.View().RecomputeEdgeMutations();
   compare_treedags(treedag.View(), sample_tree.View());
 
-  Merge merge{treedag.View().GetReferenceSequence()};
+  Merge<MADAG> merge{treedag.View().GetReferenceSequence()};
   merge.AddDAGs({treedag.View(), sample_tree.View()});
   merge.ComputeResultEdgeMutations();
 

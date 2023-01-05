@@ -3,8 +3,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "larch/madag/mutation_annotated_dag.hpp"
-
 struct ParNuc_Info {
   NodeId par_node_id;
   NodeId child_node_id;
@@ -54,9 +52,10 @@ void check_edge_mutations_helper(Node dag_node, const all_mutated_t& all_mutated
   }
 }
 
-void check_edge_mutations(MADAG madag) {
+template <typename DAG>
+void check_edge_mutations(DAG dag) {
   std::cout << "start_check" << std::endl;
   all_mutated_t init;
-  check_edge_mutations_helper(madag.GetRoot(), init);
+  check_edge_mutations_helper(dag.GetRoot(), init);
   std::cout << "end_check" << std::endl;
 }

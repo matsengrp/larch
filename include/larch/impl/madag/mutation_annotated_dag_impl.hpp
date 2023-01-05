@@ -58,7 +58,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes()
     if (not compact_genome.empty()) {
       return;
     }
-    Edge edge = *(for_node.GetParents().begin());
+    Edge edge = for_node.GetFirstParent();
     self(self, edge.GetParent());
     const EdgeMutations& mutations = edge.GetEdgeMutations();
     const CompactGenome& parent = new_cgs.at(edge.GetParentId().value);
@@ -68,7 +68,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes()
     ComputeCG(ComputeCG, node);
   }
   for (Node node : dag.GetNodes()) {
-    node.SetCompactGenome(std::move(new_cgs.at(node.GetId().value)));
+    node = std::move(new_cgs.at(node.GetId().value));
   }
   std::unordered_map<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {

@@ -1,14 +1,16 @@
 #include <algorithm>
 
 template <typename BinaryOperatorWeightOps>
+template <typename DAG>
 typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight
-SimpleWeightOps<BinaryOperatorWeightOps>::ComputeLeaf(MADAG dag, NodeId node_id) {
+SimpleWeightOps<BinaryOperatorWeightOps>::ComputeLeaf(DAG dag, NodeId node_id) {
   return binary_operator_weight_ops_.ComputeLeaf(dag, node_id);
 }
 
 template <typename BinaryOperatorWeightOps>
+template <typename DAG>
 typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight
-SimpleWeightOps<BinaryOperatorWeightOps>::ComputeEdge(MADAG dag, EdgeId edge_id) {
+SimpleWeightOps<BinaryOperatorWeightOps>::ComputeEdge(DAG dag, EdgeId edge_id) {
   return binary_operator_weight_ops_.ComputeEdge(dag, edge_id);
 }
 

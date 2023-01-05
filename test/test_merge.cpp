@@ -24,7 +24,7 @@ static void test_protobuf(const std::string& correct_path,
   MADAGStorage correct_result = LoadDAGFromJson(correct_path);
   correct_result.View().RecomputeEdgeMutations();
 
-  Merge merge(correct_result.View().GetReferenceSequence());
+  Merge<MADAG> merge(correct_result.View().GetReferenceSequence());
   merge.AddDAGs(tree_views);
 
   assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
@@ -98,7 +98,7 @@ static void test_case_20d() {
   }
 
   Benchmark merge_time;
-  Merge merge(correct_result.View().GetReferenceSequence());
+  Merge<MADAG> merge(correct_result.View().GetReferenceSequence());
   merge_time.start();
   merge.AddDAGs(tree_views);
   merge_time.stop();
@@ -132,7 +132,7 @@ static void test_add_trees() {
   MADAGStorage correct_result = LoadDAGFromJson(correct_path);
   correct_result.View().RecomputeEdgeMutations();
 
-  Merge merge(correct_result.View().GetReferenceSequence());
+  Merge<MADAG> merge(correct_result.View().GetReferenceSequence());
   std::vector<MADAG> tree_views1;
   for (auto& i : trees1) {
     tree_views1.emplace_back(i);
@@ -143,6 +143,34 @@ static void test_add_trees() {
     tree_views2.emplace_back(i);
   }
   merge.AddDAGs(tree_views2);
+
+  assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
+               "Nodes count");
+
+  assert_equal(correct_result.View().GetEdgesCount(), merge.GetResult().GetEdgesCount(),
+               "Edges count");
+}
+
+static void test_subtree() {
+  std::string_view correct_path = "data/test_5_trees/full_dag.json.gz";
+  std::vector<std::string> paths = {
+      "data/test_5_trees/tree_0.pb.gz", "data/test_5_trees/tree_1.pb.gz",
+      "data/test_5_trees/tree_2.pb.gz", "data/test_5_trees/tree_3.pb.gz",
+      "data/test_5_trees/tree_4.pb.gz"};
+
+  MADAGStorage correct_result = LoadDAGFromJson(correct_path);
+  correct_result.View().RecomputeEdgeMutations();
+  Merge<MADAG> merge(correct_result.View().GetReferenceSequence());
+
+  std::vector<MADAGStorage> trees;
+  for (auto& path : paths) {
+    trees.push_back(LoadDAGFromProtobuf(path));
+    trees.back().View().RecomputeCompactGenomes();
+  }
+
+  for (auto& tree : trees) {
+    merge.AddDAG(tree.View());
+  }
 
   assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
                "Nodes count");
@@ -165,3 +193,6 @@ static void test_add_trees() {
 
 [[maybe_unused]] static const auto test4_added =
     add_test({test_add_trees, "Merge: Add trees"});
+
+[[maybe_unused]] static const auto test5_added =
+    add_test({test_subtree, "Merge: Subtree"});

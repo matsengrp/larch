@@ -2,7 +2,7 @@
 
 #include "test_common.hpp"
 #include "larch/dag_loader.hpp"
-#include "larch/merge/merge.hpp"
+#include "larch/madag/mutation_annotated_dag.hpp"
 
 [[maybe_unused]] static void test_edge_mutations(std::string_view path) {
   MADAGStorage dag_storage = LoadDAGFromProtobuf(path);
@@ -32,7 +32,7 @@
   }
 
   for (Node node : dag.GetNodes()) {
-    node.SetCompactGenome({});
+    node = CompactGenome{};
   }
   dag.RecomputeCompactGenomes();
   index = 0;

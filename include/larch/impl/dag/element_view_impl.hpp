@@ -3,7 +3,9 @@
 #endif
 
 template <typename Id, typename DV>
-ElementView<Id, DV>::ElementView(DV dag_view, Id id) : dag_view_{dag_view}, id_{id} {}
+ElementView<Id, DV>::ElementView(DV dag_view, Id id) : dag_view_{dag_view}, id_{id} {
+  Assert(id.value not_eq NoId);
+}
 
 template <typename Id, typename DV>
 ElementView<Id, DV>::operator Id() const {

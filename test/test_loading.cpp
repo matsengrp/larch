@@ -7,11 +7,6 @@
 
 #include "larch/usher_glue.hpp"
 
-namespace MAT = Mutation_Annotated_Tree;
-void fill_static_reference_sequence(std::string_view);
-MAT::Tree mat_from_dag(MADAG);
-MADAGStorage build_madag_from_mat(const MAT::Tree&, std::string_view);
-
 using Node = MADAG::NodeView;
 using Edge = MADAG::EdgeView;
 
@@ -63,7 +58,7 @@ static void test_loading_dag(std::string_view path) {
   MADAGStorage tree1 = LoadDAGFromProtobuf("temp_tree.pb");
   AssertDAGsEqual(tree0.View(), tree1.View());
 
-  SubtreeWeight<ParsimonyScore> weight(tree0.View());
+  SubtreeWeight<ParsimonyScore, MADAG> weight(tree0.View());
   MADAGStorage sampled0 = weight.SampleTree({}).first;
 
   fill_static_reference_sequence(sampled0.View().GetReferenceSequence());

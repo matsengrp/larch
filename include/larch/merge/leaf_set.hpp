@@ -38,6 +38,8 @@ class LeafSet {
 
   [[nodiscard]] inline std::vector<const CompactGenome*> ToParentClade() const;
 
+  [[nodiscard]] inline size_t ParentCladeSize() const;
+
   inline const std::vector<std::vector<const CompactGenome*>>& GetClades() const;
 
  private:
