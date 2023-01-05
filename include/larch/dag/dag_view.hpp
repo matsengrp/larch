@@ -3,7 +3,7 @@
 #endif
 
 /**
-  DAG is the main structure that holDagStorageT node and edge data, and provides
+  DAG is the main structure that holds node and edge data, and provides
   various queries.
 
   Populating with data should be performed by first adding all nodes by the
@@ -11,7 +11,7 @@
   calling BuildConnections().
 
   NodeId and EdgeId are strongly typed wrappers around size_t, and data is
-  stored internally by the order of its IDagStorageT.
+  stored internally by the order of its IDs.
 
   Additional node and edge data may be stored in classes which extend DAG.
   See for example the class MADAG in `mutation_annotated_dag.hpp`.
