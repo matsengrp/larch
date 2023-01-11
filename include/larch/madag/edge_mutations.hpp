@@ -13,6 +13,7 @@ struct MutationPosition {
 };
 
 inline bool operator==(MutationPosition lhs, MutationPosition rhs);
+inline bool operator!=(MutationPosition lhs, MutationPosition rhs);
 inline bool operator<(MutationPosition lhs, MutationPosition rhs);
 
 class EdgeMutations {

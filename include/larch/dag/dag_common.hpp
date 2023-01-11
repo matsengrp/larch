@@ -48,6 +48,7 @@ struct NodeId {
 };
 
 inline bool operator==(NodeId lhs, NodeId rhs);
+inline bool operator!=(NodeId lhs, NodeId rhs);
 inline bool operator<(NodeId lhs, NodeId rhs);
 
 template <>
@@ -60,6 +61,7 @@ struct EdgeId {
 };
 
 inline bool operator==(EdgeId lhs, EdgeId rhs);
+inline bool operator!=(EdgeId lhs, EdgeId rhs);
 inline bool operator<(EdgeId lhs, EdgeId rhs);
 
 struct CladeIdx {
@@ -67,6 +69,7 @@ struct CladeIdx {
 };
 
 inline bool operator==(CladeIdx lhs, CladeIdx rhs);
+inline bool operator!=(CladeIdx lhs, CladeIdx rhs);
 inline bool operator<(CladeIdx lhs, CladeIdx rhs);
 
 namespace Transform {
