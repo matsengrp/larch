@@ -15,7 +15,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   }
 };
 
-[[maybe_unused]] static auto choose_root = [](const auto& subtree_weight) {
+static auto choose_root = [](const auto& subtree_weight) {
   return subtree_weight.GetDAG().GetRoot();
 };
 
@@ -55,9 +55,8 @@ static void test_matOptimize(std::string_view input_dag_path,
     SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
 
     auto chosen_node = choose_node(weight);
-    auto [sample, dag_ids] = weight.SampleTree({}, chosen_node);
+    auto sample = weight.SampleTree({}, chosen_node).first;
     std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
-    std::ignore = dag_ids;
     check_edge_mutations(sample.View());
     Test_Move_Found_Callback callback;
     optimized_dags.push_back(optimize_dag_direct(sample.View(), callback));

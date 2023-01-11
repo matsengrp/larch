@@ -2,63 +2,62 @@
 #error "Don't include this header"
 #endif
 
-template <typename DagStorageT>
-inline constexpr bool DAGView<DagStorageT>::is_mutable =
-    not std::is_const_v<DagStorageT>;
+template <typename DS>
+inline constexpr bool DAGView<DS>::is_mutable = not std::is_const_v<DS>;
 
-template <typename DagStorageT>
+template <typename DS>
 template <typename Id, typename Feature>
-inline constexpr bool DAGView<DagStorageT>::contains_element_feature =
-    DagStorageT::template contains_element_feature<Id, Feature>;
+inline constexpr bool DAGView<DS>::contains_element_feature =
+    DS::template contains_element_feature<Id, Feature>;
 
-template <typename DagStorageT>
-DAGView<DagStorageT>::DAGView(DagStorageT& dag_storage) : dag_storage_{dag_storage} {}
+template <typename DS>
+DAGView<DS>::DAGView(DS& dag_storage) : dag_storage_{dag_storage} {}
 
-template <typename DagStorageT>
-DAGView<DagStorageT>::operator DAGView<const DagStorageT>() const {
-  return DAGView<const DagStorageT>{dag_storage_};
+template <typename DS>
+DAGView<DS>::operator DAGView<const DS>() const {
+  return DAGView<const DS>{dag_storage_};
 }
 
-template <typename DagStorageT>
-ElementView<NodeId, DAGView<DagStorageT>> DAGView<DagStorageT>::Get(NodeId id) const {
+template <typename DS>
+ElementView<NodeId, DAGView<DS>> DAGView<DS>::Get(NodeId id) const {
   return {*this, id};
 }
 
-template <typename DagStorageT>
-ElementView<EdgeId, DAGView<DagStorageT>> DAGView<DagStorageT>::Get(EdgeId id) const {
+template <typename DS>
+ElementView<EdgeId, DAGView<DS>> DAGView<DS>::Get(EdgeId id) const {
   return {*this, id};
 }
 
-template <typename DagStorageT>
-ElementView<NodeId, DAGView<DagStorageT>> DAGView<DagStorageT>::AppendNode() const {
+template <typename DS>
+ElementView<NodeId, DAGView<DS>> DAGView<DS>::AppendNode() const {
   NodeId result = dag_storage_.AppendNode();
   return {*this, result};
 }
 
-template <typename DagStorageT>
-ElementView<EdgeId, DAGView<DagStorageT>> DAGView<DagStorageT>::AppendEdge() const {
+template <typename DS>
+ElementView<EdgeId, DAGView<DS>> DAGView<DS>::AppendEdge() const {
   EdgeId result = dag_storage_.AppendEdge();
   return {*this, result};
 }
 
-template <typename DagStorageT>
-ElementView<NodeId, DAGView<DagStorageT>> DAGView<DagStorageT>::AddNode(NodeId id) {
+template <typename DS>
+ElementView<NodeId, DAGView<DS>> DAGView<DS>::AddNode(NodeId id) {
   dag_storage_.AddNode(id);
   return {*this, id};
 }
 
-template <typename DagStorageT>
-ElementView<EdgeId, DAGView<DagStorageT>> DAGView<DagStorageT>::AddEdge(
-    EdgeId id, NodeId parent, NodeId child,
-    CladeIdx clade) {  // TODO
+template <typename DS>
+ElementView<EdgeId, DAGView<DS>> DAGView<DS>::AddEdge(EdgeId id, NodeId parent,
+                                                      NodeId child,
+                                                      CladeIdx clade) {  // TODO
   dag_storage_.AddEdge(id);
   auto result = Get(id);
   result.Set(parent, child, clade);
   return result;
 }
 
-template <typename DagStorageT>
-ElementView<EdgeId, DAGView<DagStorageT>> DAGView<DagStorageT>::AppendEdge(
+template <typename DS>
+ElementView<EdgeId, DAGView<DS>> DAGView<DS>::AppendEdge(
     NodeId parent, NodeId child,
     CladeIdx clade) const {  // TODO
   auto result = AppendEdge();
@@ -66,57 +65,57 @@ ElementView<EdgeId, DAGView<DagStorageT>> DAGView<DagStorageT>::AppendEdge(
   return result;
 }
 
-template <typename DagStorageT>
-size_t DAGView<DagStorageT>::GetNodesCount() const {
+template <typename DS>
+size_t DAGView<DS>::GetNodesCount() const {
   return dag_storage_.GetNodesCount();
 }
 
-template <typename DagStorageT>
-size_t DAGView<DagStorageT>::GetEdgesCount() const {
+template <typename DS>
+size_t DAGView<DS>::GetEdgesCount() const {
   return dag_storage_.GetEdgesCount();
 }
 
-template <typename DagStorageT>
-auto DAGView<DagStorageT>::GetNodes() const {
-  return dag_storage_.GetNodes() |
-         ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
-           return ElementView<NodeId, DAGView<DagStorageT>>{*this, {idx++}};
+template <typename DS>
+auto DAGView<DS>::GetNodes() const {
+  return ranges::views::indices(GetNodesCount()) |
+         ranges::views::transform([*this](size_t i) {
+           return ElementView{*this, NodeId{i}};
          });
 }
 
-template <typename DagStorageT>
-auto DAGView<DagStorageT>::GetEdges() const {
-  return dag_storage_.GetEdges() |
-         ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
-           return ElementView<EdgeId, DAGView<DagStorageT>>{*this, {idx++}};
+template <typename DS>
+auto DAGView<DS>::GetEdges() const {
+  return ranges::views::indices(GetEdgesCount()) |
+         ranges::views::transform([*this](size_t i) {
+           return ElementView{*this, EdgeId{i}};
          });
 }
 
-template <typename DagStorageT>
-void DAGView<DagStorageT>::InitializeNodes(size_t size) const {
+template <typename DS>
+void DAGView<DS>::InitializeNodes(size_t size) const {
   dag_storage_.InitializeNodes(size);
 }
 
-template <typename DagStorageT>
-template <typename Feature>
-auto& DAGView<DagStorageT>::GetFeatureStorage() const {
-  return dag_storage_.template GetFeatureStorage<Feature>();
+template <typename DS>
+template <typename F>
+auto& DAGView<DS>::GetFeatureStorage() const {
+  return dag_storage_.template GetFeatureStorage<F>();
 }
 
-template <typename DagStorageT>
-template <typename Feature>
-auto& DAGView<DagStorageT>::GetFeatureStorage(NodeId id) const {
-  return dag_storage_.template GetFeatureStorage<Feature>(id);
+template <typename DS>
+template <typename F>
+auto& DAGView<DS>::GetFeatureStorage(NodeId id) const {
+  return dag_storage_.template GetFeatureStorage<F>(id);
 }
 
-template <typename DagStorageT>
-template <typename Feature>
-auto& DAGView<DagStorageT>::GetFeatureStorage(EdgeId id) const {
-  return dag_storage_.template GetFeatureStorage<Feature>(id);
+template <typename DS>
+template <typename F>
+auto& DAGView<DS>::GetFeatureStorage(EdgeId id) const {
+  return dag_storage_.template GetFeatureStorage<F>(id);
 }
 
-template <typename DagStorageT>
-template <typename Id, typename Feature>
-auto& DAGView<DagStorageT>::GetFeatureExtraStorage() const {
-  return dag_storage_.template GetFeatureExtraStorage<Id, Feature>();
+template <typename DS>
+template <typename Id, typename F>
+auto& DAGView<DS>::GetFeatureExtraStorage() const {
+  return dag_storage_.template GetFeatureExtraStorage<Id, F>();
 }

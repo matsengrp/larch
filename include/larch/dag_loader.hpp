@@ -20,7 +20,8 @@
 template <typename DAG>
 void StoreDAGToProtobuf(DAG dag, std::string_view path);
 
-void StoreTreeToProtobuf(MADAG dag, std::string_view path);
+template <typename DAG>
+void StoreTreeToProtobuf(DAG dag, std::string_view path);
 
 void MADAGToDOT(MADAG dag, std::ostream& out);
 

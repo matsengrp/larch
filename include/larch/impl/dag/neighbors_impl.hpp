@@ -12,7 +12,7 @@ template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetClades() const {
   auto dag = static_cast<const CRTP&>(*this).GetDAG();
   return GetFeatureStorage(this).clades_ |
-         ranges::views::transform([dag](const std::vector<EdgeId>& clade) {
+         ranges::views::transform([*this, dag](const std::vector<EdgeId>& clade) {
            return clade | Transform::ToEdges(dag);
          });
 }

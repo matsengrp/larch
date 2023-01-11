@@ -7,36 +7,34 @@
  * internally pointing to an instance of DAGStorage or classes providing
  * the same interface, like ExtendDAGStorage.
  */
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NC, typename EC, typename... Fs>
 struct DAGStorage {
  public:
   template <typename Id, typename CRTP>
   using ConstElementViewBase =
       std::conditional_t<std::is_same_v<Id, NodeId>,
-                         typename NodesContainerT::template ConstElementViewBase<CRTP>,
-                         typename EdgesContainerT::template ConstElementViewBase<CRTP>>;
+                         typename NC::template ConstElementViewBase<CRTP>,
+                         typename EC::template ConstElementViewBase<CRTP>>;
   template <typename Id, typename CRTP>
-  using MutableElementViewBase = std::conditional_t<
-      std::is_same_v<Id, NodeId>,
-      typename NodesContainerT::template MutableElementViewBase<CRTP>,
-      typename EdgesContainerT::template MutableElementViewBase<CRTP>>;
+  using MutableElementViewBase =
+      std::conditional_t<std::is_same_v<Id, NodeId>,
+                         typename NC::template MutableElementViewBase<CRTP>,
+                         typename EC::template MutableElementViewBase<CRTP>>;
 
   template <typename Id, typename Feature>
   static const bool contains_element_feature;
 
   template <typename CRTP>
-  struct ConstDAGViewBase : FeatureConstView<Features, CRTP>...,
-                            ExtraFeatureConstView<Features, CRTP>...,
-                            NodesContainerT::template ExtraConstElementViewBase<CRTP>,
-                            EdgesContainerT::template ExtraConstElementViewBase<CRTP> {
-  };
+  struct ConstDAGViewBase : FeatureConstView<Fs, CRTP>...,
+                            ExtraFeatureConstView<Fs, CRTP>...,
+                            NC::template ExtraConstElementViewBase<CRTP>,
+                            EC::template ExtraConstElementViewBase<CRTP> {};
   template <typename CRTP>
-  struct MutableDAGViewBase
-      : ConstDAGViewBase<CRTP>,
-        FeatureMutableView<Features, CRTP>...,
-        ExtraFeatureMutableView<Features, CRTP>...,
-        NodesContainerT::template ExtraMutableElementViewBase<CRTP>,
-        EdgesContainerT::template ExtraMutableElementViewBase<CRTP> {};
+  struct MutableDAGViewBase : ConstDAGViewBase<CRTP>,
+                              FeatureMutableView<Fs, CRTP>...,
+                              ExtraFeatureMutableView<Fs, CRTP>...,
+                              NC::template ExtraMutableElementViewBase<CRTP>,
+                              EC::template ExtraMutableElementViewBase<CRTP> {};
 
   DAGStorage() = default;
   MOVE_ONLY(DAGStorage);
@@ -70,20 +68,20 @@ struct DAGStorage {
   template <typename F>
   const auto& GetFeatureStorage(EdgeId id) const;
 
-  template <typename Id, typename Feature>
+  template <typename Id, typename F>
   auto& GetFeatureExtraStorage();
 
-  template <typename Id, typename Feature>
+  template <typename Id, typename F>
   const auto& GetFeatureExtraStorage() const;
 
-  template <typename Feature>
+  template <typename F>
   auto& GetFeatureStorage();
 
-  template <typename Feature>
+  template <typename F>
   const auto& GetFeatureStorage() const;
 
  private:
-  NodesContainerT nodes_container_;
-  EdgesContainerT edges_container_;
-  std::tuple<Features...> features_storage_;
+  NC nodes_container_;
+  EC edges_container_;
+  std::tuple<Fs...> features_storage_;
 };

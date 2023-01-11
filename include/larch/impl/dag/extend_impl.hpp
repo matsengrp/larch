@@ -5,13 +5,18 @@
 template <typename DV, typename Arg0, typename Arg1, typename Arg2>
 ExtendDAGStorage<DV, Arg0, Arg1, Arg2>::ExtendDAGStorage(DV dv, Arg0, Arg1, Arg2)
     : target_dag_view_{dv} {
-  additional_node_features_storage_.resize(target_dag_view_.NodesCount());
-  additional_edge_features_storage_.resize(target_dag_view_.EdgesCount());
+  additional_node_features_storage_.resize(target_dag_view_.GetNodesCount());
+  additional_edge_features_storage_.resize(target_dag_view_.GetEdgesCount());
 }
 
 template <typename DV, typename Arg0, typename Arg1, typename Arg2>
 auto ExtendDAGStorage<DV, Arg0, Arg1, Arg2>::View() {
   return DAGView<ExtendDAGStorage<DV, Arg0, Arg1, Arg2>>{*this};
+}
+
+template <typename DV, typename Arg0, typename Arg1, typename Arg2>
+auto ExtendDAGStorage<DV, Arg0, Arg1, Arg2>::View() const {
+  return DAGView<const ExtendDAGStorage<DV, Arg0, Arg1, Arg2>>{*this};
 }
 
 template <typename DV, typename Arg0, typename Arg1, typename Arg2>
@@ -39,18 +44,28 @@ void ExtendDAGStorage<DV, Arg0, Arg1, Arg2>::AddEdge(EdgeId id) {
 }
 
 template <typename DV, typename Arg0, typename Arg1, typename Arg2>
+size_t ExtendDAGStorage<DV, Arg0, Arg1, Arg2>::GetNodesCount() const {
+  return target_dag_view_.GetNodesCount();
+}
+
+template <typename DV, typename Arg0, typename Arg1, typename Arg2>
+size_t ExtendDAGStorage<DV, Arg0, Arg1, Arg2>::GetEdgesCount() const {
+  return target_dag_view_.GetEdgesCount();
+}
+
+template <typename DV, typename Arg0, typename Arg1, typename Arg2>
 auto ExtendDAGStorage<DV, Arg0, Arg1, Arg2>::GetNodes() const {
-  return target_dag_view_.GetNodes() |
-         ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
-           return ElementView<NodeId, DV>{*this, {idx++}};
+  return ranges::views::indices(GetNodesCount()) |
+         ranges::views::transform([this](size_t i) {
+           return ElementView{this->View(), NodeId{i}};
          });
 }
 
 template <typename DV, typename Arg0, typename Arg1, typename Arg2>
 auto ExtendDAGStorage<DV, Arg0, Arg1, Arg2>::GetEdges() const {
-  return target_dag_view_.GetEdges() |
-         ranges::views::transform([*this, idx = size_t{}](auto&) mutable {
-           return ElementView<EdgeId, DV>{*this, {idx++}};
+  return ranges::views::indices(GetEdgesCount()) |
+         ranges::views::transform([this](size_t i) {
+           return ElementView{this->View(), EdgeId{i}};
          });
 }
 

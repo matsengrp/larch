@@ -6,31 +6,28 @@
  * Stores a collection of elements (nodes or edges, distinguished by the `Id`
  * parameter).
  */
-template <typename Id, typename ElementStorageT, typename... Features>
+template <typename Id, typename ES, typename... Fs>
 struct ElementsContainer {
  public:
   template <typename Feature>
   static const bool contains_element_feature;
 
   template <typename CRTP>
-  struct ConstElementViewBase : ElementStorageT::template ConstElementViewBase<CRTP>,
-                                FeatureConstView<Features, CRTP>... {};
+  struct ConstElementViewBase : ES::template ConstElementViewBase<CRTP>,
+                                FeatureConstView<Fs, CRTP>... {};
   template <typename CRTP>
-  struct MutableElementViewBase
-      : ElementStorageT::template MutableElementViewBase<CRTP>,
-        FeatureMutableView<Features, CRTP>... {
-    using ElementStorageT::template MutableElementViewBase<CRTP>::operator=;
-    using FeatureMutableView<Features, CRTP>::operator=...;
+  struct MutableElementViewBase : ES::template MutableElementViewBase<CRTP>,
+                                  FeatureMutableView<Fs, CRTP>... {
+    using ES::template MutableElementViewBase<CRTP>::operator=;
+    using FeatureMutableView<Fs, CRTP>::operator=...;
   };
 
   template <typename CRTP>
-  struct ExtraConstElementViewBase
-      : ElementStorageT::template ExtraConstElementViewBase<CRTP>,
-        ExtraFeatureConstView<Features, CRTP>... {};
+  struct ExtraConstElementViewBase : ES::template ExtraConstElementViewBase<CRTP>,
+                                     ExtraFeatureConstView<Fs, CRTP>... {};
   template <typename CRTP>
-  struct ExtraMutableElementViewBase
-      : ElementStorageT::template ExtraMutableElementViewBase<CRTP>,
-        ExtraFeatureMutableView<Features, CRTP>... {};
+  struct ExtraMutableElementViewBase : ES::template ExtraMutableElementViewBase<CRTP>,
+                                       ExtraFeatureMutableView<Fs, CRTP>... {};
 
   ElementsContainer() = default;
   MOVE_ONLY(ElementsContainer);
@@ -43,22 +40,22 @@ struct ElementsContainer {
 
   void Initialize(size_t size);
 
-  template <typename Feature>
+  template <typename F>
   auto& GetFeatureStorage(Id id);
-  template <typename Feature>
+  template <typename F>
   const auto& GetFeatureStorage(Id id) const;
 
-  template <typename Feature>
+  template <typename F>
   auto& GetFeatureExtraStorage();
-  template <typename Feature>
+  template <typename F>
   const auto& GetFeatureExtraStorage() const;
 
  private:
   template <typename, typename, typename...>
   friend struct DAGStorage;  // TODO remove
 
-  std::vector<ElementStorageT> elements_storage_;
-  std::vector<std::tuple<Features...>> features_storage_;
-  std::tuple<ExtraFeatureStorage<Features>...> extra_features_storage_;
-  typename ElementStorageT::ExtraStorage elements_extra_features_storage_;
+  std::vector<ES> elements_storage_;
+  std::vector<std::tuple<Fs...>> features_storage_;
+  std::tuple<ExtraFeatureStorage<Fs>...> extra_features_storage_;
+  typename ES::ExtraStorage elements_extra_features_storage_;
 };
