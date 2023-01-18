@@ -53,16 +53,6 @@ size_t DAGStorage<NC, EC, Fs...>::GetEdgesCount() const {
 }
 
 template <typename NC, typename EC, typename... Fs>
-const auto& DAGStorage<NC, EC, Fs...>::GetNodes() const {
-  return nodes_container_.elements_storage_;
-}  // TODO
-
-template <typename NC, typename EC, typename... Fs>
-const auto& DAGStorage<NC, EC, Fs...>::GetEdges() const {
-  return edges_container_.elements_storage_;
-}  // TODO
-
-template <typename NC, typename EC, typename... Fs>
 void DAGStorage<NC, EC, Fs...>::InitializeNodes(size_t size) {
   nodes_container_.Initialize(size);
 }

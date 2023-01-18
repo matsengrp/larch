@@ -28,8 +28,24 @@ struct ExtraFeatureMutableView {};
 template <typename Feature>
 struct ExtraFeatureStorage {};
 
-template <typename DS>
-struct DAGView;
+template <typename Id, typename DAGViewType>
+struct ElementView;
+
+template <typename DAGStorageType, typename DAGViewType>
+struct DefaultViewBase {
+  using DAGViewBase = std::conditional_t<
+      std::is_const_v<DAGStorageType>,
+      typename DAGStorageType::template ConstDAGViewBase<DAGViewType>,
+      typename DAGStorageType::template MutableDAGViewBase<DAGViewType>>;
+
+  template <typename Id>
+  using ElementViewBase =
+      std::conditional_t<std::is_const_v<DAGStorageType>,
+                         typename DAGStorageType::template ConstElementViewBase<
+                             Id, ElementView<Id, DAGViewType>>,
+                         typename DAGStorageType::template MutableElementViewBase<
+                             Id, ElementView<Id, DAGViewType>>>;
+};
 
 /**
  * Called by functions in FeatureConstView and FeatureMutableView specializations

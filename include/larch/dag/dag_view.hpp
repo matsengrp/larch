@@ -20,47 +20,41 @@
   ordered by id.
 
 */
-
-template <typename DS>
-struct DAGView
-    : std::conditional_t<std::is_const_v<DS>,
-                         typename DS::template ConstDAGViewBase<DAGView<DS>>,
-                         typename DS::template MutableDAGViewBase<DAGView<DS>>> {
+template <typename Storage,
+          template <typename, typename> typename Base = DefaultViewBase>
+struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
  public:
-  using NodeView = ElementView<NodeId, DAGView<DS>>;
-  using EdgeView = ElementView<EdgeId, DAGView<DS>>;
-  using StorageType = DS;
-  using MutableType = DAGView<std::remove_const_t<DS>>;
-
-  template <typename Id, typename CRTP>
-  using ConstElementViewBase = typename DS::template ConstElementViewBase<Id, CRTP>;
-  template <typename Id, typename CRTP>
-  using MutableElementViewBase = typename DS::template MutableElementViewBase<Id, CRTP>;
+  using NodeView = ElementView<NodeId, DAGView<Storage, Base>>;
+  using EdgeView = ElementView<EdgeId, DAGView<Storage, Base>>;
+  using BaseType = Base<Storage, DAGView<Storage, Base>>;
+  using StorageType = Storage;
+  using MutableType = DAGView<std::remove_const_t<Storage>>;
 
   static const bool is_mutable;
   template <typename Id, typename Feature>
   static const bool contains_element_feature;
 
-  explicit DAGView(DS& dag_storage);
+  explicit DAGView(Storage& dag_storage);
 
-  operator DAGView<const DS>() const;
+  operator DAGView<const Storage, Base>() const;
 
   /**
    * Get a Node or Edge view by its id
    * @{
    */
-  ElementView<NodeId, DAGView<DS>> Get(NodeId id) const;
-  ElementView<EdgeId, DAGView<DS>> Get(EdgeId id) const;
+  ElementView<NodeId, DAGView<Storage, Base>> Get(NodeId id) const;
+  ElementView<EdgeId, DAGView<Storage, Base>> Get(EdgeId id) const;
   /** @} */
 
-  ElementView<NodeId, DAGView<DS>> AppendNode() const;
-  ElementView<EdgeId, DAGView<DS>> AppendEdge() const;
+  ElementView<NodeId, DAGView<Storage, Base>> AppendNode() const;
+  ElementView<EdgeId, DAGView<Storage, Base>> AppendEdge() const;
 
-  ElementView<NodeId, DAGView<DS>> AddNode(NodeId id);
-  ElementView<EdgeId, DAGView<DS>> AddEdge(EdgeId id, NodeId parent, NodeId child,
-                                           CladeIdx clade);  // TODO
-  ElementView<EdgeId, DAGView<DS>> AppendEdge(NodeId parent, NodeId child,
-                                              CladeIdx clade) const;  // TODO
+  ElementView<NodeId, DAGView<Storage, Base>> AddNode(NodeId id);
+  ElementView<EdgeId, DAGView<Storage, Base>> AddEdge(EdgeId id, NodeId parent,
+                                                      NodeId child,
+                                                      CladeIdx clade);  // TODO
+  ElementView<EdgeId, DAGView<Storage, Base>> AppendEdge(NodeId parent, NodeId child,
+                                                         CladeIdx clade) const;  // TODO
 
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
@@ -77,15 +71,15 @@ struct DAGView
 
   void InitializeNodes(size_t size) const;
 
-  template <typename F>
+  template <typename Feature>
   auto& GetFeatureStorage() const;
-  template <typename F>
+  template <typename Feature>
   auto& GetFeatureStorage(NodeId id) const;
-  template <typename F>
+  template <typename Feature>
   auto& GetFeatureStorage(EdgeId id) const;
-  template <typename Id, typename F>
+  template <typename Id, typename Feature>
   auto& GetFeatureExtraStorage() const;
 
  private:
-  DS& dag_storage_;
+  Storage& dag_storage_;
 };
