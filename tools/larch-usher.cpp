@@ -309,6 +309,14 @@ int main(int argc, char** argv) {
   Merge<MADAG> merge{input_dag.View().GetReferenceSequence()};
   merge.AddDAGs({input_dag.View()});
   std::vector<MADAGStorage> optimized_dags;
+  auto get_callback = [&merge, &optimized_dags](MADAGStorage history, bool merge_to_dag) -> Move_Found_Callback& {
+    if (merge_to_dag):
+      optimized_dags.push_back(std::move(result));
+      merge.AddDAGs({optimized_dags.back().View()});
+    Larch_Move_Found_Callback callback{
+        merge, history.View(), dag_ids, {move_coeff_nodes, move_coeff_pscore}};
+    return callback;
+  };
 
   auto start_time = std::chrono::high_resolution_clock::now();
   auto time_elapsed = [&start_time]() {
@@ -428,9 +436,8 @@ int main(int argc, char** argv) {
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
               << sample.GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
-    Larch_Move_Found_Callback callback{
-        merge, sample.View(), dag_ids, {move_coeff_nodes, move_coeff_pscore}};
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
+
     MADAGStorage result = optimize_dag_direct(sample.View(), callback);
     optimized_dags.push_back(std::move(result));
     if (subtree_node.has_value()) {

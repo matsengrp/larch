@@ -148,13 +148,11 @@ void fill_static_reference_sequence(std::string_view dag_ref) {
 }
 
 template <typename DAG>
-MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback) {
+MADAGStorage optimize_dag_direct(DAG dag, auto& make_callback) {
   auto dag_ref = dag.GetReferenceSequence();
   fill_static_reference_sequence(dag_ref);
   auto tree = mat_from_dag(dag);
 
-  Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "before_optimize.pb");
-  check_MAT_MADAG_Eq(tree, dag);
   Original_State_t origin_states;
   check_samples(tree.root, origin_states, &tree);
   reassign_states(tree, origin_states);
@@ -171,7 +169,7 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback) {
     optimize_inner_loop(all_nodes,     // nodes to search
                         tree,          // tree
                         1 << rad_exp,  // radius
-                        callback,
+                        make_callback((rad_exp == 1)?dag:result, !(rad_exp==1)), // make a callback. If after first iteration, use result, and merge into DAG.
                         true,                  // allow drift
                         true,                  // search all directions
                         5,                     // minutes between save
@@ -184,9 +182,8 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback) {
                         "intermediate_base",   // intermediate base name
                         "intermediate_newick"  // intermediate newick name
     );
+    MADAGStorage result = build_madag_from_mat(tree, dag.GetReferenceSequence());
   }
-  Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
-  MADAGStorage result = build_madag_from_mat(tree, dag.GetReferenceSequence());
   tree.delete_nodes();
   result.View().RecomputeCompactGenomes();
   return result;
