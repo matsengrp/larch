@@ -39,7 +39,7 @@ void Merge<DAG>::AddDAGs(const std::vector<DAG>& dags) {
 
 template <typename DAG>
 template <typename D, typename N>
-void Merge<DAG>::AddDAG(D dag, N below) {
+std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
   dag.AssertUA();
   tree_labels_.push_back({});
   std::vector<NodeLabel>& labels = tree_labels_.back();
@@ -67,14 +67,16 @@ void Merge<DAG>::AddDAG(D dag, N below) {
     auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node.GetId().value)));
     labels.at(node.GetId().value).SetLeafSet(std::addressof(*ls_iter.first));
   }
-
+  std::map<NodeId, NodeId> new_nodes;
   NodeId node_id{ResultDAG().GetNodesCount()};
-  for (auto label : labels) {
+  for (size_t i = 0; i < labels.size(); ++i) {
+    auto& label = labels.at(i);
     if (is_subtree and label == NodeLabel{}) {
       continue;
     }
     if (result_nodes_.try_emplace(label, node_id).second) {
       GetOrInsert(result_node_labels_, node_id) = label;
+      new_nodes.emplace(NodeId{i}, node_id);
       ++node_id.value;
     }
   }
@@ -125,6 +127,7 @@ void Merge<DAG>::AddDAG(D dag, N below) {
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   // TODO Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
   ResultDAG().BuildConnections();
+  return new_nodes;
 }
 
 template <typename DAG>

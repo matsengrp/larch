@@ -63,7 +63,7 @@ class Merge {
   inline void AddDAGs(const std::vector<DAG>& dags);
 
   template <typename D, typename N = std::nullopt_t>
-  void AddDAG(D dag, N below = std::nullopt);
+  std::map<NodeId, NodeId> AddDAG(D dag, N below = std::nullopt);
 
   /**
    * Get the DAG resulting from merge

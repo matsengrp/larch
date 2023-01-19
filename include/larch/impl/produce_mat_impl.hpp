@@ -147,8 +147,9 @@ void fill_static_reference_sequence(std::string_view dag_ref) {
   }
 }
 
-template <typename DAG>
-MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback) {
+template <typename DAG, typename RadiusCallback>
+MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
+                                 RadiusCallback&& radius_callback) {
   auto dag_ref = dag.GetReferenceSequence();
   fill_static_reference_sequence(dag_ref);
   auto tree = mat_from_dag(dag);
@@ -184,6 +185,8 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback) {
                         "intermediate_base",   // intermediate base name
                         "intermediate_newick"  // intermediate newick name
     );
+
+    radius_callback(tree);
   }
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
   MADAGStorage result = build_madag_from_mat(tree, dag.GetReferenceSequence());

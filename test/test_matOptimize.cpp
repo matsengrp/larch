@@ -59,7 +59,8 @@ static void test_matOptimize(std::string_view input_dag_path,
     std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
     Test_Move_Found_Callback callback;
-    optimized_dags.push_back(optimize_dag_direct(sample.View(), callback));
+    optimized_dags.push_back(
+        optimize_dag_direct(sample.View(), callback, [](MAT::Tree) {}));
     optimized_dags.back().View().RecomputeCompactGenomes();
     merge.AddDAG(optimized_dags.back().View(), chosen_node);
   }
