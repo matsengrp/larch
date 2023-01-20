@@ -32,6 +32,9 @@ void check_edge_mutations(DAG dag);
 template <typename DAG>
 MAT::Tree mat_from_dag(DAG dag);
 
+inline std::pair<MADAGStorage, std::map<NodeId, NodeId>> build_madag_from_mat(
+    const MAT::Tree& tree, std::string_view reference_sequence);
+
 template <typename DAG, typename RadiusCallback>
 MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                                  RadiusCallback&& radius_callback);

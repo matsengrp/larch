@@ -363,17 +363,23 @@ int main(int argc, char** argv) {
         merge, sample.View(), dag_ids, {move_coeff_nodes, move_coeff_pscore}};
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
     auto radius_callback = [&](MAT::Tree tree) -> void {
-      MADAGStorage result =
+      auto [result, node_map] =
           build_madag_from_mat(tree, merge.GetResult().GetReferenceSequence());
       result.View().RecomputeCompactGenomes();
       optimized_dags.push_back(std::move(result));
-      std::map<NodeId, NodeId> new_nodes = [&] {
+      std::map<NodeId, NodeId> new_nodes = [&, &node_map = node_map] {
+        std::map<NodeId, NodeId> merged_new;
         if (subtrees) {
-          return merge.AddDAG(optimized_dags.back().View(),
-                              merge.GetResult().Get(subtree_node.value()));
+          merged_new = merge.AddDAG(optimized_dags.back().View(),
+                                    merge.GetResult().Get(subtree_node.value()));
         } else {
-          return merge.AddDAG(optimized_dags.back().View());
+          merged_new = merge.AddDAG(optimized_dags.back().View());
         }
+        std::map<NodeId, NodeId> remaped;
+        for (auto [from, to] : merged_new) {
+          remaped.insert({node_map.at(from), to});
+        }
+        return remaped;
       }();
       callback.MergeNewNodes(std::move(new_nodes));
     };
