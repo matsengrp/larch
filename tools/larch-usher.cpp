@@ -122,6 +122,10 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
       NodeId dst_id = ToMergedNodeId(move.dst->node_id);
       NodeId lca_id = ToMergedNodeId(move.LCA->node_id);
 
+      if (src_id == NodeId{} or dst_id == NodeId{} or lca_id == NodeId{}) {
+        return false;
+      }
+
       const auto& src_clades =
           merge_.GetResultNodeLabels().at(src_id.value).GetLeafSet()->GetClades();
       const auto& dst_clades =
@@ -175,7 +179,10 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     if (it != new_nodes_.end()) {
       return it->second;
     }
-    return sample_dag_ids_.at(id);
+    if (id < sample_dag_ids_.size()) {
+      return sample_dag_ids_.at(id);
+    }
+    return {};
   }
 
   const Merge<MADAG>& merge_;

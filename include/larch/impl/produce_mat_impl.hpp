@@ -190,7 +190,6 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                         "intermediate_base",   // intermediate base name
                         "intermediate_newick"  // intermediate newick name
     );
-
     radius_callback(tree);
   }
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
