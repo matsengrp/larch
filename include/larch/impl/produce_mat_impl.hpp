@@ -39,7 +39,8 @@ static void mat_from_dag_helper(typename DAG::NodeView dag_node,
     Assert(clade.size() == 1);
     typename DAG::EdgeView edge = *clade.begin();
     const auto& mutations = edge.GetEdgeMutations();
-    MAT::Node* node = new MAT::Node(node_id++);
+    node_id = edge.GetChild().GetId().value;
+    MAT::Node* node = new MAT::Node(node_id);
     new_tree.register_node_serial(node);
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {

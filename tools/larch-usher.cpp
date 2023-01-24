@@ -122,9 +122,9 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
       NodeId dst_id = ToMergedNodeId(move.dst->node_id);
       NodeId lca_id = ToMergedNodeId(move.LCA->node_id);
 
-      if (src_id == NodeId{} or dst_id == NodeId{} or lca_id == NodeId{}) {
-        return false;
-      }
+      //if (src_id == NodeId{} or dst_id == NodeId{} or lca_id == NodeId{}) {
+      //  return false;
+      //}
 
       const auto& src_clades =
           merge_.GetResultNodeLabels().at(src_id.value).GetLeafSet()->GetClades();
