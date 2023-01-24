@@ -32,15 +32,13 @@ static uint8_t EncodeBaseMAT(char base) {
 
 template <typename DAG>
 static void mat_from_dag_helper(typename DAG::NodeView dag_node,
-                                MAT::Node* mat_par_node, size_t& node_id,
-                                MAT::Tree& new_tree) {
+                                MAT::Node* mat_par_node, MAT::Tree& new_tree) {
   mat_par_node->children.reserve(dag_node.GetCladesCount());
   for (auto clade : dag_node.GetClades()) {
     Assert(clade.size() == 1);
     typename DAG::EdgeView edge = *clade.begin();
     const auto& mutations = edge.GetEdgeMutations();
-    node_id = edge.GetChild().GetId().value;
-    MAT::Node* node = new MAT::Node(node_id);
+    MAT::Node* node = new MAT::Node(edge.GetChild().GetId().value);
     new_tree.register_node_serial(node);
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
@@ -52,7 +50,7 @@ static void mat_from_dag_helper(typename DAG::NodeView dag_node,
     }
     node->parent = mat_par_node;
     mat_par_node->children.push_back(node);
-    mat_from_dag_helper<DAG>(edge.GetChild(), node, node_id, new_tree);
+    mat_from_dag_helper<DAG>(edge.GetChild(), node, new_tree);
   }
 }
 
@@ -60,9 +58,8 @@ template <typename DAG>
 MAT::Tree mat_from_dag(DAG dag) {
   dag.AssertUA();
   MAT::Tree tree;
-  size_t node_id = 0;
   typename DAG::NodeView root_node = dag.GetRoot().GetFirstChild().GetChild();
-  MAT::Node* mat_root_node = new MAT::Node(node_id++);
+  MAT::Node* mat_root_node = new MAT::Node(root_node.GetId().value);
 
   const auto& tree_root_mutations = dag.GetRoot().GetFirstChild().GetEdgeMutations();
   mat_root_node->mutations.reserve(tree_root_mutations.size());
@@ -76,7 +73,7 @@ MAT::Tree mat_from_dag(DAG dag) {
 
   tree.root = mat_root_node;
   tree.register_node_serial(mat_root_node);
-  mat_from_dag_helper<DAG>(root_node, mat_root_node, node_id, tree);
+  mat_from_dag_helper<DAG>(root_node, mat_root_node, tree);
 
   return tree;
 }
