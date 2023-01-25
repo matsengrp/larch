@@ -382,9 +382,11 @@ int main(int argc, char** argv) {
         } else {
           merged_new = merge.AddDAG(optimized_dags.back().View());
         }
+        // node_map is not the identity, so all pairs in node_map must be used
+        // to build remaped
         std::map<NodeId, NodeId> remaped;
-        for (auto [from, to] : merged_new) {
-          remaped.insert({node_map.at(from), to});
+        for (auto [from, to] : node_map) {
+          remaped.insert({to, merged_new.at(from)});
         }
         return remaped;
       }();
