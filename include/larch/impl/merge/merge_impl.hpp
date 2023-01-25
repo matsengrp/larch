@@ -67,17 +67,23 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
     auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node.GetId().value)));
     labels.at(node.GetId().value).SetLeafSet(std::addressof(*ls_iter.first));
   }
+
+  // maps NodeIds in dag to corresponding NodeIds in merge object
   std::map<NodeId, NodeId> new_nodes;
   NodeId node_id{ResultDAG().GetNodesCount()};
   for (size_t i = 0; i < labels.size(); ++i) {
+    //labels indices are nodeID values
     auto& label = labels.at(i);
-    if (is_subtree and label == NodeLabel{}) {
+    if (label == NodeLabel{}) {
       continue;
     }
-    if (result_nodes_.try_emplace(label, node_id).second) {
+    auto insert_pair = result_nodes_.try_emplace(label, node_id);
+    if (insert_pair.second) {
       GetOrInsert(result_node_labels_, node_id) = label;
       new_nodes.emplace(NodeId{i}, node_id);
       ++node_id.value;
+    } else if (i != dag.GetNodesCount() - 1) {
+      new_nodes.emplace(NodeId{i}, insert_pair.first->second);
     }
   }
 
