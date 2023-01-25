@@ -162,6 +162,7 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   Original_State_t origin_states;
   check_samples(tree.root, origin_states, &tree);
   reassign_states(tree, origin_states);
+  radius_callback(tree);
 
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
   std::chrono::steady_clock::time_point end_time = start_time + std::chrono::hours(8);
