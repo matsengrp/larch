@@ -41,7 +41,7 @@ template <typename DAG>
 template <typename D, typename N>
 std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
   dag.AssertUA();
-  tree_labels_.push_back({});
+  tree_labels_.emplace_back(std::vector<NodeLabel>{});
   std::vector<NodeLabel>& labels = tree_labels_.back();
   const bool is_subtree = [=] {
     if constexpr (std::is_same_v<N, std::nullopt_t>) {
@@ -69,10 +69,10 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
   }
 
   // maps NodeIds in dag to corresponding NodeIds in merge object
-  std::map<NodeId, NodeId> new_nodes;
+  std::map<NodeId, NodeId> node_map;
   NodeId node_id{ResultDAG().GetNodesCount()};
   for (size_t i = 0; i < labels.size(); ++i) {
-    //labels indices are nodeID values
+    // labels indices are nodeID values
     auto& label = labels.at(i);
     if (label == NodeLabel{}) {
       continue;
@@ -80,10 +80,10 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
     auto insert_pair = result_nodes_.try_emplace(label, node_id);
     if (insert_pair.second) {
       GetOrInsert(result_node_labels_, node_id) = label;
-      new_nodes.emplace(NodeId{i}, node_id);
+      node_map.emplace(NodeId{i}, node_id);
       ++node_id.value;
     } else if (i != dag.GetNodesCount() - 1) {
-      new_nodes.emplace(NodeId{i}, insert_pair.first->second);
+      node_map.emplace(NodeId{i}, insert_pair.first->second);
     }
   }
 
@@ -133,7 +133,7 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   // TODO Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
   ResultDAG().BuildConnections();
-  return new_nodes;
+  return node_map;
 }
 
 template <typename DAG>

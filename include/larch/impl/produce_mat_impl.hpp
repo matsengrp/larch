@@ -24,7 +24,7 @@ static uint8_t EncodeBaseMAT(char base) {
     case 'G':
       return 4;
     case 'T':
-      return 8;
+      return 8;  // NOLINT
     default:
       Fail("Invalid base");
   };
@@ -38,7 +38,8 @@ static void mat_from_dag_helper(typename DAG::NodeView dag_node,
     Assert(clade.size() == 1);
     typename DAG::EdgeView edge = *clade.begin();
     const auto& mutations = edge.GetEdgeMutations();
-    MAT::Node* node = new MAT::Node(edge.GetChild().GetId().value);
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+    auto* node = new MAT::Node(edge.GetChild().GetId().value);
     new_tree.register_node_serial(node);
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
@@ -59,7 +60,8 @@ MAT::Tree mat_from_dag(DAG dag) {
   dag.AssertUA();
   MAT::Tree tree;
   typename DAG::NodeView root_node = dag.GetRoot().GetFirstChild().GetChild();
-  MAT::Node* mat_root_node = new MAT::Node(root_node.GetId().value);
+  // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+  auto* mat_root_node = new MAT::Node(root_node.GetId().value);
 
   const auto& tree_root_mutations = dag.GetRoot().GetFirstChild().GetEdgeMutations();
   mat_root_node->mutations.reserve(tree_root_mutations.size());
@@ -83,10 +85,10 @@ inline auto mutations_view(MAT::Node* node) {
          ranges::views::transform(
              [](const MAT::Mutation& mut)
                  -> std::pair<MutationPosition, std::pair<char, char>> {
-               static const char decode[] = {'A', 'C', 'G', 'T'};
+               static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
                return {{static_cast<size_t>(mut.get_position())},
-                       {decode[one_hot_to_two_bit(mut.get_par_one_hot())],
-                        decode[one_hot_to_two_bit(mut.get_mut_one_hot())]}};
+                       {decode.at(one_hot_to_two_bit(mut.get_par_one_hot())),
+                        decode.at(one_hot_to_two_bit(mut.get_mut_one_hot()))}};
              });
 }
 
@@ -153,7 +155,7 @@ void fill_static_reference_sequence(std::string_view dag_ref) {
 template <typename DAG, typename RadiusCallback>
 MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                                  RadiusCallback&& radius_callback) {
-  auto dag_ref = dag.GetReferenceSequence();
+  auto& dag_ref = dag.GetReferenceSequence();
   fill_static_reference_sequence(dag_ref);
   auto tree = mat_from_dag(dag);
 
@@ -165,6 +167,7 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   radius_callback(tree);
 
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+  // NOLINTNEXTLINE
   std::chrono::steady_clock::time_point end_time = start_time + std::chrono::hours(8);
   size_t ddepth = tree.get_max_level() * 2;
   std::cout << "maximum radius is " << std::to_string(ddepth) << "\n";
@@ -179,7 +182,7 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                         callback,
                         true,                  // allow drift
                         true,                  // search all directions
-                        5,                     // minutes between save
+                        5,                     // NOLINT // minutes between save
                         true,                  // do not write intermediate files
                         end_time,              // search end time
                         start_time,            // start time

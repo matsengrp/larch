@@ -116,15 +116,11 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int /* best_score_change */,
                   std::vector<Node_With_Major_Allele_Set_Change>&
                   /* node_with_major_allele_set_change */) override {
-    int new_nodes_count = 0;
+    int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
       NodeId src_id = ToMergedNodeId(move.src->node_id);
       NodeId dst_id = ToMergedNodeId(move.dst->node_id);
       NodeId lca_id = ToMergedNodeId(move.LCA->node_id);
-
-      //if (src_id == NodeId{} or dst_id == NodeId{} or lca_id == NodeId{}) {
-      //  return false;
-      //}
 
       const auto& src_clades =
           merge_.GetResultNodeLabels().at(src_id.value).GetLeafSet()->GetClades();
@@ -139,7 +135,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
                                  .GetLeafSet()
                                  ->GetClades();
         if (not merge_.ContainsLeafset(clades_difference(clades, src_clades))) {
-          ++new_nodes_count;
+          ++node_id_map_count;
         }
         curr_node = curr_node->parent;
         if (curr_node == nullptr) {
@@ -155,7 +151,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
                                  .GetLeafSet()
                                  ->GetClades();
         if (not merge_.ContainsLeafset(clades_union(clades, dst_clades))) {
-          ++new_nodes_count;
+          ++node_id_map_count;
         }
         curr_node = curr_node->parent;
         if (curr_node == nullptr) {
@@ -165,18 +161,18 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     }
 
     move.score_change = move_score_coeffs_.second * move.score_change -
-                        move_score_coeffs_.first * new_nodes_count;
+                        move_score_coeffs_.first * node_id_map_count;
     return move.score_change <= 0;
   }
 
-  void MergeNewNodes(std::map<NodeId, NodeId>&& new_nodes) {
-    new_nodes_.merge(std::forward<decltype(new_nodes)>(new_nodes));
+  void MergeNodeIDs(std::map<NodeId, NodeId>&& node_id_map) {
+    node_id_map_.merge(std::forward<decltype(node_id_map)>(node_id_map));
   }
 
  private:
   NodeId ToMergedNodeId(size_t id) {
-    auto it = new_nodes_.find(NodeId{id});
-    if (it != new_nodes_.end()) {
+    auto it = node_id_map_.find(NodeId{id});
+    if (it != node_id_map_.end()) {
       return it->second;
     }
     if (id < sample_dag_ids_.size()) {
@@ -189,10 +185,10 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
   SampleDAG sample_;
   const std::vector<NodeId>& sample_dag_ids_;
   const std::pair<int, int> move_score_coeffs_;
-  std::map<NodeId, NodeId> new_nodes_;
+  std::map<NodeId, NodeId> node_id_map_;
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   Arguments args = GetArguments(argc, argv);
   int ignored{};
   std::string input_dag_path;
@@ -369,28 +365,28 @@ int main(int argc, char** argv) {
     Larch_Move_Found_Callback callback{
         merge, sample.View(), dag_ids, {move_coeff_nodes, move_coeff_pscore}};
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
-    auto radius_callback = [&](MAT::Tree tree) -> void {
-      auto [result, node_map] =
+    auto radius_callback = [&](MAT::Tree& tree) -> void {
+      auto [result, mat_node_map] =
           build_madag_from_mat(tree, merge.GetResult().GetReferenceSequence());
       result.View().RecomputeCompactGenomes();
       optimized_dags.push_back(std::move(result));
-      std::map<NodeId, NodeId> new_nodes = [&, &node_map = node_map] {
-        std::map<NodeId, NodeId> merged_new;
+      std::map<NodeId, NodeId> full_map = [&, &mat_node_map = mat_node_map] {
+        std::map<NodeId, NodeId> merge_node_map;
         if (subtrees) {
-          merged_new = merge.AddDAG(optimized_dags.back().View(),
-                                    merge.GetResult().Get(subtree_node.value()));
+          merge_node_map = merge.AddDAG(optimized_dags.back().View(),
+                                        merge.GetResult().Get(subtree_node.value()));
         } else {
-          merged_new = merge.AddDAG(optimized_dags.back().View());
+          merge_node_map = merge.AddDAG(optimized_dags.back().View());
         }
-        // node_map is not the identity, so all pairs in node_map must be used
+        // mat_node_map is not the identity, so all pairs in mat_node_map must be used
         // to build remaped
         std::map<NodeId, NodeId> remaped;
-        for (auto [from, to] : node_map) {
-          remaped.insert({to, merged_new.at(from)});
+        for (auto [from, to] : mat_node_map) {
+          remaped.insert({to, merge_node_map.at(from)});
         }
         return remaped;
       }();
-      callback.MergeNewNodes(std::move(new_nodes));
+      callback.MergeNodeIDs(std::move(full_map));
     };
     optimize_dag_direct(sample.View(), callback, radius_callback);
 

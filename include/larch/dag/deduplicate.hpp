@@ -20,6 +20,17 @@ template <typename Feature>
 struct ExtraFeatureStorage<Deduplicate<Feature>> {
   ExtraFeatureStorage() = default;
   MOVE_ONLY(ExtraFeatureStorage);
+
+ private:
+  template <typename CRTP, typename F>
+  // NOLINTNEXTLINE(readability-redundant-declaration)
+  friend auto& GetFeatureStorage(const FeatureConstView<F, CRTP, Deduplicate<F>>*);
+
+  template <typename, typename, typename>
+  friend struct FeatureMutableView;
+
+  template <typename, typename>
+  friend struct ExtraFeatureMutableView;
   ConcurrentUnorderedSet<Feature> deduplicated_;
   static const Feature empty_;
 };
