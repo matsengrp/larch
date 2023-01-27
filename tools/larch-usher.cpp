@@ -26,19 +26,32 @@
   std::cout << "larch-usher -i,--input file -o,--output file [-m,--matopt file] "
                "[-c,--count number]\n";
   std::cout << "  -i,--input   Path to input DAG\n";
+  std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
+               "reference sequence\nif input points to MAT protobuf\n";
   std::cout << "  -o,--output  Path to output DAG\n";
   std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
   std::cout << "  -l,--logpath Path for logging\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
-  std::cout << "  -s,--subtree Optimize subtrees\n";
+  std::cout << "  -s,--switch-subtree           Switch to optimizing subtrees after "
+               "the specified "
+               "number of iterations (default never)\n";
+  std::cout << "  --min-subtree-clade-size      The minimum number of leaves in a "
+               "subtree sampled for optimization (default 100, ignored without option "
+               "`-s`)\n";
+  std::cout << "  --max-subtree-clade-size      The maximum number of leaves in a "
+               "subtree sampled for optimization (default 1000, ignored without option "
+               "`-s`)\n";
+  std::cout << "  --uniform-subtree-root        Choose subtree root node uniformly"
+               "from allowed options. Default choice is weighted by (1 + m^2) where m "
+               "is minimum "
+               "mutations on a node's parent edge\n";
   std::cout
       << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
   std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
                "Default: 1\n";
-  std::cout << "  --sample-best-tree   Only sample trees with best achieved parsimony "
-               "score.\n";
-  std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
-               "reference sequence\nif input points to MAT protobuf\n";
+  std::cout << "  --sample-any-tree    Sample any tree for optimization, rather than "
+               "requiring "
+               "the sampled tree to maximize parsimony.\n";
 
   std::exit(EXIT_SUCCESS);
 }
@@ -196,11 +209,14 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string matoptimize_path = "matOptimize";
   std::string logfile_path = "optimization_log";
   std::string refseq_path;
-  bool sample_best_tree = false;
+  bool sample_best_tree = true;
   size_t count = 1;
   int move_coeff_nodes = 1;
   int move_coeff_pscore = 1;
-  bool subtrees = false;
+  size_t switch_subtrees = std::numeric_limits<size_t>::max();
+  size_t min_subtree_clade_size = 100;   // NOLINT
+  size_t max_subtree_clade_size = 1000;  // NOLINT
+  bool uniform_subtree_root = false;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -229,8 +245,12 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         Fail();
       }
       count = static_cast<size_t>(ParseNumber(*params.begin()));
-    } else if (name == "-s" or name == "--subtrees") {
-      subtrees = true;
+    } else if (name == "-s" or name == "--switch-subtrees") {
+      if (params.empty()) {
+        std::cerr << "Count not specified.\n";
+        Fail();
+      }
+      switch_subtrees = static_cast<size_t>(ParseNumber(*params.begin()));
     } else if (name == "-l" or name == "--logpath") {
       if (params.empty()) {
         std::cerr << "log path name not specified.\n";
@@ -249,8 +269,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         Fail();
       }
       move_coeff_nodes = ParseNumber(*params.begin());
-    } else if (name == "--sample-best-tree") {
-      sample_best_tree = true;
+    } else if (name == "--sample-any-tree") {
+      sample_best_tree = false;
     } else if (name == "-r" or name == "--MAT-refseq-file") {
       if (params.empty()) {
         std::cerr << "Mutation annotated tree refsequence fasta path not specified.\n";
@@ -324,42 +344,90 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   };
   logger(0);
 
+  bool subtrees = false;
   for (size_t i = 0; i < count; ++i) {
     std::cout << "############ Beginning optimize loop " << std::to_string(i)
               << " #######\n";
+    subtrees = (i >= switch_subtrees);
 
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
     std::optional<NodeId> subtree_node;
     auto [sample, dag_ids] = [&] {
-      if (subtrees) {
-        subtree_node = [&] {
-          std::random_device random_device;
-          std::mt19937 random_generator(random_device());
+      subtree_node = [&]() -> std::optional<NodeId> {
+        if (subtrees) {
+          std::vector<NodeId> options;
+          std::vector<size_t> weights;
+          std::set<NodeId> visited;
+          auto node_filter = [&](NodeId start_node, auto& node_filter_ref) -> void {
+            auto node_instance = weight.GetDAG().Get(start_node);
+            if (not visited.count(start_node)) {
+              visited.insert(start_node);
+              bool is_root = node_instance.IsRoot();
+              size_t clade_size = merge.GetResultNodeLabels()
+                                      .at(node_instance.GetId().value)
+                                      .GetLeafSet()
+                                      ->ParentCladeSize();
 
-          NodeId node_id;
-          do {
-            Assert(weight.GetDAG().GetNodesCount() > 0);
-            node_id = {std::uniform_int_distribution<size_t>{
-                0, weight.GetDAG().GetNodesCount() - 1}(random_generator)};
-            auto node = weight.GetDAG().Get(node_id);
-            if (node.IsLeaf() or node.GetCompactGenome().empty()) {
-              continue;
+              if (not is_root and clade_size < min_subtree_clade_size) {
+                // terminate recursion because clade size only
+                // decreases in children
+                return;
+              } else {
+                // Add any other required conditions here
+                if (not is_root and clade_size <= max_subtree_clade_size and
+                    not node_instance.IsLeaf() and
+                    not node_instance.GetCompactGenome().empty()) {
+                  if (uniform_subtree_root) {
+                    weights.push_back(1);
+                  } else {
+                    size_t min_parent_mutations = std::numeric_limits<size_t>::max();
+                    for (auto parent_edge : node_instance.GetParents()) {
+                      auto n_edge_muts = parent_edge.GetEdgeMutations().size();
+                      if (min_parent_mutations > n_edge_muts) {
+                        min_parent_mutations = n_edge_muts;
+                      }
+                    }
+                    // increase preference for many parent mutations,
+                    // and ensure weights cannot not be zero:
+                    weights.push_back(1 + min_parent_mutations * min_parent_mutations);
+                  }
+                  options.push_back(start_node);
+                }
+                for (auto child_edge : node_instance.GetChildren()) {
+                  node_filter_ref(child_edge.GetChild().GetId(), node_filter_ref);
+                }
+              }
             }
-            break;
-          } while (true);
-          return weight.GetDAG().Get(node_id);
-        }();
-        return weight.SampleTree({}, subtree_node.value());
-      } else {
-        if (sample_best_tree) {
-          return weight.MinWeightSampleTree({});
-        } else {
-          return weight.SampleTree({});
+          };
+          node_filter(weight.GetDAG().GetRoot().GetId(), node_filter);
+          if (not options.empty()) {
+            std::random_device random_device;
+            std::mt19937 random_generator(random_device());
+            size_t option_idx = {std::discrete_distribution<size_t>{
+                weights.begin(), weights.end()}(random_generator)};
+            NodeId chosen_node = options.at(option_idx);
+            std::cout << "Chose node " << chosen_node.value
+                      << " as subtree root, with score " << weights.at(option_idx)
+                      << "\n"
+                      << std::flush;
+            return weight.GetDAG().Get(chosen_node);
+          } else {
+            std::cout << "Warning: No suitable subtree root nodes found. Optimizing an "
+                         "entire tree.\n"
+                      << std::flush;
+          }
         }
+        return std::nullopt;
+      }();
+
+      if (sample_best_tree) {
+        return weight.MinWeightSampleTree({}, subtree_node);
+      } else {
+        return weight.SampleTree({}, subtree_node);
       }
     }();
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Sampled nodes: "
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
               << sample.GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
     Larch_Move_Found_Callback callback{
