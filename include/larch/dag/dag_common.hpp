@@ -7,6 +7,9 @@
  * an attachable feature. Functions declared in FeatureConstView are
  * for read-only access to the Feature's storage, and in FeatureMutableView
  * are for modifying access.
+ *
+ * The Tag template parameter equals Feature by default, and can be customized
+ * for behavior modifiers like Deduplicate.
  * @{
  */
 template <typename Feature, typename CRTP, typename Tag = Feature>
@@ -15,15 +18,21 @@ template <typename Feature, typename CRTP, typename Tag = Feature>
 struct FeatureMutableView;
 /** @} */
 
+/**
+ * A per-element feature can have some additional functions, that are exposed
+ * in the DAG view, rather than the element view.
+ * @{
+ */
 template <typename Feature, typename CRTP>
 struct ExtraFeatureConstView {};
 template <typename Feature, typename CRTP>
 struct ExtraFeatureMutableView {};
+/** @} */
 
 /**
  * Used by specialization on the Feature parameter to add extra storage for
  * features that are attached to node or edge (not the DAG itself). Extra storage
- * is not per-element, but global for the entire DAG.
+ * is not per-element, but global for the elements container.
  */
 template <typename Feature>
 struct ExtraFeatureStorage {};
