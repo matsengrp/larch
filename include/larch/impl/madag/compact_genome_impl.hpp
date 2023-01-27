@@ -147,7 +147,7 @@ const CompactGenome& FeatureConstView<CompactGenome, CRTP, Tag>::GetCompactGenom
 
 template <typename CRTP, typename Tag>
 auto& FeatureMutableView<CompactGenome, CRTP, Tag>::operator=(
-    CompactGenome&& compact_genome) const {
+    CompactGenome&& compact_genome) {
   GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);
   return *this;
 }

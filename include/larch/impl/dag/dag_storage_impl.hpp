@@ -57,18 +57,6 @@ size_t DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetEdgesCount(
 }
 
 template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-const auto& DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetNodes()
-    const {
-  return nodes_container_.elements_storage_;
-}  // TODO
-
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-const auto& DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetEdges()
-    const {
-  return edges_container_.elements_storage_;
-}  // TODO
-
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
 void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::InitializeNodes(
     size_t size) {
   nodes_container_.Initialize(size);

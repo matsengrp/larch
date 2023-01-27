@@ -24,7 +24,7 @@ static uint8_t EncodeBaseMAT(char base) {
     case 'G':
       return 4;
     case 'T':
-      return 8;
+      return 8;  // NOLINT
     default:
       Fail("Invalid base");
   };
@@ -32,14 +32,14 @@ static uint8_t EncodeBaseMAT(char base) {
 
 template <typename DAG>
 static void mat_from_dag_helper(typename DAG::NodeView dag_node,
-                                MAT::Node* mat_par_node, size_t& node_id,
-                                MAT::Tree& new_tree) {
+                                MAT::Node* mat_par_node, MAT::Tree& new_tree) {
   mat_par_node->children.reserve(dag_node.GetCladesCount());
   for (auto clade : dag_node.GetClades()) {
     Assert(clade.size() == 1);
     typename DAG::EdgeView edge = *clade.begin();
     const auto& mutations = edge.GetEdgeMutations();
-    MAT::Node* node = new MAT::Node(node_id++);
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+    auto* node = new MAT::Node(edge.GetChild().GetId().value);
     new_tree.register_node_serial(node);
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
@@ -51,7 +51,7 @@ static void mat_from_dag_helper(typename DAG::NodeView dag_node,
     }
     node->parent = mat_par_node;
     mat_par_node->children.push_back(node);
-    mat_from_dag_helper<DAG>(edge.GetChild(), node, node_id, new_tree);
+    mat_from_dag_helper<DAG>(edge.GetChild(), node, new_tree);
   }
 }
 
@@ -59,9 +59,9 @@ template <typename DAG>
 MAT::Tree mat_from_dag(DAG dag) {
   dag.AssertUA();
   MAT::Tree tree;
-  size_t node_id = 0;
   typename DAG::NodeView root_node = dag.GetRoot().GetFirstChild().GetChild();
-  MAT::Node* mat_root_node = new MAT::Node(node_id++);
+  // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+  auto* mat_root_node = new MAT::Node(root_node.GetId().value);
 
   const auto& tree_root_mutations = dag.GetRoot().GetFirstChild().GetEdgeMutations();
   mat_root_node->mutations.reserve(tree_root_mutations.size());
@@ -75,7 +75,7 @@ MAT::Tree mat_from_dag(DAG dag) {
 
   tree.root = mat_root_node;
   tree.register_node_serial(mat_root_node);
-  mat_from_dag_helper<DAG>(root_node, mat_root_node, node_id, tree);
+  mat_from_dag_helper<DAG>(root_node, mat_root_node, tree);
 
   return tree;
 }
@@ -85,35 +85,39 @@ inline auto mutations_view(MAT::Node* node) {
          ranges::views::transform(
              [](const MAT::Mutation& mut)
                  -> std::pair<MutationPosition, std::pair<char, char>> {
-               static const char decode[] = {'A', 'C', 'G', 'T'};
+               static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
                return {{static_cast<size_t>(mut.get_position())},
-                       {decode[one_hot_to_two_bit(mut.get_par_one_hot())],
-                        decode[one_hot_to_two_bit(mut.get_mut_one_hot())]}};
+                       {decode.at(one_hot_to_two_bit(mut.get_par_one_hot())),
+                        decode.at(one_hot_to_two_bit(mut.get_mut_one_hot()))}};
              });
 }
 
 template <typename MutableDAG>
 void build_madag_from_mat_helper(MAT::Node* par_node,
-                                 typename MutableDAG::NodeView node, MutableDAG dag) {
+                                 typename MutableDAG::NodeView node, MutableDAG dag,
+                                 std::map<NodeId, NodeId>& node_map) {
   for (size_t clade_idx = 0; clade_idx < par_node->children.size(); clade_idx++) {
     MAT::Node* mat_child = par_node->children[clade_idx];
     typename MutableDAG::NodeView child_node = dag.AppendNode();
+    node_map.insert({child_node, NodeId{mat_child->node_id}});
     typename MutableDAG::EdgeView child_edge =
         dag.AppendEdge(node, child_node, CladeIdx{clade_idx});
     child_edge.SetEdgeMutations({mutations_view(mat_child)});
-    build_madag_from_mat_helper(mat_child, child_node, dag);
+    build_madag_from_mat_helper(mat_child, child_node, dag, node_map);
   }
 }
 
-inline MADAGStorage build_madag_from_mat(const MAT::Tree& tree,
-                                         std::string_view reference_sequence) {
+std::pair<MADAGStorage, std::map<NodeId, NodeId>> build_madag_from_mat(
+    const MAT::Tree& tree, std::string_view reference_sequence) {
   MADAGStorage result;
+  std::map<NodeId, NodeId> node_map;
   result.View().SetReferenceSequence(reference_sequence);
   MutableMADAG::NodeView root_node = result.View().AppendNode();
-  build_madag_from_mat_helper(tree.root, root_node, result.View());
+  node_map.insert({root_node, NodeId{tree.root->node_id}});
+  build_madag_from_mat_helper(tree.root, root_node, result.View(), node_map);
   result.View().BuildConnections();
   result.View().AddUA(EdgeMutations{mutations_view(tree.root)});
-  return result;
+  return {std::move(result), std::move(node_map)};
 }
 
 template <typename Node1, typename Node2>
@@ -136,7 +140,8 @@ void compareDAG(Node1 dag1, Node2 dag2) {
 
 template <typename DAG>
 void check_MAT_MADAG_Eq(const MAT::Tree& tree, DAG init) {
-  MADAGStorage converted_dag = build_madag_from_mat(tree, init.GetReferenceSequence());
+  MADAGStorage converted_dag =
+      build_madag_from_mat(tree, init.GetReferenceSequence()).first;
   compareDAG(converted_dag.View().GetRoot(), init.GetRoot());
 }
 
@@ -147,9 +152,10 @@ void fill_static_reference_sequence(std::string_view dag_ref) {
   }
 }
 
-template <typename DAG>
-MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback) {
-  auto dag_ref = dag.GetReferenceSequence();
+template <typename DAG, typename RadiusCallback>
+MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
+                                 RadiusCallback&& radius_callback) {
+  auto& dag_ref = dag.GetReferenceSequence();
   fill_static_reference_sequence(dag_ref);
   auto tree = mat_from_dag(dag);
 
@@ -158,8 +164,10 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback) {
   Original_State_t origin_states;
   check_samples(tree.root, origin_states, &tree);
   reassign_states(tree, origin_states);
+  radius_callback(tree);
 
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+  // NOLINTNEXTLINE
   std::chrono::steady_clock::time_point end_time = start_time + std::chrono::hours(8);
   size_t ddepth = tree.get_max_level() * 2;
   std::cout << "maximum radius is " << std::to_string(ddepth) << "\n";
@@ -174,7 +182,7 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback) {
                         callback,
                         true,                  // allow drift
                         true,                  // search all directions
-                        5,                     // minutes between save
+                        5,                     // NOLINT // minutes between save
                         true,                  // do not write intermediate files
                         end_time,              // search end time
                         start_time,            // start time
@@ -184,9 +192,10 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback) {
                         "intermediate_base",   // intermediate base name
                         "intermediate_newick"  // intermediate newick name
     );
+    radius_callback(tree);
   }
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
-  MADAGStorage result = build_madag_from_mat(tree, dag.GetReferenceSequence());
+  MADAGStorage result = build_madag_from_mat(tree, dag.GetReferenceSequence()).first;
   tree.delete_nodes();
   result.View().RecomputeCompactGenomes();
   return result;

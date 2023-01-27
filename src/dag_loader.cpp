@@ -120,8 +120,8 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
   Assert(static_cast<size_t>(data.node_mutations_size()) ==
          result.View().GetNodesCount() - 1);
   using Edge = MutableMADAG::EdgeView;
-  auto apply_mutations = [](auto& self, Edge edge, const auto& node_mutations,
-                            size_t& idx) -> void {
+  auto apply_mutations = [&result](auto& self, Edge edge, const auto& node_mutations,
+                                   size_t& idx) -> void {
     const auto& pb_muts = node_mutations.Get(static_cast<int>(idx++)).mutation();
     EdgeMutations muts;
     for (auto i : pb_muts | ranges::views::transform(DecodeMutation)) {
@@ -240,67 +240,6 @@ void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut)
   proto_mut->set_ref_nuc(EncodeBasePB(ref));
   proto_mut->set_par_nuc(EncodeBasePB(par));
   proto_mut->add_mut_nuc(EncodeBasePB(mut));
-}
-
-void StoreTreeToProtobuf(MADAG dag, std::string_view path) {
-  dag.AssertUA();
-  Assert(dag.IsTree());
-
-  Parsimony::data data;
-  using Node = MADAG::NodeView;
-  std::string newick;
-  auto to_newick = [&](auto& self, Node node) -> void {
-    if (not node.IsLeaf()) {
-      newick += '(';
-    }
-    size_t clade_idx = 0;
-    for (auto clade : node.GetClades()) {
-      Assert(clade.size() == 1);
-      MADAG::NodeView i = (*clade.begin()).GetChild();
-      if (i.IsLeaf()) {
-        if (i.GetSampleId()) {
-          newick += *i.GetSampleId();
-        } else {
-          newick += "unknown_leaf_";
-          newick += std::to_string(i.GetId().value);
-        }
-      } else {
-        self(self, i);
-        newick += "inner_";
-        newick += std::to_string(i.GetId().value);
-      }
-      if (++clade_idx < node.GetCladesCount()) {
-        newick += ',';
-      }
-    }
-    if (not node.IsLeaf()) {
-      newick += ')';
-    }
-  };
-  to_newick(to_newick, dag.GetRoot().GetFirstChild().GetChild());
-  newick += ';';
-  data.set_newick(newick);
-  using Edge = MADAG::EdgeView;
-  auto store_mutations = [](auto& self, Edge edge, Parsimony::data& result,
-                            std::string_view ref_seq) -> void {
-    auto* proto = result.add_node_mutations();
-    for (auto [pos, mut] : edge.GetEdgeMutations()) {
-      auto* proto_mut = proto->add_mutation();
-      proto_mut->set_position(static_cast<int32_t>(pos.value));
-      proto_mut->set_ref_nuc(EncodeBasePB(ref_seq.at(pos.value - 1)));
-      proto_mut->set_par_nuc(EncodeBasePB(mut.first));
-      proto_mut->add_mut_nuc(EncodeBasePB(mut.second));
-      proto_mut->set_chromosome("leaf_0");
-    }
-    for (MADAG::EdgeView child : edge.GetChild().GetChildren()) {
-      self(self, child, result, ref_seq);
-    }
-  };
-  store_mutations(store_mutations, dag.GetRoot().GetFirstChild(), data,
-                  dag.GetReferenceSequence());
-
-  std::ofstream file{std::string{path}};
-  data.SerializeToOstream(&file);
 }
 
 static std::string EdgeMutationsToString(MADAG::EdgeView edge) {

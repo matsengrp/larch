@@ -2,6 +2,10 @@ bool operator==(MutationPosition lhs, MutationPosition rhs) {
   return lhs.value == rhs.value;
 }
 
+bool operator!=(MutationPosition lhs, MutationPosition rhs) {
+  return lhs.value != rhs.value;
+}
+
 bool operator<(MutationPosition lhs, MutationPosition rhs) {
   return lhs.value < rhs.value;
 }

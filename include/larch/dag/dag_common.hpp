@@ -7,6 +7,9 @@
  * an attachable feature. Functions declared in FeatureConstView are
  * for read-only access to the Feature's storage, and in FeatureMutableView
  * are for modifying access.
+ *
+ * The Tag template parameter equals Feature by default, and can be customized
+ * for behavior modifiers like Deduplicate.
  * @{
  */
 template <typename Feature, typename CRTP, typename Tag = Feature>
@@ -15,21 +18,43 @@ template <typename Feature, typename CRTP, typename Tag = Feature>
 struct FeatureMutableView;
 /** @} */
 
+/**
+ * A per-element feature can have some additional functions, that are exposed
+ * in the DAG view, rather than the element view.
+ * @{
+ */
 template <typename Feature, typename CRTP>
 struct ExtraFeatureConstView {};
 template <typename Feature, typename CRTP>
 struct ExtraFeatureMutableView {};
+/** @} */
 
 /**
  * Used by specialization on the Feature parameter to add extra storage for
  * features that are attached to node or edge (not the DAG itself). Extra storage
- * is not per-element, but global for the entire DAG.
+ * is not per-element, but global for the elements container.
  */
 template <typename Feature>
 struct ExtraFeatureStorage {};
 
-template <typename DS>
-struct DAGView;
+template <typename Id, typename DAGViewType>
+struct ElementView;
+
+template <typename DAGStorageType, typename DAGViewType>
+struct DefaultViewBase {
+  using DAGViewBase = std::conditional_t<
+      std::is_const_v<DAGStorageType>,
+      typename DAGStorageType::template ConstDAGViewBase<DAGViewType>,
+      typename DAGStorageType::template MutableDAGViewBase<DAGViewType>>;
+
+  template <typename Id>
+  using ElementViewBase =
+      std::conditional_t<std::is_const_v<DAGStorageType>,
+                         typename DAGStorageType::template ConstElementViewBase<
+                             Id, ElementView<Id, DAGViewType>>,
+                         typename DAGStorageType::template MutableElementViewBase<
+                             Id, ElementView<Id, DAGViewType>>>;
+};
 
 /**
  * Called by functions in FeatureConstView and FeatureMutableView specializations
@@ -48,6 +73,7 @@ struct NodeId {
 };
 
 inline bool operator==(NodeId lhs, NodeId rhs);
+inline bool operator!=(NodeId lhs, NodeId rhs);
 inline bool operator<(NodeId lhs, NodeId rhs);
 
 template <>
@@ -60,6 +86,7 @@ struct EdgeId {
 };
 
 inline bool operator==(EdgeId lhs, EdgeId rhs);
+inline bool operator!=(EdgeId lhs, EdgeId rhs);
 inline bool operator<(EdgeId lhs, EdgeId rhs);
 
 struct CladeIdx {
@@ -67,6 +94,7 @@ struct CladeIdx {
 };
 
 inline bool operator==(CladeIdx lhs, CladeIdx rhs);
+inline bool operator!=(CladeIdx lhs, CladeIdx rhs);
 inline bool operator<(CladeIdx lhs, CladeIdx rhs);
 
 namespace Transform {

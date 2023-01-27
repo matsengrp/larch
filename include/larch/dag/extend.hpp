@@ -101,17 +101,18 @@ struct ExtendDAGStorage {
                             Arg2 = Extend::Empty<>{});
 
   auto View();
+  auto View() const;
 
   NodeId AppendNode();
-
   EdgeId AppendEdge();
 
   void AddNode(NodeId id);
-
   void AddEdge(EdgeId id);
 
-  auto GetNodes() const;
+  size_t GetNodesCount() const;
+  size_t GetEdgesCount() const;
 
+  auto GetNodes() const;
   auto GetEdges() const;
 
   void InitializeNodes(size_t size) const;

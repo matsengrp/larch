@@ -19,6 +19,7 @@
 #include <range/v3/view/drop.hpp>
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/group_by.hpp>
+#include <range/v3/view/indices.hpp>
 #include <range/v3/view/join.hpp>
 #include <range/v3/view/reverse.hpp>
 #include <range/v3/view/subrange.hpp>

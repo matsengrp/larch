@@ -54,9 +54,6 @@ struct ElementsContainer {
   const auto& GetFeatureExtraStorage() const;
 
  private:
-  template <typename, typename, typename...>
-  friend struct DAGStorage;  // TODO remove
-
   std::vector<ElementStorageT> elements_storage_;
   std::vector<std::tuple<Features...>> features_storage_;
   std::tuple<ExtraFeatureStorage<Features>...> extra_features_storage_;

@@ -10,6 +10,8 @@
 template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
 struct DAGStorage {
  public:
+  using FeatureTypes = std::tuple<Features...>;
+
   template <typename Id, typename CRTP>
   using ConstElementViewBase =
       std::conditional_t<std::is_same_v<Id, NodeId>,
@@ -53,21 +55,18 @@ struct DAGStorage {
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
 
-  const auto& GetNodes() const;
-  const auto& GetEdges() const;
-
   void InitializeNodes(size_t size);
 
-  template <typename F>
+  template <typename Feature>
   auto& GetFeatureStorage(NodeId id);
 
-  template <typename F>
+  template <typename Feature>
   const auto& GetFeatureStorage(NodeId id) const;
 
-  template <typename F>
+  template <typename Feature>
   auto& GetFeatureStorage(EdgeId id);
 
-  template <typename F>
+  template <typename Feature>
   const auto& GetFeatureStorage(EdgeId id) const;
 
   template <typename Id, typename Feature>
