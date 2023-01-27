@@ -263,6 +263,18 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         Fail();
       }
       move_coeff_pscore = ParseNumber(*params.begin());
+    } else if (name == "--min-subtree-clade-size") {
+      if (params.empty()) {
+        std::cerr << "minimum subtree clade size not specified\n";
+        Fail();
+      }
+      min_subtree_clade_size = static_cast<size_t>(ParseNumber(*params.begin()));
+    } else if (name == "--max-subtree-clade-size") {
+      if (params.empty()) {
+        std::cerr << "maximum subtree clade size not specified\n";
+        Fail();
+      }
+      max_subtree_clade_size = static_cast<size_t>(ParseNumber(*params.begin()));
     } else if (name == "--move-coeff-nodes") {
       if (params.empty()) {
         std::cerr << "parsimony score move coefficient not specified\n";
