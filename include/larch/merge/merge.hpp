@@ -32,6 +32,13 @@ using MergeDAGStorage = DAGStorage<
     ElementsContainer<EdgeId, ElementStorage<Endpoints, EdgeMutations>>, Connections,
     ReferenceSequence>;
 
+// using MergeDAGStorage =
+//     ExtendDAGStorage<DAGStorage<ElementsContainer<NodeId, ElementStorage<>>,
+//                                 ElementsContainer<EdgeId, ElementStorage<>>>,
+//                      Extend::Nodes<Neighbors, Deduplicate<CompactGenome>, SampleId>,
+//                      Extend::Edges<Endpoints, EdgeMutations>,
+//                      Extend::DAG<Connections, ReferenceSequence>>;
+
 using MergeDAG = DAGView<const MergeDAGStorage>;
 using MutableMergeDAG = DAGView<MergeDAGStorage>;
 

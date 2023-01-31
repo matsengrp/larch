@@ -49,6 +49,12 @@ ElementView<NodeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AddNode(Node
 }
 
 template <typename Storage, template <typename, typename> typename Base>
+ElementView<EdgeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AddEdge(EdgeId id) {
+  dag_storage_.AddEdge(id);
+  return {*this, id};
+}
+
+template <typename Storage, template <typename, typename> typename Base>
 ElementView<EdgeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AddEdge(
     EdgeId id, NodeId parent, NodeId child,
     CladeIdx clade) {  // TODO

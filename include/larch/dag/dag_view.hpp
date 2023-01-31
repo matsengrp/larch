@@ -50,6 +50,8 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   ElementView<EdgeId, DAGView<Storage, Base>> AppendEdge() const;
 
   ElementView<NodeId, DAGView<Storage, Base>> AddNode(NodeId id);
+  ElementView<EdgeId, DAGView<Storage, Base>> AddEdge(EdgeId id);
+
   ElementView<EdgeId, DAGView<Storage, Base>> AddEdge(EdgeId id, NodeId parent,
                                                       NodeId child,
                                                       CladeIdx clade);  // TODO

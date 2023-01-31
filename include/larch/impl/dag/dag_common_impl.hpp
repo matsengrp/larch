@@ -64,3 +64,13 @@ static constexpr auto select_argument() {
     return Template<>{};
   }
 }
+
+template <typename T>
+auto ViewOf(T&& storage) {
+  return storage.View();
+}
+
+template <typename Storage, template <typename, typename> typename Base>
+auto ViewOf(DAGView<Storage, Base> view) -> DAGView<Storage, Base> {
+  return view;
+}

@@ -113,3 +113,12 @@ template <template <typename...> typename Template, size_t I, typename... Ts>
 static constexpr auto select_argument();
 template <template <typename...> typename Template, typename... Ts>
 using select_argument_t = decltype(select_argument<Template, 0, Ts...>());
+
+template <typename T>
+auto ViewOf(T&& storage);
+
+template <typename, template <typename, typename> typename>
+struct DAGView;
+
+template <typename Storage, template <typename, typename> typename Base>
+auto ViewOf(DAGView<Storage, Base> view) -> DAGView<Storage, Base>;

@@ -8,7 +8,7 @@
  *
  *     ExtendDAGStorage my_extended_dag{existing_dag_view,
  *         Extend::Nodes<Deduplicate<MyNewNodeFeature>>{},
- *         Extend::Edges<MyNewEdgeFeature1, MyNewEdgeFeatur2>{}};
+ *         Extend::Edges<MyNewEdgeFeature1, MyNewEdgeFeature2>{}};
  *
  */
 namespace Extend {
@@ -23,6 +23,15 @@ struct Nodes {
   struct MutableView : ConstView<CRTP>, FeatureMutableView<Fs, CRTP>... {
     using FeatureMutableView<Fs, CRTP>::operator=...;
   };
+
+  template <typename CRTP>
+  struct ExtraConstView : ExtraFeatureConstView<Fs, CRTP>... {};
+  template <typename CRTP>
+  struct ExtraMutableView : ExtraConstView<CRTP>,
+                            ExtraFeatureMutableView<Fs, CRTP>... {};
+  template <typename Feature>
+  static const bool contains_element_feature =
+      tuple_contains_v<std::tuple<Fs...>, Feature>;
 };
 
 template <typename... Fs>
@@ -35,15 +44,28 @@ struct Edges {
   struct MutableView : ConstView<CRTP>, FeatureMutableView<Fs, CRTP>... {
     using FeatureMutableView<Fs, CRTP>::operator=...;
   };
+
+  template <typename CRTP>
+  struct ExtraConstView : ExtraFeatureConstView<Fs, CRTP>... {};
+  template <typename CRTP>
+  struct ExtraMutableView : ExtraConstView<CRTP>,
+                            ExtraFeatureMutableView<Fs, CRTP>... {};
+
+  template <typename Feature>
+  static const bool contains_element_feature =
+      tuple_contains_v<std::tuple<Fs...>, Feature>;
 };
 
 template <typename... Fs>
 struct DAG {
   using Storage = std::tuple<Fs...>;
   template <typename CRTP>
-  struct ConstView : FeatureConstView<Fs, CRTP>... {};
+  struct ConstView : FeatureConstView<Fs, CRTP>...,
+                     ExtraFeatureConstView<Fs, CRTP>... {};
   template <typename CRTP>
-  struct MutableView : ConstView<CRTP>, FeatureMutableView<Fs, CRTP>... {};
+  struct MutableView : ConstView<CRTP>,
+                       FeatureMutableView<Fs, CRTP>...,
+                       ExtraFeatureMutableView<Fs, CRTP>... {};
 };
 
 template <typename...>
@@ -53,52 +75,75 @@ struct Empty {
   struct ConstView {};
   template <typename, typename>
   struct MutableView {};
+  struct ExtraConstView {};
+  template <typename, typename>
+  struct ExtraMutableView {};
+  template <typename>
+  static const bool contains_element_feature = false;
 };
 }  // namespace Extend
 
 /**
  * Adds new features to an existing DAG. See `namespace Extend` for more info.
  */
-template <typename DV, typename Arg0 = Extend::Empty<>, typename Arg1 = Extend::Empty<>,
-          typename Arg2 = Extend::Empty<>>
+template <typename Target, typename Arg0 = Extend::Empty<>,
+          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
 struct ExtendDAGStorage {
  public:
+  using TargetView = decltype(ViewOf(std::declval<Target>()));
   using OnNodes = select_argument_t<Extend::Nodes, Arg0, Arg1, Arg2>;
   using OnEdges = select_argument_t<Extend::Edges, Arg0, Arg1, Arg2>;
   using OnDAG = select_argument_t<Extend::DAG, Arg0, Arg1, Arg2>;
 
   template <typename Id, typename CRTP>
-  struct ConstElementViewBase
-      : DV::StorageType::template ConstElementViewBase<Id, CRTP>,
+  struct ConstElementViewBase;
+
+  template <typename CRTP>
+  struct ConstElementViewBase<NodeId, CRTP>
+      : TargetView::StorageType::template ConstElementViewBase<NodeId, CRTP>,
         OnNodes::template ConstView<CRTP> {};
+
+  template <typename CRTP>
+  struct ConstElementViewBase<EdgeId, CRTP>
+      : TargetView::StorageType::template ConstElementViewBase<EdgeId, CRTP>,
+        OnEdges::template ConstView<CRTP> {};
+
   template <typename Id, typename CRTP>
   struct MutableElementViewBase;
 
   template <typename CRTP>
   struct MutableElementViewBase<NodeId, CRTP>
-      : DV::StorageType::template MutableElementViewBase<NodeId, CRTP>,
+      : TargetView::StorageType::template MutableElementViewBase<NodeId, CRTP>,
         OnNodes::template MutableView<CRTP> {
     using OnNodes::template MutableView<CRTP>::operator=;
   };
 
   template <typename CRTP>
   struct MutableElementViewBase<EdgeId, CRTP>
-      : DV::StorageType::template MutableElementViewBase<EdgeId, CRTP>,
+      : TargetView::StorageType::template MutableElementViewBase<EdgeId, CRTP>,
         OnEdges::template MutableView<CRTP> {
     using OnEdges::template MutableView<CRTP>::operator=;
   };
 
+  template <typename Id, typename Feature>
+  static const bool contains_element_feature;
+
   template <typename CRTP>
-  struct ConstDAGViewBase : DV::StorageType::template ConstDAGViewBase<CRTP>,
-                            OnDAG::template ConstView<CRTP> {};
+  struct ConstDAGViewBase : TargetView::StorageType::template ConstDAGViewBase<CRTP>,
+                            OnDAG::template ConstView<CRTP>,
+                            OnNodes::template ExtraConstView<CRTP>,
+                            OnEdges::template ExtraConstView<CRTP> {};
   template <typename CRTP>
-  struct MutableDAGViewBase : DV::StorageType::template MutableDAGViewBase<CRTP>,
-                              OnDAG::template MutableView<CRTP> {};
+  struct MutableDAGViewBase
+      : TargetView::StorageType::template MutableDAGViewBase<CRTP>,
+        OnDAG::template MutableView<CRTP>,
+        OnNodes::template ExtraMutableView<CRTP>,
+        OnEdges::template ExtraMutableView<CRTP> {};
 
   MOVE_ONLY(ExtendDAGStorage);
 
-  explicit ExtendDAGStorage(DV dv, Arg0 = Extend::Empty<>{}, Arg1 = Extend::Empty<>{},
-                            Arg2 = Extend::Empty<>{});
+  ExtendDAGStorage();
+  explicit ExtendDAGStorage(Target&& target);
 
   auto View();
   auto View() const;
@@ -115,7 +160,7 @@ struct ExtendDAGStorage {
   auto GetNodes() const;
   auto GetEdges() const;
 
-  void InitializeNodes(size_t size) const;
+  void InitializeNodes(size_t size);
 
   template <typename F>
   auto& GetFeatureStorage();
@@ -142,7 +187,10 @@ struct ExtendDAGStorage {
   const auto& GetFeatureExtraStorage() const;
 
  private:
-  std::decay_t<DV> target_dag_view_;
+  auto GetTarget();
+  auto GetTarget() const;
+
+  std::decay_t<Target> target_ = {};
   typename OnNodes::Storage additional_node_features_storage_;
   typename OnEdges::Storage additional_edge_features_storage_;
   typename OnDAG::Storage additional_dag_features_storage_;
