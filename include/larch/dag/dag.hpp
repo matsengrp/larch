@@ -20,6 +20,7 @@
 #include "larch/dag/neighbors.hpp"
 #include "larch/dag/endpoints.hpp"
 #include "larch/dag/connections.hpp"
+#include "larch/dag/overlay.hpp"
 #undef DAG_DECLARATIONS
 
 #define DAG_DEFINITIONS
@@ -34,4 +35,5 @@
 #include "larch/impl/dag/neighbors_impl.hpp"
 #include "larch/impl/dag/endpoints_impl.hpp"
 #include "larch/impl/dag/connections_impl.hpp"
+#include "larch/impl/dag/overlay_impl.hpp"
 #undef DAG_DEFINITIONS

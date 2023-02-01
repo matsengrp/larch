@@ -95,6 +95,10 @@ struct ExtendDAGStorage {
   using OnEdges = select_argument_t<Extend::Edges, Arg0, Arg1, Arg2>;
   using OnDAG = select_argument_t<Extend::DAG, Arg0, Arg1, Arg2>;
 
+  using FeatureTypes = typename TargetView::StorageType::FeatureTypes;
+  using AllNodeFeatures = typename TargetView::StorageType::AllNodeFeatures;
+  using AllEdgeFeatures = typename TargetView::StorageType::AllEdgeFeatures;
+
   template <typename Id, typename CRTP>
   struct ConstElementViewBase;
 

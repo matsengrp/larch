@@ -10,6 +10,7 @@
 template <typename... Fs>
 struct ElementStorage {
  public:
+  using FeatureTypes = std::tuple<Fs...>;
   using ExtraStorage = std::tuple<ExtraFeatureStorage<Fs>...>;
 
   template <typename Feature>

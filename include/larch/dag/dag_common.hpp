@@ -114,6 +114,16 @@ static constexpr auto select_argument();
 template <template <typename...> typename Template, typename... Ts>
 using select_argument_t = decltype(select_argument<Template, 0, Ts...>());
 
+template <typename... Ts>
+struct CombineBases : Ts... {
+  static_assert(std::conjunction_v<std::is_empty<Ts>...>);
+};
+
+template <typename... Ts>
+struct CombineBases<std::tuple<Ts...>> : Ts... {
+  static_assert(std::conjunction_v<std::is_empty<Ts>...>);
+};
+
 template <typename T>
 auto ViewOf(T&& storage);
 
