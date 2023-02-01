@@ -122,3 +122,22 @@ struct DAGView;
 
 template <typename Storage, template <typename, typename> typename Base>
 auto ViewOf(DAGView<Storage, Base> view) -> DAGView<Storage, Base>;
+
+template <typename, typename, typename...>
+struct DAGStorage;
+
+template <typename, typename, typename...>
+struct ElementsContainer;
+
+template <typename...>
+struct ElementStorage;
+
+struct Neighbors;
+
+struct Endpoints;
+
+struct Connections;
+
+using DefaultDAGStorage =
+    DAGStorage<ElementsContainer<NodeId, ElementStorage<Neighbors>>,
+               ElementsContainer<EdgeId, ElementStorage<Endpoints>>, Connections>;
