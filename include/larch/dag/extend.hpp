@@ -15,6 +15,7 @@ namespace Extend {
 
 template <typename... Fs>
 struct Nodes {
+  using FeatureTypes = std::tuple<Fs...>;
   using Storage = std::vector<std::tuple<Fs...>>;
   using ExtraStorage = std::tuple<ExtraFeatureStorage<Fs>...>;
   template <typename CRTP>
@@ -36,6 +37,7 @@ struct Nodes {
 
 template <typename... Fs>
 struct Edges {
+  using FeatureTypes = std::tuple<Fs...>;
   using Storage = std::vector<std::tuple<Fs...>>;
   using ExtraStorage = std::tuple<ExtraFeatureStorage<Fs>...>;
   template <typename CRTP>
@@ -58,6 +60,7 @@ struct Edges {
 
 template <typename... Fs>
 struct DAG {
+  using FeatureTypes = std::tuple<Fs...>;
   using Storage = std::tuple<Fs...>;
   template <typename CRTP>
   struct ConstView : FeatureConstView<Fs, CRTP>...,
@@ -70,6 +73,7 @@ struct DAG {
 
 template <typename...>
 struct Empty {
+  using FeatureTypes = std::tuple<>;
   using Storage = std::tuple<>;
   template <typename, typename>
   struct ConstView {};
@@ -96,8 +100,12 @@ struct ExtendDAGStorage {
   using OnDAG = select_argument_t<Extend::DAG, Arg0, Arg1, Arg2>;
 
   using FeatureTypes = typename TargetView::StorageType::FeatureTypes;
-  using AllNodeFeatures = typename TargetView::StorageType::AllNodeFeatures;
-  using AllEdgeFeatures = typename TargetView::StorageType::AllEdgeFeatures;
+  using AllNodeFeatures =
+      decltype(std::tuple_cat(typename OnNodes::FeatureTypes{},
+                              typename TargetView::StorageType::AllNodeFeatures{}));
+  using AllEdgeFeatures =
+      decltype(std::tuple_cat(typename OnEdges::FeatureTypes{},
+                              typename TargetView::StorageType::AllEdgeFeatures{}));
 
   template <typename Id, typename CRTP>
   struct ConstElementViewBase;

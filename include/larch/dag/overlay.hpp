@@ -78,13 +78,12 @@ struct OverlayDAGStorage {
   const auto& GetFeatureExtraStorage() const;
 
  private:
-  struct NodeStorage : CombineBases<AllNodeFeatures> {};
-  struct EdgeStorage : CombineBases<AllEdgeFeatures> {};
-
   auto GetTarget();
   auto GetTarget() const;
 
   std::decay_t<Target> target_ = {};
-  std::unordered_map<NodeId, NodeStorage> node_storage_;
-  std::unordered_map<NodeId, EdgeStorage> edge_storage_;
+  std::unordered_map<NodeId, AllNodeFeatures> replaced_node_storage_;
+  std::unordered_map<EdgeId, AllEdgeFeatures> replaced_edge_storage_;
+  std::vector<AllNodeFeatures> added_node_storage_;
+  std::vector<AllEdgeFeatures> added_edge_storage_;
 };

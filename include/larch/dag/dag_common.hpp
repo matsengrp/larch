@@ -85,6 +85,11 @@ struct EdgeId {
   size_t value = NoId;
 };
 
+template <>
+struct std::hash<EdgeId> {
+  inline size_t operator()(EdgeId id) const noexcept;
+};
+
 inline bool operator==(EdgeId lhs, EdgeId rhs);
 inline bool operator!=(EdgeId lhs, EdgeId rhs);
 inline bool operator<(EdgeId lhs, EdgeId rhs);

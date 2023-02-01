@@ -20,6 +20,7 @@ size_t std::hash<NodeId>::operator()(NodeId id) const noexcept { return id.value
 bool operator==(EdgeId lhs, EdgeId rhs) { return lhs.value == rhs.value; }
 bool operator!=(EdgeId lhs, EdgeId rhs) { return lhs.value != rhs.value; }
 bool operator<(EdgeId lhs, EdgeId rhs) { return lhs.value < rhs.value; }
+size_t std::hash<EdgeId>::operator()(EdgeId id) const noexcept { return id.value; }
 
 bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs.value == rhs.value; }
 bool operator!=(CladeIdx lhs, CladeIdx rhs) { return lhs.value != rhs.value; }

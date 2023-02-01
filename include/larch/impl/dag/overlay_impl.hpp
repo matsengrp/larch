@@ -26,32 +26,34 @@ auto OverlayDAGStorage<Target>::View() const {
 
 template <typename Target>
 NodeId OverlayDAGStorage<Target>::AppendNode() {
-  return GetTarget().AppendNode().GetId();
+  added_node_storage_.push_back({});
+  return {GetNodesCount() - 1};
 }
 
 template <typename Target>
 EdgeId OverlayDAGStorage<Target>::AppendEdge() {
-  return GetTarget().AppendEdge().GetId();
+  added_edge_storage_.push_back({});
+  return {GetNodesCount() - 1};
 }
 
 template <typename Target>
 void OverlayDAGStorage<Target>::AddNode(NodeId id) {
-  GetTarget().AddNode(id);
+  std::ignore = GetOrInsert(added_node_storage_, id);
 }
 
 template <typename Target>
 void OverlayDAGStorage<Target>::AddEdge(EdgeId id) {
-  GetTarget().AddEdge(id);
+  std::ignore = GetOrInsert(added_edge_storage_, id);
 }
 
 template <typename Target>
 size_t OverlayDAGStorage<Target>::GetNodesCount() const {
-  return GetTarget().GetNodesCount();
+  return GetTarget().GetNodesCount() + added_node_storage_.size();
 }
 
 template <typename Target>
 size_t OverlayDAGStorage<Target>::GetEdgesCount() const {
-  return GetTarget().GetEdgesCount();
+  return GetTarget().GetEdgesCount() + added_edge_storage_.size();
 }
 
 template <typename Target>
@@ -72,7 +74,10 @@ auto OverlayDAGStorage<Target>::GetEdges() const {
 
 template <typename Target>
 void OverlayDAGStorage<Target>::InitializeNodes(size_t size) {
-  GetTarget().InitializeNodes(size);
+  if (size < GetTarget().GetNodesCount()) {
+    throw std::runtime_error("Overlayed DAG can only be grown");
+  }
+  added_node_storage_.resize(size - GetTarget().GetNodesCount());
 }
 
 template <typename Target>
@@ -90,44 +95,60 @@ const auto& OverlayDAGStorage<Target>::GetFeatureStorage() const {
 template <typename Target>
 template <typename F>
 auto& OverlayDAGStorage<Target>::GetFeatureStorage(NodeId id) {
-  auto it = node_storage_.find(id);
-  if (it == node_storage_.end()) {
-    return GetTarget().template GetFeatureStorage<F>(id);
+  if (id.value < GetTarget().GetNodesCount()) {
+    auto it = replaced_node_storage_.find(id);
+    if (it == replaced_node_storage_.end()) {
+      return GetTarget().template GetFeatureStorage<F>(id);
+    } else {
+      return std::get<F>(it->second);
+    }
   } else {
-    return std::get<F>(it->second);
+    return std::get<F>(added_node_storage_.at(id.value - GetTarget().GetNodesCount()));
   }
 }
 
 template <typename Target>
 template <typename F>
 const auto& OverlayDAGStorage<Target>::GetFeatureStorage(NodeId id) const {
-  auto it = node_storage_.find(id);
-  if (it == node_storage_.end()) {
-    return GetTarget().template GetFeatureStorage<F>(id);
+  if (id.value < GetTarget().GetNodesCount()) {
+    auto it = replaced_node_storage_.find(id);
+    if (it == replaced_node_storage_.end()) {
+      return GetTarget().template GetFeatureStorage<F>(id);
+    } else {
+      return std::get<F>(it->second);
+    }
   } else {
-    return std::get<F>(it->second);
+    return std::get<F>(added_node_storage_.at(id.value - GetTarget().GetNodesCount()));
   }
 }
 
 template <typename Target>
 template <typename F>
 auto& OverlayDAGStorage<Target>::GetFeatureStorage(EdgeId id) {
-  auto it = edge_storage_.find(id);
-  if (it == edge_storage_.end()) {
-    return GetTarget().template GetFeatureStorage<F>(id);
+  if (id.value < GetTarget().GetEdgesCount()) {
+    auto it = replaced_edge_storage_.find(id);
+    if (it == replaced_edge_storage_.end()) {
+      return GetTarget().template GetFeatureStorage<F>(id);
+    } else {
+      return std::get<F>(it->second);
+    }
   } else {
-    return std::get<F>(it->second);
+    return std::get<F>(added_edge_storage_.at(id.value - GetTarget().GetEdgesCount()));
   }
 }
 
 template <typename Target>
 template <typename F>
 const auto& OverlayDAGStorage<Target>::GetFeatureStorage(EdgeId id) const {
-  auto it = edge_storage_.find(id);
-  if (it == edge_storage_.end()) {
-    return GetTarget().template GetFeatureStorage<F>(id);
+  if (id.value < GetTarget().GetEdgesCount()) {
+    auto it = replaced_edge_storage_.find(id);
+    if (it == replaced_edge_storage_.end()) {
+      return GetTarget().template GetFeatureStorage<F>(id);
+    } else {
+      return std::get<F>(it->second);
+    }
   } else {
-    return std::get<F>(it->second);
+    return std::get<F>(added_edge_storage_.at(id.value - GetTarget().GetEdgesCount()));
   }
 }
 
