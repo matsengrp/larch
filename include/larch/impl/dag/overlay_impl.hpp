@@ -2,6 +2,48 @@
 #error "Don't include this header"
 #endif
 
+template <typename CRTP, typename Tag>
+bool FeatureConstView<Overlay, CRTP, Tag>::IsOverlaid() const {
+  auto& element_view = static_cast<const CRTP&>(*this);
+  auto id = element_view.GetId();
+  auto& storage = element_view.GetDAG().GetStorage();
+  if constexpr (std::is_same_v<decltype(id), NodeId>) {
+    if (id.value < storage.GetTarget().GetNodesCount()) {
+      auto it = storage.replaced_node_storage_.find(id);
+      return (it != storage.replaced_node_storage_.end());
+    } else {
+      return true;
+    }
+  } else {
+    if (id.value < storage.GetTarget().GetEdgesCount()) {
+      auto it = storage.replaced_edge_storage_.find(id);
+      return (it != storage.replaced_edge_storage_.end());
+    } else {
+      return true;
+    }
+  }
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Overlay, CRTP, Tag>::Overlay() {
+  auto& element_view = static_cast<const CRTP&>(*this);
+  auto id = element_view.GetId();
+  auto& storage = element_view.GetDAG().GetStorage();
+  if constexpr (std::is_same_v<decltype(id), NodeId>) {
+    if (id.value < storage.GetTarget().GetNodesCount()) {
+      storage.replaced_node_storage_[id] = {};
+    } else {
+      std::ignore = GetOrInsert(storage.added_node_storage_, id);
+    }
+  } else {
+    if (id.value < storage.GetTarget().GetEdgesCount()) {
+      storage.replaced_edge_storage_[id] = {};
+    } else {
+      std::ignore = GetOrInsert(storage.replaced_edge_storage_, id);
+    }
+  }
+}
+
 template <typename Target>
 template <typename Id, typename Feature>
 inline constexpr bool OverlayDAGStorage<Target>::contains_element_feature =
@@ -38,12 +80,12 @@ EdgeId OverlayDAGStorage<Target>::AppendEdge() {
 
 template <typename Target>
 void OverlayDAGStorage<Target>::AddNode(NodeId id) {
-  std::ignore = GetOrInsert(added_node_storage_, id);
+  View().Overlay(id);
 }
 
 template <typename Target>
 void OverlayDAGStorage<Target>::AddEdge(EdgeId id) {
-  std::ignore = GetOrInsert(added_edge_storage_, id);
+  View().Overlay(id);
 }
 
 template <typename Target>

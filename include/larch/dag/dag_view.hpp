@@ -82,6 +82,9 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   template <typename Id, typename Feature>
   auto& GetFeatureExtraStorage() const;
 
+  const Storage& GetStorage() const;
+  Storage& GetStorage();
+
  private:
   Storage& dag_storage_;
 };

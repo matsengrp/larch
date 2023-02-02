@@ -2,6 +2,18 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+struct Overlay {};
+
+template <typename CRTP, typename Tag>
+struct FeatureConstView<Overlay, CRTP, Tag> {
+  bool IsOverlaid() const;
+};
+
+template <typename CRTP, typename Tag>
+struct FeatureMutableView<Overlay, CRTP, Tag> {
+  void Overlay();
+};
+
 template <typename Target>
 struct OverlayDAGStorage {
  public:
@@ -13,11 +25,14 @@ struct OverlayDAGStorage {
 
   template <typename Id, typename CRTP>
   struct ConstElementViewBase
-      : TargetView::StorageType::template ConstElementViewBase<Id, CRTP> {};
+      : FeatureConstView<Overlay, CRTP>,
+        TargetView::StorageType::template ConstElementViewBase<Id, CRTP> {};
 
   template <typename Id, typename CRTP>
   struct MutableElementViewBase
-      : TargetView::StorageType::template MutableElementViewBase<Id, CRTP> {
+      : FeatureConstView<Overlay, CRTP>,
+        FeatureMutableView<Overlay, CRTP>,
+        TargetView::StorageType::template MutableElementViewBase<Id, CRTP> {
     using TargetView::StorageType::template MutableElementViewBase<Id, CRTP>::operator=;
   };
 
@@ -78,6 +93,12 @@ struct OverlayDAGStorage {
   const auto& GetFeatureExtraStorage() const;
 
  private:
+  template <typename, typename, typename>
+  friend struct FeatureConstView;
+
+  template <typename, typename, typename>
+  friend struct FeatureMutableView;
+
   auto GetTarget();
   auto GetTarget() const;
 

@@ -127,3 +127,13 @@ template <typename Id, typename Feature>
 auto& DAGView<Storage, Base>::GetFeatureExtraStorage() const {
   return dag_storage_.template GetFeatureExtraStorage<Id, Feature>();
 }
+
+template <typename Storage, template <typename, typename> typename Base>
+const Storage& DAGView<Storage, Base>::GetStorage() const {
+  return dag_storage_;
+}
+
+template <typename Storage, template <typename, typename> typename Base>
+Storage& DAGView<Storage, Base>::GetStorage() {
+  return dag_storage_;
+}
