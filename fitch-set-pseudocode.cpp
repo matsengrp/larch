@@ -1,3 +1,6 @@
+// Start at HypotheticalTree::GetFragment() to see how this all fits together
+
+
 // updates the map in a compact genome with the supplied map. If a site from
 // the new map isn't already present, adds that site. If it is already present,
 // the target base is updated to the one from the new map.
@@ -93,6 +96,19 @@ class HypotheticalTreeNode {
     return old_cg.ApplyChanges(cg_changes);
   }
 
+  void PreorderComputeCompactGenome(std::vector<HypotheticalTreeNode>& fragment_vector) {
+    ComputeNewCompactGenome();
+    fragment_vector.push_back(this);
+    if (not self.IsAnchorNode()) {
+      for (auto child : GetChildNodes()) {
+        child.PreorderComputeCompactGenome();
+      }
+    }
+  }
+
+  // If this node is an ancestor of the source parent or source or target,
+  // then false. Otherwise true if new compact genome and leafset matches
+  // compact genome and leafset on dag_node_.
   bool IsAnchorNode();
 
   std::optional<CompactGenome> new_compact_genome;
@@ -128,10 +144,21 @@ class HypotheticalTree {
   // changes, whichever is higher in the tree.
   HypotheticalTreeNode GetOldestChangedNode();
 
+  std::vector<HypotheticalTreeNode> GetFragment() {
+    std::vector<HypotheticalTreeNode> result;
+    HypotheticalTreeNode& oldest_changed = GetOldestChangedNode();
+    if (oldest_changed.IsRoot()) {
+      // we need to add the UA node as the root anchor node of the fragment,
+      // somehow
+    } else {
+      result.push_back(oldest_changed.GetParent());
+    }
+    oldest_changed.PreorderComputeCompactGenome(result);
+    return result;
+  }
+
   private:
     const MADAG& sample_dag_;
     const MAT& sample_mat_;
     const Profitable_Moves& move;
 }
-
-
