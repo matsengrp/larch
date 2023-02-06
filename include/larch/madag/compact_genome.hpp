@@ -13,16 +13,17 @@
 
 #include "larch/dag/dag.hpp"
 #include "larch/madag/edge_mutations.hpp"
+#include "larch/contiguous_map.hpp"
 
 class CompactGenome {
-  std::vector<std::pair<MutationPosition, char>> mutations_ = {};
+  ContiguousMap<MutationPosition, char> mutations_ = {};
   size_t hash_ = {};
 
  public:
   inline static const CompactGenome* Empty();
   CompactGenome() = default;
   MOVE_ONLY(CompactGenome);
-  inline CompactGenome(std::vector<std::pair<MutationPosition, char>>&& mutations);
+  inline CompactGenome(ContiguousMap<MutationPosition, char>&& mutations);
 
   inline bool operator==(const CompactGenome& rhs) const noexcept;
   inline bool operator<(const CompactGenome& rhs) const noexcept;
@@ -41,13 +42,15 @@ class CompactGenome {
   inline void AddParentEdge(const EdgeMutations& mutations, const CompactGenome& parent,
                             std::string_view reference_sequence);
 
+  inline void ApplyChanges(const std::map<MutationPosition, char>& changes);
+
   [[nodiscard]] inline static EdgeMutations ToEdgeMutations(
       std::string_view reference_sequence, const CompactGenome& parent,
       const CompactGenome& child);
 
  private:
   inline static size_t ComputeHash(
-      const std::vector<std::pair<MutationPosition, char>>& mutations);
+      const ContiguousMap<MutationPosition, char>& mutations);
 };
 
 template <>
