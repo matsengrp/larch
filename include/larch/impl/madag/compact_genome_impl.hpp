@@ -40,6 +40,15 @@ void CompactGenome::ApplyChanges(const std::map<MutationPosition, char>& changes
   }
 }
 
+char CompactGenome::GetBase(MutationPosition pos,
+                            std::string_view reference_sequence) const {
+  auto it = mutations_.LowerBound(pos);
+  if (it != mutations_.end() and it->first == pos) {
+    return it->second;
+  }
+  return reference_sequence.at(pos.value);
+}
+
 bool CompactGenome::operator==(const CompactGenome& rhs) const noexcept {
   if (hash_ != rhs.hash_) {
     return false;
@@ -54,9 +63,7 @@ bool CompactGenome::operator<(const CompactGenome& rhs) const noexcept {
 size_t CompactGenome::Hash() const noexcept { return hash_; }
 
 std::optional<char> CompactGenome::operator[](MutationPosition pos) const {
-  auto it = std::lower_bound(mutations_.begin(), mutations_.end(), pos,
-                             [](std::pair<MutationPosition, char> lhs,
-                                MutationPosition rhs) { return lhs.first < rhs; });
+  auto it = mutations_.LowerBound(pos);
   if (it != mutations_.end() and it->first == pos) {
     return it->second;
   }

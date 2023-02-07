@@ -28,3 +28,11 @@ auto& FeatureMutableView<FitchSet, CRTP, Tag>::operator=(FitchSet&& fitch_set) {
   GetFeatureStorage(this) = std::forward<FitchSet>(fitch_set);
   return *this;
 }
+
+template <typename DAG, typename CRTP, typename Tag>
+void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
+    DAG sample_dag, const MAT::Tree& sample_mat, const Profitable_Moves& move) {
+  auto& self = GetFeatureStorage(this);
+  self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
+      typename HypotheticalTree<DAG>::Data{sample_dag, sample_mat, move});
+}

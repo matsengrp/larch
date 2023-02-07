@@ -23,18 +23,10 @@ ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::ExtendDAGStorage() = default;
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::ExtendDAGStorage(Target&& target)
-    : target_{std::move(target)} {
+    : target_{std::forward<Target>(target)} {
   additional_node_features_storage_.resize(GetTarget().GetNodesCount());
   additional_edge_features_storage_.resize(GetTarget().GetEdgesCount());
 }
-
-// template <typename Target, typename Arg0, typename Arg1, typename Arg2>
-// ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::ExtendDAGStorage(Target&& target, Arg0,
-//                                                              Arg1, Arg2)
-//     : target_{std::move(target)} {
-//   additional_node_features_storage_.resize(GetTarget().GetNodesCount());
-//   additional_edge_features_storage_.resize(GetTarget().GetEdgesCount());
-// }
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 auto ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::View() {
@@ -208,4 +200,9 @@ auto ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetTarget() {
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 auto ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetTarget() const {
   return ViewOf(target_);
+}
+
+template <typename Target, typename Arg0, typename Arg1, typename Arg2>
+auto ExtendStorage(Target&& target, Arg0, Arg1, Arg2) {
+  return ExtendDAGStorage<Target, Arg0, Arg1, Arg2>{std::forward<Target>(target)};
 }

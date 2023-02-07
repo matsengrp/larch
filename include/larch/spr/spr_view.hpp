@@ -1,5 +1,7 @@
 #pragma once
 
+#include "larch/usher_glue.hpp"
+
 struct FitchSet {
   FitchSet() = default;
   MOVE_ONLY(FitchSet);
@@ -32,13 +34,30 @@ struct FeatureMutableView<FitchSet, CRTP, Tag> {
 };
 
 template <typename DAG>
-using SPRStorage =
-    OverlayDAGStorage<ExtendDAGStorage<DAG, Extend::Nodes<Deduplicate<FitchSet>>>>;
+struct HypotheticalTree {
+  struct Data {
+    DAG sample_dag_;
+    const MAT::Tree& sample_mat_;
+    Profitable_Moves move_;
+  };
+  std::unique_ptr<Data> data_;
+};
+
+template <typename DAG, typename CRTP, typename Tag>
+struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {};
+
+template <typename DAG, typename CRTP, typename Tag>
+struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
+  void InitHypotheticalTree(DAG sample_dag, const MAT::Tree& sample_mat,
+                            const Profitable_Moves& move);
+};
 
 template <typename DAG>
-using SPRDAG = DAGView<const SPRStorage<DAG>>;
-
-template <typename DAG>
-using MutableSPRDAG = DAGView<SPRStorage<DAG>>;
+auto SPRStorage(DAG&& dag) {
+  auto extend =
+      ExtendStorage(std::forward<DAG>(dag), Extend::Nodes<Deduplicate<FitchSet>>{},
+                    Extend::DAG<HypotheticalTree<std::decay_t<DAG>>>{});
+  return OverlayDAGStorage{std::move(extend)};
+}
 
 #include "larch/impl/spr/spr_view_impl.hpp"

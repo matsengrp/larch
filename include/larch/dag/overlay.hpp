@@ -48,7 +48,6 @@ struct OverlayDAGStorage {
 
   MOVE_ONLY(OverlayDAGStorage);
 
-  OverlayDAGStorage();
   explicit OverlayDAGStorage(Target&& target);
 
   auto View();

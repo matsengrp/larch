@@ -44,6 +44,8 @@ class CompactGenome {
 
   inline void ApplyChanges(const std::map<MutationPosition, char>& changes);
 
+  inline char GetBase(MutationPosition pos, std::string_view reference_sequence) const;
+
   [[nodiscard]] inline static EdgeMutations ToEdgeMutations(
       std::string_view reference_sequence, const CompactGenome& parent,
       const CompactGenome& child);

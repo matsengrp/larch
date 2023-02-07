@@ -50,11 +50,8 @@ inline constexpr bool OverlayDAGStorage<Target>::contains_element_feature =
     TargetView::StorageType::template contains_element_feature<Id, Feature>;
 
 template <typename Target>
-OverlayDAGStorage<Target>::OverlayDAGStorage() = default;
-
-template <typename Target>
 OverlayDAGStorage<Target>::OverlayDAGStorage(Target&& target)
-    : target_{std::move(target)} {}
+    : target_{std::forward<Target>(target)} {}
 
 template <typename Target>
 auto OverlayDAGStorage<Target>::View() {

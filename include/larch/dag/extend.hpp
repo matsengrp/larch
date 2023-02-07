@@ -209,3 +209,8 @@ struct ExtendDAGStorage {
   typename OnNodes::ExtraStorage additional_node_extra_features_storage_;
   typename OnEdges::ExtraStorage additional_edge_extra_features_storage_;
 };
+
+template <typename Target, typename Arg0 = Extend::Empty<>,
+          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
+auto ExtendStorage(Target&& target, Arg0 = Extend::Empty<>{}, Arg1 = Extend::Empty<>{},
+                   Arg2 = Extend::Empty<>{});
