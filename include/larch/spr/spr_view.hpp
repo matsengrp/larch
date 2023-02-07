@@ -36,9 +36,14 @@ struct FeatureMutableView<FitchSet, CRTP, Tag> {
 template <typename DAG>
 struct HypotheticalTree {
   struct Data {
+    Data(DAG sample_dag, const MAT::Tree& sample_mat, const Profitable_Moves& move,
+         const std::vector<Node_With_Major_Allele_Set_Change>&
+             nodes_with_major_allele_set_change);
     DAG sample_dag_;
     const MAT::Tree& sample_mat_;
     Profitable_Moves move_;
+    std::map<MAT::Node*, std::map<size_t, Mutation_Count_Change>>
+        changed_fitch_set_map_;
   };
   std::unique_ptr<Data> data_;
 };
@@ -49,7 +54,9 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {};
 template <typename DAG, typename CRTP, typename Tag>
 struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
   void InitHypotheticalTree(DAG sample_dag, const MAT::Tree& sample_mat,
-                            const Profitable_Moves& move);
+                            const Profitable_Moves& move,
+                            const std::vector<Node_With_Major_Allele_Set_Change>&
+                                nodes_with_major_allele_set_change);
 };
 
 template <typename DAG>

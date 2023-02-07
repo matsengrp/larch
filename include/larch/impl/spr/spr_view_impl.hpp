@@ -31,8 +31,28 @@ auto& FeatureMutableView<FitchSet, CRTP, Tag>::operator=(FitchSet&& fitch_set) {
 
 template <typename DAG, typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
-    DAG sample_dag, const MAT::Tree& sample_mat, const Profitable_Moves& move) {
+    DAG sample_dag, const MAT::Tree& sample_mat, const Profitable_Moves& move,
+    const std::vector<Node_With_Major_Allele_Set_Change>&
+        nodes_with_major_allele_set_change) {
   auto& self = GetFeatureStorage(this);
   self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
-      typename HypotheticalTree<DAG>::Data{sample_dag, sample_mat, move});
+      typename HypotheticalTree<DAG>::Data{sample_dag, sample_mat, move,
+                                           nodes_with_major_allele_set_change});
+}
+
+template <typename DAG>
+HypotheticalTree<DAG>::Data::Data(DAG sample_dag, const MAT::Tree& sample_mat,
+                                  const Profitable_Moves& move,
+                                  const std::vector<Node_With_Major_Allele_Set_Change>&
+                                      nodes_with_major_allele_set_change)
+    : sample_dag_{sample_dag}, sample_mat_{sample_mat}, move_{move} {
+  for (auto& node_with_allele_set_change : nodes_with_major_allele_set_change) {
+    std::map<size_t, Mutation_Count_Change> node_map;
+    for (auto& mutation_count_change :
+         node_with_allele_set_change.major_allele_set_change) {
+      node_map.insert({mutation_count_change.get_position(), mutation_count_change});
+    }
+    changed_fitch_set_map_.insert(
+        {node_with_allele_set_change.node, std::move(node_map)});
+  }
 }

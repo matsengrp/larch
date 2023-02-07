@@ -10,12 +10,14 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag) : sample_dag_{sample_dag} {}
 
   bool operator()(Profitable_Moves& move, int best_score_change,
-                  std::vector<Node_With_Major_Allele_Set_Change>&) override {
+                  std::vector<Node_With_Major_Allele_Set_Change>&
+                      nodes_with_major_allele_set_change) override {
     auto spr_storage = SPRStorage(sample_dag_);
     auto spr = spr_storage.View();
 
     Assert(sample_mat_);
-    spr.InitHypotheticalTree(sample_dag_, *sample_mat_, move);
+    spr.InitHypotheticalTree(sample_dag_, *sample_mat_, move,
+                             nodes_with_major_allele_set_change);
 
     return move.score_change < best_score_change;
   }
