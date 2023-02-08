@@ -3,35 +3,42 @@
 #include "larch/usher_glue.hpp"
 
 struct FitchSet {
-  FitchSet() = default;
-  MOVE_ONLY(FitchSet);
-
-  inline bool operator==(const FitchSet& rhs) const noexcept;
-  inline bool operator<(const FitchSet& rhs) const noexcept;
-  [[nodiscard]] inline size_t Hash() const noexcept;
-
-  [[nodiscard]] inline FitchSet Copy() const;
+  template <typename X>
+  FitchSet(X&&);
 };
 
-template <>
-struct std::hash<FitchSet> {
-  inline std::size_t operator()(const FitchSet& fs) const noexcept;
-};
-
-template <>
-struct std::equal_to<FitchSet> {
-  inline bool operator()(const FitchSet& lhs, const FitchSet& rhs) const noexcept;
+struct HypotheticalNode {
+  std::set<MutationPosition> changed_base_sites_;
 };
 
 template <typename CRTP, typename Tag>
-struct FeatureConstView<FitchSet, CRTP, Tag> {
-  const FitchSet& GetFitchSet() const;
+struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
+  const MAT::Node& GetMATNode() const;
+  bool IsSource() const;
+  bool IsTarget() const;
+  bool IsNew() const;
+
+  const std::set<MutationPosition>& GetChangedBaseSites() const;
+
+  // return a set of site indices at which there are fitch set changes
+  [[nodiscard]] std::set<MutationPosition> GetSitesWithChangedFitchSets() const;
+
+  [[nodiscard]] std::pair<
+      MAT::Mutations_Collection,
+      std::optional<std::map<MutationPosition, Mutation_Count_Change>>>
+  GetFitchSetParts() const;
+
+  // get the (possibly modified) fitch set at this node at the provided site.
+  [[nodiscard]] FitchSet GetFitchSet(MutationPosition site) const;
+
+  // Most of the time this can just return the parent node's
+  // changed_base_sites. However, it's different if the node in question is the
+  // source node!
+  [[nodiscard]] std::set<MutationPosition> GetParentChangedBaseSites() const;
 };
 
 template <typename CRTP, typename Tag>
-struct FeatureMutableView<FitchSet, CRTP, Tag> {
-  auto& operator=(FitchSet&& fitch_set);
-};
+struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {};
 
 template <typename DAG>
 struct HypotheticalTree {
@@ -42,14 +49,20 @@ struct HypotheticalTree {
     DAG sample_dag_;
     const MAT::Tree& sample_mat_;
     Profitable_Moves move_;
-    std::map<MAT::Node*, std::map<size_t, Mutation_Count_Change>>
+    std::map<const MAT::Node*, std::map<MutationPosition, Mutation_Count_Change>>
         changed_fitch_set_map_;
   };
   std::unique_ptr<Data> data_;
 };
 
 template <typename DAG, typename CRTP, typename Tag>
-struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {};
+struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
+  const MAT::Tree& GetMAT() const;
+  auto GetSource() const;
+  auto GetTarget() const;
+  const std::map<const MAT::Node*, std::map<MutationPosition, Mutation_Count_Change>>&
+  GetChangedFitchSetMap() const;
+};
 
 template <typename DAG, typename CRTP, typename Tag>
 struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
@@ -61,9 +74,8 @@ struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
 
 template <typename DAG>
 auto SPRStorage(DAG&& dag) {
-  auto extend =
-      ExtendStorage(std::forward<DAG>(dag), Extend::Nodes<Deduplicate<FitchSet>>{},
-                    Extend::DAG<HypotheticalTree<std::decay_t<DAG>>>{});
+  auto extend = ExtendStorage(std::forward<DAG>(dag), Extend::Nodes<HypotheticalNode>{},
+                              Extend::DAG<HypotheticalTree<std::decay_t<DAG>>>{});
   return OverlayDAGStorage{std::move(extend)};
 }
 

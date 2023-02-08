@@ -10,6 +10,7 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <set>
 
 #include "larch/dag/dag.hpp"
 #include "larch/madag/edge_mutations.hpp"
@@ -45,6 +46,8 @@ class CompactGenome {
   inline void ApplyChanges(const std::map<MutationPosition, char>& changes);
 
   inline char GetBase(MutationPosition pos, std::string_view reference_sequence) const;
+
+  inline std::set<MutationPosition> DifferingSites(const CompactGenome& other) const;
 
   [[nodiscard]] inline static EdgeMutations ToEdgeMutations(
       std::string_view reference_sequence, const CompactGenome& parent,
