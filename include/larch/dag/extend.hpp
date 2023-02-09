@@ -18,17 +18,17 @@ struct Nodes {
   using FeatureTypes = std::tuple<Fs...>;
   using Storage = std::vector<std::tuple<Fs...>>;
   using ExtraStorage = std::tuple<ExtraFeatureStorage<Fs>...>;
-  template <typename CRTP>
+  template <typename Self, typename CRTP>
   struct ConstView : FeatureConstView<Fs, CRTP>... {};
-  template <typename CRTP>
-  struct MutableView : ConstView<CRTP>, FeatureMutableView<Fs, CRTP>... {
+  template <typename Self, typename CRTP>
+  struct MutableView : ConstView<Self, CRTP>, FeatureMutableView<Fs, CRTP>... {
     using FeatureMutableView<Fs, CRTP>::operator=...;
   };
 
-  template <typename CRTP>
+  template <typename Self, typename CRTP>
   struct ExtraConstView : ExtraFeatureConstView<Fs, CRTP>... {};
-  template <typename CRTP>
-  struct ExtraMutableView : ExtraConstView<CRTP>,
+  template <typename Self, typename CRTP>
+  struct ExtraMutableView : ExtraConstView<Self, CRTP>,
                             ExtraFeatureMutableView<Fs, CRTP>... {};
   template <typename Feature>
   static const bool contains_element_feature =
@@ -40,17 +40,17 @@ struct Edges {
   using FeatureTypes = std::tuple<Fs...>;
   using Storage = std::vector<std::tuple<Fs...>>;
   using ExtraStorage = std::tuple<ExtraFeatureStorage<Fs>...>;
-  template <typename CRTP>
+  template <typename Self, typename CRTP>
   struct ConstView : FeatureConstView<Fs, CRTP>... {};
-  template <typename CRTP>
-  struct MutableView : ConstView<CRTP>, FeatureMutableView<Fs, CRTP>... {
+  template <typename Self, typename CRTP>
+  struct MutableView : ConstView<Self, CRTP>, FeatureMutableView<Fs, CRTP>... {
     using FeatureMutableView<Fs, CRTP>::operator=...;
   };
 
-  template <typename CRTP>
+  template <typename Self, typename CRTP>
   struct ExtraConstView : ExtraFeatureConstView<Fs, CRTP>... {};
-  template <typename CRTP>
-  struct ExtraMutableView : ExtraConstView<CRTP>,
+  template <typename Self, typename CRTP>
+  struct ExtraMutableView : ExtraConstView<Self, CRTP>,
                             ExtraFeatureMutableView<Fs, CRTP>... {};
 
   template <typename Feature>
@@ -62,11 +62,11 @@ template <typename... Fs>
 struct DAG {
   using FeatureTypes = std::tuple<Fs...>;
   using Storage = std::tuple<Fs...>;
-  template <typename CRTP>
+  template <typename Self, typename CRTP>
   struct ConstView : FeatureConstView<Fs, CRTP>...,
                      ExtraFeatureConstView<Fs, CRTP>... {};
-  template <typename CRTP>
-  struct MutableView : ConstView<CRTP>,
+  template <typename Self, typename CRTP>
+  struct MutableView : ConstView<Self, CRTP>,
                        FeatureMutableView<Fs, CRTP>...,
                        ExtraFeatureMutableView<Fs, CRTP>... {};
 };
@@ -94,6 +94,7 @@ template <typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
 struct ExtendDAGStorage {
  public:
+  using Self = ExtendDAGStorage<Target, Arg0, Arg1, Arg2>;
   using TargetView = decltype(ViewOf(std::declval<Target>()));
   using OnNodes = select_argument_t<Extend::Nodes, Arg0, Arg1, Arg2>;
   using OnEdges = select_argument_t<Extend::Edges, Arg0, Arg1, Arg2>;
@@ -113,12 +114,12 @@ struct ExtendDAGStorage {
   template <typename CRTP>
   struct ConstElementViewBase<NodeId, CRTP>
       : TargetView::StorageType::template ConstElementViewBase<NodeId, CRTP>,
-        OnNodes::template ConstView<CRTP> {};
+        OnNodes::template ConstView<Self, CRTP> {};
 
   template <typename CRTP>
   struct ConstElementViewBase<EdgeId, CRTP>
       : TargetView::StorageType::template ConstElementViewBase<EdgeId, CRTP>,
-        OnEdges::template ConstView<CRTP> {};
+        OnEdges::template ConstView<Self, CRTP> {};
 
   template <typename Id, typename CRTP>
   struct MutableElementViewBase;
@@ -126,15 +127,15 @@ struct ExtendDAGStorage {
   template <typename CRTP>
   struct MutableElementViewBase<NodeId, CRTP>
       : TargetView::StorageType::template MutableElementViewBase<NodeId, CRTP>,
-        OnNodes::template MutableView<CRTP> {
-    using OnNodes::template MutableView<CRTP>::operator=;
+        OnNodes::template MutableView<Self, CRTP> {
+    using OnNodes::template MutableView<Self, CRTP>::operator=;
   };
 
   template <typename CRTP>
   struct MutableElementViewBase<EdgeId, CRTP>
       : TargetView::StorageType::template MutableElementViewBase<EdgeId, CRTP>,
-        OnEdges::template MutableView<CRTP> {
-    using OnEdges::template MutableView<CRTP>::operator=;
+        OnEdges::template MutableView<Self, CRTP> {
+    using OnEdges::template MutableView<Self, CRTP>::operator=;
   };
 
   template <typename Id, typename Feature>
@@ -142,15 +143,15 @@ struct ExtendDAGStorage {
 
   template <typename CRTP>
   struct ConstDAGViewBase : TargetView::StorageType::template ConstDAGViewBase<CRTP>,
-                            OnDAG::template ConstView<CRTP>,
-                            OnNodes::template ExtraConstView<CRTP>,
-                            OnEdges::template ExtraConstView<CRTP> {};
+                            OnDAG::template ConstView<Self, CRTP>,
+                            OnNodes::template ExtraConstView<Self, CRTP>,
+                            OnEdges::template ExtraConstView<Self, CRTP> {};
   template <typename CRTP>
   struct MutableDAGViewBase
       : TargetView::StorageType::template MutableDAGViewBase<CRTP>,
-        OnDAG::template MutableView<CRTP>,
-        OnNodes::template ExtraMutableView<CRTP>,
-        OnEdges::template ExtraMutableView<CRTP> {};
+        OnDAG::template MutableView<Self, CRTP>,
+        OnNodes::template ExtraMutableView<Self, CRTP>,
+        OnEdges::template ExtraMutableView<Self, CRTP> {};
 
   MOVE_ONLY(ExtendDAGStorage);
 

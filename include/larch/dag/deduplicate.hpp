@@ -49,7 +49,7 @@ struct FeatureConstView<Deduplicate<Feature>, CRTP>
  */
 template <typename Feature, typename CRTP>
 struct FeatureMutableView<Deduplicate<Feature>, CRTP>
-    : FeatureConstView<Feature, CRTP, Deduplicate<Feature>> {
+    : FeatureMutableView<Feature, CRTP, Deduplicate<Feature>> {
   auto& operator=(Feature&& feature);
   auto& operator=(const Feature* feature);
 };
@@ -60,7 +60,6 @@ struct ExtraFeatureConstView<Deduplicate<Feature>, CRTP> {
 };
 
 template <typename Feature, typename CRTP>
-struct ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>
-    : FeatureConstView<Feature, CRTP, Deduplicate<Feature>> {
+struct ExtraFeatureMutableView<Deduplicate<Feature>, CRTP> {
   std::pair<const Feature*, bool> AddDeduplicated(Feature&& feature);
 };
