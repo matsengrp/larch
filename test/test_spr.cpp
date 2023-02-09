@@ -19,6 +19,8 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     spr.InitHypotheticalTree(sample_dag_, *sample_mat_, move,
                              nodes_with_major_allele_set_change);
 
+    std::ignore = spr.GetRoot().ComputeNewCompactGenome();
+
     return move.score_change < best_score_change;
   }
 

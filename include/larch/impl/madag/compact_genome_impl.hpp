@@ -49,6 +49,24 @@ char CompactGenome::GetBase(MutationPosition pos,
   return reference_sequence.at(pos.value);
 }
 
+std::set<MutationPosition> CompactGenome::DifferingSites(
+    const CompactGenome& other) const {
+  std::set<MutationPosition> result;
+  for (auto [pos, base] : mutations_) {
+    auto it = other.mutations_.LowerBound(pos);
+    if (it == other.mutations_.end() or it->second != base) {
+      result.insert(pos);
+    }
+  }
+  for (auto [pos, base] : other.mutations_) {
+    auto it = mutations_.LowerBound(pos);
+    if (it == mutations_.end() or it->second != base) {
+      result.insert(pos);
+    }
+  }
+  return result;
+}
+
 bool CompactGenome::operator==(const CompactGenome& rhs) const noexcept {
   if (hash_ != rhs.hash_) {
     return false;

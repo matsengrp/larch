@@ -44,6 +44,12 @@ void FeatureMutableView<Overlay, CRTP, Tag>::Overlay() {
   }
 }
 
+template <typename CRTP, typename Tag>
+auto FeatureConstView<OverlayDAG, CRTP, Tag>::GetOld() const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  return dag.GetStorage().GetTarget();
+}
+
 template <typename Target>
 template <typename Id, typename Feature>
 inline constexpr bool OverlayDAGStorage<Target>::contains_element_feature =

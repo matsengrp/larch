@@ -6,6 +6,12 @@ const MAT::Node& FeatureConstView<HypotheticalNode, CRTP, Tag>::GetMATNode() con
 }
 
 template <typename CRTP, typename Tag>
+bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMATRoot() const {
+  auto& node = static_cast<const CRTP&>(*this);
+  return node.GetMATNode().parent == nullptr;
+}
+
+template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsSource() const {
   auto& node = static_cast<const CRTP&>(*this);
   return node.GetDAG().GetSource().GetId() == node.GetId();
@@ -21,6 +27,12 @@ template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNew() const {
   auto& node = static_cast<const CRTP&>(*this);
   return node.IsOverlaid();
+}
+
+template <typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalNode, CRTP, Tag>::GetOld() const {
+  auto& node = static_cast<const CRTP&>(*this);
+  return node.GetDAG().GetOld().Get(node.GetId());
 }
 
 template <typename CRTP, typename Tag>
@@ -75,14 +87,15 @@ template <typename CRTP, typename Tag>
 FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
     MutationPosition site) const {
   auto& node = static_cast<const CRTP&>(*this);
+  auto dag = node.GetDAG();
   auto [old_fitch_sets, changes] = GetFitchSetParts();
   if (old_fitch_sets.find(static_cast<int>(site.value)) ==
       old_fitch_sets.mutations.end()) {
     // if no fitch set is recorded on the corresponding MAT node, we can use
     // a singleton set containing the base at this site in the parent compact genome
     // TODO: Does this work if IsSourceNode()?
-    return FitchSet(
-        {node.GetSingleParent().GetParent().GetCompactGenome().GetBase(site)});
+    return FitchSet({node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
+        site, dag.GetReferenceSequence())});
   } else if (changes.has_value()) {
     return FitchSet(
         (old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele() &
@@ -99,19 +112,70 @@ std::set<MutationPosition>
 FeatureConstView<HypotheticalNode, CRTP, Tag>::GetParentChangedBaseSites() const {
   auto& node = static_cast<const CRTP&>(*this);
   auto dag = node.GetDAG();
-  if (node.IsSourceNode()) {
+  if (node.IsSource()) {
     // this node used to be below the old source parent, so we need
     // differences between the new parent's new cg, and the old cg of the old
     // parent of the source node.
-    const CompactGenome& old_parent_cg = dag.GetOldSourceParent().GetOldCompactGenome();
+    const CompactGenome& old_parent_cg = dag.GetOldSourceParent().GetCompactGenome();
     // Parent must be the new node:
-    const CompactGenome& new_parent_cg = node.GetParent().GetCompactGenome();
+    const CompactGenome& new_parent_cg =
+        node.GetSingleParent().GetParent().GetCompactGenome();
     // Imaginary method DifferingSites returns sites at which new_parent_cg
     // and old_parent_cg don't have the same base.
     return old_parent_cg.DifferingSites(new_parent_cg);
   } else {
-    return node.GetParent().GetChangedBaseSites();
+    return node.GetSingleParent().GetParent().GetChangedBaseSites();
   }
+}
+
+template <typename CRTP, typename Tag>
+CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGenome()
+    const {
+  auto& node = static_cast<const CRTP&>(*this);
+  std::set<MutationPosition> changed_base_sites = node.GetSitesWithChangedFitchSets();
+  const CompactGenome& old_cg = node.GetOld().GetCompactGenome();
+  std::map<MutationPosition, char> cg_changes;
+  if (node.IsMATRoot()) {
+    // If this node is the root node of the tree, we don't have to worry
+    // about parent bases, we just
+    // choose a base from each changed fitch set, preferring the base that was
+    // already in that site before the SPR move
+    std::set<MutationPosition> focus_sites = GetSitesWithChangedFitchSets();
+    for (auto site : focus_sites) {
+      FitchSet site_fitch_set = GetFitchSet(site);
+      char oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
+      if (not site_fitch_set.find(oldbase)) {
+        cg_changes.insert({site, site_fitch_set.at(0)});
+        changed_base_sites.insert(site);
+      }
+    }
+  } else {
+    // If this node is not the root node, we do need to prefer the base
+    // from the new compact genome of the parent node. If it's not in the
+    // fitch set, then we're free to choose any base in the fitch set, so we
+    // choose the base in this node's old compact genome when that base is in
+    // the fitch set.
+    std::set<MutationPosition> focus_sites = node.GetSitesWithChangedFitchSets();
+    focus_sites.merge(node.GetParentChangedBaseSites());
+    for (auto site : focus_sites) {
+      FitchSet site_fitch_set = node.GetFitchSet(site);
+      char oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
+      char parent_base = node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
+          site, node.GetDAG().GetReferenceSequence());
+      if (site_fitch_set.find(parent_base)) {
+        if (oldbase != parent_base) {
+          cg_changes.insert({site, parent_base});
+          changed_base_sites.insert(site);
+        }
+      } else if (not site_fitch_set.find(oldbase)) {
+        cg_changes.insert({site, site_fitch_set.at(0)});
+        changed_base_sites.insert(site);
+      }
+    }
+  }
+  CompactGenome result = old_cg.Copy();
+  result.ApplyChanges(cg_changes);
+  return result;
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -132,6 +196,12 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetTarget() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.Get(NodeId{self.data_->move_.dst->node_id});
+}
+
+template <typename DAG, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldSourceParent() const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  return dag.GetSource().GetOld().GetSingleParent().GetParent();
 }
 
 template <typename DAG, typename CRTP, typename Tag>

@@ -14,6 +14,17 @@ struct FeatureMutableView<Overlay, CRTP, Tag> {
   void Overlay();
 };
 
+struct OverlayDAG {};
+
+template <typename CRTP, typename Tag>
+struct FeatureConstView<OverlayDAG, CRTP, Tag> {
+  auto GetOld() const;
+};
+
+template <typename CRTP, typename Tag>
+struct FeatureMutableView<OverlayDAG, CRTP, Tag>
+    : FeatureConstView<OverlayDAG, CRTP, Tag> {};
+
 template <typename Target>
 struct OverlayDAGStorage {
  public:
@@ -40,11 +51,13 @@ struct OverlayDAGStorage {
   static const bool contains_element_feature;
 
   template <typename CRTP>
-  struct ConstDAGViewBase : TargetView::StorageType::template ConstDAGViewBase<CRTP> {};
+  struct ConstDAGViewBase : FeatureConstView<OverlayDAG, CRTP>,
+                            TargetView::StorageType::template ConstDAGViewBase<CRTP> {};
 
   template <typename CRTP>
   struct MutableDAGViewBase
-      : TargetView::StorageType::template MutableDAGViewBase<CRTP> {};
+      : FeatureMutableView<OverlayDAG, CRTP>,
+        TargetView::StorageType::template MutableDAGViewBase<CRTP> {};
 
   MOVE_ONLY(OverlayDAGStorage);
 
@@ -92,14 +105,14 @@ struct OverlayDAGStorage {
   const auto& GetFeatureExtraStorage() const;
 
  private:
+  auto GetTarget();
+  auto GetTarget() const;
+
   template <typename, typename, typename>
   friend struct FeatureConstView;
 
   template <typename, typename, typename>
   friend struct FeatureMutableView;
-
-  auto GetTarget();
-  auto GetTarget() const;
 
   std::decay_t<Target> target_ = {};
   std::unordered_map<NodeId, AllNodeFeatures> replaced_node_storage_;
