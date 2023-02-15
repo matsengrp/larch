@@ -25,5 +25,5 @@ struct FeatureConstView<Endpoints, CRTP, Tag> {
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<Endpoints, CRTP, Tag> {
-  void Set(NodeId parent, NodeId child, CladeIdx clade);
+  void Set(NodeId parent, NodeId child, CladeIdx clade) const;
 };

@@ -42,6 +42,7 @@ class SubtreeWeight {
   using MutableDAG = typename DAG::MutableType;
   using Node = typename DAG::NodeView;
   using Edge = typename DAG::EdgeView;
+  using SampledDAGStorage = ExtendDAGStorage<Storage, Extend::Nodes<MappedNodes>>;
   explicit SubtreeWeight(DAG dag);
 
   DAG GetDAG() const;
@@ -52,13 +53,13 @@ class SubtreeWeight {
 
   [[nodiscard]] Storage TrimToMinWeight(WeightOps&& weight_ops);
 
-  [[nodiscard]] std::pair<Storage, std::vector<NodeId>> SampleTree(
+  [[nodiscard]] SampledDAGStorage SampleTree(
       WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
 
-  [[nodiscard]] std::pair<Storage, std::vector<NodeId>> UniformSampleTree(
+  [[nodiscard]] SampledDAGStorage UniformSampleTree(
       WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
 
-  [[nodiscard]] std::pair<Storage, std::vector<NodeId>> MinWeightSampleTree(
+  [[nodiscard]] SampledDAGStorage MinWeightSampleTree(
       WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
 
  private:
@@ -66,13 +67,13 @@ class SubtreeWeight {
   typename WeightOps::Weight CladeWeight(CladeRange&& clade, WeightOps&& weight_ops);
 
   template <typename DistributionMaker>
-  [[nodiscard]] std::pair<Storage, std::vector<NodeId>> SampleTreeImpl(
-      WeightOps&& weight_ops, DistributionMaker&& distribution_maker, Node below);
+  [[nodiscard]] SampledDAGStorage SampleTreeImpl(WeightOps&& weight_ops,
+                                                 DistributionMaker&& distribution_maker,
+                                                 Node below);
 
-  template <typename EdgeSelector>
-  void ExtractTree(Node input_node, NodeId result_node_id, WeightOps&& weight_ops,
-                   EdgeSelector&& edge_selector, MutableDAG result,
-                   std::vector<NodeId>& result_dag_ids);
+  template <typename NodeType, typename EdgeSelector, typename MutableDAGType>
+  void ExtractTree(NodeType input_node, NodeId result_node_id, WeightOps&& weight_ops,
+                   EdgeSelector&& edge_selector, MutableDAGType result);
 
   DAG dag_;
 

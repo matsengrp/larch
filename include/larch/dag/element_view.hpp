@@ -14,6 +14,9 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<Id> {
    */
   using DAGViewType::BaseType::template ElementViewBase<Id>::operator=;
 
+  template <typename Feature>
+  static const bool contains_feature;
+
   ElementView(DAGViewType dag_view, Id id);
 
   operator Id() const;

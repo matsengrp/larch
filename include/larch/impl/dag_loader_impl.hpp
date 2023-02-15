@@ -108,8 +108,8 @@ void StoreTreeToProtobuf(DAG dag, std::string_view path) {
   newick += ';';
   data.set_newick(newick);
   using Edge = typename DAG::EdgeView;
-  auto store_mutations = [&dag](auto& self, Edge edge, Parsimony::data& result,
-                                std::string_view ref_seq) -> void {
+  auto store_mutations = [](auto& self, Edge edge, Parsimony::data& result,
+                            std::string_view ref_seq) -> void {
     auto* proto = result.add_node_mutations();
     for (auto [pos, mut] : edge.GetEdgeMutations()) {
       auto* proto_mut = proto->add_mutation();

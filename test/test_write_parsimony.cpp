@@ -69,7 +69,7 @@ static void test_write_protobuf() {
   MADAGStorage treedag = LoadTreeFromProtobuf(path, refseq);
 
   SubtreeWeight<BinaryParsimonyScore, MADAG> weight{treedag.View()};
-  auto sample_tree = weight.SampleTree({}).first;
+  auto sample_tree = weight.SampleTree({});
 
   StoreTreeToProtobuf(sample_tree.View(), "test_write_protobuf.pb");
   compare_treedags(treedag.View(), sample_tree.View());

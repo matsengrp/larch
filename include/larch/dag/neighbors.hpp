@@ -28,6 +28,6 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<Neighbors, CRTP, Tag> {
-  void ClearConnections();
-  void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent);
+  void ClearConnections() const;
+  void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent) const;
 };

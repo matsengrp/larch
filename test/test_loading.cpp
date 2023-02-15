@@ -61,7 +61,7 @@ static void test_loading_dag(std::string_view path) {
   AssertDAGsEqual(tree0.View(), tree1.View());
 
   SubtreeWeight<ParsimonyScore, MADAG> weight(tree0.View());
-  auto sampled0 = weight.SampleTree({}).first;
+  auto sampled0 = weight.SampleTree({});
 
   fill_static_reference_sequence(sampled0.View().GetReferenceSequence());
   MADAGStorage sampled1 = build_madag_from_mat(mat_from_dag(sampled0.View()),

@@ -92,8 +92,9 @@ class Merge {
 
   inline void MergeTrees(const std::vector<size_t>& tree_idxs);
 
+  template <typename DAGType>
   inline static std::vector<LeafSet> ComputeLeafSets(
-      DAG dag, const std::vector<NodeLabel>& labels);
+      DAGType dag, const std::vector<NodeLabel>& labels);
 
   // Vector of externally owned input DAGs.
   std::vector<DAG> trees_;

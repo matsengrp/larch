@@ -21,6 +21,7 @@
 #include "larch/dag/endpoints.hpp"
 #include "larch/dag/connections.hpp"
 #include "larch/dag/overlay.hpp"
+#include "larch/dag/mapped_nodes.hpp"
 #undef DAG_DECLARATIONS
 
 #define DAG_DEFINITIONS
@@ -36,4 +37,5 @@
 #include "larch/impl/dag/endpoints_impl.hpp"
 #include "larch/impl/dag/connections_impl.hpp"
 #include "larch/impl/dag/overlay_impl.hpp"
+#include "larch/impl/dag/mapped_nodes_impl.hpp"
 #undef DAG_DEFINITIONS

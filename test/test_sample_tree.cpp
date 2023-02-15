@@ -18,11 +18,11 @@
 static void test_sample_tree(MADAG dag) {
   SubtreeWeight<ParsimonyScore, MADAG> weight(dag);
 
-  auto result = weight.SampleTree({}).first;
+  auto result = weight.SampleTree({});
   assert_true(result.View().IsTree(), "Tree");
 
   SubtreeWeight<TreeCount, MADAG> tree_count{dag};
-  auto result2 = tree_count.UniformSampleTree({}).first;
+  auto result2 = tree_count.UniformSampleTree({});
   assert_true(result2.View().IsTree(), "Tree");
 }
 

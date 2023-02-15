@@ -233,21 +233,22 @@ void Merge<DAG>::MergeTrees(const std::vector<size_t>& tree_idxs) {
 }
 
 template <typename DAG>
-std::vector<LeafSet> Merge<DAG>::ComputeLeafSets(DAG dag,
+template <typename DAGType>
+std::vector<LeafSet> Merge<DAG>::ComputeLeafSets(DAGType dag,
                                                  const std::vector<NodeLabel>& labels) {
   std::vector<LeafSet> result;
   result.resize(dag.GetNodesCount());
-  auto ComputeLS = [&](auto& self, Node for_node) {
+  auto ComputeLS = [&](auto& self, auto for_node) {
     const LeafSet& leaf_set = result.at(for_node.GetId().value);
     if (not leaf_set.empty()) {
       return;
     }
-    for (Node child : for_node.GetChildren() | Transform::GetChild()) {
+    for (auto child : for_node.GetChildren() | Transform::GetChild()) {
       self(self, child);
     }
     result.at(for_node.GetId().value) = LeafSet{for_node, labels, result};
   };
-  for (Node node : dag.GetNodes()) {
+  for (auto node : dag.GetNodes()) {
     ComputeLS(ComputeLS, node);
   }
   return result;

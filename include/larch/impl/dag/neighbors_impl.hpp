@@ -12,7 +12,7 @@ template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetClades() const {
   auto dag = static_cast<const CRTP&>(*this).GetDAG();
   return GetFeatureStorage(this).clades_ |
-         ranges::views::transform([*this, dag](const std::vector<EdgeId>& clade) {
+         ranges::views::transform([dag](const std::vector<EdgeId>& clade) {
            return clade | Transform::ToEdges(dag);
          });
 }
@@ -73,14 +73,14 @@ bool FeatureConstView<Neighbors, CRTP, Tag>::IsLeaf() const {
 }
 
 template <typename CRTP, typename Tag>
-void FeatureMutableView<Neighbors, CRTP, Tag>::ClearConnections() {
+void FeatureMutableView<Neighbors, CRTP, Tag>::ClearConnections() const {
   GetFeatureStorage(this).parents_.clear();
   GetFeatureStorage(this).clades_.clear();
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Neighbors, CRTP, Tag>::AddEdge(CladeIdx clade, EdgeId id,
-                                                       bool this_node_is_parent) {
+                                                       bool this_node_is_parent) const {
   if (this_node_is_parent) {
     GetOrInsert(GetFeatureStorage(this).clades_, clade).push_back(id);
   } else {

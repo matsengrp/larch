@@ -46,7 +46,7 @@ bool FeatureConstView<Endpoints, CRTP, Tag>::IsLeaf() const {
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Endpoints, CRTP, Tag>::Set(NodeId parent, NodeId child,
-                                                   CladeIdx clade) {
+                                                   CladeIdx clade) const {
   Assert(parent.value != NoId);
   Assert(child.value != NoId);
   Assert(parent.value != child.value);

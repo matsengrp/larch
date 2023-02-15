@@ -128,6 +128,8 @@ struct ExtendDAGStorage {
   struct MutableElementViewBase<NodeId, CRTP>
       : TargetView::StorageType::template MutableElementViewBase<NodeId, CRTP>,
         OnNodes::template MutableView<Self, CRTP> {
+    using TargetView::StorageType::template MutableElementViewBase<NodeId,
+                                                                   CRTP>::operator=;
     using OnNodes::template MutableView<Self, CRTP>::operator=;
   };
 
@@ -135,6 +137,8 @@ struct ExtendDAGStorage {
   struct MutableElementViewBase<EdgeId, CRTP>
       : TargetView::StorageType::template MutableElementViewBase<EdgeId, CRTP>,
         OnEdges::template MutableView<Self, CRTP> {
+    using TargetView::StorageType::template MutableElementViewBase<EdgeId,
+                                                                   CRTP>::operator=;
     using OnEdges::template MutableView<Self, CRTP>::operator=;
   };
 
