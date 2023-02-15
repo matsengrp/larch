@@ -15,71 +15,6 @@
 #include "larch/usher_glue.hpp"
 #include <tbb/task_scheduler_init.h>
 
-static uint8_t EncodeBaseMAT(char base) {
-  switch (base) {
-    case 'A':
-      return 1;
-    case 'C':
-      return 2;
-    case 'G':
-      return 4;
-    case 'T':
-      return 8;  // NOLINT
-    default:
-      Fail("Invalid base");
-  };
-}
-
-template <typename DAG>
-static void mat_from_dag_helper(typename DAG::NodeView dag_node,
-                                MAT::Node* mat_par_node, MAT::Tree& new_tree) {
-  mat_par_node->children.reserve(dag_node.GetCladesCount());
-  for (auto clade : dag_node.GetClades()) {
-    Assert(clade.size() == 1);
-    typename DAG::EdgeView edge = *clade.begin();
-    const auto& mutations = edge.GetEdgeMutations();
-    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-    auto* node = new MAT::Node(edge.GetChild().GetId().value);
-    new_tree.register_node_serial(node);
-    node->mutations.reserve(mutations.size());
-    for (auto [pos, muts] : mutations) {
-      Assert(pos.value != NoId);
-      MAT::Mutation mat_mut("ref", static_cast<int>(pos.value),
-                            EncodeBaseMAT(muts.second), EncodeBaseMAT(muts.first),
-                            EncodeBaseMAT(muts.second));
-      node->mutations.push_back(mat_mut);
-    }
-    node->parent = mat_par_node;
-    mat_par_node->children.push_back(node);
-    mat_from_dag_helper<DAG>(edge.GetChild(), node, new_tree);
-  }
-}
-
-template <typename DAG>
-MAT::Tree mat_from_dag(DAG dag) {
-  dag.AssertUA();
-  MAT::Tree tree;
-  typename DAG::NodeView root_node = dag.GetRoot().GetFirstChild().GetChild();
-  // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-  auto* mat_root_node = new MAT::Node(root_node.GetId().value);
-
-  const auto& tree_root_mutations = dag.GetRoot().GetFirstChild().GetEdgeMutations();
-  mat_root_node->mutations.reserve(tree_root_mutations.size());
-  for (auto [pos, muts] : tree_root_mutations) {
-    Assert(pos.value != NoId);
-    MAT::Mutation mat_mut("ref", static_cast<int>(pos.value),
-                          EncodeBaseMAT(muts.second), EncodeBaseMAT(muts.first),
-                          EncodeBaseMAT(muts.second));
-    mat_root_node->mutations.push_back(mat_mut);
-  }
-
-  tree.root = mat_root_node;
-  tree.register_node_serial(mat_root_node);
-  mat_from_dag_helper<DAG>(root_node, mat_root_node, tree);
-
-  return tree;
-}
-
 inline auto mutations_view(MAT::Node* node) {
   return node->mutations |
          ranges::views::transform(
@@ -157,7 +92,7 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                                  RadiusCallback&& radius_callback) {
   auto& dag_ref = dag.GetReferenceSequence();
   fill_static_reference_sequence(dag_ref);
-  auto tree = mat_from_dag(dag);
+  auto tree = AddMATConversion(dag).View().BuildMAT();
 
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "before_optimize.pb");
   check_MAT_MADAG_Eq(tree, dag);

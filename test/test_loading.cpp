@@ -43,14 +43,16 @@ static void test_loading_tree(std::string_view path, std::string_view refseq_pat
   AssertDAGsEqual(tree0.View(), tree1.View());
 
   fill_static_reference_sequence(tree0.View().GetReferenceSequence());
-  MADAGStorage tree2 = build_madag_from_mat(mat_from_dag(tree0.View()),
-                                            tree0.View().GetReferenceSequence())
-                           .first;
+  MADAGStorage tree2 =
+      build_madag_from_mat(AddMATConversion(tree0.View()).View().BuildMAT(),
+                           tree0.View().GetReferenceSequence())
+          .first;
   AssertDAGsEqual(tree0.View(), tree2.View());
 
-  MADAGStorage tree3 = build_madag_from_mat(mat_from_dag(tree1.View()),
-                                            tree1.View().GetReferenceSequence())
-                           .first;
+  MADAGStorage tree3 =
+      build_madag_from_mat(AddMATConversion(tree1.View()).View().BuildMAT(),
+                           tree1.View().GetReferenceSequence())
+          .first;
   AssertDAGsEqual(tree0.View(), tree3.View());
 }
 
@@ -64,9 +66,10 @@ static void test_loading_dag(std::string_view path) {
   auto sampled0 = weight.SampleTree({});
 
   fill_static_reference_sequence(sampled0.View().GetReferenceSequence());
-  MADAGStorage sampled1 = build_madag_from_mat(mat_from_dag(sampled0.View()),
-                                               sampled0.View().GetReferenceSequence())
-                              .first;
+  MADAGStorage sampled1 =
+      build_madag_from_mat(AddMATConversion(sampled0.View()).View().BuildMAT(),
+                           sampled0.View().GetReferenceSequence())
+          .first;
   AssertDAGsEqual(sampled0.View(), sampled1.View());
 }
 

@@ -14,7 +14,7 @@ struct FeatureMutableView<Overlay, CRTP, Tag> {
   void Overlay();
 };
 
-struct OverlayDAG {};
+struct OverlayDAG {}; //TODO make it extra feature
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<OverlayDAG, CRTP, Tag> {
