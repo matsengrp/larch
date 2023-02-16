@@ -84,6 +84,11 @@ size_t DAGView<Storage, Base>::GetEdgesCount() const {
 }
 
 template <typename Storage, template <typename, typename> typename Base>
+bool DAGView<Storage, Base>::IsEmpty() const {
+  return GetNodesCount() == 0 and GetEdgesCount() == 0;
+}
+
+template <typename Storage, template <typename, typename> typename Base>
 auto DAGView<Storage, Base>::GetNodes() const {
   return ranges::views::indices(GetNodesCount()) |
          ranges::views::transform([*this](size_t i) {

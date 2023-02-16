@@ -39,7 +39,7 @@ static void test_spr(std::string_view input_dag_path, std::string_view refseq_pa
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
-  std::vector<MADAGStorage> optimized_dags;
+  std::vector<decltype(AddMATConversion(MADAGStorage{}))> optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();

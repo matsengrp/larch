@@ -7,11 +7,8 @@ inline void fill_static_reference_sequence(std::string_view dag_ref);
 template <typename DAG>
 void check_edge_mutations(DAG dag);
 
-inline std::pair<MADAGStorage, std::map<NodeId, NodeId>> build_madag_from_mat(
-    const MAT::Tree& tree, std::string_view reference_sequence);
-
 template <typename DAG, typename RadiusCallback>
-MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
+auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                                  RadiusCallback&& radius_callback);
 
 #include "larch/impl/usher_glue_impl.hpp"

@@ -60,6 +60,7 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
+  bool IsEmpty() const;
 
   /**
    * Return a range containing Node views for each node in the DAG

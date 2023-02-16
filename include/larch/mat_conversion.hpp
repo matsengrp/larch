@@ -25,17 +25,23 @@ class Node;
 namespace MAT = Mutation_Annotated_Tree;
 
 struct MATConversion {
-  size_t mat_node_id_;
+  size_t mat_node_id_ = NoId;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATConversion, CRTP, Tag> {
+  bool HaveMATNode() const;
   const MAT::Node& GetMATNode() const;
+  size_t GetMATNodeId() const;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATConversion, CRTP, Tag> {
-  MAT::Node& GetMATNode() const;
+  MAT::Node& GetMutableMATNode() const;
+
+ private:
+  template <typename, typename>
+  friend struct ExtraFeatureMutableView;
   void SetMATNodeId(size_t id) const;
 };
 
@@ -53,8 +59,15 @@ struct ExtraFeatureConstView<MATConversion, CRTP> {
 
 template <typename CRTP>
 struct ExtraFeatureMutableView<MATConversion, CRTP> {
-  MAT::Tree& GetMAT() const;
+  MAT::Tree& GetMutableMAT() const;
   MAT::Tree& BuildMAT() const;
+  void BuildFromMAT(MAT::Tree&& mat, std::string_view reference_sequence) const;
+
+ private:
+  template <typename Node>
+  static void BuildHelper(Node dag_node, MAT::Node* mat_par_node, MAT::Tree& new_tree);
+  template <typename Node, typename DAG>
+  static void BuildHelper(MAT::Node* par_node, Node node, DAG dag);
 };
 
 template <typename DAG>

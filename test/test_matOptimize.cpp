@@ -163,7 +163,7 @@ static void test_matOptimize(std::string_view input_dag_path,
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
-  std::vector<MADAGStorage> optimized_dags;
+  std::vector<decltype(AddMATConversion(MADAGStorage{}))> optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();
@@ -180,11 +180,12 @@ static void test_matOptimize(std::string_view input_dag_path,
         merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}};
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
     auto radius_callback = [&](MAT::Tree& tree) -> void {
-      auto [result, mat_node_map] =
-          build_madag_from_mat(tree, merge.GetResult().GetReferenceSequence());
+      auto result = AddMATConversion(MADAGStorage{});
+      result.View().BuildFromMAT(MAT::Tree{tree},  // TODO don't copy the tree
+                                 merge.GetResult().GetReferenceSequence());
       result.View().RecomputeCompactGenomes();
       optimized_dags.push_back(std::move(result));
-      std::map<NodeId, NodeId> full_map = [&, &mat_node_map = mat_node_map] {
+      std::map<NodeId, NodeId> full_map = [&] {
         std::map<NodeId, NodeId> merge_node_map;
         if (subtrees) {
           merge_node_map = merge.AddDAG(optimized_dags.back().View(),
@@ -195,8 +196,11 @@ static void test_matOptimize(std::string_view input_dag_path,
         // mat_node_map is not the identity, so all pairs in mat_node_map must be used
         // to build remaped
         std::map<NodeId, NodeId> remaped;
-        for (auto [from, to] : mat_node_map) {
-          remaped.insert({to, merge_node_map.at(from)});
+        for (auto node : optimized_dags.back().View().GetNodes()) {
+          if (node.IsRoot()) {
+            continue;
+          }
+          remaped.insert({{node.GetMATNodeId()}, merge_node_map.at(node.GetId())});
         }
         return remaped;
       }();
@@ -209,6 +213,6 @@ static void test_matOptimize(std::string_view input_dag_path,
 [[maybe_unused]] static const auto test_added0 =
     add_test({[] {
                 test_matOptimize("data/seedtree/seedtree.pb.gz",
-                                 "data/seedtree/refseq.txt.gz", 3, choose_random);
+                                 "data/seedtree/refseq.txt.gz", 3, choose_root);
               },
               "matOptimize: seedtree"});

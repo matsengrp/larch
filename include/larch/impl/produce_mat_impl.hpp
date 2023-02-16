@@ -15,46 +15,6 @@
 #include "larch/usher_glue.hpp"
 #include <tbb/task_scheduler_init.h>
 
-inline auto mutations_view(MAT::Node* node) {
-  return node->mutations |
-         ranges::views::transform(
-             [](const MAT::Mutation& mut)
-                 -> std::pair<MutationPosition, std::pair<char, char>> {
-               static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
-               return {{static_cast<size_t>(mut.get_position())},
-                       {decode.at(one_hot_to_two_bit(mut.get_par_one_hot())),
-                        decode.at(one_hot_to_two_bit(mut.get_mut_one_hot()))}};
-             });
-}
-
-template <typename MutableDAG>
-void build_madag_from_mat_helper(MAT::Node* par_node,
-                                 typename MutableDAG::NodeView node, MutableDAG dag,
-                                 std::map<NodeId, NodeId>& node_map) {
-  for (size_t clade_idx = 0; clade_idx < par_node->children.size(); clade_idx++) {
-    MAT::Node* mat_child = par_node->children[clade_idx];
-    typename MutableDAG::NodeView child_node = dag.AppendNode();
-    node_map.insert({child_node, NodeId{mat_child->node_id}});
-    typename MutableDAG::EdgeView child_edge =
-        dag.AppendEdge(node, child_node, CladeIdx{clade_idx});
-    child_edge.SetEdgeMutations({mutations_view(mat_child)});
-    build_madag_from_mat_helper(mat_child, child_node, dag, node_map);
-  }
-}
-
-std::pair<MADAGStorage, std::map<NodeId, NodeId>> build_madag_from_mat(
-    const MAT::Tree& tree, std::string_view reference_sequence) {
-  MADAGStorage result;
-  std::map<NodeId, NodeId> node_map;
-  result.View().SetReferenceSequence(reference_sequence);
-  MutableMADAG::NodeView root_node = result.View().AppendNode();
-  node_map.insert({root_node, NodeId{tree.root->node_id}});
-  build_madag_from_mat_helper(tree.root, root_node, result.View(), node_map);
-  result.View().BuildConnections();
-  result.View().AddUA(EdgeMutations{mutations_view(tree.root)});
-  return {std::move(result), std::move(node_map)};
-}
-
 template <typename Node1, typename Node2>
 void compareDAG(Node1 dag1, Node2 dag2) {
   if (dag1.GetCladesCount() != dag2.GetCladesCount()) {
@@ -75,8 +35,9 @@ void compareDAG(Node1 dag1, Node2 dag2) {
 
 template <typename DAG>
 void check_MAT_MADAG_Eq(const MAT::Tree& tree, DAG init) {
-  MADAGStorage converted_dag =
-      build_madag_from_mat(tree, init.GetReferenceSequence()).first;
+  auto converted_dag = AddMATConversion(MADAGStorage{});
+  converted_dag.View().BuildFromMAT(
+      MAT::Tree{tree}, init.GetReferenceSequence());  // TODO don't copy tree
   compareDAG(converted_dag.View().GetRoot(), init.GetRoot());
 }
 
@@ -88,8 +49,8 @@ void fill_static_reference_sequence(std::string_view dag_ref) {
 }
 
 template <typename DAG, typename RadiusCallback>
-MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
-                                 RadiusCallback&& radius_callback) {
+auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
+                         RadiusCallback&& radius_callback) {
   auto& dag_ref = dag.GetReferenceSequence();
   fill_static_reference_sequence(dag_ref);
   auto tree = AddMATConversion(dag).View().BuildMAT();
@@ -130,8 +91,9 @@ MADAGStorage optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
     radius_callback(tree);
   }
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
-  MADAGStorage result = build_madag_from_mat(tree, dag.GetReferenceSequence()).first;
-  tree.delete_nodes();
+  auto result = AddMATConversion(MADAGStorage{});
+  result.View().BuildFromMAT(std::move(tree), dag.GetReferenceSequence());
+  // TODO tree.delete_nodes();
   result.View().RecomputeCompactGenomes();
   return result;
 }
