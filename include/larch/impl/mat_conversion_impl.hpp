@@ -76,12 +76,22 @@ inline auto mutations_view(MAT::Node* node) {
              });
 }
 
+static inline void fill_static_reference_sequence(std::string_view dag_ref) {
+  static std::mutex static_ref_seq_mutex;
+  std::lock_guard lock{static_ref_seq_mutex};
+  MAT::Mutation::refs.resize(dag_ref.size() + 1);
+  for (size_t ref_idx = 0; ref_idx < dag_ref.size(); ref_idx++) {
+    MAT::Mutation::refs[ref_idx + 1] = EncodeBaseMAT(dag_ref[ref_idx]);
+  }
+}
+
 }  // namespace
 
 template <typename CRTP>
 MAT::Tree& ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT() const {
   auto& dag = static_cast<const CRTP&>(*this);
   dag.AssertUA();
+  fill_static_reference_sequence(dag.GetReferenceSequence());
   auto& tree = dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
 
   auto root_node = dag.GetRoot().GetFirstChild().GetChild();

@@ -1,10 +1,3 @@
-
-template <typename CRTP, typename Tag>
-const MAT::Node& FeatureConstView<HypotheticalNode, CRTP, Tag>::GetMATNode() const {
-  auto& node = static_cast<const CRTP&>(*this);
-  return *node.GetDAG().GetMAT().get_node(node.GetId().value);
-}
-
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMATRoot() const {
   auto& node = static_cast<const CRTP&>(*this);
@@ -179,12 +172,6 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
 }
 
 template <typename DAG, typename CRTP, typename Tag>
-const MAT::Tree& FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMAT() const {
-  auto& self = GetFeatureStorage(this);
-  return self.data_->sample_mat_;
-}
-
-template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetSource() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
@@ -213,21 +200,18 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetChangedFitchSetMap() cons
 
 template <typename DAG, typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
-    DAG sample_dag, const MAT::Tree& sample_mat, const Profitable_Moves& move,
-    const std::vector<Node_With_Major_Allele_Set_Change>&
-        nodes_with_major_allele_set_change) {
+    const Profitable_Moves& move, const std::vector<Node_With_Major_Allele_Set_Change>&
+                                      nodes_with_major_allele_set_change) {
   auto& self = GetFeatureStorage(this);
   self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
-      typename HypotheticalTree<DAG>::Data{sample_dag, sample_mat, move,
-                                           nodes_with_major_allele_set_change});
+      typename HypotheticalTree<DAG>::Data{move, nodes_with_major_allele_set_change});
 }
 
 template <typename DAG>
-HypotheticalTree<DAG>::Data::Data(DAG sample_dag, const MAT::Tree& sample_mat,
-                                  const Profitable_Moves& move,
+HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move,
                                   const std::vector<Node_With_Major_Allele_Set_Change>&
                                       nodes_with_major_allele_set_change)
-    : sample_dag_{sample_dag}, sample_mat_{sample_mat}, move_{move} {
+    : move_{move} {
   for (auto& node_with_allele_set_change : nodes_with_major_allele_set_change) {
     std::map<MutationPosition, Mutation_Count_Change> node_map;
     for (auto& mutation_count_change :

@@ -41,19 +41,11 @@ void check_MAT_MADAG_Eq(const MAT::Tree& tree, DAG init) {
   compareDAG(converted_dag.View().GetRoot(), init.GetRoot());
 }
 
-void fill_static_reference_sequence(std::string_view dag_ref) {
-  MAT::Mutation::refs.resize(dag_ref.size() + 1);
-  for (size_t ref_idx = 0; ref_idx < dag_ref.size(); ref_idx++) {
-    MAT::Mutation::refs[ref_idx + 1] = EncodeBaseMAT(dag_ref[ref_idx]);
-  }
-}
-
 template <typename DAG, typename RadiusCallback>
 auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                          RadiusCallback&& radius_callback) {
-  auto& dag_ref = dag.GetReferenceSequence();
-  fill_static_reference_sequence(dag_ref);
-  auto tree = AddMATConversion(dag).View().BuildMAT();
+  static_assert(DAG::template contains_element_feature<NodeId, MATConversion>);
+  auto& tree = dag.GetMutableMAT();
 
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "before_optimize.pb");
   check_MAT_MADAG_Eq(tree, dag);

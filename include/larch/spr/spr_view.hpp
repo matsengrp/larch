@@ -4,7 +4,7 @@
 
 struct FitchSet {
   FitchSet(char base) : value_{base} {}
-  FitchSet(int base) : value_{static_cast<char>(base)} {} //TODO
+  FitchSet(int base) : value_{static_cast<char>(base)} {}  // TODO
   FitchSet(nuc_one_hot one_hot)
       : value_{[](nuc_one_hot base) {
           static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
@@ -24,7 +24,6 @@ struct HypotheticalNode {
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
-  const MAT::Node& GetMATNode() const;
   bool IsMATRoot() const;
   bool IsSource() const;
   bool IsTarget() const;
@@ -58,21 +57,18 @@ struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {};
 template <typename DAG>
 struct HypotheticalTree {
   struct Data {
-    Data(DAG sample_dag, const MAT::Tree& sample_mat, const Profitable_Moves& move,
+    Data(const Profitable_Moves& move,
          const std::vector<Node_With_Major_Allele_Set_Change>&
              nodes_with_major_allele_set_change);
-    DAG sample_dag_;
-    const MAT::Tree& sample_mat_;
     Profitable_Moves move_;
     std::map<const MAT::Node*, std::map<MutationPosition, Mutation_Count_Change>>
         changed_fitch_set_map_;
   };
-  std::unique_ptr<Data> data_;
+  std::unique_ptr<Data> data_;  // TODO fixme
 };
 
 template <typename DAG, typename CRTP, typename Tag>
 struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
-  const MAT::Tree& GetMAT() const;
   // Get the LCA of source and target nodes
   auto GetLCA() const;
   // These return the HypotheticalTreeNodes corresponding to source and target
@@ -100,8 +96,7 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
 
 template <typename DAG, typename CRTP, typename Tag>
 struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
-  void InitHypotheticalTree(DAG sample_dag, const MAT::Tree& sample_mat,
-                            const Profitable_Moves& move,
+  void InitHypotheticalTree(const Profitable_Moves& move,
                             const std::vector<Node_With_Major_Allele_Set_Change>&
                                 nodes_with_major_allele_set_change);
 };

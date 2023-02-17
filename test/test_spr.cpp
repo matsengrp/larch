@@ -15,11 +15,11 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     auto spr_storage = SPRStorage(sample_dag_);
     auto spr = spr_storage.View();
 
-    Assert(sample_mat_);
-    spr.InitHypotheticalTree(sample_dag_, *sample_mat_, move,
+    Assert(sample_mat_ != nullptr);
+    spr.InitHypotheticalTree(/*sample_dag_, *sample_mat_,*/ move,
                              nodes_with_major_allele_set_change);
 
-    // std::ignore = spr.GetRoot().ComputeNewCompactGenome();
+    std::ignore = spr.GetRoot().ComputeNewCompactGenome();
 
     return move.score_change < best_score_change;
   }
@@ -46,7 +46,8 @@ static void test_spr(std::string_view input_dag_path, std::string_view refseq_pa
     SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
 
     auto chosen_node = weight.GetDAG().GetRoot();
-    auto sample = weight.SampleTree({}, chosen_node);
+    auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
+    sample.View().BuildMAT();
     std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
     Test_Move_Found_Callback callback{sample.View()};

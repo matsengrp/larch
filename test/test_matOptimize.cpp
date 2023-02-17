@@ -172,7 +172,8 @@ static void test_matOptimize(std::string_view input_dag_path,
 
     auto chosen_node = choose_node(weight);
     bool subtrees = not chosen_node.IsRoot();
-    auto sample = weight.SampleTree({}, chosen_node);
+    auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
+    sample.View().BuildMAT();
     std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
     int move_coeff_nodes = 1;
