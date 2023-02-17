@@ -15,3 +15,8 @@ template <typename CRTP, typename Tag>
 struct FeatureMutableView<MappedNodes, CRTP, Tag> {
   void SetOriginalId(NodeId id) const;
 };
+
+template <typename DAG>
+auto AddMappedNodes(DAG&& dag) {
+  return ExtendStorage(std::forward<DAG>(dag), Extend::Nodes<MappedNodes>{});
+}

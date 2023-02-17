@@ -39,7 +39,7 @@ void Merge<DAG>::AddDAGs(const std::vector<DAG>& dags) {
 
 template <typename DAG>
 template <typename D, typename N>
-std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
+void Merge<DAG>::AddDAG(D dag, N below) {
   dag.AssertUA();
   tree_labels_.emplace_back(std::vector<NodeLabel>{});
   std::vector<NodeLabel>& labels = tree_labels_.back();
@@ -69,7 +69,7 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
   }
 
   // maps NodeIds in dag to corresponding NodeIds in merge object
-  std::map<NodeId, NodeId> node_map;
+
   NodeId node_id{ResultDAG().GetNodesCount()};
   for (size_t i = 0; i < labels.size(); ++i) {
     // labels indices are nodeID values
@@ -80,10 +80,14 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
     auto insert_pair = result_nodes_.try_emplace(label, node_id);
     if (insert_pair.second) {
       GetOrInsert(result_node_labels_, node_id) = label;
-      node_map.emplace(NodeId{i}, node_id);
+      if constexpr (D::template contains_element_feature<NodeId, MappedNodes>) {
+        dag.Get(NodeId{i}).SetOriginalId(node_id);
+      }
       ++node_id.value;
     } else if (i != dag.GetNodesCount() - 1) {
-      node_map.emplace(NodeId{i}, insert_pair.first->second);
+      if constexpr (D::template contains_element_feature<NodeId, MappedNodes>) {
+        dag.Get(NodeId{i}).SetOriginalId(insert_pair.first->second);
+      }
     }
   }
 
@@ -133,7 +137,6 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   // TODO Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
   ResultDAG().BuildConnections();
-  return node_map;
 }
 
 template <typename DAG>

@@ -163,7 +163,8 @@ static void test_matOptimize(std::string_view input_dag_path,
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
-  std::vector<decltype(AddMATConversion(MADAGStorage{}))> optimized_dags;
+  std::vector<decltype(AddMappedNodes(AddMATConversion(MADAGStorage{})))>
+      optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();
@@ -180,27 +181,26 @@ static void test_matOptimize(std::string_view input_dag_path,
         merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}};
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
     auto radius_callback = [&](MAT::Tree& tree) -> void {
-      auto result = AddMATConversion(MADAGStorage{});
-      result.View().BuildFromMAT(MAT::Tree{tree},  // TODO don't copy the tree
-                                 merge.GetResult().GetReferenceSequence());
-      result.View().RecomputeCompactGenomes();
-      optimized_dags.push_back(std::move(result));
+      auto temp_result = AddMappedNodes(AddMATConversion(MADAGStorage{}));
+      temp_result.View().BuildFromMAT(MAT::Tree{tree},  // TODO don't copy the tree
+                                      merge.GetResult().GetReferenceSequence());
+      temp_result.View().RecomputeCompactGenomes();
+      optimized_dags.push_back(std::move(temp_result));
+      auto result = optimized_dags.back().View();
       std::map<NodeId, NodeId> full_map = [&] {
-        std::map<NodeId, NodeId> merge_node_map;
         if (subtrees) {
-          merge_node_map = merge.AddDAG(optimized_dags.back().View(),
-                                        merge.GetResult().Get(chosen_node));
+          merge.AddDAG(result, merge.GetResult().Get(chosen_node));
         } else {
-          merge_node_map = merge.AddDAG(optimized_dags.back().View());
+          merge.AddDAG(result);
         }
         // mat_node_map is not the identity, so all pairs in mat_node_map must be used
         // to build remaped
         std::map<NodeId, NodeId> remaped;
-        for (auto node : optimized_dags.back().View().GetNodes()) {
+        for (auto node : result.GetNodes()) {
           if (node.IsRoot()) {
             continue;
           }
-          remaped.insert({{node.GetMATNodeId()}, merge_node_map.at(node.GetId())});
+          remaped.insert({{node.GetMATNodeId()}, node.GetOriginalId()});
         }
         return remaped;
       }();
