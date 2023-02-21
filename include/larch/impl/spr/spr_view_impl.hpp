@@ -205,6 +205,11 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   auto& self = GetFeatureStorage(this);
   self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
       typename HypotheticalTree<DAG>::Data{move, nodes_with_major_allele_set_change});
+  auto& dag = static_cast<const CRTP&>(*this);
+  for (auto& mat_node : nodes_with_major_allele_set_change) {
+    size_t id = mat_node.node->node_id;
+    dag.GetMutableNodeFromMAT(id).Overlay();
+  }
 }
 
 template <typename DAG>

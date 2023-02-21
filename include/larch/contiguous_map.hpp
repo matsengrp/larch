@@ -78,6 +78,18 @@ class ContiguousMap {
     }
   }
 
+  const V& at(K key) const {
+    auto it = LowerBound(key);
+    Assert(it != end());
+    return it->second;
+  }
+
+  V& at(K key) {
+    auto it = LowerBound(key);
+    Assert(it != end());
+    return it->second;
+  }
+
  private:
   ContiguousMap(const ContiguousMap&) = default;
   std::vector<std::pair<K, V>> data_;

@@ -33,6 +33,10 @@ MAT::Node& FeatureMutableView<MATConversion, CRTP, Tag>::GetMutableMATNode() con
 template <typename CRTP, typename Tag>
 void FeatureMutableView<MATConversion, CRTP, Tag>::SetMATNodeId(size_t id) const {
   GetFeatureStorage(this).mat_node_id_ = id;
+  auto& node = static_cast<const CRTP&>(*this);
+  node.GetDAG()
+      .template GetFeatureExtraStorage<NodeId, MATConversion>()
+      .reverse_map_.Insert(id, node.GetId());
 }
 
 template <typename CRTP>
@@ -42,9 +46,29 @@ const MAT::Tree& ExtraFeatureConstView<MATConversion, CRTP>::GetMAT() const {
 }
 
 template <typename CRTP>
+auto ExtraFeatureConstView<MATConversion, CRTP>::GetNodeFromMAT(
+    size_t mat_node_id) const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  NodeId id =
+      dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(
+          mat_node_id);
+  return dag.Get(id);
+}
+
+template <typename CRTP>
 MAT::Tree& ExtraFeatureMutableView<MATConversion, CRTP>::GetMutableMAT() const {
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
+}
+
+template <typename CRTP>
+auto ExtraFeatureMutableView<MATConversion, CRTP>::GetMutableNodeFromMAT(
+    size_t mat_node_id) const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  NodeId id =
+      dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(
+          mat_node_id);
+  return dag.Get(id);
 }
 
 namespace {

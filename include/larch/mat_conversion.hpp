@@ -50,16 +50,19 @@ struct ExtraFeatureStorage<MATConversion> {
   ExtraFeatureStorage() = default;
   MOVE_ONLY(ExtraFeatureStorage);
   MAT::Tree mat_tree_;
+  ContiguousMap<size_t, NodeId> reverse_map_;
 };
 
 template <typename CRTP>
 struct ExtraFeatureConstView<MATConversion, CRTP> {
   const MAT::Tree& GetMAT() const;
+  auto GetNodeFromMAT(size_t mat_node_id) const;
 };
 
 template <typename CRTP>
 struct ExtraFeatureMutableView<MATConversion, CRTP> {
   MAT::Tree& GetMutableMAT() const;
+  auto GetMutableNodeFromMAT(size_t mat_node_id) const;
   MAT::Tree& BuildMAT() const;
   void BuildFromMAT(MAT::Tree&& mat, std::string_view reference_sequence) const;
 
