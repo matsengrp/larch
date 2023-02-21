@@ -14,7 +14,7 @@ struct FeatureMutableView<Overlay, CRTP, Tag> {
   void Overlay();
 };
 
-struct OverlayDAG {}; //TODO make it extra feature
+struct OverlayDAG {};  // TODO make it extra feature
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<OverlayDAG, CRTP, Tag> {
@@ -108,6 +108,11 @@ struct OverlayDAGStorage {
   auto GetTarget();
   auto GetTarget() const;
 
+  // TODO write const/non-const helpers for the rest of feature getters
+  template <typename F, typename OverlayStorageType>
+  static auto GetFeatureStorageImpl(OverlayStorageType& self, NodeId id)
+      -> std::conditional_t<OverlayStorageType::TargetView::is_mutable, F&, const F&>;
+
   template <typename, typename, typename>
   friend struct FeatureConstView;
 
@@ -120,3 +125,8 @@ struct OverlayDAGStorage {
   std::vector<AllNodeFeatures> added_node_storage_;
   std::vector<AllEdgeFeatures> added_edge_storage_;
 };
+
+template <typename DAG>
+auto AddOverlay(DAG&& dag) {
+  return OverlayDAGStorage<DAG>{std::forward<DAG>(dag)};
+}

@@ -140,31 +140,13 @@ const auto& OverlayDAGStorage<Target>::GetFeatureStorage() const {
 template <typename Target>
 template <typename F>
 auto& OverlayDAGStorage<Target>::GetFeatureStorage(NodeId id) {
-  if (id.value < GetTarget().GetNodesCount()) {
-    auto it = replaced_node_storage_.find(id);
-    if (it == replaced_node_storage_.end()) {
-      return GetTarget().template GetFeatureStorage<F>(id);
-    } else {
-      return std::get<F>(it->second);
-    }
-  } else {
-    return std::get<F>(added_node_storage_.at(id.value - GetTarget().GetNodesCount()));
-  }
+  return GetFeatureStorageImpl<F>(*this, id);
 }
 
 template <typename Target>
 template <typename F>
 const auto& OverlayDAGStorage<Target>::GetFeatureStorage(NodeId id) const {
-  if (id.value < GetTarget().GetNodesCount()) {
-    auto it = replaced_node_storage_.find(id);
-    if (it == replaced_node_storage_.end()) {
-      return GetTarget().template GetFeatureStorage<F>(id);
-    } else {
-      return std::get<F>(it->second);
-    }
-  } else {
-    return std::get<F>(added_node_storage_.at(id.value - GetTarget().GetNodesCount()));
-  }
+  return GetFeatureStorageImpl<F>(*this, id);
 }
 
 template <typename Target>
@@ -217,4 +199,22 @@ auto OverlayDAGStorage<Target>::GetTarget() {
 template <typename Target>
 auto OverlayDAGStorage<Target>::GetTarget() const {
   return ViewOf(target_);
+}
+
+template <typename Target>
+template <typename F, typename OverlayStorageType>
+auto OverlayDAGStorage<Target>::GetFeatureStorageImpl(OverlayStorageType& self,
+                                                      NodeId id)
+    -> std::conditional_t<OverlayStorageType::TargetView::is_mutable, F&, const F&> {
+  if (id.value < self.GetTarget().GetNodesCount()) {
+    auto it = self.replaced_node_storage_.find(id);
+    if (it == self.replaced_node_storage_.end()) {
+      return self.GetTarget().template GetFeatureStorage<F>(id);
+    } else {
+      return std::get<F>(it->second);
+    }
+  } else {
+    return std::get<F>(
+        self.added_node_storage_.at(id.value - self.GetTarget().GetNodesCount()));
+  }
 }

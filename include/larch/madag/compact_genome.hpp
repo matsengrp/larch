@@ -27,6 +27,7 @@ class CompactGenome {
   inline CompactGenome(ContiguousMap<MutationPosition, char>&& mutations);
 
   inline bool operator==(const CompactGenome& rhs) const noexcept;
+  inline bool operator!=(const CompactGenome& rhs) const noexcept;
   inline bool operator<(const CompactGenome& rhs) const noexcept;
   [[nodiscard]] inline size_t Hash() const noexcept;
 

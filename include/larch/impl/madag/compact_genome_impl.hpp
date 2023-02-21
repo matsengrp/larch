@@ -74,6 +74,10 @@ bool CompactGenome::operator==(const CompactGenome& rhs) const noexcept {
   return mutations_ == rhs.mutations_;
 }
 
+bool CompactGenome::operator!=(const CompactGenome& rhs) const noexcept {
+  return mutations_ != rhs.mutations_;
+}
+
 bool CompactGenome::operator<(const CompactGenome& rhs) const noexcept {
   return mutations_ < rhs.mutations_;
 }
