@@ -24,6 +24,23 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsOverlaid() const {
   }
 }
 
+namespace {
+
+template <typename FromDAG, typename Id, typename ToTuple, size_t I = 0>
+void CopyFeatures(const FromDAG& from, Id id, ToTuple& to) {
+  if constexpr (I < std::tuple_size_v<ToTuple>) {
+    using type = std::tuple_element_t<I, ToTuple>;
+    if constexpr (std::is_copy_assignable_v<type>) {
+      std::get<I>(to) = from.template GetFeatureStorage<type>(id);
+    } else {
+      std::get<I>(to) = from.template GetFeatureStorage<type>(id).Copy();
+    }
+    CopyFeatures<FromDAG, Id, ToTuple, I + 1>(from, id, to);
+  }
+}
+
+} // namespace
+
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Overlay, CRTP, Tag>::Overlay() {
   auto& element_view = static_cast<const CRTP&>(*this);
@@ -31,21 +48,21 @@ void FeatureMutableView<Overlay, CRTP, Tag>::Overlay() {
   auto& storage = element_view.GetDAG().GetStorage();
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     if (id.value < storage.GetTarget().GetNodesCount()) {
-      storage.replaced_node_storage_[id] = {};
+      CopyFeatures(storage.GetTarget(), id, storage.replaced_node_storage_[id]);
     } else {
       std::ignore = GetOrInsert(storage.added_node_storage_, id);
     }
   } else {
     if (id.value < storage.GetTarget().GetEdgesCount()) {
-      storage.replaced_edge_storage_[id] = {};
+      CopyFeatures(storage.GetTarget(), id, storage.replaced_edge_storage_[id]);
     } else {
-      std::ignore = GetOrInsert(storage.replaced_edge_storage_, id);
+      std::ignore = GetOrInsert(storage.added_edge_storage_, id);
     }
   }
 }
 
 template <typename CRTP, typename Tag>
-auto FeatureConstView<OverlayDAG, CRTP, Tag>::GetOld() const {
+auto FeatureConstView<OverlayDAG, CRTP, Tag>::GetOriginal() const {
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.GetStorage().GetTarget();
 }
@@ -78,7 +95,7 @@ NodeId OverlayDAGStorage<Target>::AppendNode() {
 template <typename Target>
 EdgeId OverlayDAGStorage<Target>::AppendEdge() {
   added_edge_storage_.push_back({});
-  return {GetNodesCount() - 1};
+  return {GetEdgesCount() - 1};
 }
 
 template <typename Target>

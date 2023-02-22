@@ -76,15 +76,14 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes()
       bool success =
           leaf_cgs.emplace(node.GetCompactGenome().Copy(), node.GetId()).second;
       if (not success) {
-        /*
+        
         std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
                   << node.GetId().value << " also seen at "
                   << leaf_cgs.at(node.GetCompactGenome().Copy()).value
                   << "\nCompact Genome is\n"
                   << node.GetCompactGenome().ToString() << "\n"
                   << std::flush;
-        */
-        Fail("Error in ComputeCompactGenomes: had a non-unique leaf node");
+                Fail("Error in ComputeCompactGenomes: had a non-unique leaf node");
       }
     }
   }

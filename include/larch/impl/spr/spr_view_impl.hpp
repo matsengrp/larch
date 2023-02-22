@@ -25,7 +25,7 @@ bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNew() const {
 template <typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalNode, CRTP, Tag>::GetOld() const {
   auto& node = static_cast<const CRTP&>(*this);
-  return node.GetDAG().GetOld().Get(node.GetId());
+  return node.GetDAG().GetOriginal().Get(node.GetId());
 }
 
 template <typename CRTP, typename Tag>
@@ -196,6 +196,50 @@ const std::map<const MAT::Node*, std::map<MutationPosition, Mutation_Count_Chang
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetChangedFitchSetMap() const {
   auto& self = GetFeatureStorage(this);
   return self.data_->changed_fitch_set_map_;
+}
+
+template <typename DAG, typename CRTP, typename Tag>
+void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
+                                                                     NodeId dst) const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  auto src_node = dag.Get(src);
+  auto dst_node = dag.Get(dst);
+  auto src_parent_edge = src_node.GetSingleParent();
+  auto dst_parent_edge = dst_node.GetSingleParent();
+  auto src_parent = src_parent_edge.GetParent();
+  auto dst_parent = dst_parent_edge.GetParent();
+  auto dst_grandparent_edge = dst_parent.GetSingleParent();
+
+  auto new_node = dag.AppendNode();
+  auto new_edge = dag.AppendEdge(dst_parent, new_node, {0});
+
+  src_node.Overlay();
+  src_parent_edge.Overlay();
+  src_parent.Overlay();
+
+  dst_node.Overlay();
+  dst_parent_edge.Overlay();
+  dst_parent.Overlay();
+
+  src_parent_edge.Set(new_node, src_node, {0});
+  dst_parent_edge.Set(new_node, dst_node, {0});
+
+  auto build_connections = [&dag](EdgeId id) {
+    auto edge = dag.Get(id);
+    edge.GetParent().AddEdge(edge.GetClade(), edge, true);
+    edge.GetChild().AddEdge(edge.GetClade(), edge, false);
+  };
+
+  for (auto child_edge : src_parent.GetOld().GetChildren()) {
+    build_connections(child_edge);
+  }
+
+  for (auto child_edge : dst_parent.GetOld().GetChildren()) {
+    build_connections(child_edge);
+  }
+  
+  build_connections(new_edge);
+  build_connections(dst_grandparent_edge);
 }
 
 template <typename DAG, typename CRTP, typename Tag>

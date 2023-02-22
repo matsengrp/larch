@@ -64,3 +64,9 @@ void FeatureMutableView<EdgeMutations, CRTP, Tag>::SetEdgeMutations(
     EdgeMutations&& edge_mutations) const {
   GetFeatureStorage(this) = std::forward<EdgeMutations>(edge_mutations);
 }
+
+template <typename CRTP, typename Tag>
+EdgeMutations& FeatureMutableView<EdgeMutations, CRTP, Tag>::GetMutableEdgeMutations()
+    const {
+  return GetFeatureStorage(this);
+}

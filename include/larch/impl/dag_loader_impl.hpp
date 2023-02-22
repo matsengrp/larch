@@ -129,3 +129,50 @@ void StoreTreeToProtobuf(DAG dag, std::string_view path) {
   std::ofstream file{std::string{path}};
   data.SerializeToOstream(&file);
 }
+
+template <typename Edge>
+static std::string EdgeMutationsToString(Edge edge) {
+  std::string result;
+  size_t count = 0;
+  for (auto [pos, muts] : edge.GetEdgeMutations()) {
+    result += muts.first;
+    result += std::to_string(pos.value);
+    result += muts.second;
+    result += ++count % 3 == 0 ? "\\n" : " ";
+  }
+  return result;
+}
+
+template <typename Node>
+static std::string CompactGenomeToString(Node node) {
+  if (node.IsRoot()) {
+    return "p";
+  }
+  std::string result = std::to_string(node.GetId().value);
+  result += "\\n";
+  size_t count = 0;
+  for (auto [pos, base] : node.GetCompactGenome()) {
+    result += std::to_string(pos.value);
+    result += base;
+    result += ++count % 3 == 0 ? "\\n" : " ";
+  }
+  return result;
+}
+
+template <typename DAG>
+void MADAGToDOT(DAG dag, std::ostream& out) {
+  out << "digraph {\n";
+  out << "  forcelabels=true\n";
+  out << "  nodesep=1.0\n";
+  out << "  ranksep=2.0\n";
+  out << "  ratio=1.0\n";
+  for (auto edge : dag.GetEdges()) {
+    out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
+        << CompactGenomeToString(edge.GetChild()) << "\"";
+    out << "[ xlabel=\"";
+    out << EdgeMutationsToString(edge);
+    out << "\" ]";
+    out << "\n";
+  }
+  out << "}\n";
+}

@@ -61,6 +61,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
     Assert(edge.GetParentId().value != NoId && "Edge has no parent");
     Assert(edge.GetChildId().value != NoId && "Edge has no child");
     Assert(edge.GetClade().value != NoId && "Edge has no clade index");
+    Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
     edge.GetParent().AddEdge(edge.GetClade(), edge, true);
     edge.GetChild().AddEdge(edge.GetClade(), edge, false);
     ++edge_id.value;

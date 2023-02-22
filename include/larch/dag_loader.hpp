@@ -23,6 +23,7 @@ void StoreDAGToProtobuf(DAG dag, std::string_view path);
 template <typename DAG>
 void StoreTreeToProtobuf(DAG dag, std::string_view path);
 
+template <typename DAG>
 void MADAGToDOT(MADAG dag, std::ostream& out);
 
 #include "larch/impl/dag_loader_impl.hpp"

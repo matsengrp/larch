@@ -62,6 +62,7 @@ struct FeatureConstView<EdgeMutations, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<EdgeMutations, CRTP, Tag> {
   void SetEdgeMutations(EdgeMutations&& edge_mutations) const;
+  EdgeMutations& GetMutableEdgeMutations() const;
 };
 
 #include "larch/impl/madag/edge_mutations_impl.hpp"
