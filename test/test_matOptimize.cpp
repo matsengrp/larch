@@ -173,7 +173,8 @@ static void test_matOptimize(std::string_view input_dag_path,
     auto chosen_node = choose_node(weight);
     bool subtrees = not chosen_node.IsRoot();
     auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
-    sample.View().BuildMAT();
+    MAT::Tree mat;
+    sample.View().BuildMAT(mat);
     std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
     int move_coeff_nodes = 1;
@@ -183,8 +184,7 @@ static void test_matOptimize(std::string_view input_dag_path,
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
     auto radius_callback = [&](MAT::Tree& tree) -> void {
       auto temp_result = AddMappedNodes(AddMATConversion(MADAGStorage{}));
-      temp_result.View().BuildFromMAT(MAT::Tree{tree},  // TODO don't copy the tree
-                                      merge.GetResult().GetReferenceSequence());
+      temp_result.View().BuildFromMAT(tree, merge.GetResult().GetReferenceSequence());
       temp_result.View().RecomputeCompactGenomes();
       optimized_dags.push_back(std::move(temp_result));
       auto result = optimized_dags.back().View();

@@ -24,6 +24,18 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsOverlaid() const {
   }
 }
 
+template <typename CRTP, typename Tag>
+bool FeatureConstView<Overlay, CRTP, Tag>::IsAppended() const {
+  auto& element_view = static_cast<const CRTP&>(*this);
+  auto id = element_view.GetId();
+  auto target_dag = element_view.GetDAG().GetStorage().GetTarget();
+  if constexpr (std::is_same_v<decltype(id), NodeId>) {
+    return id.value >= target_dag.GetNodesCount();
+  } else {
+    return id.value >= target_dag.GetEdgesCount();
+  }
+}
+
 namespace {
 
 template <typename FromDAG, typename Id, typename ToTuple, size_t I = 0>
@@ -39,12 +51,13 @@ void CopyFeatures(const FromDAG& from, Id id, ToTuple& to) {
   }
 }
 
-} // namespace
+}  // namespace
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Overlay, CRTP, Tag>::Overlay() {
   auto& element_view = static_cast<const CRTP&>(*this);
   auto id = element_view.GetId();
+  Assert(not element_view.IsOverlaid());
   auto& storage = element_view.GetDAG().GetStorage();
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     if (id.value < storage.GetTarget().GetNodesCount()) {

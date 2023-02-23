@@ -19,7 +19,7 @@ bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsTarget() const {
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNew() const {
   auto& node = static_cast<const CRTP&>(*this);
-  return node.IsOverlaid();
+  return node.IsAppended();
 }
 
 template <typename CRTP, typename Tag>
@@ -210,6 +210,9 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
   auto dst_parent = dst_parent_edge.GetParent();
   auto dst_grandparent_edge = dst_parent.GetSingleParent();
 
+  Assert(src_node.GetId() != dst_node.GetId());
+  Assert(src_parent.GetId() != dst_parent.GetId());
+  
   auto new_node = dag.AppendNode();
   auto new_edge = dag.AppendEdge(dst_parent, new_node, {0});
 
@@ -237,7 +240,7 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
   for (auto child_edge : dst_parent.GetOld().GetChildren()) {
     build_connections(child_edge);
   }
-  
+
   build_connections(new_edge);
   build_connections(dst_grandparent_edge);
 }
@@ -250,7 +253,9 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
       typename HypotheticalTree<DAG>::Data{move, nodes_with_major_allele_set_change});
   auto& dag = static_cast<const CRTP&>(*this);
-  std::set<size_t> new_nodes;
+  dag.ApplyMove(dag.GetNodeFromMAT(move.src->node_id),
+                dag.GetNodeFromMAT(move.dst->node_id));
+/*  std::set<size_t> new_nodes;
   for (auto& mat_node : nodes_with_major_allele_set_change) {
     new_nodes.insert(mat_node.node->node_id);
   }
@@ -269,7 +274,7 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   for (size_t id : new_nodes) {
     dag.GetMutableNodeFromMAT(id).Overlay();
   }
-}
+*/}
 
 template <typename DAG>
 HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move,

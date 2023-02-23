@@ -5,6 +5,8 @@
 #include "larch/subtree/parsimony_score.hpp"
 #include "larch/spr/spr_view.hpp"
 
+#include <tbb/global_control.h>
+
 template <typename DAG>
 struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag) : sample_dag_{sample_dag} {}
@@ -12,6 +14,10 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&
                       nodes_with_major_allele_set_change) override {
+    if (move.src->parent->node_id == move.dst->parent->node_id) {
+      std::cout << "Siblings move! " << move.src->parent->node_id << "\n";
+      return false;
+    }
     auto spr_storage = SPRStorage(sample_dag_);
     auto spr = spr_storage.View();
 
@@ -32,6 +38,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 
 static void test_spr(std::string_view input_dag_path, std::string_view refseq_path,
                      size_t count) {
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
   MADAGStorage input_dag_storage =
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
@@ -39,7 +46,8 @@ static void test_spr(std::string_view input_dag_path, std::string_view refseq_pa
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
-  std::vector<decltype(AddMATConversion(MADAGStorage{}))> optimized_dags;
+  std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{})), MAT::Tree>>
+      optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();
@@ -47,13 +55,14 @@ static void test_spr(std::string_view input_dag_path, std::string_view refseq_pa
 
     auto chosen_node = weight.GetDAG().GetRoot();
     auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
-    sample.View().BuildMAT();
+    MAT::Tree mat;
+    sample.View().BuildMAT(mat);
     std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
     Test_Move_Found_Callback callback{sample.View()};
     optimized_dags.push_back(optimize_dag_direct(sample.View(), callback, callback));
-    optimized_dags.back().View().RecomputeCompactGenomes();
-    merge.AddDAG(optimized_dags.back().View(), chosen_node);
+    optimized_dags.back().first.View().RecomputeCompactGenomes();
+    merge.AddDAG(optimized_dags.back().first.View(), chosen_node);
   }
 }
 

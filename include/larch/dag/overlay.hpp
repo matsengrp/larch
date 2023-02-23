@@ -7,6 +7,7 @@ struct Overlay {};
 template <typename CRTP, typename Tag>
 struct FeatureConstView<Overlay, CRTP, Tag> {
   bool IsOverlaid() const;
+  bool IsAppended() const;
 };
 
 template <typename CRTP, typename Tag>

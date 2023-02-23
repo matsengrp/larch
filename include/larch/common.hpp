@@ -77,13 +77,15 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #ifndef NDEBUG
 #include <csignal>
 #include <iostream>
-#define Assert(x)                                           \
-  {                                                         \
-    if (not(x)) {                                           \
-      std::cerr << "Assert failed: \"" #x "\" in " __FILE__ \
-                   ":" TOSTRING(__LINE__) "\n";             \
-      std::raise(SIGTRAP);                                  \
-    }                                                       \
+#define Assert(x)                                                       \
+  {                                                                     \
+    if (not(x)) {                                                       \
+      std::cerr << "Assert failed: \"" #x "\" in " __FILE__             \
+                   ":" TOSTRING(__LINE__) "\n";                         \
+      std::raise(SIGTRAP);                                              \
+      throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
+                               ":" TOSTRING(__LINE__));                 \
+    }                                                                   \
   }
 #else
 #define Assert(x)                                                       \

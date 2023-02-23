@@ -34,10 +34,9 @@ void compareDAG(Node1 dag1, Node2 dag2) {
 }
 
 template <typename DAG>
-void check_MAT_MADAG_Eq(const MAT::Tree& tree, DAG init) {
+void check_MAT_MADAG_Eq(MAT::Tree& tree, DAG init) {
   auto converted_dag = AddMATConversion(MADAGStorage{});
-  converted_dag.View().BuildFromMAT(
-      MAT::Tree{tree}, init.GetReferenceSequence());  // TODO don't copy tree
+  converted_dag.View().BuildFromMAT(tree, init.GetReferenceSequence());
   compareDAG(converted_dag.View().GetRoot(), init.GetRoot());
 }
 
@@ -83,9 +82,9 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
     radius_callback(tree);
   }
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
-  auto result = AddMATConversion(MADAGStorage{});
-  result.View().BuildFromMAT(std::move(tree), dag.GetReferenceSequence());
+  auto result = std::make_pair(AddMATConversion(MADAGStorage{}), std::move(tree));
+  result.first.View().BuildFromMAT(result.second, dag.GetReferenceSequence());
   // TODO tree.delete_nodes();
-  result.View().RecomputeCompactGenomes();
+  result.first.View().RecomputeCompactGenomes();
   return result;
 }

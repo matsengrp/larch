@@ -21,8 +21,8 @@ static void test_overlay(std::string_view input_dag_path,
   overlay_node.Overlay();
 
   Assert(overlay_node.IsOverlaid());
-  Assert(overlay_node.GetCompactGenome().empty());
-  Assert(input_node.GetCompactGenome() != overlay_node.GetCompactGenome());
+  Assert(not overlay_node.GetCompactGenome().empty());
+  Assert(input_node.GetCompactGenome() == overlay_node.GetCompactGenome());
 
   ContiguousMap<MutationPosition, char> new_cg;
   new_cg.Insert({5}, 'A');

@@ -42,7 +42,7 @@ void FeatureMutableView<MATConversion, CRTP, Tag>::SetMATNodeId(size_t id) const
 template <typename CRTP>
 const MAT::Tree& ExtraFeatureConstView<MATConversion, CRTP>::GetMAT() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
+  return *dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
 }
 
 template <typename CRTP>
@@ -58,7 +58,7 @@ auto ExtraFeatureConstView<MATConversion, CRTP>::GetNodeFromMAT(
 template <typename CRTP>
 MAT::Tree& ExtraFeatureMutableView<MATConversion, CRTP>::GetMutableMAT() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
+  return *dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
 }
 
 template <typename CRTP>
@@ -112,11 +112,12 @@ static inline void fill_static_reference_sequence(std::string_view dag_ref) {
 }  // namespace
 
 template <typename CRTP>
-MAT::Tree& ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT() const {
+void ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT(MAT::Tree& tree) const {
   auto& dag = static_cast<const CRTP&>(*this);
   dag.AssertUA();
   fill_static_reference_sequence(dag.GetReferenceSequence());
-  auto& tree = dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
+  dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_ =
+      std::addressof(tree);
 
   auto root_node = dag.GetRoot().GetFirstChild().GetChild();
   root_node.SetMATNodeId(root_node.GetId().value);
@@ -136,22 +137,21 @@ MAT::Tree& ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT() const {
   tree.root = mat_root_node;
   tree.register_node_serial(mat_root_node);
   BuildHelper(root_node, mat_root_node, tree);
-  return tree;
 }
 
 template <typename CRTP>
 void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
-    MAT::Tree&& mat, std::string_view reference_sequence) const {
+    MAT::Tree& mat, std::string_view reference_sequence) const {
   auto& dag = static_cast<const CRTP&>(*this);
   Assert(dag.IsEmpty());
-  auto& tree = dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
-  tree = std::move(mat);
+  dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_ =
+      std::addressof(mat);
   dag.SetReferenceSequence(reference_sequence);
   auto root_node = dag.AppendNode();
-  root_node.SetMATNodeId(tree.root->node_id);
-  BuildHelper(tree.root, root_node, dag);
+  root_node.SetMATNodeId(mat.root->node_id);
+  BuildHelper(mat.root, root_node, dag);
   dag.BuildConnections();
-  dag.AddUA(EdgeMutations{mutations_view(tree.root)});
+  dag.AddUA(EdgeMutations{mutations_view(mat.root)});
 }
 
 template <typename CRTP>

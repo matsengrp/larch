@@ -45,14 +45,16 @@ static void test_loading_tree(std::string_view path, std::string_view refseq_pat
   fill_static_reference_sequence(tree0.View().GetReferenceSequence());
 
   auto tree2 = AddMATConversion(MADAGStorage{});
-  tree2.View().BuildFromMAT(std::move(AddMATConversion(tree0.View()).View().BuildMAT()),
-                            tree0.View().GetReferenceSequence());
+  MAT::Tree mat0;
+  AddMATConversion(tree0.View()).View().BuildMAT(mat0);
+  tree2.View().BuildFromMAT(mat0, tree0.View().GetReferenceSequence());
 
   AssertDAGsEqual(tree0.View(), tree2.View());
 
   auto tree3 = AddMATConversion(MADAGStorage{});
-  tree3.View().BuildFromMAT(std::move(AddMATConversion(tree1.View()).View().BuildMAT()),
-                            tree1.View().GetReferenceSequence());
+  MAT::Tree mat1;
+  AddMATConversion(tree1.View()).View().BuildMAT(mat1);
+  tree3.View().BuildFromMAT(mat1, tree1.View().GetReferenceSequence());
 
   AssertDAGsEqual(tree0.View(), tree3.View());
 }
@@ -68,9 +70,9 @@ static void test_loading_dag(std::string_view path) {
 
   fill_static_reference_sequence(sampled0.View().GetReferenceSequence());
   auto sampled1 = AddMATConversion(MADAGStorage{});
-  sampled1.View().BuildFromMAT(
-      std::move(AddMATConversion(sampled0.View()).View().BuildMAT()),
-      sampled0.View().GetReferenceSequence());
+  MAT::Tree mat0;
+  AddMATConversion(sampled0.View()).View().BuildMAT(mat0);
+  sampled1.View().BuildFromMAT(mat0, sampled0.View().GetReferenceSequence());
   AssertDAGsEqual(sampled0.View(), sampled1.View());
 }
 
