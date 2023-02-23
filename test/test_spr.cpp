@@ -22,10 +22,9 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     auto spr = spr_storage.View();
 
     Assert(sample_mat_ != nullptr);
-    spr.InitHypotheticalTree(/*sample_dag_, *sample_mat_,*/ move,
-                             nodes_with_major_allele_set_change);
+    spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
 
-    std::ignore = spr.GetRoot().ComputeNewCompactGenome();
+    std::ignore = spr.GetRoot().GetFirstChild().GetChild().ComputeNewCompactGenome();
 
     return move.score_change < best_score_change;
   }
@@ -46,7 +45,7 @@ static MADAGStorage Load(std::string_view input_dag_path,
 }
 
 static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
-  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAG(input_dag);
@@ -115,8 +114,7 @@ static auto MakeSampleDAG() {
   return input_storage;
 }
 
-[[maybe_unused]]
-static void test_sample() {
+[[maybe_unused]] static void test_sample() {
   auto input_storage = MakeSampleDAG();
   auto dag = input_storage.View();
   auto spr_storage = SPRStorage(dag);

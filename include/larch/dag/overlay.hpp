@@ -20,6 +20,7 @@ struct OverlayDAG {};  // TODO make it extra feature
 template <typename CRTP, typename Tag>
 struct FeatureConstView<OverlayDAG, CRTP, Tag> {
   auto GetOriginal() const;
+  bool HaveOverlays() const;
 };
 
 template <typename CRTP, typename Tag>

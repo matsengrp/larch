@@ -125,6 +125,7 @@ template <typename CRTP, typename Tag>
 CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGenome()
     const {
   auto& node = static_cast<const CRTP&>(*this);
+  Assert(node.GetMATNodeId() != NoId);
   std::set<MutationPosition> changed_base_sites = node.GetSitesWithChangedFitchSets();
   const CompactGenome& old_cg = node.GetOld().GetCompactGenome();
   std::map<MutationPosition, char> cg_changes;
@@ -202,6 +203,8 @@ template <typename DAG, typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
                                                                      NodeId dst) const {
   auto& dag = static_cast<const CRTP&>(*this);
+  Assert(dag.IsTree());
+  Assert(not dag.HaveOverlays());
   auto src_node = dag.Get(src);
   auto dst_node = dag.Get(dst);
   auto src_parent_edge = src_node.GetSingleParent();
@@ -250,31 +253,13 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
     const Profitable_Moves& move, const std::vector<Node_With_Major_Allele_Set_Change>&
                                       nodes_with_major_allele_set_change) {
   auto& self = GetFeatureStorage(this);
-  self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
-      typename HypotheticalTree<DAG>::Data{move, nodes_with_major_allele_set_change});
+  Assert(not self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
   dag.ApplyMove(dag.GetNodeFromMAT(move.src->node_id),
                 dag.GetNodeFromMAT(move.dst->node_id));
-/*  std::set<size_t> new_nodes;
-  for (auto& mat_node : nodes_with_major_allele_set_change) {
-    new_nodes.insert(mat_node.node->node_id);
-  }
-  for (MAT::Node* node = move.src; node != nullptr; node = node->parent) {
-    new_nodes.insert(node->node_id);
-    if (node == move.LCA) {
-      break;
-    }
-  }
-  for (MAT::Node* node = move.dst; node != nullptr; node = node->parent) {
-    new_nodes.insert(node->node_id);
-    if (node == move.LCA) {
-      break;
-    }
-  }
-  for (size_t id : new_nodes) {
-    dag.GetMutableNodeFromMAT(id).Overlay();
-  }
-*/}
+  self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
+      typename HypotheticalTree<DAG>::Data{move, nodes_with_major_allele_set_change});
+}
 
 template <typename DAG>
 HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move,

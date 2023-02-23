@@ -80,6 +80,14 @@ auto FeatureConstView<OverlayDAG, CRTP, Tag>::GetOriginal() const {
   return dag.GetStorage().GetTarget();
 }
 
+template <typename CRTP, typename Tag>
+bool FeatureConstView<OverlayDAG, CRTP, Tag>::HaveOverlays() const {
+  auto& storage = static_cast<const CRTP&>(*this).GetStorage();
+  return storage.replaced_node_storage_.empty() and
+         storage.replaced_edge_storage_.empty() and
+         storage.added_node_storage_.empty() and storage.added_edge_storage_.empty();
+}
+
 template <typename Target>
 template <typename Id, typename Feature>
 inline constexpr bool OverlayDAGStorage<Target>::contains_element_feature =
