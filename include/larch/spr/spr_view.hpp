@@ -25,9 +25,9 @@ struct HypotheticalNode {
 template <typename CRTP, typename Tag>
 struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
   bool IsMATRoot() const;
-  bool IsSource() const;
-  bool IsTarget() const;
-  bool IsNew() const;
+  bool IsMoveSource() const;
+  bool IsMoveTarget() const;
+  bool IsMoveNew() const;
   auto GetOld() const;
 
   const std::set<MutationPosition>& GetChangedBaseSites() const;
@@ -70,11 +70,11 @@ struct HypotheticalTree {
 template <typename DAG, typename CRTP, typename Tag>
 struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   // Get the LCA of source and target nodes
-  auto GetLCA() const;
+  auto GetMoveLCA() const;
   // These return the HypotheticalTreeNodes corresponding to source and target
   // nodes (they're siblings in the hypothetical tree)
-  auto GetSource() const;
-  auto GetTarget() const;
+  auto GetMoveSource() const;
+  auto GetMoveTarget() const;
 
   // Returns the HypotheticalTreeNode that used to be the parent of source
   // before the SPR move. TODO: This node may (but need not be) unifurcating

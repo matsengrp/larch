@@ -36,16 +36,20 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   const MAT::Tree* sample_mat_ = nullptr;
 };
 
-static void test_spr(std::string_view input_dag_path, std::string_view refseq_path,
-                     size_t count) {
-  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+static MADAGStorage Load(std::string_view input_dag_path,
+                         std::string_view refseq_path) {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
   MADAGStorage input_dag_storage =
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
   input_dag_storage.View().RecomputeCompactGenomes();
+  return input_dag_storage;
+}
+
+static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
-  merge.AddDAGs({input_dag});
+  merge.AddDAG(input_dag);
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{})), MAT::Tree>>
       optimized_dags;
 
@@ -111,6 +115,7 @@ static auto MakeSampleDAG() {
   return input_storage;
 }
 
+[[maybe_unused]]
 static void test_sample() {
   auto input_storage = MakeSampleDAG();
   auto dag = input_storage.View();
@@ -126,10 +131,11 @@ static void test_sample() {
 
 [[maybe_unused]] static const auto test_added1 =
     add_test({[] {
-                test_spr("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
-                         "data/20D_from_fasta/refseq.txt.gz", 3);
+                test_spr(Load("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
+                              "data/20D_from_fasta/refseq.txt.gz"),
+                         3);
               },
               "SPR: tree 20D_from_fasta"});
 
 [[maybe_unused]] static const auto test_added2 =
-    add_test({[] { test_sample(); }, "SPR: sample"});
+    add_test({[] { test_spr(MakeSampleDAG(), 3); }, "SPR: sample"});

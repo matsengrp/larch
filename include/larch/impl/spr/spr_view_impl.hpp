@@ -5,19 +5,19 @@ bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMATRoot() const {
 }
 
 template <typename CRTP, typename Tag>
-bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsSource() const {
+bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveSource() const {
   auto& node = static_cast<const CRTP&>(*this);
-  return node.GetDAG().GetSource().GetId() == node.GetId();
+  return node.GetDAG().GetMoveSource().GetId() == node.GetId();
 }
 
 template <typename CRTP, typename Tag>
-bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsTarget() const {
+bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveTarget() const {
   auto& node = static_cast<const CRTP&>(*this);
-  return node.GetDAG().GetTarget().GetId() == node.GetId();
+  return node.GetDAG().GetMoveTarget().GetId() == node.GetId();
 }
 
 template <typename CRTP, typename Tag>
-bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNew() const {
+bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveNew() const {
   auto& node = static_cast<const CRTP&>(*this);
   return node.IsAppended();
 }
@@ -55,16 +55,16 @@ std::pair<MAT::Mutations_Collection,
 FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetParts() const {
   auto& node = static_cast<const CRTP&>(*this);
   auto dag = node.GetDAG();
-  if (node.IsTarget()) {
+  if (node.IsMoveTarget()) {
     // then fitch sets can't have changed, but the fitch sets recorded in
     // tree_'s changed fitch set map relative to this node are meant for this
     // node's new parent!
     return {node.GetMATNode().mutations, std::nullopt};
-  } else if (node.IsNew()) {
+  } else if (node.IsMoveNew()) {
     // Then fitch set changes are relative to the target node
-    auto result =
-        dag.GetChangedFitchSetMap().find(std::addressof(dag.GetTarget().GetMATNode()));
-    return {dag.GetTarget().GetMATNode().mutations,
+    auto result = dag.GetChangedFitchSetMap().find(
+        std::addressof(dag.GetMoveTarget().GetMATNode()));
+    return {dag.GetMoveTarget().GetMATNode().mutations,
             result == dag.GetChangedFitchSetMap().end()
                 ? std::nullopt
                 : std::make_optional(result->second)};
@@ -105,7 +105,7 @@ std::set<MutationPosition>
 FeatureConstView<HypotheticalNode, CRTP, Tag>::GetParentChangedBaseSites() const {
   auto& node = static_cast<const CRTP&>(*this);
   auto dag = node.GetDAG();
-  if (node.IsSource()) {
+  if (node.IsMoveSource()) {
     // this node used to be below the old source parent, so we need
     // differences between the new parent's new cg, and the old cg of the old
     // parent of the source node.
@@ -172,14 +172,14 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
 }
 
 template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetSource() const {
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.Get(NodeId{self.data_->move_.src->node_id});
 }
 
 template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetTarget() const {
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTarget() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.Get(NodeId{self.data_->move_.dst->node_id});
@@ -188,7 +188,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetTarget() const {
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldSourceParent() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetSource().GetOld().GetSingleParent().GetParent();
+  return dag.GetMoveSource().GetOld().GetSingleParent().GetParent();
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -212,7 +212,7 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
 
   Assert(src_node.GetId() != dst_node.GetId());
   Assert(src_parent.GetId() != dst_parent.GetId());
-  
+
   auto new_node = dag.AppendNode();
   auto new_edge = dag.AppendEdge(dst_parent, new_node, {0});
 
