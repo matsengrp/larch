@@ -205,47 +205,28 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
   auto& dag = static_cast<const CRTP&>(*this);
   Assert(dag.IsTree());
   Assert(not dag.HaveOverlays());
-  auto src_node = dag.Get(src);
-  auto dst_node = dag.Get(dst);
-  auto src_parent_edge = src_node.GetSingleParent();
-  auto dst_parent_edge = dst_node.GetSingleParent();
-  auto src_parent = src_parent_edge.GetParent();
-  auto dst_parent = dst_parent_edge.GetParent();
-  auto dst_grandparent_edge = dst_parent.GetSingleParent();
+  auto src_node = dag.Get(src).Overlay();
+  auto dst_node = dag.Get(dst).Overlay();
+  auto src_parent_edge = src_node.GetSingleParent().Overlay();
+  auto dst_parent_edge = dst_node.GetSingleParent().Overlay();
+  auto src_parent = src_parent_edge.GetParent().Overlay();
+  auto dst_parent = dst_parent_edge.GetParent().Overlay();
 
   Assert(src_node.GetId() != dst_node.GetId());
   Assert(src_parent.GetId() != dst_parent.GetId());
 
+  src_parent.RemoveChild(src_parent_edge.GetClade(), src_parent_edge);
+  dst_parent.RemoveChild(dst_parent_edge.GetClade(), dst_parent_edge);
+
   auto new_node = dag.AppendNode();
   auto new_edge = dag.AppendEdge(dst_parent, new_node, {0});
-
-  src_node.Overlay();
-  src_parent_edge.Overlay();
-  src_parent.Overlay();
-
-  dst_node.Overlay();
-  dst_parent_edge.Overlay();
-  dst_parent.Overlay();
 
   src_parent_edge.Set(new_node, src_node, {0});
   dst_parent_edge.Set(new_node, dst_node, {0});
 
-  auto build_connections = [&dag](EdgeId id) {
-    auto edge = dag.Get(id);
-    edge.GetParent().AddEdge(edge.GetClade(), edge, true);
-    edge.GetChild().AddEdge(edge.GetClade(), edge, false);
-  };
-
-  for (auto child_edge : src_parent.GetOld().GetChildren()) {
-    build_connections(child_edge);
-  }
-
-  for (auto child_edge : dst_parent.GetOld().GetChildren()) {
-    build_connections(child_edge);
-  }
-
-  build_connections(new_edge);
-  build_connections(dst_grandparent_edge);
+  new_node.AddEdge(src_parent_edge.GetClade(), src_parent_edge, true);
+  new_node.AddEdge(dst_parent_edge.GetClade(), dst_parent_edge, true);
+  new_node.AddEdge(new_edge.GetClade(), new_edge, false);
 }
 
 template <typename DAG, typename CRTP, typename Tag>

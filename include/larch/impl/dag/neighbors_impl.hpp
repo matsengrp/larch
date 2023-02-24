@@ -87,3 +87,20 @@ void FeatureMutableView<Neighbors, CRTP, Tag>::AddEdge(CladeIdx clade, EdgeId id
     GetFeatureStorage(this).parents_.push_back(id);
   }
 }
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Neighbors, CRTP, Tag>::RemoveParent(EdgeId edge) const {
+  auto& parents = GetFeatureStorage(this).parents_;
+  auto it = ranges::find(parents, edge);
+  Assert(it != parents.end());
+  parents.erase(it);
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Neighbors, CRTP, Tag>::RemoveChild(CladeIdx clade,
+                                                           EdgeId child) const {
+  auto& children = GetFeatureStorage(this).clades_.at(clade.value);
+  auto it = ranges::find(children, child);
+  Assert(it != children.end());
+  children.erase(it);
+}

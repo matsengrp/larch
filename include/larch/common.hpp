@@ -14,6 +14,7 @@
 #include <range/v3/algorithm/unique.hpp>
 #include <range/v3/algorithm/for_each.hpp>
 #include <range/v3/algorithm/all_of.hpp>
+#include <range/v3/algorithm/find.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/counted.hpp>
 #include <range/v3/view/drop.hpp>
@@ -96,7 +97,13 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   }
 #endif
 
-[[noreturn]] inline void Fail(const char* msg) { throw std::runtime_error(msg); }
+[[noreturn]] inline void Fail(const char* msg) {
+#ifndef NDEBUG
+  std::cerr << msg << "\n";
+  std::raise(SIGTRAP);
+#endif
+  throw std::runtime_error(msg);
+}
 
 #define MOVE_ONLY(x)                    \
   x(x&&) noexcept = default;            \

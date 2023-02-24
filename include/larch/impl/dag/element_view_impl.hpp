@@ -19,6 +19,11 @@ ElementView<Id, DAGViewType>::operator Id() const {
 }
 
 template <typename Id, typename DAGViewType>
+auto ElementView<Id, DAGViewType>::Const() const {
+  return dag_view_.Const().Get(id_);
+}
+
+template <typename Id, typename DAGViewType>
 DAGViewType ElementView<Id, DAGViewType>::GetDAG() const {
   return dag_view_;
 }

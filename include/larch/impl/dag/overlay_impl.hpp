@@ -54,7 +54,7 @@ void CopyFeatures(const FromDAG& from, Id id, ToTuple& to) {
 }  // namespace
 
 template <typename CRTP, typename Tag>
-void FeatureMutableView<Overlay, CRTP, Tag>::Overlay() {
+auto FeatureMutableView<Overlay, CRTP, Tag>::Overlay() {
   auto& element_view = static_cast<const CRTP&>(*this);
   auto id = element_view.GetId();
   Assert(not element_view.IsOverlaid());
@@ -72,6 +72,7 @@ void FeatureMutableView<Overlay, CRTP, Tag>::Overlay() {
       std::ignore = GetOrInsert(storage.added_edge_storage_, id);
     }
   }
+  return element_view;
 }
 
 template <typename CRTP, typename Tag>
@@ -159,7 +160,7 @@ auto OverlayDAGStorage<Target>::GetEdges() const {
 template <typename Target>
 void OverlayDAGStorage<Target>::InitializeNodes(size_t size) {
   if (size < GetTarget().GetNodesCount()) {
-    throw std::runtime_error("Overlayed DAG can only be grown");
+    Fail("Overlayed DAG can only be grown");
   }
   added_node_storage_.resize(size - GetTarget().GetNodesCount());
 }
@@ -191,31 +192,13 @@ const auto& OverlayDAGStorage<Target>::GetFeatureStorage(NodeId id) const {
 template <typename Target>
 template <typename F>
 auto& OverlayDAGStorage<Target>::GetFeatureStorage(EdgeId id) {
-  if (id.value < GetTarget().GetEdgesCount()) {
-    auto it = replaced_edge_storage_.find(id);
-    if (it == replaced_edge_storage_.end()) {
-      return GetTarget().template GetFeatureStorage<F>(id);
-    } else {
-      return std::get<F>(it->second);
-    }
-  } else {
-    return std::get<F>(added_edge_storage_.at(id.value - GetTarget().GetEdgesCount()));
-  }
+  return GetFeatureStorageImpl<F>(*this, id);
 }
 
 template <typename Target>
 template <typename F>
 const auto& OverlayDAGStorage<Target>::GetFeatureStorage(EdgeId id) const {
-  if (id.value < GetTarget().GetEdgesCount()) {
-    auto it = replaced_edge_storage_.find(id);
-    if (it == replaced_edge_storage_.end()) {
-      return GetTarget().template GetFeatureStorage<F>(id);
-    } else {
-      return std::get<F>(it->second);
-    }
-  } else {
-    return std::get<F>(added_edge_storage_.at(id.value - GetTarget().GetEdgesCount()));
-  }
+  return GetFeatureStorageImpl<F>(*this, id);
 }
 
 template <typename Target>
@@ -244,10 +227,16 @@ template <typename Target>
 template <typename F, typename OverlayStorageType>
 auto OverlayDAGStorage<Target>::GetFeatureStorageImpl(OverlayStorageType& self,
                                                       NodeId id)
-    -> std::conditional_t<OverlayStorageType::TargetView::is_mutable, F&, const F&> {
+    -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
+                              OverlayStorageType::TargetView::is_mutable,
+                          F&, const F&> {
   if (id.value < self.GetTarget().GetNodesCount()) {
     auto it = self.replaced_node_storage_.find(id);
     if (it == self.replaced_node_storage_.end()) {
+      if constexpr (not std::is_const_v<OverlayStorageType> and
+                    OverlayStorageType::TargetView::is_mutable) {
+        Fail("Can't modify non-overlaid node");
+      }
       return self.GetTarget().template GetFeatureStorage<F>(id);
     } else {
       return std::get<F>(it->second);
@@ -255,5 +244,29 @@ auto OverlayDAGStorage<Target>::GetFeatureStorageImpl(OverlayStorageType& self,
   } else {
     return std::get<F>(
         self.added_node_storage_.at(id.value - self.GetTarget().GetNodesCount()));
+  }
+}
+
+template <typename Target>
+template <typename F, typename OverlayStorageType>
+auto OverlayDAGStorage<Target>::GetFeatureStorageImpl(OverlayStorageType& self,
+                                                      EdgeId id)
+    -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
+                              OverlayStorageType::TargetView::is_mutable,
+                          F&, const F&> {
+  if (id.value < self.GetTarget().GetEdgesCount()) {
+    auto it = self.replaced_edge_storage_.find(id);
+    if (it == self.replaced_edge_storage_.end()) {
+      if constexpr (not std::is_const_v<OverlayStorageType> and
+                    OverlayStorageType::TargetView::is_mutable) {
+        Fail("Can't modify non-overlaid edge");
+      }
+      return self.GetTarget().template GetFeatureStorage<F>(id);
+    } else {
+      return std::get<F>(it->second);
+    }
+  } else {
+    return std::get<F>(
+        self.added_edge_storage_.at(id.value - self.GetTarget().GetEdgesCount()));
   }
 }

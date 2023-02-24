@@ -123,7 +123,6 @@ static auto MakeSampleDAG() {
   spr.ApplyMove({7}, {9});
 
   spr.RecomputeCompactGenomes();
-
   MADAGToDOT(spr, std::cout);
 }
 
@@ -137,3 +136,6 @@ static auto MakeSampleDAG() {
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[] { test_spr(MakeSampleDAG(), 3); }, "SPR: sample"});
+
+[[maybe_unused]] static const auto test_added3 =
+    add_test({[] { test_sample(); }, "SPR: move"});

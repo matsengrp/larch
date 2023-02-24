@@ -19,6 +19,11 @@ DAGView<Storage, Base>::operator DAGView<const Storage, Base>() const {
 }
 
 template <typename Storage, template <typename, typename> typename Base>
+DAGView<const Storage, Base> DAGView<Storage, Base>::Const() const {
+  return DAGView<const Storage, Base>{dag_storage_};
+}
+
+template <typename Storage, template <typename, typename> typename Base>
 ElementView<NodeId, DAGView<Storage, Base>> DAGView<Storage, Base>::Get(
     NodeId id) const {
   return {*this, id};

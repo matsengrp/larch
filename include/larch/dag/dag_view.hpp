@@ -38,6 +38,8 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   operator DAGView<const Storage, Base>() const;
 
+  DAGView<const Storage, Base> Const() const;
+
   /**
    * Get a Node or Edge view by its id
    * @{
