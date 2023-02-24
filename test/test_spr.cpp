@@ -14,8 +14,16 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&
                       nodes_with_major_allele_set_change) override {
+    Assert(move.src != nullptr);
+    Assert(move.dst != nullptr);
+
+    if (move.src->parent == nullptr or move.dst->parent == nullptr) {
+      // std::cout << "Root move!\n";
+      return false;
+    }
+
     if (move.src->parent->node_id == move.dst->parent->node_id) {
-      std::cout << "Siblings move! " << move.src->parent->node_id << "\n";
+      // std::cout << "Siblings move!\n";
       return false;
     }
     auto spr_storage = SPRStorage(sample_dag_);
@@ -24,7 +32,12 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     Assert(sample_mat_ != nullptr);
     spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
 
-    std::ignore = spr.GetRoot().GetFirstChild().GetChild().ComputeNewCompactGenome();
+    for (auto node : spr.Const().GetNodes()) {
+      if (node.IsRoot() or node.IsMoveNew()) {
+        continue;
+      }
+      std::ignore = node.Const().ComputeNewCompactGenome();
+    }
 
     return move.score_change < best_score_change;
   }
@@ -45,7 +58,7 @@ static MADAGStorage Load(std::string_view input_dag_path,
 }
 
 static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
-  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAG(input_dag);
@@ -122,7 +135,16 @@ static auto MakeSampleDAG() {
 
   spr.ApplyMove({7}, {9});
 
+  for (auto node : spr.GetNodes()) {
+    if (not node.IsOverlaid()) node.Overlay();
+  }
+
+  for (auto edge : spr.GetEdges()) {
+    if (not edge.IsOverlaid()) edge.Overlay();
+  }
+
   spr.RecomputeCompactGenomes();
+  
   MADAGToDOT(spr, std::cout);
 }
 

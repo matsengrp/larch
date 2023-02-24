@@ -49,7 +49,6 @@ template <>
 struct ExtraFeatureStorage<MATConversion> {
   ExtraFeatureStorage() = default;
   MOVE_ONLY(ExtraFeatureStorage);
-  //std::reference_wrapper<MAT::Tree> mat_tree_;
   MAT::Tree* mat_tree_ = nullptr;
   ContiguousMap<size_t, NodeId> reverse_map_;
 };

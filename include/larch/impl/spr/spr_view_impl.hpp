@@ -81,6 +81,7 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
     MutationPosition site) const {
   auto& node = static_cast<const CRTP&>(*this);
   auto dag = node.GetDAG();
+  Assert(site.value < dag.GetReferenceSequence().size());
   auto [old_fitch_sets, changes] = GetFitchSetParts();
   if (old_fitch_sets.find(static_cast<int>(site.value)) ==
       old_fitch_sets.mutations.end()) {
@@ -248,11 +249,18 @@ HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move,
                                       nodes_with_major_allele_set_change)
     : move_{move} {
   for (auto& node_with_allele_set_change : nodes_with_major_allele_set_change) {
+    Assert(node_with_allele_set_change.node != nullptr);
     std::map<MutationPosition, Mutation_Count_Change> node_map;
     for (auto& mutation_count_change :
          node_with_allele_set_change.major_allele_set_change) {
-      node_map.insert({{static_cast<size_t>(mutation_count_change.get_position())},
-                       mutation_count_change});
+      MutationPosition pos = {
+          static_cast<size_t>(mutation_count_change.get_position())};
+      // Assert(pos.value < 2147483647);
+      if (pos.value >= 2147483647) {
+        std::cout << "Warning: mutation_count_change invalid site\n";
+        continue;
+      }
+      node_map.insert({pos, mutation_count_change});
     }
     changed_fitch_set_map_.insert(
         {node_with_allele_set_change.node, std::move(node_map)});

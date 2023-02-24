@@ -1,6 +1,9 @@
 template <typename CRTP, typename Tag>
 bool FeatureConstView<MATConversion, CRTP, Tag>::HaveMATNode() const {
-  size_t id = GetMATNodeId();
+  size_t id = GetFeatureStorage(this).mat_node_id_;
+  if (id == NoId) {
+    return false;
+  }
   auto& node = static_cast<const CRTP&>(*this);
   return node.GetDAG().GetMAT().get_node(id) != nullptr;
 }

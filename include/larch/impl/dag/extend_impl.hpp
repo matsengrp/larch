@@ -181,7 +181,7 @@ auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() {
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 template <typename Id, typename F>
 const auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() const {
-  if constexpr (Target::template contains_element_feature<Id, F>) {
+  if constexpr (std::decay_t<Target>::template contains_element_feature<Id, F>) {
     return GetTarget().template GetFeatureExtraStorage<Id, F>();
   } else {
     if constexpr (std::is_same_v<Id, NodeId>) {
