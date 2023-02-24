@@ -205,13 +205,18 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
                                                                      NodeId dst) const {
   auto& dag = static_cast<const CRTP&>(*this);
   Assert(dag.IsTree());
-  Assert(not dag.HaveOverlays());
-  auto src_node = dag.Get(src).Overlay();
-  auto dst_node = dag.Get(dst).Overlay();
-  auto src_parent_edge = src_node.GetSingleParent().Overlay();
-  auto dst_parent_edge = dst_node.GetSingleParent().Overlay();
-  auto src_parent = src_parent_edge.GetParent().Overlay();
-  auto dst_parent = dst_parent_edge.GetParent().Overlay();
+  auto src_node = dag.Get(src);
+  auto dst_node = dag.Get(dst);
+  src_node.template SetOverlay<Neighbors>();
+  dst_node.template SetOverlay<Neighbors>();
+  auto src_parent_edge = src_node.GetSingleParent();
+  auto dst_parent_edge = dst_node.GetSingleParent();
+  src_parent_edge.template SetOverlay<Endpoints>();
+  dst_parent_edge.template SetOverlay<Endpoints>();
+  auto src_parent = src_parent_edge.GetParent();
+  auto dst_parent = dst_parent_edge.GetParent();
+  src_parent.template SetOverlay<Neighbors>();
+  dst_parent.template SetOverlay<Neighbors>();
 
   Assert(src_node.GetId() != dst_node.GetId());
   Assert(src_parent.GetId() != dst_parent.GetId());

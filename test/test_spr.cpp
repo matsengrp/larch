@@ -136,11 +136,9 @@ static auto MakeSampleDAG() {
   spr.ApplyMove({7}, {9});
 
   for (auto node : spr.GetNodes()) {
-    if (not node.IsOverlaid()) node.Overlay();
-  }
-
-  for (auto edge : spr.GetEdges()) {
-    if (not edge.IsOverlaid()) edge.Overlay();
+    if (not node.IsOverlaid<CompactGenome>()) {
+      node.SetOverlay<CompactGenome>();
+    }
   }
 
   spr.RecomputeCompactGenomes();

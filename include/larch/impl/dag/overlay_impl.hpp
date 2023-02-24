@@ -3,21 +3,28 @@
 #endif
 
 template <typename CRTP, typename Tag>
+template <typename F>
 bool FeatureConstView<Overlay, CRTP, Tag>::IsOverlaid() const {
   auto& element_view = static_cast<const CRTP&>(*this);
   auto id = element_view.GetId();
   auto& storage = element_view.GetDAG().GetStorage();
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     if (id.value < storage.GetTarget().GetNodesCount()) {
-      auto it = storage.replaced_node_storage_.find(id);
-      return (it != storage.replaced_node_storage_.end());
+      auto it = std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_)
+                    .find(id);
+      return it !=
+             std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_)
+                 .end();
     } else {
       return true;
     }
   } else {
     if (id.value < storage.GetTarget().GetEdgesCount()) {
-      auto it = storage.replaced_edge_storage_.find(id);
-      return (it != storage.replaced_edge_storage_.end());
+      auto it = std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_)
+                    .find(id);
+      return it !=
+             std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_)
+                 .end();
     } else {
       return true;
     }
@@ -36,38 +43,33 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsAppended() const {
   }
 }
 
-namespace {
-
-template <typename FromDAG, typename Id, typename ToTuple, size_t I = 0>
-void CopyFeatures(const FromDAG& from, Id id, ToTuple& to) {
-  if constexpr (I < std::tuple_size_v<ToTuple>) {
-    using type = std::tuple_element_t<I, ToTuple>;
-    if constexpr (std::is_copy_assignable_v<type>) {
-      std::get<I>(to) = from.template GetFeatureStorage<type>(id);
-    } else {
-      std::get<I>(to) = from.template GetFeatureStorage<type>(id).Copy();
-    }
-    CopyFeatures<FromDAG, Id, ToTuple, I + 1>(from, id, to);
-  }
-}
-
-}  // namespace
-
 template <typename CRTP, typename Tag>
-auto FeatureMutableView<Overlay, CRTP, Tag>::Overlay() {
+template <typename F>
+auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() {
   auto& element_view = static_cast<const CRTP&>(*this);
   auto id = element_view.GetId();
-  Assert(not element_view.IsOverlaid());
   auto& storage = element_view.GetDAG().GetStorage();
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     if (id.value < storage.GetTarget().GetNodesCount()) {
-      CopyFeatures(storage.GetTarget(), id, storage.replaced_node_storage_[id]);
+      if constexpr (std::is_copy_assignable_v<F>) {
+        std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_)[id] =
+            storage.GetTarget().template GetFeatureStorage<F>(id);
+      } else {
+        std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_)[id] =
+            storage.GetTarget().template GetFeatureStorage<F>(id).Copy();
+      }
     } else {
       std::ignore = GetOrInsert(storage.added_node_storage_, id);
     }
   } else {
     if (id.value < storage.GetTarget().GetEdgesCount()) {
-      CopyFeatures(storage.GetTarget(), id, storage.replaced_edge_storage_[id]);
+      if constexpr (std::is_copy_assignable_v<F>) {
+        std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_)[id] =
+            storage.GetTarget().template GetFeatureStorage<F>(id);
+      } else {
+        std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_)[id] =
+            storage.GetTarget().template GetFeatureStorage<F>(id).Copy();
+      }
     } else {
       std::ignore = GetOrInsert(storage.added_edge_storage_, id);
     }
@@ -231,15 +233,17 @@ auto OverlayDAGStorage<Target>::GetFeatureStorageImpl(OverlayStorageType& self,
                               OverlayStorageType::TargetView::is_mutable,
                           F&, const F&> {
   if (id.value < self.GetTarget().GetNodesCount()) {
-    auto it = self.replaced_node_storage_.find(id);
-    if (it == self.replaced_node_storage_.end()) {
+    auto it =
+        std::get<std::unordered_map<NodeId, F>>(self.replaced_node_storage_).find(id);
+    if (it ==
+        std::get<std::unordered_map<NodeId, F>>(self.replaced_node_storage_).end()) {
       if constexpr (not std::is_const_v<OverlayStorageType> and
                     OverlayStorageType::TargetView::is_mutable) {
         Fail("Can't modify non-overlaid node");
       }
       return self.GetTarget().template GetFeatureStorage<F>(id);
     } else {
-      return std::get<F>(it->second);
+      return it->second;
     }
   } else {
     return std::get<F>(
@@ -255,15 +259,17 @@ auto OverlayDAGStorage<Target>::GetFeatureStorageImpl(OverlayStorageType& self,
                               OverlayStorageType::TargetView::is_mutable,
                           F&, const F&> {
   if (id.value < self.GetTarget().GetEdgesCount()) {
-    auto it = self.replaced_edge_storage_.find(id);
-    if (it == self.replaced_edge_storage_.end()) {
+    auto it =
+        std::get<std::unordered_map<EdgeId, F>>(self.replaced_edge_storage_).find(id);
+    if (it ==
+        std::get<std::unordered_map<EdgeId, F>>(self.replaced_edge_storage_).end()) {
       if constexpr (not std::is_const_v<OverlayStorageType> and
                     OverlayStorageType::TargetView::is_mutable) {
         Fail("Can't modify non-overlaid edge");
       }
       return self.GetTarget().template GetFeatureStorage<F>(id);
     } else {
-      return std::get<F>(it->second);
+      return it->second;
     }
   } else {
     return std::get<F>(

@@ -18,9 +18,9 @@ static void test_overlay(std::string_view input_dag_path,
   Assert(not overlay_node.GetCompactGenome().empty());
   Assert(input_node.GetCompactGenome() == overlay_node.GetCompactGenome());
 
-  overlay_node.Overlay();
+  overlay_node.SetOverlay<CompactGenome>();
 
-  Assert(overlay_node.IsOverlaid());
+  Assert(overlay_node.IsOverlaid<CompactGenome>());
   Assert(not overlay_node.GetCompactGenome().empty());
   Assert(input_node.GetCompactGenome() == overlay_node.GetCompactGenome());
 

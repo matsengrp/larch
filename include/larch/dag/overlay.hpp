@@ -6,13 +6,15 @@ struct Overlay {};
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<Overlay, CRTP, Tag> {
+  template <typename F>
   bool IsOverlaid() const;
   bool IsAppended() const;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<Overlay, CRTP, Tag> {
-  auto Overlay();
+  template <typename F>
+  auto SetOverlay();
 };
 
 struct OverlayDAG {};  // TODO make it extra feature
@@ -26,6 +28,17 @@ struct FeatureConstView<OverlayDAG, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<OverlayDAG, CRTP, Tag>
     : FeatureConstView<OverlayDAG, CRTP, Tag> {};
+
+namespace {
+template <typename>
+struct ToOverlayStorage;
+
+template <typename... Features>
+struct ToOverlayStorage<std::tuple<Features...>> {
+  template <typename Id>
+  using type = std::tuple<std::unordered_map<Id, Features>...>;
+};
+}  // namespace
 
 template <typename Target>
 struct OverlayDAGStorage {
@@ -129,8 +142,10 @@ struct OverlayDAGStorage {
   friend struct FeatureMutableView;
 
   std::decay_t<Target> target_ = {};
-  std::unordered_map<NodeId, AllNodeFeatures> replaced_node_storage_;
-  std::unordered_map<EdgeId, AllEdgeFeatures> replaced_edge_storage_;
+  typename ToOverlayStorage<AllNodeFeatures>::template type<NodeId>
+      replaced_node_storage_;
+  typename ToOverlayStorage<AllEdgeFeatures>::template type<EdgeId>
+      replaced_edge_storage_;
   std::vector<AllNodeFeatures> added_node_storage_;
   std::vector<AllEdgeFeatures> added_edge_storage_;
 };
