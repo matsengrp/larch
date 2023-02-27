@@ -9,7 +9,7 @@ auto& GetFeatureStorage(const FeatureMutableView<Feature, CRTP, Tag>* feature) {
 
 template <typename CRTP, typename Feature, typename Tag>
 const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* feature) {
-  return static_cast<const CRTP&>(*feature).template GetFeatureStorage<Tag>();
+  return static_cast<const CRTP&>(*feature).Const().template GetFeatureStorage<Tag>();
 }
 
 bool operator==(NodeId lhs, NodeId rhs) { return lhs.value == rhs.value; }

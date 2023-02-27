@@ -207,6 +207,7 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
   Assert(dag.IsTree());
   auto src_node = dag.Get(src);
   auto dst_node = dag.Get(dst);
+  Assert(src_node.GetId() != dst_node.GetId());
   src_node.template SetOverlay<Neighbors>();
   dst_node.template SetOverlay<Neighbors>();
   auto src_parent_edge = src_node.GetSingleParent();
@@ -215,11 +216,11 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
   dst_parent_edge.template SetOverlay<Endpoints>();
   auto src_parent = src_parent_edge.GetParent();
   auto dst_parent = dst_parent_edge.GetParent();
+  const bool is_sibling_move = src_parent.GetId() == dst_parent.GetId();
   src_parent.template SetOverlay<Neighbors>();
-  dst_parent.template SetOverlay<Neighbors>();
-
-  Assert(src_node.GetId() != dst_node.GetId());
-  Assert(src_parent.GetId() != dst_parent.GetId());
+  if (not is_sibling_move) {
+    dst_parent.template SetOverlay<Neighbors>();
+  }
 
   src_parent.RemoveChild(src_parent_edge.GetClade(), src_parent_edge);
   dst_parent.RemoveChild(dst_parent_edge.GetClade(), dst_parent_edge);
@@ -260,9 +261,7 @@ HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move,
          node_with_allele_set_change.major_allele_set_change) {
       MutationPosition pos = {
           static_cast<size_t>(mutation_count_change.get_position())};
-      // Assert(pos.value < 2147483647);
       if (pos.value >= 2147483647) {
-        std::cout << "Warning: mutation_count_change invalid site\n";
         continue;
       }
       node_map.insert({pos, mutation_count_change});

@@ -17,15 +17,6 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     Assert(move.src != nullptr);
     Assert(move.dst != nullptr);
 
-    if (move.src->parent == nullptr or move.dst->parent == nullptr) {
-      // std::cout << "Root move!\n";
-      return false;
-    }
-
-    if (move.src->parent->node_id == move.dst->parent->node_id) {
-      // std::cout << "Siblings move!\n";
-      return false;
-    }
     auto spr_storage = SPRStorage(sample_dag_);
     auto spr = spr_storage.View();
 
