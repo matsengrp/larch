@@ -173,6 +173,34 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
   return result;
 }
 
+template <typename CRTP, typename Tag>
+bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNonrootAnchorNode() const {
+  auto& node = static_cast<const CRTP&>(*this);
+  if (not IsLCAAncestor()) {
+    return (node.GetOld().GetCompactGenome() == node.GetCompactGenome());
+            // TODO and node.GetOld().GetLeafSet() == node.GetLeafSet());
+  } else {
+    return false;
+  }
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGenome(
+    std::vector<NodeId>& result) const {
+  auto& node = static_cast<const CRTP&>(*this);
+  if (not node.IsMoveNew()) { // TODO compute new node CG
+    node = node.ComputeNewCompactGenome();
+  }
+  result.push_back(node);
+  // If we've reached an anchor node, there's no need to continue down this
+  // branch.
+  if (not node.IsNonrootAnchorNode()) {
+    for (auto child : node.GetChildren()) {
+      child.GetChild().PreorderComputeCompactGenome(result);
+    }
+  }
+}
+
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {
   auto& self = GetFeatureStorage(this);
@@ -193,6 +221,29 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldSourceParent() co
   return dag.GetMoveSource().GetOld().GetSingleParent().GetParent();
 }
 
+template <typename DAG, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  auto lca = FindLCA(dag.GetMoveSource(), dag.GetMoveTarget());
+  // TODO check earliest node with fitch set changes
+  return dag.Get(lca.lca);
+}
+
+template <typename DAG, typename CRTP, typename Tag>
+std::vector<NodeId> FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment()
+    const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  std::vector<NodeId> result;
+  auto oldest_changed = dag.GetOldestChangedNode();
+  if (oldest_changed.IsRoot()) {
+    // we need to add the UA node as the root anchor node of the fragment,
+    // somehow
+  } else {
+    result.push_back(oldest_changed.GetSingleParent().GetParent());
+  }
+  oldest_changed.PreorderComputeCompactGenome(result);
+  return result;
+}
 template <typename DAG, typename CRTP, typename Tag>
 const std::map<const MAT::Node*, std::map<MutationPosition, Mutation_Count_Change>>&
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetChangedFitchSetMap() const {

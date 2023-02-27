@@ -50,8 +50,8 @@ struct FeatureConstView<Deduplicate<Feature>, CRTP>
 template <typename Feature, typename CRTP>
 struct FeatureMutableView<Deduplicate<Feature>, CRTP>
     : FeatureMutableView<Feature, CRTP, Deduplicate<Feature>> {
-  auto& operator=(Feature&& feature);
-  auto& operator=(const Feature* feature);
+  auto& operator=(Feature&& feature) const;
+  auto& operator=(const Feature* feature) const;
 };
 
 template <typename Feature, typename CRTP>

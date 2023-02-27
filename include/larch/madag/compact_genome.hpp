@@ -77,7 +77,7 @@ struct FeatureConstView<CompactGenome, CRTP, Tag> {
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<CompactGenome, CRTP, Tag> {
-  auto& operator=(CompactGenome&& compact_genome);
+  auto& operator=(CompactGenome&& compact_genome) const;
 };
 
 #include "larch/impl/madag/compact_genome_impl.hpp"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "larch/usher_glue.hpp"
+#include "larch/spr/lca.hpp"
 
 struct FitchSet {
   FitchSet(char base) : value_{base} {}
@@ -28,6 +29,16 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
   bool IsMoveSource() const;
   bool IsMoveTarget() const;
   bool IsMoveNew() const;
+
+  // returns true if this node is an ancestor of the
+  // source-target-LCA (the node returned by HypotheticalTree::GetLCA()),
+  // which disqualifies a node from being a nonroot anchor
+  // node (this method is used in IsNonrootAnchorNode)
+  bool IsLCAAncestor() const {
+    // TODO implement
+    return false;
+  }
+
   auto GetOld() const;
 
   const std::set<MutationPosition>& GetChangedBaseSites() const;
@@ -49,10 +60,19 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
   [[nodiscard]] std::set<MutationPosition> GetParentChangedBaseSites() const;
 
   [[nodiscard]] CompactGenome ComputeNewCompactGenome() const;
+
+  // A tree fragment has two kinds of anchor nodes: One root anchor node, which
+  // is always the parent of HypotheticalTree.GetOldestChangedNode(), and the
+  // rest are what I'm calling here "nonroot anchor nodes", whose descendants
+  // in the hypothetical tree are guaranteed to also be unchanged from before
+  // the SPR move. This method identifies the second kind.
+  bool IsNonrootAnchorNode() const;
 };
 
 template <typename CRTP, typename Tag>
-struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {};
+struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {
+  void PreorderComputeCompactGenome(std::vector<NodeId>& result) const;
+};
 
 template <typename DAG>
 struct HypotheticalTree {
@@ -88,7 +108,9 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
 
   // returns LCA of source and target, or the earliest node with fitch set
   // changes, whichever is higher in the tree.
-  auto GetOldestChangedNode() const;
+  [[nodiscard]] auto GetOldestChangedNode() const;
+
+  [[nodiscard]] std::vector<NodeId> GetFragment() const;
 
   const std::map<const MAT::Node*, std::map<MutationPosition, Mutation_Count_Change>>&
   GetChangedFitchSetMap() const;
