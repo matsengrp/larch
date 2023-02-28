@@ -47,7 +47,9 @@ class HypotheticalTreeNode {
   // source-target-LCA (the node returned by HypotheticalTree::GetLCA()),
   // which disqualifies a node from being a nonroot anchor
   // node (this method is used in IsNonrootAnchorNode)
-  bool IsLCAAncestor();
+  bool IsLCAAncestor(){
+    return tree_.LCAAncestors.find(this);
+  }
 
   // This only works correctly once ComputeNewCompactGenome has been called on
   // the node, if it needs to be.
@@ -215,6 +217,13 @@ class HypotheticalTree {
           changed_fitch_set_map_.insert({node_with_allele_set_change.node, node_with_allele_set_change.major_allele_set_change})
         }
 
+        //mark LCA ancestors
+        HypotheticalTreeNode lca = GetLCA();
+        LCAAncestors.insert(lca);
+        while (true) {
+          lca = lca.GetParent();
+          LCAAncestors.insert(lca);
+        }
       }
 
   // Get the LCA of source and target nodes
@@ -266,6 +275,7 @@ class HypotheticalTree {
     const MAT& sample_mat_;
     const Profitable_Moves& move;
     std::map<MAT::Node*, std::map<size_t, MAT::Mutation_Count_Change&>> changed_fitch_set_map_;
+    std::set<HypotheticalTreeNode> LCAAncestors;
 }
 
 // // From
