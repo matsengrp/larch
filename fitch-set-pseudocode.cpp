@@ -19,6 +19,9 @@ class HypotheticalTreeNode {
   std::vector<HypotheticalTreeNode> GetChildren();
   HypotheticalTreeNode GetParent();
 
+  // Get the parent of this node before the SPR move
+  HypotheticalTreeNode GetOldParent();
+
   CompactGenome GetOldCompactGenome() {
     if (IsNewNode()) {
       return tree_.GetTarget().GetOldCompactGenome();
@@ -88,8 +91,11 @@ class HypotheticalTreeNode {
     if (old_fitch_sets.find(site) == old_fitch_sets.mutations.end()) {
       // if no fitch set is recorded on the corresponding MAT node, we can use
       // a singleton set containing the base at this site in the parent compact genome
-      // TODO: Does this work if IsSourceNode()?
-      return FitchSet({GetParent().GetNewCompactGenome().GetBase(site)});
+      if (changes) {
+        return FitchSet({GetOldParent().GetOldCompactGenome().GetBase(site)} & (~changes->get_decremented()) | changes->get_incremented());
+      } else {
+        return FitchSet({GetOldParent().GetOldCompactGenome().GetBase(site)});
+      }
     } else if (changes) {
       return FitchSet((old_fitch_sets.find(site).get_all_major_allele() & (~changes->get_decremented())) | changes->get_incremented());
     } else {
@@ -117,7 +123,6 @@ class HypotheticalTreeNode {
   }
 
   void ComputeNewCompactGenome() {
-    std::set<size_t>& changed_parent_sites = GetSitesWithChangedFitchSets();
     CompactGenome& old_cg = GetOldCompactGenome();
     std::map<size_t, char> cg_changes;
     if IsRoot() {
@@ -209,6 +214,7 @@ class HypotheticalTree {
           }
           changed_fitch_set_map_.insert({node_with_allele_set_change.node, node_with_allele_set_change.major_allele_set_change})
         }
+
       }
 
   // Get the LCA of source and target nodes
@@ -230,7 +236,17 @@ class HypotheticalTree {
 
   // returns LCA of source and target, or the earliest node with fitch set
   // changes, whichever is higher in the tree.
-  HypotheticalTreeNode GetOldestChangedNode();
+  HypotheticalTreeNode GetOldestChangedNode() {
+    HypotheticalTreeNode oldest_changed_node = GetLCA().mat_node_;
+    for (auto node_change : changed_fitch_set_map_) {
+      if (node_change.first.dfs_index < oldest_changed_node.dfs_index) {
+        oldest_changed_node = node_change.first;
+      }
+    }
+    // well... return the HypotheticalTreeNode corresponding to the mat node
+    // oldest_changed_node.
+    return oldest_changed_node
+  }
 
   std::vector<HypotheticalTreeNode> GetFragment() {
     std::vector<HypotheticalTreeNode> result;
