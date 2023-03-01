@@ -34,7 +34,7 @@ FetchContent_MakeAvailable(json)
 include(ExternalProject)
 ExternalProject_Add(range-v3
     GIT_REPOSITORY      https://github.com/ericniebler/range-v3.git
-    GIT_TAG             0.11.0
+    GIT_TAG             0.12.0
     GIT_SHALLOW         true
     GIT_PROGRESS        true
     UPDATE_DISCONNECTED true

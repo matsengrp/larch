@@ -13,8 +13,8 @@ bool operator<(MutationPosition lhs, MutationPosition rhs) {
 template <typename T>
 EdgeMutations::EdgeMutations(T&& mutations_view,
                              std::enable_if_t<not std::is_same_v<T, EdgeMutations>>*) {
-  for (auto [pos, muts] : mutations_view) {
-    mutations_.Insert(pos, muts);
+  for (auto mut : mutations_view) {
+    mutations_.insert(mut);
   }
 }
 
@@ -39,10 +39,9 @@ auto EdgeMutations::operator[](MutationPosition pos) -> decltype(mutations_[pos]
   return mutations_[pos];
 }
 
-auto EdgeMutations::insert(std::pair<MutationPosition, std::pair<char, char>> mut)
-    -> decltype(mutations_.Insert(mut.first, mut.second)) {
+auto EdgeMutations::insert(std::pair<MutationPosition, std::pair<char, char>> mut) {
   Assert(mut.first.value != NoId);
-  return mutations_.Insert(mut.first, mut.second);
+  return mutations_.insert(mut);
 }
 
 bool EdgeMutations::operator==(const EdgeMutations& rhs) const {

@@ -13,7 +13,7 @@ void FeatureMutableView<MappedNodes, CRTP, Tag>::SetOriginalId(NodeId id) const 
   auto& node = static_cast<const CRTP&>(*this);
   node.GetDAG()
       .template GetFeatureExtraStorage<NodeId, MappedNodes>()
-      .reverse_map_.Insert(id, node.GetId());
+      .reverse_map_.insert({id, node.GetId()});
 }
 
 template <typename CRTP>

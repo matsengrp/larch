@@ -28,7 +28,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
         continue;
       }
       // std::ignore = node.Const().ComputeNewCompactGenome();
-      std::ignore = spr.GetFragment();
+      // std::ignore = spr.GetFragment();
     }
 
     return move.score_change < best_score_change;

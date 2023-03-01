@@ -32,8 +32,7 @@ class EdgeMutations {
   inline auto end() const -> decltype(mutations_.end());
   inline size_t size() const;
   inline auto operator[](MutationPosition pos) -> decltype(mutations_[pos]);
-  inline auto insert(std::pair<MutationPosition, std::pair<char, char>> mut)
-      -> decltype(mutations_.Insert(mut.first, mut.second));
+  inline auto insert(std::pair<MutationPosition, std::pair<char, char>> mut);
   inline bool operator==(const EdgeMutations& rhs) const;
   inline bool operator!=(const EdgeMutations& rhs) const;
 

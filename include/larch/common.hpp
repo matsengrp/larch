@@ -8,24 +8,7 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wstack-usage="
-#include <range/v3/action/push_back.hpp>
-#include <range/v3/action/sort.hpp>
-#include <range/v3/action/unique.hpp>
-#include <range/v3/algorithm/unique.hpp>
-#include <range/v3/algorithm/for_each.hpp>
-#include <range/v3/algorithm/all_of.hpp>
-#include <range/v3/algorithm/find.hpp>
-#include <range/v3/range/conversion.hpp>
-#include <range/v3/view/counted.hpp>
-#include <range/v3/view/drop.hpp>
-#include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/group_by.hpp>
-#include <range/v3/view/indices.hpp>
-#include <range/v3/view/join.hpp>
-#include <range/v3/view/reverse.hpp>
-#include <range/v3/view/subrange.hpp>
-#include <range/v3/view/transform.hpp>
-#include <range/v3/view/zip.hpp>
+#include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
 
 struct NodeId;

@@ -15,6 +15,7 @@
 #include "larch/dag/dag.hpp"
 #include "larch/madag/edge_mutations.hpp"
 #include "larch/contiguous_map.hpp"
+#include "larch/contiguous_set.hpp"
 
 class CompactGenome {
   ContiguousMap<MutationPosition, char> mutations_ = {};
@@ -44,11 +45,12 @@ class CompactGenome {
   inline void AddParentEdge(const EdgeMutations& mutations, const CompactGenome& parent,
                             std::string_view reference_sequence);
 
-  inline void ApplyChanges(const std::map<MutationPosition, char>& changes);
+  inline void ApplyChanges(const ContiguousMap<MutationPosition, char>& changes);
 
   inline char GetBase(MutationPosition pos, std::string_view reference_sequence) const;
 
-  inline std::set<MutationPosition> DifferingSites(const CompactGenome& other) const;
+  inline ContiguousSet<MutationPosition> DifferingSites(
+      const CompactGenome& other) const;
 
   [[nodiscard]] inline static EdgeMutations ToEdgeMutations(
       std::string_view reference_sequence, const CompactGenome& parent,

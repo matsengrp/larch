@@ -2,6 +2,7 @@
 
 #include "larch/usher_glue.hpp"
 #include "larch/spr/lca.hpp"
+#include "larch/contiguous_set.hpp"
 
 struct FitchSet {
   FitchSet(char base) : value_{base} {}
@@ -20,7 +21,7 @@ struct FitchSet {
 };
 
 struct HypotheticalNode {
-  std::set<MutationPosition> changed_base_sites_;
+  ContiguousSet<MutationPosition> changed_base_sites_;
 };
 
 template <typename CRTP, typename Tag>
@@ -41,14 +42,14 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
 
   auto GetOld() const;
 
-  const std::set<MutationPosition>& GetChangedBaseSites() const;
+  const ContiguousSet<MutationPosition>& GetChangedBaseSites() const;
 
   // return a set of site indices at which there are fitch set changes
-  [[nodiscard]] std::set<MutationPosition> GetSitesWithChangedFitchSets() const;
+  [[nodiscard]] ContiguousSet<MutationPosition> GetSitesWithChangedFitchSets() const;
 
   [[nodiscard]] std::pair<
       MAT::Mutations_Collection,
-      std::optional<std::map<MutationPosition, Mutation_Count_Change>>>
+      std::optional<ContiguousMap<MutationPosition, Mutation_Count_Change>>>
   GetFitchSetParts() const;
 
   // get the (possibly modified) fitch set at this node at the provided site.
@@ -57,7 +58,7 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
   // Most of the time this can just return the parent node's
   // changed_base_sites. However, it's different if the node in question is the
   // source node!
-  [[nodiscard]] std::set<MutationPosition> GetParentChangedBaseSites() const;
+  [[nodiscard]] ContiguousSet<MutationPosition> GetParentChangedBaseSites() const;
 
   [[nodiscard]] CompactGenome ComputeNewCompactGenome() const;
 
@@ -81,7 +82,8 @@ struct HypotheticalTree {
          const std::vector<Node_With_Major_Allele_Set_Change>&
              nodes_with_major_allele_set_change);
     Profitable_Moves move_;
-    std::map<const MAT::Node*, std::map<MutationPosition, Mutation_Count_Change>>
+    ContiguousMap<const MAT::Node*,
+                  ContiguousMap<MutationPosition, Mutation_Count_Change>>
         changed_fitch_set_map_;
   };
   std::unique_ptr<Data> data_;  // TODO fixme
@@ -112,7 +114,8 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
 
   [[nodiscard]] std::vector<NodeId> GetFragment() const;
 
-  const std::map<const MAT::Node*, std::map<MutationPosition, Mutation_Count_Change>>&
+  const ContiguousMap<const MAT::Node*,
+                      ContiguousMap<MutationPosition, Mutation_Count_Change>>&
   GetChangedFitchSetMap() const;
 };
 

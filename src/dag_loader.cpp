@@ -170,7 +170,7 @@ static CompactGenome GetCompactGenome(const nlohmann::json& json,
     MutationPosition position = {mutation[0]};
     std::string mut_nuc = mutation[1][1].get<std::string>();
     Assert(mut_nuc.size() == 1);
-    result.Insert(position, mut_nuc.at(0));
+    result.insert({position, mut_nuc.at(0)});
   }
   return result;
 }

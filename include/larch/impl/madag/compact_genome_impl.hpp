@@ -8,7 +8,7 @@ static void ComputeMutations(const EdgeMutations& edge_mutations,
                              ContiguousMap<MutationPosition, char>& result) {
   for (auto [pos, nucs] : edge_mutations) {
     const bool is_valid = nucs.second != reference_sequence.at(pos.value - 1);
-    auto it = result.LowerBound(pos);
+    auto it = result.find(pos);
     if (it != result.end() and it->first == pos) {
       if (is_valid) {
         it->second = nucs.second;
@@ -17,7 +17,7 @@ static void ComputeMutations(const EdgeMutations& edge_mutations,
       }
     } else {
       if (is_valid) {
-        result.insert(it, {pos, nucs.second});
+        result.Insert(it, {pos, nucs.second});
       }
     }
   }
@@ -34,32 +34,32 @@ void CompactGenome::AddParentEdge(const EdgeMutations& mutations,
   hash_ = ComputeHash(mutations_);
 }
 
-void CompactGenome::ApplyChanges(const std::map<MutationPosition, char>& changes) {
-  for (auto [pos, mut] : changes) {
-    mutations_.Insert(pos, mut);
+void CompactGenome::ApplyChanges(const ContiguousMap<MutationPosition, char>& changes) {
+  for (auto change : changes) {
+    mutations_.insert(change);
   }
 }
 
 char CompactGenome::GetBase(MutationPosition pos,
                             std::string_view reference_sequence) const {
-  auto it = mutations_.LowerBound(pos);
+  auto it = mutations_.find(pos);
   if (it != mutations_.end() and it->first == pos) {
     return it->second;
   }
   return reference_sequence.at(pos.value);
 }
 
-std::set<MutationPosition> CompactGenome::DifferingSites(
+ContiguousSet<MutationPosition> CompactGenome::DifferingSites(
     const CompactGenome& other) const {
-  std::set<MutationPosition> result;
+  ContiguousSet<MutationPosition> result;
   for (auto [pos, base] : mutations_) {
-    auto it = other.mutations_.LowerBound(pos);
+    auto it = other.mutations_.find(pos);
     if (it == other.mutations_.end() or it->second != base) {
       result.insert(pos);
     }
   }
   for (auto [pos, base] : other.mutations_) {
-    auto it = mutations_.LowerBound(pos);
+    auto it = mutations_.find(pos);
     if (it == mutations_.end() or it->second != base) {
       result.insert(pos);
     }
@@ -85,7 +85,7 @@ bool CompactGenome::operator<(const CompactGenome& rhs) const noexcept {
 size_t CompactGenome::Hash() const noexcept { return hash_; }
 
 std::optional<char> CompactGenome::operator[](MutationPosition pos) const {
-  auto it = mutations_.LowerBound(pos);
+  auto it = mutations_.find(pos);
   if (it != mutations_.end() and it->first == pos) {
     return it->second;
   }
