@@ -204,6 +204,7 @@ void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGeno
     std::vector<NodeId>& result) const {
   auto& node = static_cast<const CRTP&>(*this);
   if (not node.IsMoveNew()) {  // TODO compute new node CG
+    node.template SetOverlay<CompactGenome>(); //TODO
     node = node.ComputeNewCompactGenome();
   }
   result.push_back(node);
@@ -337,7 +338,7 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   NodeId lca = dag.GetMoveLCA();
   do {
     self.data_->lca_ancestors_.insert(lca);
-    lca = dag.GetMoveLCA().GetSingleParent().GetParent();
+    lca = dag.Get(lca).GetSingleParent().GetParent();
   } while (not dag.Get(lca).IsRoot());
 }
 
