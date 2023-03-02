@@ -68,7 +68,8 @@ class ContiguousSet {
   void Union(const ContiguousSet& other) {
     storage_type result;
     result.reserve(std::max(data_.size(), other.data_.size()));
-    ranges::set_union(data_, other.data_, ranges::back_inserter(result));
+    std::set_union(data_.begin(), data_.end(), other.data_.begin(), other.data_.end(),
+                   std::back_inserter(result));
     data_ = std::move(result);
   }
 

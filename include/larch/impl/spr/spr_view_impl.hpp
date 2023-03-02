@@ -23,6 +23,13 @@ bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveNew() const {
 }
 
 template <typename CRTP, typename Tag>
+bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsLCAAncestor() const {
+  auto& node = static_cast<const CRTP&>(*this);
+  auto& ancestors = node.GetDAG().GetLCAAncestors();
+  return ancestors.find(node) != ancestors.end();
+}
+
+template <typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalNode, CRTP, Tag>::GetOld() const {
   auto& node = static_cast<const CRTP&>(*this);
   return node.GetDAG().GetOriginal().Get(node.GetId());
@@ -88,9 +95,15 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
       old_fitch_sets.mutations.end()) {
     // if no fitch set is recorded on the corresponding MAT node, we can use
     // a singleton set containing the base at this site in the parent compact genome
-    // TODO: Does this work if IsSourceNode()?
-    return FitchSet({node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
-        site, dag.GetReferenceSequence())});
+    if (changes) {
+      return FitchSet({node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
+                           site, dag.GetReferenceSequence()) &
+                       (~changes.value().at(site).get_decremented() |
+                        changes.value().at(site).get_incremented())});
+    } else {
+      return FitchSet({node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
+          site, dag.GetReferenceSequence())});
+    }
   } else if (changes.has_value()) {
     return FitchSet(
         (old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele() &
@@ -204,6 +217,13 @@ void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGeno
 }
 
 template <typename DAG, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveLCA() const {
+  auto& self = GetFeatureStorage(this);
+  auto& dag = static_cast<const CRTP&>(*this);
+  return dag.Get(NodeId{self.data_->move_.LCA->node_id});
+};
+
+template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
@@ -226,9 +246,13 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldSourceParent() co
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  auto lca = FindLCA(dag.GetMoveSource(), dag.GetMoveTarget());
-  // TODO check earliest node with fitch set changes
-  return dag.Get(lca.lca);
+  const MAT::Node* oldest_changed_node = std::addressof(dag.GetMoveLCA().GetMATNode());
+  for (auto& node_change : dag.GetChangedFitchSetMap()) {
+    if (node_change.first->dfs_index < oldest_changed_node->dfs_index) {
+      oldest_changed_node = node_change.first;
+    }
+  }
+  return dag.GetNodeFromMAT(oldest_changed_node->node_id);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -251,7 +275,16 @@ const ContiguousMap<const MAT::Node*,
                     ContiguousMap<MutationPosition, Mutation_Count_Change>>&
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetChangedFitchSetMap() const {
   auto& self = GetFeatureStorage(this);
+  Assert(self.data_);
   return self.data_->changed_fitch_set_map_;
+}
+
+template <typename DAG, typename CRTP, typename Tag>
+const ContiguousSet<NodeId>&
+FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetLCAAncestors() const {
+  auto& self = GetFeatureStorage(this);
+  Assert(self.data_);
+  return self.data_->lca_ancestors_;
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -301,6 +334,11 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
                 dag.GetNodeFromMAT(move.dst->node_id));
   self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
       typename HypotheticalTree<DAG>::Data{move, nodes_with_major_allele_set_change});
+  NodeId lca = dag.GetMoveLCA();
+  do {
+    self.data_->lca_ancestors_.insert(lca);
+    lca = dag.GetMoveLCA().GetSingleParent().GetParent();
+  } while (not dag.Get(lca).IsRoot());
 }
 
 template <typename DAG>

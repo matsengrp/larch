@@ -23,13 +23,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     Assert(sample_mat_ != nullptr);
     spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
 
-    for (auto node : spr.Const().GetNodes()) {
-      if (node.IsRoot() or node.IsMoveNew()) {
-        continue;
-      }
-      // std::ignore = node.Const().ComputeNewCompactGenome();
-      // std::ignore = spr.GetFragment();
-    }
+    std::ignore = spr.GetFragment();
 
     return move.score_change < best_score_change;
   }
@@ -134,7 +128,7 @@ static auto MakeSampleDAG() {
   }
 
   spr.RecomputeCompactGenomes();
-  
+
   MADAGToDOT(spr, std::cout);
 }
 

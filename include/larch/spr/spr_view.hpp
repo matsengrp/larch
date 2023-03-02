@@ -35,10 +35,7 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
   // source-target-LCA (the node returned by HypotheticalTree::GetLCA()),
   // which disqualifies a node from being a nonroot anchor
   // node (this method is used in IsNonrootAnchorNode)
-  bool IsLCAAncestor() const {
-    // TODO implement
-    return false;
-  }
+  bool IsLCAAncestor() const;
 
   auto GetOld() const;
 
@@ -85,6 +82,7 @@ struct HypotheticalTree {
     ContiguousMap<const MAT::Node*,
                   ContiguousMap<MutationPosition, Mutation_Count_Change>>
         changed_fitch_set_map_;
+    ContiguousSet<NodeId> lca_ancestors_;
   };
   std::unique_ptr<Data> data_;  // TODO fixme
 };
@@ -117,6 +115,8 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   const ContiguousMap<const MAT::Node*,
                       ContiguousMap<MutationPosition, Mutation_Count_Change>>&
   GetChangedFitchSetMap() const;
+
+  const ContiguousSet<NodeId>& GetLCAAncestors() const;
 };
 
 template <typename DAG, typename CRTP, typename Tag>
