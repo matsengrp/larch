@@ -61,7 +61,9 @@ auto ExtraFeatureConstView<MATConversion, CRTP>::GetNodeFromMAT(
 template <typename CRTP>
 MAT::Tree& ExtraFeatureMutableView<MATConversion, CRTP>::GetMutableMAT() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return *dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
+  auto* result = dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
+  Assert(result != nullptr);
+  return *result;
 }
 
 template <typename CRTP>

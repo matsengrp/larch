@@ -68,6 +68,77 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
   }
 }
 
+template <typename SampleDAG>
+struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback {
+  Single_Move_Callback_With_Hypothetical_Tree(Merge<MADAG>& merge, SampleDAG sample)
+      : merge_{merge}, sample_{sample}, approved_a_move_{false} {}
+
+  bool operator()(Profitable_Moves& move, int /*best_score_change*/,
+                  std::vector<Node_With_Major_Allele_Set_Change>&
+                      nodes_with_major_allele_set_change) override {
+    if (!approved_a_move_) {
+      // apply move to merge object.
+
+      auto spr_storage = SPRStorage(sample_);
+      auto spr = spr_storage.View();
+
+      // ** create hypothetical tree
+      spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
+
+      // ** build fragment
+      auto spr_fragment = spr.GetFragment();
+
+      // set flag so we don't approve any more moves
+      approved_a_move_ = true;
+
+      // ** merge fragment into merge
+      // TODO merge_.AddDAG(spr_fragment);
+
+      // return true so we do apply this move.
+      return true;
+
+    } else {
+      return !approved_a_move_;
+    }
+  }
+  Merge<MADAG>& merge_;
+  SampleDAG sample_;
+  bool approved_a_move_;
+};
+
+static void test_optimizing_with_hypothetical_tree(
+    const MADAGStorage& tree_shaped_dag) {
+  // this test takes a tree and uses matOptimize to apply a single move.
+
+  Merge<MADAG> dag_altered_in_callback{tree_shaped_dag.View().GetReferenceSequence()};
+  dag_altered_in_callback.AddDAGs({tree_shaped_dag.View()});
+
+  // sample tree
+  SubtreeWeight<ParsimonyScore, MergeDAG> weight{dag_altered_in_callback.GetResult()};
+  auto sample = AddMATConversion(weight.SampleTree({}));
+  check_edge_mutations(sample.View());
+  MAT::Tree mat;
+  sample.View().BuildMAT(mat);
+
+  // create a callback that only allows one move
+  Single_Move_Callback_With_Hypothetical_Tree single_move_callback{
+      dag_altered_in_callback, sample.View()};
+
+  // optimize tree with matOptimize using a callback that only applies a single move
+  auto optimized_tree =
+      optimize_dag_direct(sample.View(), single_move_callback, [](MAT::Tree) {});
+
+  Merge<MADAG> two_tree_dag{tree_shaped_dag.View().GetReferenceSequence()};
+  two_tree_dag.AddDAG(sample.View());
+  two_tree_dag.AddDAG(optimized_tree.first.View());
+
+  // check topologies of the two DAGs match in feature count
+  Assert(two_tree_dag.GetResult().GetNodesCount() ==
+         dag_altered_in_callback.GetResult().GetNodesCount());
+  Assert(two_tree_dag.GetResult().GetEdgesCount() ==
+         dag_altered_in_callback.GetResult().GetEdgesCount());
+}
+
 static auto MakeSampleDAG() {
   MADAGStorage input_storage;
   auto dag = input_storage.View();
@@ -145,3 +216,11 @@ static auto MakeSampleDAG() {
 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});
+
+[[maybe_unused]] static const auto test_added4 =
+    add_test({[] {
+                test_optimizing_with_hypothetical_tree(
+                    Load("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
+                         "data/20D_from_fasta/refseq.txt.gz"));
+              },
+              "SPR: single"});

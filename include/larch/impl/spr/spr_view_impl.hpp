@@ -203,8 +203,8 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGenome(
     std::vector<NodeId>& result) const {
   auto& node = static_cast<const CRTP&>(*this);
-  if (not node.IsMoveNew()) {  // TODO compute new node CG
-    node.template SetOverlay<Deduplicate<CompactGenome>>(); //TODO
+  if (not node.IsRoot() and not node.IsMoveNew()) { // TODO
+    node.template SetOverlay<Deduplicate<CompactGenome>>();
     node = node.ComputeNewCompactGenome();
   }
   result.push_back(node);
