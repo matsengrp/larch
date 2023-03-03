@@ -87,7 +87,7 @@ FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetParts() const {
 template <typename CRTP, typename Tag>
 FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
     MutationPosition site) const {
-  auto& node = static_cast<const CRTP&>(*this);
+  auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
   Assert(site.value < dag.GetReferenceSequence().size());
   auto [old_fitch_sets, changes] = GetFitchSetParts();
@@ -139,7 +139,7 @@ FeatureConstView<HypotheticalNode, CRTP, Tag>::GetParentChangedBaseSites() const
 template <typename CRTP, typename Tag>
 CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGenome()
     const {
-  auto& node = static_cast<const CRTP&>(*this);
+  auto node = static_cast<const CRTP&>(*this).Const();
   Assert(node.GetMATNodeId() != NoId);
   ContiguousSet<MutationPosition> changed_base_sites =
       node.GetSitesWithChangedFitchSets();
@@ -204,7 +204,7 @@ void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGeno
     std::vector<NodeId>& result) const {
   auto& node = static_cast<const CRTP&>(*this);
   if (not node.IsMoveNew()) {  // TODO compute new node CG
-    node.template SetOverlay<CompactGenome>(); //TODO
+    node.template SetOverlay<Deduplicate<CompactGenome>>(); //TODO
     node = node.ComputeNewCompactGenome();
   }
   result.push_back(node);

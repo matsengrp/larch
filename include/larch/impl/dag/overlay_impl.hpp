@@ -45,7 +45,7 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsAppended() const {
 
 template <typename CRTP, typename Tag>
 template <typename F>
-auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() {
+auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   auto& element_view = static_cast<const CRTP&>(*this);
   auto id = element_view.GetId();
   auto& storage = element_view.GetDAG().GetStorage();

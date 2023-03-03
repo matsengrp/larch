@@ -3,6 +3,10 @@
 #include <cstddef>
 #include <limits>
 #include <vector>
+#include <tuple>
+#include <typeinfo>
+
+//////////////////////////////////////////////////////////////////////////////////////
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -117,5 +121,29 @@ struct tuple_contains<std::tuple<Types...>, Type>
 
 template <typename Tuple, typename Type>
 inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Wc++20-extensions"
+template <typename T>
+inline constexpr auto tuple_to_string_impl = [
+]<std::size_t... I>(std::index_sequence<I...>) {
+  std::string result = "std::tuple<";
+  result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
+                    std::string{", "}));
+  result.pop_back();
+  result.pop_back();
+  result += ">";
+  return result;
+};
+
+template <typename T>
+inline constexpr std::string tuple_to_string() {
+  return tuple_to_string_impl<T>(std::make_index_sequence<std::tuple_size_v<T>>());
+}
+#pragma GCC diagnostic pop
 
 //////////////////////////////////////////////////////////////////////////////////////
