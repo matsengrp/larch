@@ -190,7 +190,7 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
 
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNonrootAnchorNode() const {
-  auto& node = static_cast<const CRTP&>(*this);
+  auto node = static_cast<const CRTP&>(*this).Const();
   if (not IsLCAAncestor()) {
     return (node.GetOld().GetCompactGenome() == node.GetCompactGenome());
     // TODO and node.GetOld().GetLeafSet() == node.GetLeafSet());
@@ -203,7 +203,7 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGenome(
     std::vector<NodeId>& result) const {
   auto& node = static_cast<const CRTP&>(*this);
-  if (not node.IsRoot() and not node.IsMoveNew()) { // TODO
+  if (node.HaveMATNode() and not node.IsRoot() and not node.IsMoveNew()) { // TODO
     node.template SetOverlay<Deduplicate<CompactGenome>>();
     node = node.ComputeNewCompactGenome();
   }

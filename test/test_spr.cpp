@@ -101,6 +101,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
       return !approved_a_move_;
     }
   }
+  void operator()(const MAT::Tree&) {}
   Merge<MADAG>& merge_;
   SampleDAG sample_;
   bool approved_a_move_;
@@ -108,29 +109,31 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
 static void test_optimizing_with_hypothetical_tree(
     const MADAGStorage& tree_shaped_dag) {
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   // this test takes a tree and uses matOptimize to apply a single move.
 
   Merge<MADAG> dag_altered_in_callback{tree_shaped_dag.View().GetReferenceSequence()};
-  dag_altered_in_callback.AddDAGs({tree_shaped_dag.View()});
+  dag_altered_in_callback.AddDAG(tree_shaped_dag.View());
 
   // sample tree
   SubtreeWeight<ParsimonyScore, MergeDAG> weight{dag_altered_in_callback.GetResult()};
   auto sample = AddMATConversion(weight.SampleTree({}));
-  check_edge_mutations(sample.View());
   MAT::Tree mat;
   sample.View().BuildMAT(mat);
+  check_edge_mutations(sample.View());
 
   // create a callback that only allows one move
   Single_Move_Callback_With_Hypothetical_Tree single_move_callback{
       dag_altered_in_callback, sample.View()};
 
   // optimize tree with matOptimize using a callback that only applies a single move
-  auto optimized_tree =
-      optimize_dag_direct(sample.View(), single_move_callback, [](MAT::Tree) {});
+  auto [optimized_dag, optimized_mat] =
+      optimize_dag_direct(sample.View(), single_move_callback, single_move_callback);
 
+  optimized_dag.View().RecomputeCompactGenomes();
   Merge<MADAG> two_tree_dag{tree_shaped_dag.View().GetReferenceSequence()};
   two_tree_dag.AddDAG(sample.View());
-  two_tree_dag.AddDAG(optimized_tree.first.View());
+  two_tree_dag.AddDAG(optimized_dag.View());
 
   // check topologies of the two DAGs match in feature count
   Assert(two_tree_dag.GetResult().GetNodesCount() ==
@@ -203,6 +206,12 @@ static auto MakeSampleDAG() {
   MADAGToDOT(spr, std::cout);
 }
 
+[[maybe_unused]] static const auto test_added0 = add_test(
+    {[] {
+       test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"), 3);
+     },
+     "SPR: seedtree"});
+
 [[maybe_unused]] static const auto test_added1 =
     add_test({[] {
                 test_spr(Load("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
@@ -224,3 +233,12 @@ static auto MakeSampleDAG() {
                          "data/20D_from_fasta/refseq.txt.gz"));
               },
               "SPR: single"});
+
+[[maybe_unused]] static const auto test_added5 =
+    add_test({[] {
+                test_optimizing_with_hypothetical_tree(
+                    Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz")
+
+                );
+              },
+              "SPR: seedtree single move"});
