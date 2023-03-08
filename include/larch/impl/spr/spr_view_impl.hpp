@@ -221,21 +221,21 @@ template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveLCA() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetMappedNode(NodeId{self.data_->move_.LCA->node_id});
+  return dag.GetNodeFromMAT(self.data_->move_.LCA->node_id);
 };
 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetMappedNode(NodeId{self.data_->move_.src->node_id});
+  return dag.GetNodeFromMAT(self.data_->move_.src->node_id);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTarget() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetMappedNode(NodeId{self.data_->move_.dst->node_id});
+  return dag.GetNodeFromMAT(self.data_->move_.dst->node_id);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
