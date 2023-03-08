@@ -203,7 +203,7 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGenome(
     std::vector<NodeId>& result) const {
   auto& node = static_cast<const CRTP&>(*this);
-  if (node.HaveMATNode() and not node.IsRoot() and not node.IsMoveNew()) { // TODO
+  if (not node.IsRoot() and not node.IsMoveNew()) {  // TODO
     node.template SetOverlay<Deduplicate<CompactGenome>>();
     node = node.ComputeNewCompactGenome();
   }
@@ -221,21 +221,21 @@ template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveLCA() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.Get(NodeId{self.data_->move_.LCA->node_id});
+  return dag.GetMappedNode(NodeId{self.data_->move_.LCA->node_id});
 };
 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.Get(NodeId{self.data_->move_.src->node_id});
+  return dag.GetMappedNode(NodeId{self.data_->move_.src->node_id});
 }
 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTarget() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.Get(NodeId{self.data_->move_.dst->node_id});
+  return dag.GetMappedNode(NodeId{self.data_->move_.dst->node_id});
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -314,10 +314,10 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
   dst_parent.RemoveChild(dst_parent_edge.GetClade(), dst_parent_edge);
 
   auto new_node = dag.AppendNode();
-  auto new_edge = dag.AppendEdge(dst_parent, new_node, {0});
+  auto new_edge = dag.AppendEdge(dst_parent, new_node, dst_parent_edge.GetClade());
 
   src_parent_edge.Set(new_node, src_node, {0});
-  dst_parent_edge.Set(new_node, dst_node, {0});
+  dst_parent_edge.Set(new_node, dst_node, {1});
 
   new_node.AddEdge(src_parent_edge.GetClade(), src_parent_edge, true);
   new_node.AddEdge(dst_parent_edge.GetClade(), dst_parent_edge, true);
@@ -335,6 +335,9 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
                 dag.GetNodeFromMAT(move.dst->node_id));
   self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
       typename HypotheticalTree<DAG>::Data{move, nodes_with_major_allele_set_change});
+  if (dag.GetMoveLCA().IsRoot()) {
+    return;
+  }
   NodeId lca = dag.GetMoveLCA();
   do {
     self.data_->lca_ancestors_.insert(lca);
