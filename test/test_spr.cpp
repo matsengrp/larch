@@ -33,7 +33,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     auto spr = storage.View();
     spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
     std::ignore = spr.GetFragment();
-    return false && move.score_change < best_score_change;
+    return move.score_change < best_score_change;
   }
 
   void operator()(MAT::Tree& tree) {
