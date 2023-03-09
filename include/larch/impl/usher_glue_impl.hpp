@@ -54,8 +54,6 @@ void check_edge_mutations_helper(Node dag_node, const all_mutated_t& all_mutated
 
 template <typename DAG>
 void check_edge_mutations(DAG dag) {
-  std::cout << "start_check" << std::endl;
   all_mutated_t init;
   check_edge_mutations_helper(dag.GetRoot(), init);
-  std::cout << "end_check" << std::endl;
 }

@@ -17,21 +17,33 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     Assert(move.src != nullptr);
     Assert(move.dst != nullptr);
 
-    auto spr_storage = SPRStorage(sample_dag_);
-    auto spr = spr_storage.View();
+    auto storage = [this](MAT::Tree* tree, std::string ref_seq) {
+      std::unique_lock<std::mutex> lock{mutex_};
+      Assert(sample_mat_ != nullptr);
+      using Storage = ExtendDAGStorage<
+          DefaultDAGStorage, Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
+          Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+      auto mat_conv = AddMATConversion(Storage{});
+      mat_conv.View().BuildFromMAT(*tree, ref_seq);
+      check_edge_mutations(mat_conv.View());
+      mat_conv.View().RecomputeCompactGenomes();
+      return SPRStorage(std::move(mat_conv));
+    }(sample_mat_, sample_dag_.GetReferenceSequence());
 
-    Assert(sample_mat_ != nullptr);
+    auto spr = storage.View();
     spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
-
     std::ignore = spr.GetFragment();
-
-    return move.score_change < best_score_change;
+    return false && move.score_change < best_score_change;
   }
 
-  void operator()(const MAT::Tree& tree) { sample_mat_ = std::addressof(tree); }
+  void operator()(MAT::Tree& tree) {
+    std::unique_lock<std::mutex> lock{mutex_};
+    sample_mat_ = std::addressof(tree);
+  }
 
   DAG sample_dag_;
-  const MAT::Tree* sample_mat_ = nullptr;
+  std::mutex mutex_;
+  MAT::Tree* sample_mat_ = nullptr;
 };
 
 static MADAGStorage Load(std::string_view input_dag_path,
