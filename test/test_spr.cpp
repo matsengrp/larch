@@ -17,18 +17,18 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     Assert(move.src != nullptr);
     Assert(move.dst != nullptr);
 
-    auto storage = [this](MAT::Tree* tree, std::string ref_seq) {
+    auto storage = [this](std::string ref_seq) {
       std::unique_lock<std::mutex> lock{mutex_};
       Assert(sample_mat_ != nullptr);
       using Storage = ExtendDAGStorage<
           DefaultDAGStorage, Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
           Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
       auto mat_conv = AddMATConversion(Storage{});
-      mat_conv.View().BuildFromMAT(*tree, ref_seq);
+      mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
       check_edge_mutations(mat_conv.View());
       mat_conv.View().RecomputeCompactGenomes();
       return SPRStorage(std::move(mat_conv));
-    }(sample_mat_, sample_dag_.GetReferenceSequence());
+    }(sample_dag_.GetReferenceSequence());
 
     auto spr = storage.View();
     spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
@@ -91,8 +91,19 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
     if (!approved_a_move_) {
       // apply move to merge object.
 
-      auto spr_storage = SPRStorage(sample_);
-      auto spr = spr_storage.View();
+      auto storage = [this](std::string ref_seq) {
+        std::unique_lock<std::mutex> lock{mutex_};
+        Assert(sample_mat_ != nullptr);
+        using Storage = ExtendDAGStorage<
+            DefaultDAGStorage, Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
+            Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+        auto mat_conv = AddMATConversion(Storage{});
+        mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
+        check_edge_mutations(mat_conv.View());
+        mat_conv.View().RecomputeCompactGenomes();
+        return SPRStorage(std::move(mat_conv));
+      }(sample_.GetReferenceSequence());
+      auto spr = storage.View();
 
       // ** create hypothetical tree
       spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
@@ -113,9 +124,16 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
       return !approved_a_move_;
     }
   }
-  void operator()(const MAT::Tree&) {}
+
+  void operator()(MAT::Tree& tree) {
+    std::unique_lock<std::mutex> lock{mutex_};
+    sample_mat_ = std::addressof(tree);
+  }
+
   Merge<MADAG>& merge_;
   SampleDAG sample_;
+  std::mutex mutex_;
+  MAT::Tree* sample_mat_ = nullptr;
   bool approved_a_move_;
 };
 
@@ -126,6 +144,7 @@ static void test_optimizing_with_hypothetical_tree(
 
   Merge<MADAG> dag_altered_in_callback{tree_shaped_dag.View().GetReferenceSequence()};
   dag_altered_in_callback.AddDAG(tree_shaped_dag.View());
+  dag_altered_in_callback.ComputeResultEdgeMutations();
 
   // sample tree
   SubtreeWeight<ParsimonyScore, MergeDAG> weight{dag_altered_in_callback.GetResult()};
