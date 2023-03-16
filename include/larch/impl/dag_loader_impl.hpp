@@ -166,7 +166,7 @@ void MADAGToDOT(DAG dag, std::ostream& out) {
   out << "  nodesep=1.0\n";
   out << "  ranksep=2.0\n";
   out << "  ratio=1.0\n";
-  for (auto edge : dag.GetEdges()) {
+  for (auto edge : dag.Const().GetEdges()) {
     out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
         << CompactGenomeToString(edge.GetChild()) << "\"";
     out << "[ xlabel=\"";

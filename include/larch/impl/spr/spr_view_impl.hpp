@@ -294,6 +294,7 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
   auto& dag = static_cast<const CRTP&>(*this);
   Assert(dag.IsTree());
   auto src_node = dag.Get(src);
+  Assert(not src_node.IsRoot() and not src_node.GetSingleParent().IsRoot());
   auto dst_node = dag.Get(dst);
   Assert(src_node.GetId() != dst_node.GetId());
   src_node.template SetOverlay<Neighbors>();

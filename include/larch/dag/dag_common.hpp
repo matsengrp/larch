@@ -2,6 +2,20 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+/*
++--------------------------------------------------+
+| +--------------------+   +---------------------+ |
+| | +---------------+  |   |  +---------------+  | |
+| | | Node: Element |  |   |  | Edge: Element |  | |
+| | +---------------+  |   |  +---------------+  | |
+| |                    |   |                     | |
+| |  Nodes: Container  |   |  Edges: Container   | |
+| +--------------------+   +---------------------+ |
+|                                                  |
+|                       DAG                        |
++--------------------------------------------------+
+*/
+
 /**
  * Used by specialization on the Feature parameter to add functions to
  * an attachable feature. Functions declared in FeatureConstView are

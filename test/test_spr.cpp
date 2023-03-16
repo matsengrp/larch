@@ -16,15 +16,14 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
                       nodes_with_major_allele_set_change) override {
     Assert(move.src != nullptr);
     Assert(move.dst != nullptr);
-
     auto storage = [this](std::string ref_seq) {
-      std::unique_lock<std::mutex> lock{mutex_};
-      Assert(sample_mat_ != nullptr);
+      MAT::Tree* mat = sample_mat_.load();
+      Assert(mat != nullptr);
       using Storage = ExtendDAGStorage<
           DefaultDAGStorage, Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
           Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
       auto mat_conv = AddMATConversion(Storage{});
-      mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
+      mat_conv.View().BuildFromMAT(*mat, ref_seq);
       check_edge_mutations(mat_conv.View());
       mat_conv.View().RecomputeCompactGenomes();
       return SPRStorage(std::move(mat_conv));
@@ -36,14 +35,10 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     return move.score_change < best_score_change;
   }
 
-  void operator()(MAT::Tree& tree) {
-    std::unique_lock<std::mutex> lock{mutex_};
-    sample_mat_ = std::addressof(tree);
-  }
+  void operator()(MAT::Tree& tree) { sample_mat_.store(std::addressof(tree)); }
 
   DAG sample_dag_;
-  std::mutex mutex_;
-  MAT::Tree* sample_mat_ = nullptr;
+  std::atomic<MAT::Tree*> sample_mat_ = nullptr;
 };
 
 static MADAGStorage Load(std::string_view input_dag_path,
@@ -224,7 +219,7 @@ static auto MakeSampleDAG() {
   auto spr_storage = SPRStorage(dag);
   auto spr = spr_storage.View();
 
-  spr.ApplyMove({7}, {9});
+  spr.ApplyMove({10}, {7});
 
   for (auto node : spr.GetNodes()) {
     if (not node.IsOverlaid<CompactGenome>()) {
@@ -273,3 +268,6 @@ static auto MakeSampleDAG() {
                 );
               },
               "SPR: seedtree single move"});
+
+[[maybe_unused]] static const auto test_added6 =
+    add_test({test_sample, "SPR: sample move"});
