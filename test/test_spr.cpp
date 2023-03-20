@@ -178,14 +178,14 @@ static auto MakeSampleDAG() {
 
   dag.AddEdge({0}, {0}, {10}, {0});
   dag.AddEdge({1}, {7}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'T', 'A'};
-  dag.AddEdge({2}, {7}, {2}, {0}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
+  dag.AddEdge({2}, {7}, {2}, {1}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
   dag.AddEdge({3}, {8}, {3}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
-  dag.AddEdge({4}, {8}, {4}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
+  dag.AddEdge({4}, {8}, {4}, {1}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
   dag.AddEdge({5}, {9}, {5}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
-  dag.AddEdge({6}, {9}, {6}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
-  dag.AddEdge({7}, {8}, {7}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
+  dag.AddEdge({6}, {9}, {6}, {1}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
+  dag.AddEdge({7}, {8}, {7}, {2}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
   dag.AddEdge({8}, {10}, {8}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'C'};
-  dag.AddEdge({9}, {10}, {9}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
+  dag.AddEdge({9}, {10}, {9}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
 
   dag.BuildConnections();
 
@@ -219,7 +219,9 @@ static auto MakeSampleDAG() {
   auto spr_storage = SPRStorage(dag);
   auto spr = spr_storage.View();
 
-  spr.ApplyMove({10}, {7});
+  MADAGToDOT(spr, std::cout);
+
+  spr.ApplyMove({7}, {9});
 
   for (auto node : spr.GetNodes()) {
     if (not node.IsOverlaid<CompactGenome>()) {
