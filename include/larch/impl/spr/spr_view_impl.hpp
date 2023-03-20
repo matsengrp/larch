@@ -89,7 +89,7 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
     MutationPosition site) const {
   auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
-  Assert(site.value < dag.GetReferenceSequence().size());
+  Assert(site.value <= dag.GetReferenceSequence().size());
   auto [old_fitch_sets, changes] = GetFitchSetParts();
   if (old_fitch_sets.find(static_cast<int>(site.value)) ==
       old_fitch_sets.mutations.end()) {
