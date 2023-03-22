@@ -433,11 +433,11 @@ template <typename DAG, typename SPR>
   std::cout << std::endl;
   std::cout << "==> VALIDATE DAG AFTER SPR [begin] <==" << std::endl;
 
-  auto dag_storage = MakeSampleDAG();
-  auto dag = dag_storage.View();
+  auto input_storage = MakeSampleDAG();
+  auto dag = input_storage.View();
   MADAGToDOT(dag, std::cout);
 
-  [[maybe_unused]] size_t spr_count = 0;
+  size_t spr_count = 0;
   std::ofstream os;
   std::string output_folder = "_ignore/";
   std::string output_prefix = "validate_spr.";
