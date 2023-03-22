@@ -29,8 +29,7 @@ Building
 
 `tar -xvzf 2019_U9.tar.gz`
 
-`cmake  -DTBB_DIR=${PWD}/oneTBB-2019_U9
--DCMAKE_PREFIX_PATH=${PWD}/oneTBB-2019_U9/cmake ..`
+`cmake -DTBB_DIR=${PWD}/oneTBB-2019_U9 -DCMAKE_PREFIX_PATH=${PWD}/oneTBB-2019_U9/cmake ..`
 
 `make -j16`
 
@@ -49,7 +48,7 @@ From the build directory:
 
 Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
 
-Third-party 
+Third-party
 -----------
 
 * Lohmann, N. (2022). JSON for Modern C++ (Version 3.10.5) [Computer software]. https://github.com/nlohmann

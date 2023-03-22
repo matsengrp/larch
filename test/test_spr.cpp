@@ -5,6 +5,7 @@
 #include "larch/subtree/parsimony_score.hpp"
 #include "larch/spr/spr_view.hpp"
 
+#include <fstream>
 #include <tbb/global_control.h>
 
 template <typename DAG>
@@ -219,6 +220,8 @@ static auto MakeSampleDAG() {
   auto spr_storage = SPRStorage(dag);
   auto spr = spr_storage.View();
 
+  MADAGToDOT(spr, std::cout);
+
   spr.ApplyMove({10}, {7});
 
   for (auto node : spr.GetNodes()) {
@@ -262,12 +265,135 @@ static auto MakeSampleDAG() {
 
 [[maybe_unused]] static const auto test_added5 =
     add_test({[] {
-                test_optimizing_with_hypothetical_tree(
-                    Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz")
-
-                );
+                test_optimizing_with_hypothetical_tree(Load(
+                    "data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"));
               },
               "SPR: seedtree single move"});
 
 [[maybe_unused]] static const auto test_added6 =
     add_test({test_sample, "SPR: sample move"});
+
+// ** NEW TEST
+
+// Test that all elligible SPR moves result in valid tree states.
+[[maybe_unused]] static void validate_dag_after_spr() {
+  std::cout << std::endl;
+  std::cout << "==> VALIDATE DAG AFTER SPR [begin] <==" << std::endl;
+
+  auto input_storage = MakeSampleDAG();
+  auto dag = input_storage.View();
+  MADAGToDOT(dag, std::cout);
+
+  size_t spr_count = 0;
+  std::ofstream os;
+  std::string output_folder = "_ignore/";
+  std::string output_prefix = "validate_spr.";
+  std::string output_ext = ".dot";
+  std::string output_filename;
+  // Test all valid SPR moves.
+  for (auto src_node : dag.GetNodes()) {
+    // Check that src_node is elligible for SPR move.
+    if (src_node.IsRoot()) {
+      continue;
+    }
+    if ((src_node.GetParentsCount() == 1) && src_node.GetSingleParent().IsRoot()) {
+      continue;
+    }
+    for (auto dest_node : dag.GetNodes()) {
+      // Check that dest_node is elligible for SPR move.
+      if (dest_node.IsRoot() || (src_node.GetId() == dest_node.GetId())) {
+        continue;
+      }
+      std::cout << "SRC: NodeId::" << src_node.GetId().value
+                << ", DEST: NodeId::" << dest_node.GetId().value << std::endl;
+
+      // Apply SPR
+      auto spr_storage = SPRStorage(dag);
+      auto spr = spr_storage.View();
+      spr.ApplyMove(src_node.GetId(), dest_node.GetId());
+
+      output_filename =
+          output_folder + output_prefix + std::to_string(src_node.GetId().value) + "_" +
+          std::to_string(dest_node.GetId().value) + ".pre_compact" + output_ext;
+      std::cout << ">> WRITE DOTFILE [pre]: " << output_filename << std::endl;
+      os.open(output_filename);
+      MADAGToDOT(spr, os);
+      os.close();
+
+      // Update Compact Genomes.
+      std::cout << ">> OVERLAY_NODES" << std::endl;
+      for (auto node : spr.GetNodes()) {
+        if (not node.IsOverlaid<CompactGenome>()) {
+          node.SetOverlay<CompactGenome>();
+        }
+      }
+      std::cout << ">> RECOMPUTE_NODES" << std::endl;
+      // spr.RecomputeCompactGenomes();
+
+      output_filename =
+          output_folder + output_prefix + std::to_string(src_node.GetId().value) + "_" +
+          std::to_string(dest_node.GetId().value) + ".post_compact" + output_ext;
+      std::cout << ">> WRITE DOTFILE [post]: " << output_filename << std::endl;
+      os.open(output_filename);
+      MADAGToDOT(spr, os);
+      os.close();
+
+      // Test parent-child identities.
+      std::cout << ">> TEST" << std::endl;
+      // Get previous dag connections
+      auto src_parents = src_node.GetParents();
+      auto dest_parents = dest_node.GetParents();
+      auto new_node_id = dag.GetNodesCount();
+      std::cout << "DAGNodesCount: " << dag.GetNodesCount() << std::endl;
+      std::cout << "SPRNodesCount: " << spr.GetNodesCount() << std::endl;
+      for (auto node : spr.GetNodes()) {
+        // std::cout << "test_node: " << node.GetId() << std::endl;
+        // Skip over root node.
+        // if (node.IsRoot()) {
+        //   continue;
+        // }
+        // // If node is src_node.
+        // if (node.GetId() == src_node.GetId()) {
+        //   std::cout << "src_node: " << node.GetId() << std::endl;
+        //   // Check its parent is a new node.
+        //   // Check that its children are the same.
+        // }
+        // // If node is dest_node.
+        // else if (node.GetId() == dest_node.GetId()) {
+        //   std::cout << "dest_node: " << node.GetId() << std::endl;
+        //   // Check its parent is a new node.
+        //   // Check that its children are the same.
+        // }
+        // // If node was previously a parent of the src_node.
+        // else if (src_parents.contains(node)) {
+        //   std::cout << "src_parent: " << node.GetId() << std::endl;
+        //   // Check that its parents are the same.
+        //   // Check that it has all previous children, minus src_node.
+        // }
+        // // If node was previously a parent of the dest_node.
+        // else if (dest_parents.contains(node)) {
+        //   std::cout << "dest_parent: " << node.GetId() << std::endl;
+        //   // Check that its parents are the same.
+        //   // Check that it has all previous children, minus dest_node, plus new node.
+        // }
+        // // If node is new node.
+        // else if (node.GetId() >= new_nodes_id) {
+        //   std::cout << "new_node: " << node.GetId() << std::endl;
+        //   // Check its parent is the previous parent of the dest_node.
+        // }
+        // // If node is an old node.
+        // else {
+        //   std::cout << "old_node: " << node.GetId() << std::endl;
+        //   // Check that its parents are the same.
+        //   // Check that its children are the same.
+        // }
+      }
+    }
+    continue;
+  }
+
+  std::cout << "==> VALIDATE DAG AFTER SPR [end] <==" << std::endl;
+}
+
+[[maybe_unused]] static const auto test_added7 =
+    add_test({validate_dag_after_spr, "SPR: validate DAG after SPR"});

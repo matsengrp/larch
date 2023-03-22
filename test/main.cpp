@@ -20,10 +20,13 @@ int main(int argc, char* argv[]) {
   int ignored{};
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
   bool no_catch = false;
+  bool list_names = false;
   std::regex regex{".*"};
   for (int i = 1; i < argc; ++i) {
     if (std::string("nocatch") == argv[i]) {
       no_catch = true;
+    } else if (std::string("--list") == argv[i]) {
+      list_names = true;
     } else {
       regex = argv[i];
     }
@@ -35,6 +38,13 @@ int main(int argc, char* argv[]) {
     if (std::regex_match(test.name, match, regex)) {
       tests.push_back(test);
     }
+  }
+
+  if (list_names) {
+    for (auto& test : tests) {
+      std::cout << test.name << std::endl;
+    }
+    return EXIT_SUCCESS;
   }
 
   size_t failed = 0, ran = 0;
