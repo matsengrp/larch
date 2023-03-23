@@ -104,3 +104,49 @@ void FeatureMutableView<Neighbors, CRTP, Tag>::RemoveChild(CladeIdx clade,
   Assert(it != children.end());
   children.erase(it);
 }
+
+template <typename CRTP, typename Tag>
+auto FeatureConstView<Neighbors, CRTP, Tag>::GetParentNodes() const {
+  return GetParents() | Transform::GetParent();
+}
+
+template <typename CRTP, typename Tag>
+auto FeatureConstView<Neighbors, CRTP, Tag>::GetChildNodes() const {
+  return GetChildren() | Transform::GetChild();
+}
+
+template <typename CRTP, typename Tag>
+bool FeatureConstView<Neighbors, CRTP, Tag>::ContainsParent(NodeId node) const {
+  return ranges::any_of(GetParents(), [node](auto parent_edge) {
+    return parent_edge.GetParent().GetId() == node;
+  });
+}
+
+template <typename CRTP, typename Tag>
+bool FeatureConstView<Neighbors, CRTP, Tag>::ContainsChild(NodeId node) const {
+  return ranges::any_of(GetChildren(), [node](auto child_edge) {
+    return child_edge.GetChild().GetId() == node;
+  });
+}
+
+template <typename CRTP, typename Tag>
+std::string FeatureConstView<Neighbors, CRTP, Tag>::ParentsToString() const {
+  std::stringstream os;
+  os << "[";
+  for (auto parent : GetParentNodes()) {
+    os << parent.GetId().value << ", ";
+  }
+  os << "]";
+  return os.str();
+}
+
+template <typename CRTP, typename Tag>
+std::string FeatureConstView<Neighbors, CRTP, Tag>::ChildrenToString() const {
+  std::stringstream os;
+  os << "[";
+  for (auto child : GetChildNodes()) {
+    os << child.GetId().value << ", ";
+  }
+  os << "]";
+  return os.str();
+}

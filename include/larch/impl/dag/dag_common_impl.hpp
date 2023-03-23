@@ -15,16 +15,28 @@ const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* featur
 bool operator==(NodeId lhs, NodeId rhs) { return lhs.value == rhs.value; }
 bool operator!=(NodeId lhs, NodeId rhs) { return lhs.value != rhs.value; }
 bool operator<(NodeId lhs, NodeId rhs) { return lhs.value < rhs.value; }
+// std::ostream& operator<<(std::ostream& os, NodeId node) {
+//   os << "NodeId::" << node.value;
+//   return os;
+// }
 size_t std::hash<NodeId>::operator()(NodeId id) const noexcept { return id.value; }
 
 bool operator==(EdgeId lhs, EdgeId rhs) { return lhs.value == rhs.value; }
 bool operator!=(EdgeId lhs, EdgeId rhs) { return lhs.value != rhs.value; }
 bool operator<(EdgeId lhs, EdgeId rhs) { return lhs.value < rhs.value; }
+// std::ostream& operator<<(std::ostream& os, EdgeId edge) {
+//   os << "EdgeId::" << edge.value;
+//   return os;
+// }
 size_t std::hash<EdgeId>::operator()(EdgeId id) const noexcept { return id.value; }
 
 bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs.value == rhs.value; }
 bool operator!=(CladeIdx lhs, CladeIdx rhs) { return lhs.value != rhs.value; }
 bool operator<(CladeIdx lhs, CladeIdx rhs) { return lhs.value < rhs.value; }
+// std::ostream& operator<<(std::ostream& os, CladeIdx clade) {
+//   os << "CladeIdx::" << clade.value;
+//   return os;
+// }
 
 namespace Transform {
 

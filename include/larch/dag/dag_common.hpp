@@ -89,6 +89,7 @@ struct NodeId {
 inline bool operator==(NodeId lhs, NodeId rhs);
 inline bool operator!=(NodeId lhs, NodeId rhs);
 inline bool operator<(NodeId lhs, NodeId rhs);
+// inline std::ostream& operator<<(std::ostream& os, NodeId node);
 
 template <>
 struct std::hash<NodeId> {
@@ -107,6 +108,7 @@ struct std::hash<EdgeId> {
 inline bool operator==(EdgeId lhs, EdgeId rhs);
 inline bool operator!=(EdgeId lhs, EdgeId rhs);
 inline bool operator<(EdgeId lhs, EdgeId rhs);
+// inline std::ostream& operator<<(std::ostream& os, EdgeId edge);
 
 struct CladeIdx {
   size_t value = NoId;
@@ -115,6 +117,7 @@ struct CladeIdx {
 inline bool operator==(CladeIdx lhs, CladeIdx rhs);
 inline bool operator!=(CladeIdx lhs, CladeIdx rhs);
 inline bool operator<(CladeIdx lhs, CladeIdx rhs);
+// inline std::ostream& operator<<(std::ostream& os, CladeIdx clade);
 
 namespace Transform {
 

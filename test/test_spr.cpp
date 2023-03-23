@@ -8,6 +8,16 @@
 #include <fstream>
 #include <tbb/global_control.h>
 
+std::ostream& operator<<(std::ostream& os, EdgeId edge_id) {
+  os << "EdgeId::" << edge_id.value;
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, NodeId node_id) {
+  os << "NodeId::" << node_id.value;
+  return os;
+}
+
 template <typename DAG>
 struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag) : sample_dag_{sample_dag} {}
@@ -275,13 +285,153 @@ static auto MakeSampleDAG() {
 
 // ** NEW TEST
 
+template <typename DAG, typename SPR>
+[[maybe_unused]] static void compare_dag_vs_spr_nodes(DAG dag, SPR spr,
+                                                      NodeId src_node_id,
+                                                      NodeId dest_node_id) {
+  auto src_node = dag.Get(src_node_id);
+  auto dest_node = dag.Get(dest_node_id);
+  auto new_node_id = NodeId{dag.GetNodesCount()};
+  for (auto node : spr.GetNodes()) {
+    std::cout << "==> node: " << node.GetId() << std::endl;
+    std::cout << "==> node_parents: " << node.ParentsToString() << std::endl;
+    std::cout << "==> node_children: " << node.ChildrenToString() << std::endl;
+    if (node.GetId().value != dag.GetNodesCount()) {
+      auto dag_node = dag.Get(node.GetId());
+      std::cout << "==> dag_node_parents: " << dag_node.ParentsToString() << std::endl;
+      std::cout << "==> dag_node_children: " << dag_node.ChildrenToString()
+                << std::endl;
+    }
+
+    // Special case: new node.
+    if (node.GetId() == new_node_id) {
+      std::cout << "new_node: " << node.GetId().value << std::endl;
+      // Check its parens are the same as the previous parent of the dest_node.
+      for (auto parent_node : dest_node.GetParentNodes()) {
+        assert_true(
+            node.ContainsParent(parent_node.GetId()),
+            "new_node's parent is not the dest_node's previous parent after SPR.");
+      }
+      // Check its children are src_node and dest_node.
+      for (auto child_node : {src_node, dest_node}) {
+        assert_true(node.ContainsChild(child_node.GetId()),
+                    "new_node's children are not src_node and dest_node after SPR.");
+      }
+      continue;
+    }
+
+    // Node from DAG.
+    auto dag_node = dag.Get(node.GetId());
+    // Cases: node can match multiple types.
+    bool node_is_src = (node.GetId() == src_node.GetId());
+    bool node_is_src_parent = src_node.ContainsParent(node.GetId());
+    bool node_is_dest = node.GetId() == dest_node.GetId();
+    bool node_is_dest_parent = dest_node.ContainsParent(node.GetId());
+    bool node_is_old =
+        !(node_is_src || node_is_dest || node_is_src_parent || node_is_dest_parent);
+
+    if (node_is_old) {
+      std::cout << "old_node: " << node.GetId().value << std::endl;
+      // Check its parents are the same.
+      for (auto parent : node.GetParentNodes()) {
+        assert_true(dag_node.ContainsParent(parent.GetId()),
+                    "old_node's parents are not the same after SPR.");
+      }
+      // Check its children are the same.
+      for (auto child : node.GetChildNodes()) {
+        assert_true(dag_node.ContainsChild(child.GetId()),
+                    "old_node's children are not the same after SPR.");
+      }
+    }
+    if (node_is_src) {
+      std::cout << "src_node: " << node.GetId().value << std::endl;
+      // Check its parent is a new node.
+      for (auto parent_node : node.GetParentNodes()) {
+        assert_true((parent_node.GetId() == new_node_id),
+                    "src_node's parent is not new node after SPR.");
+      }
+      // Check its children are the same.
+      for (auto child_node : node.GetChildNodes()) {
+        assert_true(dag_node.ContainsChild(child_node.GetId()),
+                    "src_node's children are not the same after SPR.");
+      }
+    } else if (node_is_dest) {
+      std::cout << "dest_node: " << node.GetId().value << std::endl;
+      // Check its parent is a new node.
+      for (auto parent_node : node.GetParentNodes()) {
+        assert_true((parent_node.GetId() == new_node_id),
+                    "dest_node's parent is not new node after SPR.");
+      }
+      // Check its children are the same.
+      for (auto child_node : node.GetChildNodes()) {
+        assert_true(dag_node.ContainsChild(child_node.GetId()),
+                    "dest_node's children are not the same after SPR.");
+      }
+    }
+    if (node_is_src_parent && node_is_dest_parent) {
+      std::cout << "src_and_dest_parent: " << node.GetId().value << std::endl;
+      // Check its parents are the same.
+      for (auto parent_node : node.GetParentNodes()) {
+        test_true(dag_node.ContainsParent(parent_node.GetId()),
+                  "src_parent's parents are not the same after SPR.");
+      }
+      // Check it has all previous children, minus src_node and dest_node, plus new
+      // node.
+      for (auto child_node : node.GetChildNodes()) {
+        test_true(dag_node.ContainsChild(child_node.GetId()),
+                  "dest_parent's children are not the same after SPR.");
+      }
+      test_false(node.ContainsChild(src_node.GetId()),
+                 "src_parent's children incorrectly contains src_node after SPR.");
+      test_false(node.ContainsChild(dest_node.GetId()),
+                 "dest_parent's children incorrectly contains dest_node after SPR.");
+      test_true(node.ContainsChild(new_node_id),
+                "dest_parent's missing new_node after SPR.");
+    } else if (node_is_src_parent) {
+      std::cout << "src_parent: " << node.GetId().value << std::endl;
+      if (!node_is_dest) {
+        // Check its parents are the same.
+        for (auto parent_node : node.GetParentNodes()) {
+          test_true(dag_node.ContainsParent(parent_node.GetId()),
+                    "src_parent's parents are not the same after SPR.");
+        }
+      }
+      // Check it has all previous children, minus src_node.
+      for (auto child_node : node.GetChildNodes()) {
+        test_true(dag_node.ContainsChild(child_node.GetId()),
+                  "src_parent's children are not same after SPR.");
+      }
+      test_false(node.ContainsChild(src_node.GetId()),
+                 "src_parent's children incorrectly contains src_node after SPR.");
+    } else if (node_is_dest_parent) {
+      std::cout << "dest_parent: " << node.GetId().value << std::endl;
+      if (!node_is_src) {
+        // Check its parents are the same.
+        for (auto parent_node : node.GetParentNodes()) {
+          test_true(dag_node.ContainsParent(parent_node.GetId()),
+                    "dest_parent's parents are not the same after SPR.");
+        }
+      }
+      // Check it has all previous children, minus dest_node, plus new node.
+      for (auto child_node : node.GetChildNodes()) {
+        test_true(dag_node.ContainsChild(child_node.GetId()),
+                  "dest_parent's children are not the same after SPR.");
+      }
+      test_false(node.ContainsChild(dest_node.GetId()),
+                 "dest_parent's children incorrectly contains dest_node after SPR.");
+      test_true(node.ContainsChild(new_node_id),
+                "dest_parent's missing new_node after SPR.");
+    }
+  }
+}
+
 // Test that all elligible SPR moves result in valid tree states.
 [[maybe_unused]] static void validate_dag_after_spr() {
   std::cout << std::endl;
   std::cout << "==> VALIDATE DAG AFTER SPR [begin] <==" << std::endl;
 
-  auto input_storage = MakeSampleDAG();
-  auto dag = input_storage.View();
+  auto dag_storage = MakeSampleDAG();
+  auto dag = dag_storage.View();
   MADAGToDOT(dag, std::cout);
 
   size_t spr_count = 0;
@@ -340,56 +490,9 @@ static auto MakeSampleDAG() {
 
       // Test parent-child identities.
       std::cout << ">> TEST" << std::endl;
-      // Get previous dag connections
-      auto src_parents = src_node.GetParents();
-      auto dest_parents = dest_node.GetParents();
-      auto new_node_id = dag.GetNodesCount();
-      std::cout << "DAGNodesCount: " << dag.GetNodesCount() << std::endl;
-      std::cout << "SPRNodesCount: " << spr.GetNodesCount() << std::endl;
-      for (auto node : spr.GetNodes()) {
-        // std::cout << "test_node: " << node.GetId() << std::endl;
-        // Skip over root node.
-        // if (node.IsRoot()) {
-        //   continue;
-        // }
-        // // If node is src_node.
-        // if (node.GetId() == src_node.GetId()) {
-        //   std::cout << "src_node: " << node.GetId() << std::endl;
-        //   // Check its parent is a new node.
-        //   // Check that its children are the same.
-        // }
-        // // If node is dest_node.
-        // else if (node.GetId() == dest_node.GetId()) {
-        //   std::cout << "dest_node: " << node.GetId() << std::endl;
-        //   // Check its parent is a new node.
-        //   // Check that its children are the same.
-        // }
-        // // If node was previously a parent of the src_node.
-        // else if (src_parents.contains(node)) {
-        //   std::cout << "src_parent: " << node.GetId() << std::endl;
-        //   // Check that its parents are the same.
-        //   // Check that it has all previous children, minus src_node.
-        // }
-        // // If node was previously a parent of the dest_node.
-        // else if (dest_parents.contains(node)) {
-        //   std::cout << "dest_parent: " << node.GetId() << std::endl;
-        //   // Check that its parents are the same.
-        //   // Check that it has all previous children, minus dest_node, plus new node.
-        // }
-        // // If node is new node.
-        // else if (node.GetId() >= new_nodes_id) {
-        //   std::cout << "new_node: " << node.GetId() << std::endl;
-        //   // Check its parent is the previous parent of the dest_node.
-        // }
-        // // If node is an old node.
-        // else {
-        //   std::cout << "old_node: " << node.GetId() << std::endl;
-        //   // Check that its parents are the same.
-        //   // Check that its children are the same.
-        // }
-      }
+      compare_dag_vs_spr_nodes(dag, spr, src_node.GetId(), dest_node.GetId());
     }
-    continue;
+    break;
   }
 
   std::cout << "==> VALIDATE DAG AFTER SPR [end] <==" << std::endl;
