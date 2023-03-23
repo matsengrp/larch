@@ -433,8 +433,8 @@ template <typename DAG, typename SPR>
   std::cout << std::endl;
   std::cout << "==> VALIDATE DAG AFTER SPR [begin] <==" << std::endl;
 
-  auto input_storage = MakeSampleDAG();
-  auto dag = input_storage.View();
+  auto dag_storage = MakeSampleDAG();
+  auto dag = dag_storage.View();
   MADAGToDOT(dag, std::cout);
 
   size_t spr_count = 0;
