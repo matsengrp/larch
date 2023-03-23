@@ -30,6 +30,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     }(sample_dag_.GetReferenceSequence());
 
     auto spr = storage.View();
+    MADAGToDOT(spr, std::cout);
     spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
     std::ignore = spr.GetFragment();
     return move.score_change < best_score_change;
@@ -51,7 +52,7 @@ static MADAGStorage Load(std::string_view input_dag_path,
 }
 
 static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
-  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAG(input_dag);
@@ -221,7 +222,7 @@ static auto MakeSampleDAG() {
 
   MADAGToDOT(spr, std::cout);
 
-  spr.ApplyMove({7}, {9});
+  spr.ApplyMove({9}, {4});
 
   for (auto node : spr.GetNodes()) {
     if (not node.IsOverlaid<CompactGenome>()) {

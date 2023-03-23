@@ -55,3 +55,8 @@ void FeatureMutableView<Endpoints, CRTP, Tag>::Set(NodeId parent, NodeId child,
   GetFeatureStorage(this).child_ = child;
   GetFeatureStorage(this).clade_ = clade;
 }
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Endpoints, CRTP, Tag>::SetClade(CladeIdx clade) const {
+  Assert(clade.value != NoId);
+  GetFeatureStorage(this).clade_ = clade;
+}

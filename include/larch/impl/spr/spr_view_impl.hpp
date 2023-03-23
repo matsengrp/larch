@@ -291,31 +291,74 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetLCAAncestors() const {
 template <typename DAG, typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(NodeId src,
                                                                      NodeId dst) const {
+  std::cout << "Move: " << src.value << " -> " << dst.value << "\n";
   auto& dag = static_cast<const CRTP&>(*this);
   Assert(dag.IsTree());
   auto src_node = dag.Get(src);
   Assert(not src_node.IsRoot() and not src_node.GetSingleParent().IsRoot());
   auto dst_node = dag.Get(dst);
   Assert(src_node.GetId() != dst_node.GetId());
-  src_node.template SetOverlay<Neighbors>();
-  dst_node.template SetOverlay<Neighbors>();
   auto src_parent_edge = src_node.GetSingleParent();
   auto dst_parent_edge = dst_node.GetSingleParent();
-  src_parent_edge.template SetOverlay<Endpoints>();
-  dst_parent_edge.template SetOverlay<Endpoints>();
   auto src_parent = src_parent_edge.GetParent();
   auto dst_parent = dst_parent_edge.GetParent();
   const bool is_sibling_move = src_parent.GetId() == dst_parent.GetId();
+  if (is_sibling_move and src_parent.GetSingleParent().IsRoot()) {
+    // sibling move under the root is no-op
+    return;
+  }
+  const bool collapse_src_parent =
+      not is_sibling_move and src_parent.GetCladesCount() <= 2;
+  src_node.template SetOverlay<Neighbors>();
+  dst_node.template SetOverlay<Neighbors>();
   src_parent.template SetOverlay<Neighbors>();
   if (not is_sibling_move) {
     dst_parent.template SetOverlay<Neighbors>();
   }
 
-  src_parent.RemoveChild(src_parent_edge.GetClade(), src_parent_edge);
-  dst_parent.RemoveChild(dst_parent_edge.GetClade(), dst_parent_edge);
+  auto remove_edge = [](auto edge) {
+    for (CladeIdx i = edge.GetClade(); i.value < edge.GetParent().GetCladesCount();
+         ++i.value) {
+      for (auto j : edge.GetParent().GetClade(i)) {
+        j.template SetOverlay<Endpoints>();
+      }
+    }
+    edge.GetParent().template SetOverlay<Neighbors>();
+    edge.GetParent().RemoveChild(edge.GetClade(), edge);
+  };
 
-  auto new_node = dag.AppendNode();
-  auto new_edge = dag.AppendEdge(dst_parent, new_node, dst_parent_edge.GetClade());
+  remove_edge(src_parent_edge);
+  remove_edge(dst_parent_edge);
+
+  auto new_node = collapse_src_parent ? src_parent : dag.AppendNode();
+  auto new_edge = collapse_src_parent ? src_parent.GetSingleParent()
+                                      : dag.AppendEdge(dst_parent, new_node,
+                                                       dst_parent_edge.GetClade());
+
+  if (collapse_src_parent) {
+    auto merge_muts = [](auto parent, auto child) {
+      parent.template SetOverlay<EdgeMutations>();
+      for (auto [pos, mut] : child.GetEdgeMutations()) {
+        auto i = parent.GetMutableEdgeMutations().insert({pos, mut});
+        if (not i.second) {
+          i.first->second.second = mut.second;
+        }
+      }
+    };
+    auto sibling_edge = src_parent.GetFirstChild();
+    merge_muts(new_edge, sibling_edge);
+    sibling_edge.template SetOverlay<Endpoints>();
+    sibling_edge.Set(new_edge.GetParent(), sibling_edge.GetChild(),
+                     new_edge.GetClade());
+    remove_edge(new_edge);
+    sibling_edge.GetParent().template SetOverlay<Neighbors>();
+    sibling_edge.GetParent().AddEdge(sibling_edge.GetClade(), sibling_edge, true);
+    new_node.ClearConnections();
+    new_edge.template SetOverlay<Endpoints>();
+    new_edge.Set(dst_parent, new_node, dst_parent_edge.GetClade());
+    new_edge.template SetOverlay<EdgeMutations>();
+    new_edge.SetEdgeMutations({});
+  }
 
   src_parent_edge.Set(new_node, src_node, {0});
   dst_parent_edge.Set(new_node, dst_node, {1});

@@ -73,6 +73,15 @@ bool FeatureConstView<Neighbors, CRTP, Tag>::IsLeaf() const {
 }
 
 template <typename CRTP, typename Tag>
+auto FeatureConstView<Neighbors, CRTP, Tag>::GetLeafsBelow() const {
+  auto dag = static_cast<const CRTP&>(*this).GetDAG();
+  return GetFeatureStorage(this).leafs_below_ |
+         ranges::views::transform([dag](const std::vector<NodeId>& i) {
+           return i | Transform::ToNodes(dag);
+         });
+}
+
+template <typename CRTP, typename Tag>
 void FeatureMutableView<Neighbors, CRTP, Tag>::ClearConnections() const {
   GetFeatureStorage(this).parents_.clear();
   GetFeatureStorage(this).clades_.clear();
@@ -99,8 +108,43 @@ void FeatureMutableView<Neighbors, CRTP, Tag>::RemoveParent(EdgeId edge) const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Neighbors, CRTP, Tag>::RemoveChild(CladeIdx clade,
                                                            EdgeId child) const {
-  auto& children = GetFeatureStorage(this).clades_.at(clade.value);
+  auto node = static_cast<const CRTP&>(*this);
+  auto& clades = GetFeatureStorage(this).clades_;
+  auto& children = clades.at(clade.value);
   auto it = ranges::find(children, child);
   Assert(it != children.end());
   children.erase(it);
+  if (children.empty()) {
+    clades.erase(clades.begin() + clade.value);
+    for (size_t i = clade.value; i < clades.size(); ++i) {
+      for (EdgeId edge : clades.at(i)) {
+        node.GetDAG().Get(edge).SetClade({i});
+      }
+    }
+  }
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Neighbors, CRTP, Tag>::CalculateLeafsBelow() const {
+  auto& self = static_cast<const CRTP&>(*this);
+  std::vector<std::vector<NodeId>> result;
+  result.reserve(self.GetCladesCount());
+  for (auto clade : self.GetClades()) {
+    std::vector<NodeId> clade_leafs;
+    clade_leafs.reserve(clade.size());
+    for (auto child : clade | Transform::GetChild()) {
+      if (child.IsLeaf()) {
+        clade_leafs.push_back(child);
+      } else {
+        child.CalculateLeafsBelow();
+        for (auto i : child.GetLeafsBelow() | ranges::views::join) {
+          clade_leafs.push_back(i);
+        }
+      }
+    }
+    clade_leafs |= ranges::actions::sort(
+        [](NodeId lhs, NodeId rhs) { return lhs.value < rhs.value; });
+    result.push_back(std::move(clade_leafs));
+  }
+  GetFeatureStorage(this).leafs_below_ = std::move(result);
 }

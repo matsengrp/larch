@@ -8,6 +8,7 @@
 struct Neighbors {
   std::vector<EdgeId> parents_;
   std::vector<std::vector<EdgeId>> clades_;
+  std::vector<std::vector<NodeId>> leafs_below_;
 };
 
 template <typename CRTP, typename Tag>
@@ -24,6 +25,7 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
   auto GetFirstClade() const;
   bool IsRoot() const;
   bool IsLeaf() const;
+  auto GetLeafsBelow() const;
 };
 
 template <typename CRTP, typename Tag>
@@ -32,4 +34,5 @@ struct FeatureMutableView<Neighbors, CRTP, Tag> {
   void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent) const;
   void RemoveParent(EdgeId edge) const;
   void RemoveChild(CladeIdx clade, EdgeId child) const;
+  void CalculateLeafsBelow() const;
 };
