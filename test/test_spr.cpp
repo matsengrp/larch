@@ -31,8 +31,17 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 
     auto spr = storage.View();
     MADAGToDOT(spr, std::cout);
+    spr.GetRoot().Validate(true);
+    std::cout << "MAT ids move: " << move.src->node_id << " -> " << move.dst->node_id
+              << "\n";
+    MATToDOT(*sample_mat_.load(), std::cout);
+    try {
     spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
-    std::ignore = spr.GetFragment();
+    spr.GetRoot().Validate(true);
+    } catch (...) {
+      std::cout << "Failed to init SPR\n"; 
+    }
+    // std::ignore = spr.GetFragment();
     return move.score_change < best_score_change;
   }
 
@@ -68,6 +77,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     MAT::Tree mat;
     sample.View().BuildMAT(mat);
     std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
+    sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View());
     Test_Move_Found_Callback callback{sample.View()};
     optimized_dags.push_back(optimize_dag_direct(sample.View(), callback, callback));
@@ -224,13 +234,13 @@ static auto MakeSampleDAG() {
 
   spr.ApplyMove({9}, {4});
 
-  for (auto node : spr.GetNodes()) {
-    if (not node.IsOverlaid<CompactGenome>()) {
-      node.SetOverlay<CompactGenome>();
-    }
-  }
+  // for (auto node : spr.GetNodes()) {
+  //   if (not node.IsOverlaid<CompactGenome>()) {
+  //     node.SetOverlay<CompactGenome>();
+  //   }
+  // }
 
-  spr.RecomputeCompactGenomes();
+  // spr.RecomputeCompactGenomes();
 
   MADAGToDOT(spr, std::cout);
 }

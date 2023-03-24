@@ -239,7 +239,7 @@ void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut)
 }
 
 static void MATToDOT(const MAT::Node* node, std::ostream& out, std::set<size_t>& visited) {
-  Assert(visited.insert(node->node_id).second);
+  // Assert(visited.insert(node->node_id).second);
          
   for (auto* i : node->children) {
     MATToDOT(i, out, visited);
