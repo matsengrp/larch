@@ -238,9 +238,10 @@ void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut)
   proto_mut->add_mut_nuc(EncodeBasePB(mut));
 }
 
-static void MATToDOT(const MAT::Node* node, std::ostream& out, std::set<size_t>& visited) {
-  // Assert(visited.insert(node->node_id).second);
-         
+static void MATToDOT(const MAT::Node* node, std::ostream& out,
+                     std::set<const MAT::Node*> visited) {
+  Assert(visited.insert(node).second);
+
   for (auto* i : node->children) {
     MATToDOT(i, out, visited);
     out << "  \"" << node->node_id << "\" -> \"" << i->node_id << "\"";
@@ -256,7 +257,7 @@ void MATToDOT(const MAT::Tree& mat, std::ostream& out) {
   out << "  nodesep=1.0\n";
   out << "  ranksep=2.0\n";
   out << "  ratio=1.0\n";
-  std::set<size_t> visited;
+  std::set<const MAT::Node*> visited;
   MATToDOT(mat.root, out, visited);
   out << "}\n";
 }

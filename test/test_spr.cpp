@@ -12,7 +12,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag) : sample_dag_{sample_dag} {}
 
   bool operator()(Profitable_Moves& move, int best_score_change,
-                  std::vector<Node_With_Major_Allele_Set_Change>&
+                  [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
                       nodes_with_major_allele_set_change) override {
     Assert(move.src != nullptr);
     Assert(move.dst != nullptr);
@@ -30,17 +30,9 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     }(sample_dag_.GetReferenceSequence());
 
     auto spr = storage.View();
-    MADAGToDOT(spr, std::cout);
     spr.GetRoot().Validate(true);
-    std::cout << "MAT ids move: " << move.src->node_id << " -> " << move.dst->node_id
-              << "\n";
-    MATToDOT(*sample_mat_.load(), std::cout);
-    try {
     spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
     spr.GetRoot().Validate(true);
-    } catch (...) {
-      std::cout << "Failed to init SPR\n"; 
-    }
     // std::ignore = spr.GetFragment();
     return move.score_change < best_score_change;
   }
@@ -61,7 +53,7 @@ static MADAGStorage Load(std::string_view input_dag_path,
 }
 
 static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
-  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAG(input_dag);
@@ -234,13 +226,13 @@ static auto MakeSampleDAG() {
 
   spr.ApplyMove({9}, {4});
 
-  // for (auto node : spr.GetNodes()) {
-  //   if (not node.IsOverlaid<CompactGenome>()) {
-  //     node.SetOverlay<CompactGenome>();
-  //   }
-  // }
+  for (auto node : spr.GetNodes()) {
+    if (not node.IsOverlaid<CompactGenome>()) {
+      node.SetOverlay<CompactGenome>();
+    }
+  }
 
-  // spr.RecomputeCompactGenomes();
+  spr.RecomputeCompactGenomes();
 
   MADAGToDOT(spr, std::cout);
 }
@@ -260,7 +252,7 @@ static auto MakeSampleDAG() {
               "SPR: tree 20D_from_fasta"});
 
 [[maybe_unused]] static const auto test_added2 =
-    add_test({[] { test_spr(MakeSampleDAG(), 3); }, "SPR: sample"});
+    add_test({[] { test_spr(MakeSampleDAG(), 3000); }, "SPR: sample"});
 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});

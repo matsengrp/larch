@@ -1,45 +1,30 @@
 template <typename CRTP, typename Tag>
 bool FeatureConstView<MATConversion, CRTP, Tag>::HaveMATNode() const {
-  size_t id = GetFeatureStorage(this).mat_node_id_;
-  if (id == NoId) {
-    return false;
-  }
-  auto& node = static_cast<const CRTP&>(*this);
-  return node.GetDAG().GetMAT().get_node(id) != nullptr;
+  MATNodePtr ptr = GetFeatureStorage(this).mat_node_ptr_;
+  return ptr != nullptr;
 }
 
 template <typename CRTP, typename Tag>
-const MAT::Node& FeatureConstView<MATConversion, CRTP, Tag>::GetMATNode() const {
-  size_t id = GetMATNodeId();
-  auto& node = static_cast<const CRTP&>(*this);
-  auto* result = node.GetDAG().GetMAT().get_node(id);
-  Assert(result != nullptr);
-  return *result;
+MATNodePtr FeatureConstView<MATConversion, CRTP, Tag>::GetMATNode() const {
+  MATNodePtr ptr = GetFeatureStorage(this).mat_node_ptr_;
+  Assert(ptr != nullptr);
+  return ptr;
 }
 
 template <typename CRTP, typename Tag>
-size_t FeatureConstView<MATConversion, CRTP, Tag>::GetMATNodeId() const {
-  size_t id = GetFeatureStorage(this).mat_node_id_;
-  Assert(id != NoId);
-  return id;
+MATNodePtr FeatureMutableView<MATConversion, CRTP, Tag>::GetMutableMATNode() const {
+  MATNodePtr ptr = GetFeatureStorage(this).mat_node_ptr_;
+  Assert(ptr != nullptr);
+  return ptr;
 }
 
 template <typename CRTP, typename Tag>
-MAT::Node& FeatureMutableView<MATConversion, CRTP, Tag>::GetMutableMATNode() const {
-  auto& node = static_cast<const CRTP&>(*this);
-  size_t id = node.GetMATNodeId();
-  auto* result = node.GetDAG().GetMutableMAT().get_node(id);
-  Assert(result != nullptr);
-  return *result;
-}
-
-template <typename CRTP, typename Tag>
-void FeatureMutableView<MATConversion, CRTP, Tag>::SetMATNodeId(size_t id) const {
-  GetFeatureStorage(this).mat_node_id_ = id;
+void FeatureMutableView<MATConversion, CRTP, Tag>::SetMATNode(MATNodePtr ptr) const {
+  GetFeatureStorage(this).mat_node_ptr_ = ptr;
   auto& node = static_cast<const CRTP&>(*this);
   node.GetDAG()
       .template GetFeatureExtraStorage<NodeId, MATConversion>()
-      .reverse_map_.insert({id, node.GetId()});
+      .reverse_map_.insert({ptr, node.GetId()});
 }
 
 template <typename CRTP>
@@ -49,12 +34,11 @@ const MAT::Tree& ExtraFeatureConstView<MATConversion, CRTP>::GetMAT() const {
 }
 
 template <typename CRTP>
-auto ExtraFeatureConstView<MATConversion, CRTP>::GetNodeFromMAT(
-    size_t mat_node_id) const {
+auto ExtraFeatureConstView<MATConversion, CRTP>::GetNodeFromMAT(MATNodePtr node) const {
   auto& dag = static_cast<const CRTP&>(*this);
   NodeId id =
       dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(
-          mat_node_id);
+          node);
   return dag.Get(id);
 }
 
@@ -68,11 +52,11 @@ MAT::Tree& ExtraFeatureMutableView<MATConversion, CRTP>::GetMutableMAT() const {
 
 template <typename CRTP>
 auto ExtraFeatureMutableView<MATConversion, CRTP>::GetMutableNodeFromMAT(
-    size_t mat_node_id) const {
+    MATNodePtr node) const {
   auto& dag = static_cast<const CRTP&>(*this);
   NodeId id =
       dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(
-          mat_node_id);
+          node);
   return dag.Get(id);
 }
 
@@ -93,7 +77,7 @@ static inline uint8_t EncodeBaseMAT(char base) {
   };
 }
 
-inline auto mutations_view(MAT::Node* node) {
+inline auto mutations_view(MATNodePtr node) {
   return node->mutations |
          ranges::views::transform(
              [](const MAT::Mutation& mut)
@@ -125,9 +109,9 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT(MAT::Tree& tree) con
       std::addressof(tree);
 
   auto root_node = dag.GetRoot().GetFirstChild().GetChild();
-  root_node.SetMATNodeId(root_node.GetId().value);
   // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-  auto* mat_root_node = new MAT::Node(root_node.GetId().value);
+  MATNodePtr mat_root_node = new MAT::Node(root_node.GetId().value);
+  root_node.SetMATNode(mat_root_node);
 
   const auto& tree_root_mutations = dag.GetRoot().GetFirstChild().GetEdgeMutations();
   mat_root_node->mutations.reserve(tree_root_mutations.size());
@@ -153,7 +137,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
       std::addressof(mat);
   dag.SetReferenceSequence(reference_sequence);
   auto root_node = dag.AppendNode();
-  root_node.SetMATNodeId(mat.root->node_id);
+  root_node.SetMATNode(mat.root);
   BuildHelper(mat.root, root_node, dag);
   dag.BuildConnections();
   dag.AddUA(EdgeMutations{mutations_view(mat.root)});
@@ -162,7 +146,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
 template <typename CRTP>
 template <typename Node>
 void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(Node dag_node,
-                                                               MAT::Node* mat_par_node,
+                                                               MATNodePtr mat_par_node,
                                                                MAT::Tree& new_tree) {
   mat_par_node->children.reserve(dag_node.GetCladesCount());
   for (auto clade : dag_node.GetClades()) {
@@ -171,8 +155,8 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(Node dag_node,
     const auto& mutations = edge.GetEdgeMutations();
     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
     size_t node_id = edge.GetChild().GetId().value;
-    edge.GetChild().SetMATNodeId(node_id);
     auto* node = new MAT::Node(node_id);
+    edge.GetChild().SetMATNode(node);
     new_tree.register_node_serial(node);
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
@@ -190,13 +174,14 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(Node dag_node,
 
 template <typename CRTP>
 template <typename Node, typename DAG>
-void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(MAT::Node* par_node,
+void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(MATNodePtr par_node,
                                                                Node node, DAG dag) {
-  for (size_t clade_idx = 0; clade_idx < par_node->children.size(); clade_idx++) {
-    MAT::Node* mat_child = par_node->children[clade_idx];
+  for (CladeIdx clade_idx = {0}; clade_idx.value < par_node->children.size();
+       ++clade_idx.value) {
+    MATNodePtr mat_child = par_node->children[clade_idx.value];
     auto child_node = dag.AppendNode();
-    child_node.SetMATNodeId(mat_child->node_id);
-    auto child_edge = dag.AppendEdge(node, child_node, CladeIdx{clade_idx});
+    child_node.SetMATNode(mat_child);
+    auto child_edge = dag.AppendEdge(node, child_node, clade_idx);
     child_edge.SetEdgeMutations({mutations_view(mat_child)});
     BuildHelper(mat_child, child_node, dag);
   }

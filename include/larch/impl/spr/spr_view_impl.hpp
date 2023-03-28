@@ -1,7 +1,7 @@
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMATRoot() const {
   auto& node = static_cast<const CRTP&>(*this);
-  return node.GetMATNode().parent == nullptr;
+  return node.GetMATNode()->parent == nullptr;
 }
 
 template <typename CRTP, typename Tag>
@@ -66,18 +66,17 @@ FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetParts() const {
     // then fitch sets can't have changed, but the fitch sets recorded in
     // tree_'s changed fitch set map relative to this node are meant for this
     // node's new parent!
-    return {node.GetMATNode().mutations, std::nullopt};
+    return {node.GetMATNode()->mutations, std::nullopt};
   } else if (node.IsMoveNew()) {
     // Then fitch set changes are relative to the target node
-    auto result = dag.GetChangedFitchSetMap().find(
-        std::addressof(dag.GetMoveTarget().GetMATNode()));
-    return {dag.GetMoveTarget().GetMATNode().mutations,
+    auto result = dag.GetChangedFitchSetMap().find(dag.GetMoveTarget().GetMATNode());
+    return {dag.GetMoveTarget().GetMATNode()->mutations,
             result == dag.GetChangedFitchSetMap().end()
                 ? std::nullopt
                 : std::make_optional(result->second.Copy())};
   } else {
-    auto result = dag.GetChangedFitchSetMap().find(std::addressof(node.GetMATNode()));
-    return {node.GetMATNode().mutations,
+    auto result = dag.GetChangedFitchSetMap().find(node.GetMATNode());
+    return {node.GetMATNode()->mutations,
             result == dag.GetChangedFitchSetMap().end()
                 ? std::nullopt
                 : std::make_optional(result->second.Copy())};
@@ -140,7 +139,7 @@ template <typename CRTP, typename Tag>
 CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGenome()
     const {
   auto node = static_cast<const CRTP&>(*this).Const();
-  Assert(node.GetMATNodeId() != NoId);
+  Assert(node.HaveMATNode());
   ContiguousSet<MutationPosition> changed_base_sites =
       node.GetSitesWithChangedFitchSets();
   const CompactGenome& old_cg = node.GetOld().GetCompactGenome();
@@ -221,21 +220,21 @@ template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveLCA() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetNodeFromMAT(self.data_->move_.LCA->node_id);
+  return dag.GetNodeFromMAT(self.data_->move_.LCA);
 };
 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetNodeFromMAT(self.data_->move_.src->node_id);
+  return dag.GetNodeFromMAT(self.data_->move_.src);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTarget() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetNodeFromMAT(self.data_->move_.dst->node_id);
+  return dag.GetNodeFromMAT(self.data_->move_.dst);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -247,13 +246,13 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldSourceParent() co
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  const MAT::Node* oldest_changed_node = std::addressof(dag.GetMoveLCA().GetMATNode());
+  MATNodePtr oldest_changed_node = dag.GetMoveLCA().GetMATNode();
   for (auto& node_change : dag.GetChangedFitchSetMap()) {
     if (node_change.first->dfs_index < oldest_changed_node->dfs_index) {
       oldest_changed_node = node_change.first;
     }
   }
-  return dag.GetNodeFromMAT(oldest_changed_node->node_id);
+  return dag.GetNodeFromMAT(oldest_changed_node);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -272,8 +271,7 @@ std::vector<NodeId> FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragm
   return result;
 }
 template <typename DAG, typename CRTP, typename Tag>
-const ContiguousMap<const MAT::Node*,
-                    ContiguousMap<MutationPosition, Mutation_Count_Change>>&
+const ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>&
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetChangedFitchSetMap() const {
   auto& self = GetFeatureStorage(this);
   Assert(self.data_);
@@ -388,8 +386,7 @@ void FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   auto& self = GetFeatureStorage(this);
   Assert(not self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
-  dag.ApplyMove(dag.GetNodeFromMAT(move.src->node_id),
-                dag.GetNodeFromMAT(move.dst->node_id));
+  dag.ApplyMove(dag.GetNodeFromMAT(move.src), dag.GetNodeFromMAT(move.dst));
   self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
       typename HypotheticalTree<DAG>::Data{move, nodes_with_major_allele_set_change});
   if (dag.GetMoveLCA().IsRoot()) {

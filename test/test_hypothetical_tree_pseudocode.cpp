@@ -1,19 +1,28 @@
 template <typename Fragment, typename SampleDAG, typename parsimonyScoreType>
-parsimonyScoreType ComputeParsimonyScoreChangeForFragment(Fragment fragment, SampleDAG sample) {
-  // calculate the parsimony score for the given fragment using sampleDAG to read compact genomes
-  
+parsimonyScoreType ComputeParsimonyScoreChangeForFragment(Fragment fragment,
+                                                          SampleDAG sample) {
+  // calculate the parsimony score for the given fragment using sampleDAG to read
+  // compact genomes
+
   parsimonyScoreType orig_parsimony = 0;
   parsimonyScoreType new_parsimony = 0;
-  // traverse the nodes in the fragment and find the corresponding parent/child pair in sampleDAG. Since the fragment has an altered topology from sampleDAG, we retrieve the corresponding sampleDAG's node. We then compute the CG hamming distance for the sampleDAG's edge above that node, as well as the CG hamming distance for the fragment's edge above that node.
-  // we do not have to worry that 
+  // traverse the nodes in the fragment and find the corresponding parent/child pair in
+  // sampleDAG. Since the fragment has an altered topology from sampleDAG, we retrieve
+  // the corresponding sampleDAG's node. We then compute the CG hamming distance for the
+  // sampleDAG's edge above that node, as well as the CG hamming distance for the
+  // fragment's edge above that node. we do not have to worry that
 
-  for (auto fragment_child_node: fragment) {
+  for (auto fragment_child_node : fragment) {
     auto sample_child_node = sample.Get(fragment_child_node);
     auto sample_parent_node = sample_child_node.GetSingleParent().GetParent();
     if (!sample_parent_node.IsRoot()) {
       auto fragment_parent_node = fragment_child_node.GetSingleParent().GetParent();
-      orig_parsimony += sample_child_node.GetCompactGenome().DifferingSites(sample_parent_node.GetCompactGenome()).size();
-      new_parsimony += fragment_child_node.GetCompactGenome().DifferingSites(fragment_parent_node.GetCompactGenome()).size();
+      orig_parsimony += sample_child_node.GetCompactGenome()
+                            .DifferingSites(sample_parent_node.GetCompactGenome())
+                            .size();
+      new_parsimony += fragment_child_node.GetCompactGenome()
+                           .DifferingSites(fragment_parent_node.GetCompactGenome())
+                           .size();
     }
   }
 
@@ -23,7 +32,11 @@ parsimonyScoreType ComputeParsimonyScoreChangeForFragment(Fragment fragment, Sam
 template <typename SampleDAG, typename parsimonyScoreType>
 struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback {
   Single_Move_Callback_With_Hypothetical_Tree(Merge<MADAG>& merge, SampleDAG sample)
-      : merge_{merge}, sample_{sample}, approved_a_move_{false}, computed_score_change_{0.0}, matOptimize_reported_score_change{0.0} {}
+      : merge_{merge},
+        sample_{sample},
+        approved_a_move_{false},
+        computed_score_change_{0.0},
+        matOptimize_reported_score_change{0.0} {}
 
   bool operator()(Profitable_Moves& move, int /*best_score_change*/,
                   std::vector<Node_With_Major_Allele_Set_Change>&
@@ -40,8 +53,10 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
       // ** build fragment
       auto spr_fragment = spr.GetFragment();
 
-      // calculate parsimony score change for this fragment and save, along with matOptimize's computed score change
-      computed_score_change_ = ComputeParsimonyScoreChangeForFragment(spr_fragment, sample_);
+      // calculate parsimony score change for this fragment and save, along with
+      // matOptimize's computed score change
+      computed_score_change_ =
+          ComputeParsimonyScoreChangeForFragment(spr_fragment, sample_);
       matOptimize_reported_score_change_ = move.score_change;
 
       // set flag so we don't approve any more moves
