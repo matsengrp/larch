@@ -46,7 +46,7 @@ char CompactGenome::GetBase(MutationPosition pos,
   if (it != mutations_.end() and it->first == pos) {
     return it->second;
   }
-  return reference_sequence.at(pos.value);
+  return reference_sequence.at(pos.value - 1);
 }
 
 ContiguousSet<MutationPosition> CompactGenome::DifferingSites(

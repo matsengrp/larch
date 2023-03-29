@@ -90,11 +90,12 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
   auto dag = node.GetDAG();
   Assert(site.value <= dag.GetReferenceSequence().size());
   auto [old_fitch_sets, changes] = GetFitchSetParts();
+
   if (old_fitch_sets.find(static_cast<int>(site.value)) ==
       old_fitch_sets.mutations.end()) {
     // if no fitch set is recorded on the corresponding MAT node, we can use
     // a singleton set containing the base at this site in the parent compact genome
-    if (changes) {
+    if (changes.has_value() and changes.value().Contains(site)) {
       return FitchSet({node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
                            site, dag.GetReferenceSequence()) &
                        (~changes.value().at(site).get_decremented() |
@@ -103,7 +104,7 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
       return FitchSet({node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
           site, dag.GetReferenceSequence())});
     }
-  } else if (changes.has_value()) {
+  } else if (changes.has_value() and changes.value().Contains(site)) {
     return FitchSet(
         (old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele() &
          (~changes.value().at(site).get_decremented())) |
@@ -190,6 +191,9 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNonrootAnchorNode() const {
   auto node = static_cast<const CRTP&>(*this).Const();
+  if (node.IsMoveNew()) {
+    return false;
+  }
   if (not IsLCAAncestor()) {
     return (node.GetOld().GetCompactGenome() == node.GetCompactGenome());
     // TODO and node.GetOld().GetLeafSet() == node.GetLeafSet());
@@ -409,11 +413,11 @@ HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move,
     ContiguousMap<MutationPosition, Mutation_Count_Change> node_map;
     for (auto& mutation_count_change :
          node_with_allele_set_change.major_allele_set_change) {
-      MutationPosition pos = {
-          static_cast<size_t>(mutation_count_change.get_position())};
-      if (pos.value >= 2147483647) {
+      if (mutation_count_change.get_position() >= 2147483647) {
         continue;
       }
+      MutationPosition pos = {
+          static_cast<size_t>(mutation_count_change.get_position())};
       node_map.insert({pos, mutation_count_change});
     }
     changed_fitch_set_map_.insert(
