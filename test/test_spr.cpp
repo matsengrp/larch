@@ -480,8 +480,6 @@ template <typename DAG, typename SPR>
           node.SetOverlay<CompactGenome>();
         }
       }
-      std::cout << ">> RECOMPUTE_NODES" << std::endl;
-      // spr.RecomputeCompactGenomes();
 
       output_filename =
           output_folder + output_prefix + std::to_string(src_node.GetId().value) + "_" +
