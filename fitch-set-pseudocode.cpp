@@ -177,7 +177,7 @@ class HypotheticalTreeNode {
     fragment_node_vector.push_back(this);
     // If we've reached an anchor node, there's no need to continue down this
     // branch.
-    if (not self.IsNonrootAnchorNode()) {
+    if (not self.IsNonrootAnchorNode() or fragment_node_vector.size() < 2) {
       for (auto child : GetChildNodes()) {
         fragment_edge_vector.push_back({this, child});
         child.PreorderComputeCompactGenome();
@@ -263,8 +263,9 @@ class HypotheticalTree {
     return oldest_changed_node
   }
 
-  std::vector<HypotheticalTreeNode> GetFragment() {
-    std::vector<HypotheticalTreeNode> result;
+std::pair<std::vector<HypotheticalTreeNode>, std::vector<std::pair<HypotheticalTreeNode, HypotheticalTreeNode>>> GetFragment() {
+    std::vector<HypotheticalTreeNode> result_nodes;
+    std::vector<std::pair<HypotheticalTreeNode, HypotheticalTreeNode>> result_edges;
     HypotheticalTreeNode& oldest_changed = GetOldestChangedNode();
     if (oldest_changed.IsRoot()) {
       // we need to add the UA node as the root anchor node of the fragment,
@@ -272,8 +273,8 @@ class HypotheticalTree {
     } else {
       result.push_back(oldest_changed.GetParent());
     }
-    oldest_changed.PreorderComputeCompactGenome(result);
-    return result;
+    oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
+    return {result_nodes, result_edges};
   }
 
   private:
