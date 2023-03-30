@@ -24,25 +24,26 @@ class Node;
 }  // namespace Mutation_Annotated_Tree
 namespace MAT = Mutation_Annotated_Tree;
 
+using MATNodePtr = MAT::Node*;
+
 struct MATConversion {
-  size_t mat_node_id_ = NoId;
+  MATNodePtr mat_node_ptr_ = nullptr;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATConversion, CRTP, Tag> {
   bool HaveMATNode() const;
-  const MAT::Node& GetMATNode() const;
-  size_t GetMATNodeId() const;
+  MATNodePtr GetMATNode() const;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATConversion, CRTP, Tag> {
-  MAT::Node& GetMutableMATNode() const;
+  MATNodePtr GetMutableMATNode() const;
 
  private:
   template <typename, typename>
   friend struct ExtraFeatureMutableView;
-  void SetMATNodeId(size_t id) const;
+  void SetMATNode(MATNodePtr id) const;
 };
 
 template <>
@@ -50,27 +51,27 @@ struct ExtraFeatureStorage<MATConversion> {
   ExtraFeatureStorage() = default;
   MOVE_ONLY(ExtraFeatureStorage);
   MAT::Tree* mat_tree_ = nullptr;
-  ContiguousMap<size_t, NodeId> reverse_map_;
+  ContiguousMap<MATNodePtr, NodeId> reverse_map_;
 };
 
 template <typename CRTP>
 struct ExtraFeatureConstView<MATConversion, CRTP> {
   const MAT::Tree& GetMAT() const;
-  auto GetNodeFromMAT(size_t mat_node_id) const;
+  auto GetNodeFromMAT(const MATNodePtr mat_node_id) const;
 };
 
 template <typename CRTP>
 struct ExtraFeatureMutableView<MATConversion, CRTP> {
   MAT::Tree& GetMutableMAT() const;
-  auto GetMutableNodeFromMAT(size_t mat_node_id) const;
+  auto GetMutableNodeFromMAT(MATNodePtr mat_node_id) const;
   void BuildMAT(MAT::Tree& tree) const;
   void BuildFromMAT(MAT::Tree& mat, std::string_view reference_sequence) const;
 
  private:
   template <typename Node>
-  static void BuildHelper(Node dag_node, MAT::Node* mat_par_node, MAT::Tree& new_tree);
+  static void BuildHelper(Node dag_node, MATNodePtr mat_par_node, MAT::Tree& new_tree);
   template <typename Node, typename DAG>
-  static void BuildHelper(MAT::Node* par_node, Node node, DAG dag);
+  static void BuildHelper(MATNodePtr par_node, Node node, DAG dag);
 };
 
 template <typename DAG>

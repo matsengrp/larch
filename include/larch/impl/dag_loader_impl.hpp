@@ -146,7 +146,7 @@ static std::string EdgeMutationsToString(Edge edge) {
 template <typename Node>
 static std::string CompactGenomeToString(Node node) {
   if (node.IsRoot()) {
-    return "p";
+    return std::to_string(node.GetId().value);
   }
   std::string result = std::to_string(node.GetId().value);
   result += "\\n";

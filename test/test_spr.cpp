@@ -23,7 +23,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag) : sample_dag_{sample_dag} {}
 
   bool operator()(Profitable_Moves& move, int best_score_change,
-                  std::vector<Node_With_Major_Allele_Set_Change>&
+                  [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
                       nodes_with_major_allele_set_change) override {
     Assert(move.src != nullptr);
     Assert(move.dst != nullptr);
@@ -41,7 +41,9 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     }(sample_dag_.GetReferenceSequence());
 
     auto spr = storage.View();
+    spr.GetRoot().Validate(true);
     spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
+    spr.GetRoot().Validate(true);
     std::ignore = spr.GetFragment();
     return move.score_change < best_score_change;
   }
@@ -78,6 +80,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     MAT::Tree mat;
     sample.View().BuildMAT(mat);
     std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
+    sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View());
     Test_Move_Found_Callback callback{sample.View()};
     optimized_dags.push_back(optimize_dag_direct(sample.View(), callback, callback));
@@ -189,14 +192,14 @@ static auto MakeSampleDAG() {
 
   dag.AddEdge({0}, {0}, {10}, {0});
   dag.AddEdge({1}, {7}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'T', 'A'};
-  dag.AddEdge({2}, {7}, {2}, {0}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
+  dag.AddEdge({2}, {7}, {2}, {1}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
   dag.AddEdge({3}, {8}, {3}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
-  dag.AddEdge({4}, {8}, {4}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
+  dag.AddEdge({4}, {8}, {4}, {1}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
   dag.AddEdge({5}, {9}, {5}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
-  dag.AddEdge({6}, {9}, {6}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
-  dag.AddEdge({7}, {8}, {7}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
+  dag.AddEdge({6}, {9}, {6}, {1}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
+  dag.AddEdge({7}, {8}, {7}, {2}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
   dag.AddEdge({8}, {10}, {8}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'C'};
-  dag.AddEdge({9}, {10}, {9}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
+  dag.AddEdge({9}, {10}, {9}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
 
   dag.BuildConnections();
 
@@ -232,7 +235,7 @@ static auto MakeSampleDAG() {
 
   MADAGToDOT(spr, std::cout);
 
-  spr.ApplyMove({10}, {7});
+  spr.ApplyMove({1}, {10});
 
   for (auto node : spr.GetNodes()) {
     if (not node.IsOverlaid<CompactGenome>()) {
@@ -260,7 +263,7 @@ static auto MakeSampleDAG() {
               "SPR: tree 20D_from_fasta"});
 
 [[maybe_unused]] static const auto test_added2 =
-    add_test({[] { test_spr(MakeSampleDAG(), 3); }, "SPR: sample"});
+    add_test({[] { test_spr(MakeSampleDAG(), 3000); }, "SPR: sample"});
 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});
@@ -434,7 +437,7 @@ template <typename DAG, typename SPR>
   auto dag = dag_storage.View();
   MADAGToDOT(dag, std::cout);
 
-  size_t spr_count = 0;
+  [[maybe_unused]] size_t spr_count = 0;
   std::ofstream os;
   std::string output_folder = "_ignore/";
   std::string output_prefix = "validate_spr.";

@@ -70,7 +70,7 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
     if (not(x)) {                                                       \
       std::cerr << "Assert failed: \"" #x "\" in " __FILE__             \
                    ":" TOSTRING(__LINE__) "\n";                         \
-      std::raise(SIGTRAP);                                              \
+      /*std::raise(SIGTRAP);*/                                          \
       throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
                                ":" TOSTRING(__LINE__));                 \
     }                                                                   \

@@ -79,8 +79,7 @@ struct HypotheticalTree {
          const std::vector<Node_With_Major_Allele_Set_Change>&
              nodes_with_major_allele_set_change);
     Profitable_Moves move_;
-    ContiguousMap<const MAT::Node*,
-                  ContiguousMap<MutationPosition, Mutation_Count_Change>>
+    ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>
         changed_fitch_set_map_;
     ContiguousSet<NodeId> lca_ancestors_;
   };
@@ -112,7 +111,7 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
 
   [[nodiscard]] std::vector<NodeId> GetFragment() const;
 
-  const ContiguousMap<const MAT::Node*,
+  const ContiguousMap<MATNodePtr,
                       ContiguousMap<MutationPosition, Mutation_Count_Change>>&
   GetChangedFitchSetMap() const;
 

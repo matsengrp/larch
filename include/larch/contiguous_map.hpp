@@ -113,6 +113,10 @@ class ContiguousMap {
     return it->second;
   }
 
+  bool Contains(const K& key) const {
+    return find(key) != end();
+  }
+
   void Union(const ContiguousMap& other) {
     storage_type result;
     result.reserve(std::max(data_.size(), other.data_.size()));
