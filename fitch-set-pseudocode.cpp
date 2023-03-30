@@ -107,7 +107,7 @@ class HypotheticalTreeNode {
 
   // Most of the time this can just return the parent node's
   // changed_base_sites. However, it's different if the node in question is the
-  // source node!
+  // source node or the target node!
   std::set<size_t> GetParentChangedBaseSites(){
     if (self.IsSourceNode()) {
       // this node used to be below the old source parent, so we need
@@ -118,6 +118,11 @@ class HypotheticalTreeNode {
       CompactGenome new_parent_cg = GetParent().GetNewCompactGenome();
       // Imaginary method DifferingSites returns sites at which new_parent_cg
       // and old_parent_cg don't have the same base.
+      return old_parent_cg.DifferingSites(new_parent_cg);
+    } else if (self.IsTargetNode()) {
+       // if this node is the target node, then the old parent of this node is now its grandparent, so we want to check which sites differ between the old parent and the new parent (which is the new node).
+       CompactGenome old_parent_cg = tree_.GetTarget().GetOldParent().GetOldCompactGenome();
+       CompactGenome new_parent_cg = GetParent().GetNewCompactGenome();
       return old_parent_cg.DifferingSites(new_parent_cg);
     } else {
       return GetParent()._changed_base_sites;
@@ -167,13 +172,14 @@ class HypotheticalTreeNode {
     return old_cg.ApplyChanges(cg_changes);
   }
 
-  void PreorderComputeCompactGenome(std::vector<HypotheticalTreeNode>& fragment_vector) {
+  void PreorderComputeCompactGenome(std::vector<HypotheticalTreeNode>& fragment_node_vector, std::vector<std::pair<HypotheticalTreeNode, HypotheticalTreeNode>>& fragment_edge_vector) {
     ComputeNewCompactGenome();
-    fragment_vector.push_back(this);
+    fragment_node_vector.push_back(this);
     // If we've reached an anchor node, there's no need to continue down this
     // branch.
     if (not self.IsNonrootAnchorNode()) {
       for (auto child : GetChildNodes()) {
+        fragment_edge_vector.push_back({this, child});
         child.PreorderComputeCompactGenome();
       }
     }
