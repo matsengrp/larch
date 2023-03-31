@@ -19,7 +19,7 @@ bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveTarget() const {
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveNew() const {
   auto& node = static_cast<const CRTP&>(*this);
-  return node.IsAppended();
+  return node.IsAppended(); // Question for Ognian: Does this work when the new node replaces the oldSourceParent (unifurcating case)
 }
 
 template <typename CRTP, typename Tag>
