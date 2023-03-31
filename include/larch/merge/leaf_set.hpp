@@ -25,6 +25,10 @@ class LeafSet {
   LeafSet(Node node, const std::vector<NodeLabel>& labels,
           std::vector<LeafSet>& computed_leafsets);
 
+  template <typename Node>
+  LeafSet(Node node, const ContiguousMap<NodeId, NodeLabel>& labels,
+          ContiguousMap<NodeId, LeafSet>& computed_leafsets);
+
   inline LeafSet(std::vector<std::vector<const CompactGenome*>>&& clades);
 
   inline bool operator==(const LeafSet& rhs) const noexcept;
