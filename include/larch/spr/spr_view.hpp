@@ -69,7 +69,8 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {
-  void PreorderComputeCompactGenome(std::vector<NodeId>& result) const;
+  void PreorderComputeCompactGenome(std::vector<NodeId>& result,
+                                    std::vector<EdgeId>& result_edges) const;
 };
 
 template <typename DAG>
@@ -109,7 +110,7 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   // changes, whichever is higher in the tree.
   [[nodiscard]] auto GetOldestChangedNode() const;
 
-  [[nodiscard]] std::vector<NodeId> GetFragment() const;
+  [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>> GetFragment() const;
 
   const ContiguousMap<MATNodePtr,
                       ContiguousMap<MutationPosition, Mutation_Count_Change>>&

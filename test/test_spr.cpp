@@ -224,7 +224,9 @@ static auto MakeSampleDAG() {
 
   MADAGToDOT(spr, std::cout);
 
-  spr.ApplyMove({9}, {4});
+  spr.GetRoot().Validate(true);
+  spr.ApplyMove({1}, {10});
+  spr.GetRoot().Validate(true);
 
   for (auto node : spr.GetNodes()) {
     if (not node.IsOverlaid<CompactGenome>()) {

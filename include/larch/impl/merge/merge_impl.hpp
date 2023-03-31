@@ -140,6 +140,10 @@ void Merge<DAG>::AddDAG(D dag, N below) {
 }
 
 template <typename DAG>
+template <typename D>
+void Merge<DAG>::AddFragment(D dag, const std::vector<NodeId>& nodes) {}
+
+template <typename DAG>
 MergeDAG Merge<DAG>::GetResult() const {
   return result_dag_storage_.View();
 }

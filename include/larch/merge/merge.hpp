@@ -64,6 +64,9 @@ class Merge {
   template <typename D, typename N = std::nullopt_t>
   void AddDAG(D dag, N below = std::nullopt);
 
+  template <typename D>
+  void AddFragment(D dag, const std::vector<NodeId>& nodes);
+
   /**
    * Get the DAG resulting from merge
    * @{

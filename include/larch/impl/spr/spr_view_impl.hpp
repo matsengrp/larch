@@ -131,6 +131,17 @@ FeatureConstView<HypotheticalNode, CRTP, Tag>::GetParentChangedBaseSites() const
     // Imaginary method DifferingSites returns sites at which new_parent_cg
     // and old_parent_cg don't have the same base.
     return old_parent_cg.DifferingSites(new_parent_cg);
+  } else if (node.IsMoveTarget()) {
+    // if this node is the target node, then the old parent of this node is now its
+    // grandparent, so we want to check which sites differ between the old parent and
+    // the new parent (which is the new node).
+    const CompactGenome& old_parent_cg =
+        dag.GetMoveTarget().GetOld().GetSingleParent().GetParent().GetCompactGenome();
+    const CompactGenome& new_parent_cg =
+        node.GetSingleParent().GetParent().GetCompactGenome();
+    // Imaginary method DifferingSites returns sites at which new_parent_cg
+    // and old_parent_cg don't have the same base.
+    return old_parent_cg.DifferingSites(new_parent_cg);
   } else {
     return node.GetSingleParent().GetParent().GetChangedBaseSites().Copy();
   }
@@ -204,18 +215,19 @@ bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNonrootAnchorNode() const 
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGenome(
-    std::vector<NodeId>& result) const {
+    std::vector<NodeId>& result_nodes, std::vector<EdgeId>& result_edges) const {
   auto& node = static_cast<const CRTP&>(*this);
   if (not node.IsRoot() and not node.IsMoveNew()) {  // TODO
     node.template SetOverlay<Deduplicate<CompactGenome>>();
     node = node.ComputeNewCompactGenome();
   }
-  result.push_back(node);
+  result_nodes.push_back(node);
   // If we've reached an anchor node, there's no need to continue down this
   // branch.
-  if (not node.IsNonrootAnchorNode()) {
+  if (not node.IsNonrootAnchorNode() or result_nodes.size() < 2) {
     for (auto child : node.GetChildren()) {
-      child.GetChild().PreorderComputeCompactGenome(result);
+      result_edges.push_back(child);
+      child.GetChild().PreorderComputeCompactGenome(result_nodes, result_edges);
     }
   }
 }
@@ -260,19 +272,20 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
 }
 
 template <typename DAG, typename CRTP, typename Tag>
-std::vector<NodeId> FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment()
-    const {
+std::pair<std::vector<NodeId>, std::vector<EdgeId>>
+FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  std::vector<NodeId> result;
+  std::vector<NodeId> result_nodes;
+  std::vector<EdgeId> result_edges;
   auto oldest_changed = dag.GetOldestChangedNode();
   if (oldest_changed.IsRoot()) {
     // we need to add the UA node as the root anchor node of the fragment,
     // somehow
   } else {
-    result.push_back(oldest_changed.GetSingleParent().GetParent());
+    result_nodes.push_back(oldest_changed.GetSingleParent().GetParent());
   }
-  oldest_changed.PreorderComputeCompactGenome(result);
-  return result;
+  oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
+  return {result_nodes, result_edges};
 }
 template <typename DAG, typename CRTP, typename Tag>
 const ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>&
