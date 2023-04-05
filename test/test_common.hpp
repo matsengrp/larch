@@ -25,14 +25,16 @@ inline void assert_equal(L&& l, R&& r, const std::string& what) {
   if (not(l == r)) throw std::runtime_error(what);
 }
 
-inline void test_true(bool expr, const std::string& what) {
+inline bool test_true(bool expr, const std::string& what) {
   if (!expr) {
-    std::cout << "TEST_FAILED: " << what << std::endl;
+    std::cout << "TEST_FAILURE: " << what << std::endl;
   }
+  return expr;
 }
 
-inline void test_false(bool expr, const std::string& what) {
+inline bool test_false(bool expr, const std::string& what) {
   if (expr) {
-    std::cout << "TEST_FAILED: " << what << std::endl;
+    std::cout << "TEST_FAILURE: " << what << std::endl;
   }
+  return !expr;
 }

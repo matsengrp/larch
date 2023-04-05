@@ -286,8 +286,9 @@ static auto MakeSampleDAG() {
 [[maybe_unused]] static const auto test_added6 =
     add_test({test_sample, "SPR: sample move"});
 
-// ** NEW TEST
+// ** SPR: validate DAG after SPR move.
 
+// Use the base DAG and the src and dest nodes.
 template <typename DAG, typename SPR, typename Node>
 [[maybe_unused]] static bool test_compare_dag_vs_spr_nodes(
     DAG dag, SPR spr, Node src_dag, Node dest_dag, std::vector<size_t> child_counts) {
@@ -337,7 +338,7 @@ template <typename DAG, typename SPR, typename Node>
   }
 
   // Check that parents of src_node and dest_node are either previous dest_parent nodes
-  // or collapsed nodes.
+  // or collapsed nodes (collapsed node ids can be repurposed for new node ids).
   for (auto parent_node : src_spr.GetParentNodes()) {
     if (!(dest_dag.ContainsParent(parent_node.GetId())) &&
         !(collapsed_nodes.find(parent_node.GetId()) != collapsed_nodes.end())) {
@@ -368,7 +369,8 @@ template <typename DAG, typename SPR, typename Node>
     }
   }
 
-  // Check that all other nodes are not modified from pre-move DAG.
+  // Check that all other nodes are not modified from pre-move DAG. Allows for the
+  // exception when parent or child is a collapsed node.
   for (auto dag_node : dag.GetNodes()) {
     if ((changed_nodes.find(dag_node.GetId()) != changed_nodes.end()) ||
         (collapsed_nodes.find(dag_node.GetId()) != collapsed_nodes.end())) {
@@ -432,8 +434,8 @@ std::set<Node> get_all_parents_of_node(Node child_node) {
   return parent_nodes;
 }
 
-template <typename DAG, typename Node>
-bool is_valid_spr_move(DAG dag, Node src_node, Node dest_node) {
+template <typename Node>
+bool is_valid_spr_move(Node src_node, Node dest_node) {
   if (src_node.GetId() == dest_node.GetId()) {
     return false;
   }
@@ -453,36 +455,31 @@ bool is_valid_spr_move(DAG dag, Node src_node, Node dest_node) {
 }
 
 // Test that all elligible SPR moves result in valid tree states.
-[[maybe_unused]] static void validate_dag_after_spr() {
+[[maybe_unused]] static void validate_dag_after_spr(const std::string& dag_name,
+                                                    bool write_dot_files = false) {
   std::ofstream os;
   std::string output_filename;
   std::string output_folder = "_ignore/";
-  std::string output_prefix = "validate_spr.";
   std::string output_ext = ".dot";
-
-  std::cout << std::endl;
-  std::cout << "==> VALIDATE DAG AFTER SPR [begin] <==" << std::endl;
 
   auto dag_storage = MakeSampleDAG();
   auto dag = dag_storage.View();
   auto child_counts = get_child_counts(dag);
 
-  output_filename = output_folder + "sample_dag" + output_ext;
-  std::cout << ">> WRITE DOTFILE [pre]: " << output_filename << std::endl;
-  os.open(output_filename);
-  MADAGToDOT(dag, os);
-  os.close();
+  if (write_dot_files) {
+    output_filename = output_folder + dag_name + output_ext;
+    std::cout << ">> WRITE DOTFILE [pre]: " << output_filename << std::endl;
+    os.open(output_filename);
+    MADAGToDOT(dag, os);
+    os.close();
+  }
 
   // Test all valid SPR moves.
   for (auto src_node : dag.GetNodes()) {
     for (auto dest_node : dag.GetNodes()) {
-      if (!is_valid_spr_move(dag, src_node, dest_node)) {
-        std::cout << "SKIPPING..." << std::endl;
+      if (!is_valid_spr_move(src_node, dest_node)) {
         continue;
       }
-
-      std::cout << "SRC: NodeId::" << src_node.GetId().value
-                << ", DEST: NodeId::" << dest_node.GetId().value << std::endl;
 
       // Apply SPR
       auto spr_storage = SPRStorage(dag);
@@ -497,20 +494,27 @@ bool is_valid_spr_move(DAG dag, Node src_node, Node dest_node) {
       }
       spr.RecomputeCompactGenomes();
 
-      output_filename = output_folder + "sample_dag." +
-                        std::to_string(src_node.GetId().value) + "_" +
-                        std::to_string(dest_node.GetId().value) + output_ext;
-      std::cout << ">> WRITE DOTFILE [post]: " << output_filename << std::endl;
-      os.open(output_filename);
-      MADAGToDOT(spr, os);
-      os.close();
+      if (write_dot_files) {
+        std::cout << "SRC: NodeId::" << src_node.GetId().value
+                  << ", DEST: NodeId::" << dest_node.GetId().value << std::endl;
+        output_filename = output_folder + dag_name + "." +
+                          std::to_string(src_node.GetId().value) + "_" +
+                          std::to_string(dest_node.GetId().value) + output_ext;
+        std::cout << ">> WRITE DOTFILE [post]: " << output_filename << std::endl;
+        os.open(output_filename);
+        MADAGToDOT(spr, os);
+        os.close();
+      }
 
-      // Test parent-child identities.
-      test_compare_dag_vs_spr_nodes(dag, spr, src_node, dest_node, child_counts);
+      assert_true(
+          test_compare_dag_vs_spr_nodes(dag, spr, src_node, dest_node, child_counts),
+          "DAG '" + dag_name + "' created invalid DAG after move " +
+              std::to_string(src_node.GetId().value) + " -> " +
+              std::to_string(dest_node.GetId().value));
     }
   }
-  std::cout << "==> VALIDATE DAG AFTER SPR [end] <==" << std::endl;
 }
 
 [[maybe_unused]] static const auto test_added7 =
-    add_test({validate_dag_after_spr, "SPR: validate DAG after SPR"});
+    add_test({[]() { validate_dag_after_spr("sample_dag", false); },
+              "SPR: validate DAG after SPR (sample_dag)"});
