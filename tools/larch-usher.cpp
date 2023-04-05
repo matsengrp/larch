@@ -63,6 +63,7 @@
 }
 
 static int ParseNumber(std::string_view str) {
+  std::cout << "Parsing input number: " << str << "\n" << std::flush;
   int result{};
   std::istringstream stream{std::string{str}};
   stream >> result;
@@ -202,7 +203,21 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
 };
 
 int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
+  std::cout << ranges::views::all(ranges::views::counted(argv, argc) | ranges::views::drop(1) |
+         ranges::views::transform([](auto i) { return std::string_view{i}; }) |
+         ranges::views::group_by([](auto _, auto i) {
+           // should return true if this is not a named argument (e.g. a value)
+           std::ignore = _;
+           if (i.length() < 2){
+             return true;
+           } else if (i.length() == 2) {
+             return i.find('-') != 0;
+           } else {
+             return i[0] != '-' or i[1] != '-';
+           }
+         })) << "\n" << std::flush;
   Arguments args = GetArguments(argc, argv);
+
   int ignored{};
   std::string input_dag_path;
   std::string output_dag_path;
