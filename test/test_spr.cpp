@@ -8,16 +8,6 @@
 #include <fstream>
 #include <tbb/global_control.h>
 
-std::ostream& operator<<(std::ostream& os, EdgeId edge_id) {
-  os << "EdgeId::" << edge_id.value;
-  return os;
-}
-
-std::ostream& operator<<(std::ostream& os, NodeId node_id) {
-  os << "NodeId::" << node_id.value;
-  return os;
-}
-
 template <typename DAG>
 struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag) : sample_dag_{sample_dag} {}

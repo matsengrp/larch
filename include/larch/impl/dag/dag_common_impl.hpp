@@ -25,10 +25,6 @@ size_t std::hash<EdgeId>::operator()(EdgeId id) const noexcept { return id.value
 bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs.value == rhs.value; }
 bool operator!=(CladeIdx lhs, CladeIdx rhs) { return lhs.value != rhs.value; }
 bool operator<(CladeIdx lhs, CladeIdx rhs) { return lhs.value < rhs.value; }
-// std::ostream& operator<<(std::ostream& os, CladeIdx clade) {
-//   os << "CladeIdx::" << clade.value;
-//   return os;
-// }
 
 namespace Transform {
 
