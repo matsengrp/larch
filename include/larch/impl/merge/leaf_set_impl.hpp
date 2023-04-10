@@ -31,6 +31,33 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
       }()},
       hash_{ComputeHash(clades_)} {}
 
+template <typename Node>
+LeafSet::LeafSet(Node node, const ContiguousMap<NodeId, NodeLabel>& labels,
+                 ContiguousMap<NodeId, LeafSet>& computed_leafsets)
+    : clades_{[&] {
+        std::vector<std::vector<const CompactGenome*>> clades;
+        clades.reserve(node.GetCladesCount());
+        for (auto clade : node.GetClades()) {
+          std::vector<const CompactGenome*> clade_leafs;
+          clade_leafs.reserve(clade.size());
+          for (Node child : clade | Transform::GetChild()) {
+            if (child.IsLeaf()) {
+              clade_leafs.push_back(labels.at(child).GetCompactGenome());
+            } else {
+              for (auto& child_leafs : computed_leafsets.at(child).clades_) {
+                clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
+                                   child_leafs.end());
+              }
+            }
+          }
+          clade_leafs |= ranges::actions::sort | ranges::actions::unique;
+          clades.emplace_back(std::move(clade_leafs));
+        }
+        clades |= ranges::actions::sort;
+        return clades;
+      }()},
+      hash_{ComputeHash(clades_)} {}
+
 LeafSet::LeafSet(std::vector<std::vector<const CompactGenome*>>&& clades)
     : clades_{std::forward<std::vector<std::vector<const CompactGenome*>>>(clades)},
       hash_{ComputeHash(clades_)} {}

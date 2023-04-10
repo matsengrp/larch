@@ -64,6 +64,10 @@ class Merge {
   template <typename D, typename N = std::nullopt_t>
   void AddDAG(D dag, N below = std::nullopt);
 
+  template <typename D>
+  void AddFragment(D dag, const std::vector<NodeId>& nodes,
+                   const std::vector<EdgeId>& edges);
+
   /**
    * Get the DAG resulting from merge
    * @{
@@ -95,6 +99,10 @@ class Merge {
   template <typename DAGType>
   inline static std::vector<LeafSet> ComputeLeafSets(
       DAGType dag, const std::vector<NodeLabel>& labels);
+
+  template <typename DAGType>
+  inline static ContiguousMap<NodeId, LeafSet> ComputeLeafSets(
+      DAGType dag, const ContiguousMap<NodeId, NodeLabel>& labels);
 
   // Vector of externally owned input DAGs.
   std::vector<DAG> trees_;

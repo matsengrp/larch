@@ -113,9 +113,7 @@ class ContiguousMap {
     return it->second;
   }
 
-  bool Contains(const K& key) const {
-    return find(key) != end();
-  }
+  bool Contains(const K& key) const { return find(key) != end(); }
 
   void Union(const ContiguousMap& other) {
     storage_type result;

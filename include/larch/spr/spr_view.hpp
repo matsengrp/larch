@@ -69,16 +69,18 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {
-  void PreorderComputeCompactGenome(std::vector<NodeId>& result) const;
+  void PreorderComputeCompactGenome(std::vector<NodeId>& result,
+                                    std::vector<EdgeId>& result_edges) const;
 };
 
 template <typename DAG>
 struct HypotheticalTree {
   struct Data {
-    Data(const Profitable_Moves& move,
+    Data(const Profitable_Moves& move, NodeId new_node,
          const std::vector<Node_With_Major_Allele_Set_Change>&
              nodes_with_major_allele_set_change);
     Profitable_Moves move_;
+    NodeId new_node_;
     ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>
         changed_fitch_set_map_;
     ContiguousSet<NodeId> lca_ancestors_;
@@ -94,6 +96,7 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   // nodes (they're siblings in the hypothetical tree)
   auto GetMoveSource() const;
   auto GetMoveTarget() const;
+  auto GetMoveNew() const;
 
   // Returns the HypotheticalTreeNode that used to be the parent of source
   // before the SPR move. TODO: This node may (but need not be) unifurcating
@@ -109,7 +112,7 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   // changes, whichever is higher in the tree.
   [[nodiscard]] auto GetOldestChangedNode() const;
 
-  [[nodiscard]] std::vector<NodeId> GetFragment() const;
+  [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>> GetFragment() const;
 
   const ContiguousMap<MATNodePtr,
                       ContiguousMap<MutationPosition, Mutation_Count_Change>>&
@@ -120,7 +123,7 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
 
 template <typename DAG, typename CRTP, typename Tag>
 struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
-  void ApplyMove(NodeId src, NodeId dst) const;
+  NodeId ApplyMove(NodeId src, NodeId dst) const;
   void InitHypotheticalTree(const Profitable_Moves& move,
                             const std::vector<Node_With_Major_Allele_Set_Change>&
                                 nodes_with_major_allele_set_change);

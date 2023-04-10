@@ -8,9 +8,9 @@
 #include <fstream>
 #include <tbb/global_control.h>
 
-template <typename DAG>
+template <typename DAG, typename MergeT>
 struct Test_Move_Found_Callback : public Move_Found_Callback {
-  Test_Move_Found_Callback(DAG sample_dag) : sample_dag_{sample_dag} {}
+  Test_Move_Found_Callback(DAG sample_dag, MergeT& merge) : sample_dag_{sample_dag}, merge_{merge} {};
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
@@ -34,13 +34,15 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     spr.GetRoot().Validate(true);
     spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
     spr.GetRoot().Validate(true);
-    std::ignore = spr.GetFragment();
+    auto fragment = spr.GetFragment();
+    merge_.AddFragment(spr, fragment.first, fragment.second);
     return move.score_change < best_score_change;
   }
 
   void operator()(MAT::Tree& tree) { sample_mat_.store(std::addressof(tree)); }
 
   DAG sample_dag_;
+  MergeT& merge_;
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
 };
 
@@ -72,7 +74,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
     sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View());
-    Test_Move_Found_Callback callback{sample.View()};
+    Test_Move_Found_Callback callback{sample.View(), merge};
     optimized_dags.push_back(optimize_dag_direct(sample.View(), callback, callback));
     optimized_dags.back().first.View().RecomputeCompactGenomes();
     merge.AddDAG(optimized_dags.back().first.View(), chosen_node);
@@ -225,7 +227,9 @@ static auto MakeSampleDAG() {
 
   MADAGToDOT(spr, std::cout);
 
+  spr.GetRoot().Validate(true);
   spr.ApplyMove({1}, {10});
+  spr.GetRoot().Validate(true);
 
   for (auto node : spr.GetNodes()) {
     if (not node.IsOverlaid<CompactGenome>()) {
