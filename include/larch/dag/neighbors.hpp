@@ -19,6 +19,7 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
   size_t GetParentsCount() const;
   size_t GetCladesCount() const;
   auto GetChildren() const;
+  size_t GetChildrenCount() const;
   auto GetSingleParent() const;
   auto GetFirstParent() const;
   auto GetFirstChild() const;
@@ -27,6 +28,12 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
   bool IsLeaf() const;
   auto GetLeafsBelow() const;
   void Validate(bool recursive = false) const;
+  auto GetParentNodes() const;
+  auto GetChildNodes() const;
+  bool ContainsParent(NodeId node) const;
+  bool ContainsChild(NodeId node) const;
+  std::string ParentsToString() const;
+  std::string ChildrenToString() const;
 };
 
 template <typename CRTP, typename Tag>
