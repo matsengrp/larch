@@ -59,6 +59,7 @@ const Feature* ExtraFeatureConstView<Deduplicate<Feature>, CRTP>::FindDeduplicat
 
 template <typename Feature, typename CRTP>
 std::pair<const Feature*, bool>
+// TODO: take const reference and copy only if needed
 ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>::AddDeduplicated(
     Feature&& feature) {
   using Id = std::conditional_t<

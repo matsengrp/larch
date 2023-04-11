@@ -238,15 +238,29 @@ void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut)
   proto_mut->add_mut_nuc(EncodeBasePB(mut));
 }
 
+std::string ToEdgeMutationsString(const MAT::Node* node) {
+  static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
+  std::string result = "<";
+  for (const MAT::Mutation& mut : node->mutations) {
+    result += decode.at(one_hot_to_two_bit(mut.get_par_one_hot()));
+    result += std::to_string(mut.get_position());
+    result += decode.at(one_hot_to_two_bit(mut.get_mut_one_hot()));
+    result += ", ";
+  }
+  return result + ">";
+}
+
 static void MATToDOT(const MAT::Node* node, std::ostream& out,
                      std::set<const MAT::Node*> visited) {
   Assert(visited.insert(node).second);
 
   for (auto* i : node->children) {
     MATToDOT(i, out, visited);
-    out << "  \"" << node->node_id << "\" -> \"" << i->node_id << "\"";
-    out << "[ xlabel=\"";
-    out << "\" ]";
+    out << "  \"" << node->node_id << " " << ToEdgeMutationsString(node) << "\" -> \""
+        << i->node_id << " " << ToEdgeMutationsString(i) << "\"";
+    // out << "[ headlabel=\"";
+    // out << ToEdgeMutationsString(i);
+    // out << "\" ]";
     out << "\n";
   }
 }

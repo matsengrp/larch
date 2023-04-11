@@ -40,9 +40,10 @@ void check_MAT_MADAG_Eq(MAT::Tree& tree, DAG init) {
   compareDAG(converted_dag.View().GetRoot(), init.GetRoot());
 }
 
-template <typename DAG, typename RadiusCallback>
+template <typename DAG, typename RadiusCallback, typename ReassignCallback>
 auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
-                         RadiusCallback&& radius_callback) {
+                         RadiusCallback&& radius_callback,
+                         ReassignCallback&& reassign_callback) {
   static_assert(DAG::template contains_element_feature<NodeId, MATConversion>);
   auto& tree = dag.GetMutableMAT();
 
@@ -51,6 +52,7 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   Original_State_t origin_states;
   check_samples(tree.root, origin_states, &tree);
   reassign_states(tree, origin_states);
+  reassign_callback.OnReassignedStates(tree);
   radius_callback(tree);
 
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();

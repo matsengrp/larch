@@ -137,6 +137,8 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     node_id_map_.merge(std::forward<decltype(node_id_map)>(node_id_map));
   }
 
+  void OnReassignedStates(const MAT::Tree&) {}
+
  private:
   NodeId ToMergedNodeId(MATNodePtr node) {
     auto it = node_id_map_.find(node);
@@ -207,7 +209,7 @@ static void test_matOptimize(std::string_view input_dag_path,
       }();
       callback.MergeNodeIDs(std::move(full_map));
     };
-    optimize_dag_direct(sample.View(), callback, radius_callback);
+    optimize_dag_direct(sample.View(), callback, radius_callback, callback);
   }
 }
 

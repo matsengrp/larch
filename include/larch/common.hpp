@@ -129,8 +129,8 @@ inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wc++20-extensions"
 template <typename T>
-inline constexpr auto tuple_to_string_impl = [
-]<std::size_t... I>(std::index_sequence<I...>) {
+inline constexpr auto tuple_to_string_impl =
+    []<std::size_t... I>(std::index_sequence<I...>) {
   std::string result = "std::tuple<";
   result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
                     std::string{", "}));

@@ -27,6 +27,11 @@ void StoreTreeToProtobuf(DAG dag, std::string_view path);
 template <typename DAG>
 void MADAGToDOT(MADAG dag, std::ostream& out);
 
+template <typename DAG>
+void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, std::ostream& out);
+
+std::string ToEdgeMutationsString(const MAT::Node* node);
+
 void MATToDOT(const MAT::Tree& mat, std::ostream& out);
 
 #include "larch/impl/dag_loader_impl.hpp"

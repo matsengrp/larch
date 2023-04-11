@@ -176,3 +176,21 @@ void MADAGToDOT(DAG dag, std::ostream& out) {
   }
   out << "}\n";
 }
+
+template <typename DAG>
+void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, std::ostream& out) {
+  out << "digraph {\n";
+  out << "  forcelabels=true\n";
+  out << "  nodesep=1.0\n";
+  out << "  ranksep=2.0\n";
+  out << "  ratio=1.0\n";
+  for (auto edge : edges | Transform::ToEdges(dag)) {
+    out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
+        << CompactGenomeToString(edge.GetChild()) << "\"";
+    out << "[ xlabel=\"";
+    out << EdgeMutationsToString(edge);
+    out << "\" ]";
+    out << "\n";
+  }
+  out << "}\n";
+}
