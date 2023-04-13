@@ -191,8 +191,8 @@ class HypotheticalTreeNode {
   // in the hypothetical tree are guaranteed to also be unchanged from before
   // the SPR move. This method identifies the second kind.
   bool IsNonrootAnchorNode() {
-    if (not IsLCAAncestor()) {
-      return (dag_node_.GetCompactGenome() == GetNewCompactGenome() and dag_node_.GetLeafSet() == GetNewLeafSet());
+    if (not (IsLCAAncestor() or tree_.node_has_changed_topology[self])) {
+      return (dag_node_.GetCompactGenome() == GetNewCompactGenome());
     } else {
       return false;
     }
@@ -229,6 +229,13 @@ class HypotheticalTree {
         while (true) {
           lca = lca.GetParent();
           LCAAncestors.insert(lca);
+        }
+        //mark nodes with changed clade sets 
+        for (auto &current_node: {GetOldSourceParent(), GetMoveNew()}) {
+          while(not (current_node == GetLCA() or node_has_changed_topology[current_node]) ) {
+            node_has_changed_topology.insert({current_node, true});
+            current_node = current_node.GetSingleParent();
+          }
         }
       }
 
@@ -282,6 +289,7 @@ std::pair<std::vector<HypotheticalTreeNode>, std::vector<std::pair<HypotheticalT
     const MAT& sample_mat_;
     const Profitable_Moves& move;
     std::map<MAT::Node*, std::map<size_t, MAT::Mutation_Count_Change&>> changed_fitch_set_map_;
+    std::map<HypotheticalTreeNode, bool> node_has_changed_topology_;
     std::set<HypotheticalTreeNode> LCAAncestors;
 }
 
