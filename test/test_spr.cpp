@@ -36,6 +36,11 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     spr.GetRoot().Validate(true);
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
+
+      std::cout << "After move: " << spr.GetMoveSource().GetId().value <<
+        "->" << spr.GetMoveTarget().GetId().value << "\n";
+      MADAGToDOT(spr, std::cout);
+      
       auto fragment = spr.GetFragment();
       merge_.AddFragment(spr, fragment.first, fragment.second);
     } else {
