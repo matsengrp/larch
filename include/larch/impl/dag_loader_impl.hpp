@@ -134,8 +134,6 @@ template <typename Edge>
 static std::string EdgeMutationsToString(Edge edge) {
   std::string result;
   size_t count = 0;
-  result += "EdgeId::" + std::to_string(edge.GetId().value);
-  result += "\\n";
   for (auto [pos, muts] : edge.GetEdgeMutations()) {
     result += muts.first;
     result += std::to_string(pos.value);
@@ -147,13 +145,13 @@ static std::string EdgeMutationsToString(Edge edge) {
 
 template <typename Node>
 static std::string CompactGenomeToString(Node node) {
-  std::string result = "NodeId::" + std::to_string(node.GetId().value);
   if (node.IsRoot()) {
-    return result;
+    return std::to_string(node.GetId().value);
   }
+  std::string result = std::to_string(node.GetId().value);
   result += "\\n";
   size_t count = 0;
-  for (auto [pos, base] : node.GetCompactGenome()) {
+  for (auto [pos, base] : node.Const().GetCompactGenome()) {
     result += std::to_string(pos.value);
     result += base;
     result += ++count % 3 == 0 ? "\\n" : " ";
@@ -163,19 +161,18 @@ static std::string CompactGenomeToString(Node node) {
 
 template <typename DAG>
 void MADAGToDOT(DAG dag, std::ostream& out) {
-  out << "digraph G {\n";
+  out << "digraph {\n";
   out << "  forcelabels=true\n";
   out << "  nodesep=1.0\n";
   out << "  ranksep=2.0\n";
   out << "  ratio=1.0\n";
-  out << "  node [color=azure4,fontcolor=black,penwidth=4]\n";
-  out << "  edge [color=azure3,fontcolor=black,penwidth=4]\n";
   for (auto edge : dag.Const().GetEdges()) {
     out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
         << CompactGenomeToString(edge.GetChild()) << "\"";
-    out << "[ headlabel=\"";
+    out << "[ xlabel=\"";
     out << EdgeMutationsToString(edge);
-    out << "\" ]\n";
+    out << "\" ]";
+    out << "\n";
   }
   out << "}\n";
 }

@@ -21,7 +21,12 @@ struct FitchSet {
 };
 
 struct HypotheticalNode {
+  HypotheticalNode Copy() const {
+    return {changed_base_sites_.Copy(), has_changed_topology_};
+  }
+
   ContiguousSet<MutationPosition> changed_base_sites_;
+  bool has_changed_topology_ = false;
 };
 
 template <typename CRTP, typename Tag>
@@ -36,6 +41,8 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
   // which disqualifies a node from being a nonroot anchor
   // node (this method is used in IsNonrootAnchorNode)
   bool IsLCAAncestor() const;
+
+  bool HasChangedTopology() const;
 
   auto GetOld() const;
 
@@ -69,6 +76,7 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {
+  void SetHasChangedTopology() const;
   void PreorderComputeCompactGenome(std::vector<NodeId>& result,
                                     std::vector<EdgeId>& result_edges) const;
 };

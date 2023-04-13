@@ -49,6 +49,9 @@ auto ToEdges(DAG dag) {
     return typename DAG::EdgeView{dag, i};
   });
 }
+auto ToConst() {
+  return ranges::views::transform([](auto&& i) { return i.Const(); });
+}
 
 }  // namespace Transform
 

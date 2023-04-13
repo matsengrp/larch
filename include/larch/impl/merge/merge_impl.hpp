@@ -207,6 +207,7 @@ void Merge<DAG>::AddFragment(D dag, const std::vector<NodeId>& nodes,
 
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   Assert(result_node_labels_.size() == ResultDAG().GetNodesCount());
+
   ResultDAG().BuildConnections();
 
   ComputeResultEdgeMutations();

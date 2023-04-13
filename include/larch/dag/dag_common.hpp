@@ -89,7 +89,6 @@ struct NodeId {
 inline bool operator==(NodeId lhs, NodeId rhs);
 inline bool operator!=(NodeId lhs, NodeId rhs);
 inline bool operator<(NodeId lhs, NodeId rhs);
-// inline std::ostream& operator<<(std::ostream& os, NodeId node);
 
 template <>
 struct std::hash<NodeId> {
@@ -126,6 +125,7 @@ template <typename DAG>
 auto ToNodes(DAG dag);
 template <typename DAG>
 auto ToEdges(DAG dag);
+inline auto ToConst();
 
 }  // namespace Transform
 

@@ -30,6 +30,11 @@ bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsLCAAncestor() const {
 }
 
 template <typename CRTP, typename Tag>
+bool FeatureConstView<HypotheticalNode, CRTP, Tag>::HasChangedTopology() const {
+  return GetFeatureStorage(this).has_changed_topology_;
+}
+
+template <typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalNode, CRTP, Tag>::GetOld() const {
   auto& node = static_cast<const CRTP&>(*this);
   return node.GetDAG().GetOriginal().Get(node.GetId());
@@ -205,12 +210,16 @@ bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNonrootAnchorNode() const 
   if (node.IsMoveNew()) {
     return false;
   }
-  if (not IsLCAAncestor()) {
-    return (node.GetOld().GetCompactGenome() == node.GetCompactGenome());
-    // TODO and node.GetOld().GetLeafSet() == node.GetLeafSet());
+  if (not IsLCAAncestor() or node.HasChangedTopology()) {
+    return node.GetOld().GetCompactGenome() == node.GetCompactGenome();
   } else {
     return false;
   }
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<HypotheticalNode, CRTP, Tag>::SetHasChangedTopology() const {
+  GetFeatureStorage(this).has_changed_topology_ = true;
 }
 
 template <typename CRTP, typename Tag>
@@ -268,15 +277,30 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldSourceParent() co
 
 template <typename Node>
 static inline bool IsChanged(Node node) {
-  return node.Const().GetCompactGenome() != node.Const().GetOld().GetCompactGenome();
+  return node.GetCompactGenome() != node.GetOld().GetCompactGenome();
 }
 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() const {
   auto& dag = static_cast<const CRTP&>(*this);
 
-  NodeId oldest = dag.GetMoveNew();
-  while (not dag.Get(oldest).IsRoot() and IsChanged(dag.Get(oldest))) {
+  NodeId oldest = [dag]() {
+    auto lca = dag.GetOriginal().GetMoveLCA();
+    if (lca.GetCladesCount() != 2) {
+      return lca;
+    }
+    if (not lca.ContainsChild(dag.GetMoveSource())) {
+      return lca;
+    }
+    for (auto node : lca.GetChildren() | Transform::GetChild()) {
+      if (node.GetId() != dag.GetMoveSource().GetId()) {
+        return node;
+      }
+    }
+    Fail("Unreachable");
+  }();
+
+  while (not dag.Get(oldest).IsRoot() and IsChanged(dag.Get(oldest).Const())) {
     oldest = dag.Get(oldest).GetSingleParent().GetParent();
   }
   return dag.Get(oldest);
@@ -406,9 +430,11 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   if (new_node.value == NoId) {
     return false;
   }
+
   self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
       typename HypotheticalTree<DAG>::Data{move, new_node,
                                            nodes_with_major_allele_set_change});
+
   if (dag.GetMoveLCA().IsRoot()) {
     return true;
   }
@@ -417,6 +443,22 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
     self.data_->lca_ancestors_.insert(lca);
     lca = dag.Get(lca).GetSingleParent().GetParent();
   } while (not dag.Get(lca).IsRoot());
+
+  auto mark_changed = [&dag](NodeId current_node) {
+    while (not(current_node == dag.GetMoveLCA().GetId()) or
+           dag.Get(current_node).HasChangedTopology()) {
+      dag.Get(current_node).template SetOverlay<HypotheticalNode>();
+      dag.Get(current_node).SetHasChangedTopology();
+      if (dag.Get(current_node).IsRoot()) {
+        break;
+      }
+      current_node = dag.Get(current_node).GetSingleParent().GetParent();
+    }
+  };
+
+  mark_changed(dag.GetOldSourceParent());
+  mark_changed(dag.GetMoveNew());
+
   return true;
 }
 
