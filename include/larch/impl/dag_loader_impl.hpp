@@ -40,7 +40,7 @@ inline int32_t EncodeBasePB(char base) {
 
 template <typename DAG>
 void StoreDAGToProtobuf(DAG dag, std::string_view path) {
-  dag.AssertUA();
+  /* dag.AssertUA(); */
   ProtoDAG::data data;
 
   data.set_reference_seq(dag.GetReferenceSequence());

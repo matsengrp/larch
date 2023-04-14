@@ -65,7 +65,6 @@
 }
 
 static int ParseNumber(std::string_view str) {
-  std::cout << "Parsing input number: " << str << "\n" << std::flush;
   int result{};
   std::istringstream stream{std::string{str}};
   stream >> result;
