@@ -52,6 +52,8 @@
   std::cout << "  --sample-any-tree    Sample any tree for optimization, rather than "
                "requiring "
                "the sampled tree to maximize parsimony.\n";
+  std::cout << "  --trim-max-parsimony    before saving output DAG, trim to only "
+               "maximally parsimonious histories.\n";
 
   std::exit(EXIT_SUCCESS);
 }
@@ -212,6 +214,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string logfile_path = "optimization_log";
   std::string refseq_path;
   bool sample_best_tree = true;
+  bool final_trim = false;
   size_t count = 1;
   int move_coeff_nodes = 1;
   int move_coeff_pscore = 1;
@@ -285,6 +288,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       move_coeff_nodes = ParseNumber(*params.begin());
     } else if (name == "--sample-any-tree") {
       sample_best_tree = false;
+    } else if (name == "--trim-max-parsimony") {
+      final_trim = true;
     } else if (name == "-r" or name == "--MAT-refseq-file") {
       if (params.empty()) {
         std::cerr << "Mutation annotated tree refsequence fasta path not specified.\n";
@@ -481,7 +486,14 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::cout << "new node coefficient: " << move_coeff_nodes << "\n";
   std::cout << "parsimony score coefficient: " << move_coeff_pscore << "\n";
   logfile.close();
-  StoreDAGToProtobuf(merge.GetResult(), output_dag_path);
+
+  if (final_trim) {
+    SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
+    merge.ComputeResultEdgeMutations();
+    StoreDAGToProtobuf(weight.TrimToMinWeight({}).View(), output_dag_path);
+  } else {
+    StoreDAGToProtobuf(merge.GetResult(), output_dag_path);
+  }
 
   return EXIT_SUCCESS;
 }
