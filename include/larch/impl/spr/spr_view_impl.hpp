@@ -233,7 +233,7 @@ void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGeno
   result_nodes.push_back(node);
   // If we've reached an anchor node, there's no need to continue down this
   // branch.
-  if (not node.IsNonrootAnchorNode() or result_nodes.size() < 2) {
+  if (not(node.IsNonrootAnchorNode() or result_nodes.size() < 2)) {
     for (auto child : node.GetChildren()) {
       result_edges.push_back(child);
       child.GetChild().PreorderComputeCompactGenome(result_nodes, result_edges);
@@ -270,9 +270,24 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveNew() const {
 }
 
 template <typename DAG, typename CRTP, typename Tag>
+bool FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::HaveCollapse() const {
+  auto& self = GetFeatureStorage(this);
+  return self.data_->collapse_;
+}
+
+template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldSourceParent() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetMoveSource().GetOld().GetSingleParent().GetParent();
+  if (dag.HaveCollapse()) {
+    return dag.GetMoveSource()
+        .GetOld()
+        .GetSingleParent()
+        .GetParent()
+        .GetSingleParent()
+        .GetParent();
+  } else {
+    return dag.GetMoveSource().GetOld().GetSingleParent().GetParent();
+  }
 }
 
 template <typename Node>
@@ -342,7 +357,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetLCAAncestors() const {
 namespace {
 
 template <typename DAG>
-NodeId ApplyMoveImpl(DAG dag, NodeId src, NodeId dst) {
+std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId src, NodeId dst) {
   Assert(dag.IsTree());
 
   auto src_node = dag.Get(src);
@@ -406,13 +421,13 @@ NodeId ApplyMoveImpl(DAG dag, NodeId src, NodeId dst) {
   new_node.AddEdge({0}, src_edge, true);
   new_node.AddEdge({1}, new_edge, true);
   dst_node.SetSingleParent(new_edge);
-  return new_node;
+  return {new_node, collapse};
 }
 
 }  // namespace
 
 template <typename DAG, typename CRTP, typename Tag>
-NodeId FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(
+std::pair<NodeId, bool> FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(
     NodeId src, NodeId dst) const {
   auto& dag = static_cast<const CRTP&>(*this);
   return ApplyMoveImpl(dag, src, dst);
@@ -425,14 +440,14 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   auto& self = GetFeatureStorage(this);
   Assert(not self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
-  NodeId new_node =
+  auto [new_node, collapse] =
       dag.ApplyMove(dag.GetNodeFromMAT(move.src), dag.GetNodeFromMAT(move.dst));
   if (new_node.value == NoId) {
     return false;
   }
 
   self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
-      typename HypotheticalTree<DAG>::Data{move, new_node,
+      typename HypotheticalTree<DAG>::Data{move, new_node, collapse,
                                            nodes_with_major_allele_set_change});
 
   if (dag.GetMoveLCA().IsRoot()) {
@@ -445,8 +460,8 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   } while (not dag.Get(lca).IsRoot());
 
   auto mark_changed = [&dag](NodeId current_node) {
-    while (not(current_node == dag.GetMoveLCA().GetId()) or
-           dag.Get(current_node).HasChangedTopology()) {
+    while (not(current_node == dag.GetMoveLCA().GetId() or
+               dag.Get(current_node).HasChangedTopology())) {
       dag.Get(current_node).template SetOverlay<HypotheticalNode>();
       dag.Get(current_node).SetHasChangedTopology();
       if (dag.Get(current_node).IsRoot()) {
@@ -464,9 +479,10 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
 
 template <typename DAG>
 HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move, NodeId new_node,
+                                  bool collapse,
                                   const std::vector<Node_With_Major_Allele_Set_Change>&
                                       nodes_with_major_allele_set_change)
-    : move_{move}, new_node_{new_node} {
+    : move_{move}, new_node_{new_node}, collapse_{collapse} {
   for (auto& node_with_allele_set_change : nodes_with_major_allele_set_change) {
     Assert(node_with_allele_set_change.node != nullptr);
     ContiguousMap<MutationPosition, Mutation_Count_Change> node_map;
