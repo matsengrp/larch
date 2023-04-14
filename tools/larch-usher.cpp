@@ -375,7 +375,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
             auto node_instance = weight.GetDAG().Get(start_node);
             if (not visited.count(start_node)) {
               visited.insert(start_node);
-              bool is_root = node_instance.IsRoot();
+              bool is_root = node_instance.IsUA();
               size_t clade_size = merge.GetResultNodeLabels()
                                       .at(node_instance.GetId().value)
                                       .GetLeafSet()

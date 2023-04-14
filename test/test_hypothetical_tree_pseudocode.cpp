@@ -15,7 +15,7 @@ parsimonyScoreType ComputeParsimonyScoreChangeForFragment(Fragment fragment,
   for (auto fragment_child_node : fragment) {
     auto sample_child_node = sample.Get(fragment_child_node);
     auto sample_parent_node = sample_child_node.GetSingleParent().GetParent();
-    if (!sample_parent_node.IsRoot()) {
+    if (!sample_parent_node.IsUA()) {
       auto fragment_parent_node = fragment_child_node.GetSingleParent().GetParent();
       orig_parsimony += sample_child_node.GetCompactGenome()
                             .DifferingSites(sample_parent_node.GetCompactGenome())

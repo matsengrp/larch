@@ -173,7 +173,7 @@ static void test_matOptimize(std::string_view input_dag_path,
     SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
 
     auto chosen_node = choose_node(weight);
-    bool subtrees = not chosen_node.IsRoot();
+    bool subtrees = not chosen_node.IsUA();
     auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
     MAT::Tree mat;
     sample.View().BuildMAT(mat);
@@ -200,7 +200,7 @@ static void test_matOptimize(std::string_view input_dag_path,
         // to build remaped
         std::map<MATNodePtr, NodeId> remaped;
         for (auto node : result.GetNodes()) {
-          if (node.IsRoot()) {
+          if (node.IsUA()) {
             continue;
           }
           remaped.insert({node.GetMATNode(), node.GetOriginalId()});

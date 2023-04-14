@@ -1,6 +1,5 @@
 // Start at HypotheticalTree::GetFragment() to see how this all fits together
 
-
 // updates the map in a compact genome with the supplied map. If a site from
 // the new map isn't already present, adds that site. If it is already present,
 // the target base is updated to the one from the new map.
@@ -32,7 +31,7 @@ class HypotheticalTreeNode {
 
   // returns whether this node corresponds to the MAT tree root
   // (equivalent to the single child of the UA node in the sample_dag_.)
-  bool IsRoot();
+  bool IsUA();
 
   // returns whether this node corresponds to the source node of the SPR move
   bool IsSourceNode();
@@ -47,9 +46,7 @@ class HypotheticalTreeNode {
   // source-target-LCA (the node returned by HypotheticalTree::GetLCA()),
   // which disqualifies a node from being a nonroot anchor
   // node (this method is used in IsNonrootAnchorNode)
-  bool IsLCAAncestor(){
-    return tree_.LCAAncestors.find(this);
-  }
+  bool IsLCAAncestor() { return tree_.LCAAncestors.find(this); }
 
   // This only works correctly once ComputeNewCompactGenome has been called on
   // the node, if it needs to be.
@@ -64,7 +61,8 @@ class HypotheticalTreeNode {
   // return a set of site indices at which there are fitch set changes
   std::set<size_t> GetSitesWithChangedFitchSets() {
     std::set<size_t> sites_with_changes;
-    std::optional<std::map<size_t, MAT::Mutation_Count_Change&>&> fitch_set_map = GetFitchSetParts().second;
+    std::optional<std::map<size_t, MAT::Mutation_Count_Change&>&> fitch_set_map =
+        GetFitchSetParts().second;
     if (fitch_set_map) {
       for (auto map_pair : *fitch_set_map) {
         sites_with_changes.insert(map_pair.first);
@@ -73,33 +71,40 @@ class HypotheticalTreeNode {
     return sites_with_changes;
   }
 
-  std::pair<MAT::Mutations_Collection&, std::optional<std::map<size_t, MAT::Mutation_Count_Change&>&>> GetFitchSetParts() {
-    if (IsTargetNode()){
-      //then fitch sets can't have changed, but the fitch sets recorded in
-      //tree_'s changed fitch set map relative to this node are meant for this
-      //node's new parent!
+  std::pair<MAT::Mutations_Collection&,
+            std::optional<std::map<size_t, MAT::Mutation_Count_Change&>&>>
+  GetFitchSetParts() {
+    if (IsTargetNode()) {
+      // then fitch sets can't have changed, but the fitch sets recorded in
+      // tree_'s changed fitch set map relative to this node are meant for this
+      // node's new parent!
       return {mat_node_.mutations, {}};
     } else if (IsNewNode()) {
       // Then fitch set changes are relative to the target node
-      return {tree_.GetTarget().mat_node_.mutations, tree_.changed_fitch_set_map.find(tree_.GetTarget().mat_node_ *)};
+      return {tree_.GetTarget().mat_node_.mutations,
+              tree_.changed_fitch_set_map.find(tree_.GetTarget().mat_node_*)};
     } else {
       return {mat_node_.mutations, tree_.changed_fitch_set_map.find(mat_node*)};
     }
   }
 
   // get the (possibly modified) fitch set at this node at the provided site.
-  FitchSet GetFitchSet(size_t site){
+  FitchSet GetFitchSet(size_t site) {
     auto [old_fitch_sets, changes] = GetFitchSetParts();
     if (old_fitch_sets.find(site) == old_fitch_sets.mutations.end()) {
       // if no fitch set is recorded on the corresponding MAT node, we can use
       // a singleton set containing the base at this site in the parent compact genome
       if (changes) {
-        return FitchSet({GetOldParent().GetOldCompactGenome().GetBase(site)} & (~changes->get_decremented()) | changes->get_incremented());
+        return FitchSet({GetOldParent().GetOldCompactGenome().GetBase(site)} &
+                            (~changes->get_decremented()) |
+                        changes->get_incremented());
       } else {
         return FitchSet({GetOldParent().GetOldCompactGenome().GetBase(site)});
       }
     } else if (changes) {
-      return FitchSet((old_fitch_sets.find(site).get_all_major_allele() & (~changes->get_decremented())) | changes->get_incremented());
+      return FitchSet((old_fitch_sets.find(site).get_all_major_allele() &
+                       (~changes->get_decremented())) |
+                      changes->get_incremented());
     } else {
       return FitchSet(old_fitch_sets.find(site).get_all_major_allele());
     }
@@ -108,7 +113,7 @@ class HypotheticalTreeNode {
   // Most of the time this can just return the parent node's
   // changed_base_sites. However, it's different if the node in question is the
   // source node or the target node!
-  std::set<size_t> GetParentChangedBaseSites(){
+  std::set<size_t> GetParentChangedBaseSites() {
     if (self.IsSourceNode()) {
       // this node used to be below the old source parent, so we need
       // differences between the new parent's new cg, and the old cg of the old
@@ -120,9 +125,12 @@ class HypotheticalTreeNode {
       // and old_parent_cg don't have the same base.
       return old_parent_cg.DifferingSites(new_parent_cg);
     } else if (self.IsTargetNode()) {
-       // if this node is the target node, then the old parent of this node is now its grandparent, so we want to check which sites differ between the old parent and the new parent (which is the new node).
-       CompactGenome old_parent_cg = tree_.GetTarget().GetOldParent().GetOldCompactGenome();
-       CompactGenome new_parent_cg = GetParent().GetNewCompactGenome();
+      // if this node is the target node, then the old parent of this node is now its
+      // grandparent, so we want to check which sites differ between the old parent and
+      // the new parent (which is the new node).
+      CompactGenome old_parent_cg =
+          tree_.GetTarget().GetOldParent().GetOldCompactGenome();
+      CompactGenome new_parent_cg = GetParent().GetNewCompactGenome();
       return old_parent_cg.DifferingSites(new_parent_cg);
     } else {
       return GetParent()._changed_base_sites;
@@ -132,7 +140,7 @@ class HypotheticalTreeNode {
   void ComputeNewCompactGenome() {
     CompactGenome& old_cg = GetOldCompactGenome();
     std::map<size_t, char> cg_changes;
-    if IsRoot() {
+    if IsUA () {
       // If this node is the root node of the tree, we don't have to worry
       // about parent bases, we just
       // choose a base from each changed fitch set, preferring the base that was
@@ -172,7 +180,10 @@ class HypotheticalTreeNode {
     return old_cg.ApplyChanges(cg_changes);
   }
 
-  void PreorderComputeCompactGenome(std::vector<HypotheticalTreeNode>& fragment_node_vector, std::vector<std::pair<HypotheticalTreeNode, HypotheticalTreeNode>>& fragment_edge_vector) {
+  void PreorderComputeCompactGenome(
+      std::vector<HypotheticalTreeNode>& fragment_node_vector,
+      std::vector<std::pair<HypotheticalTreeNode, HypotheticalTreeNode>>&
+          fragment_edge_vector) {
     ComputeNewCompactGenome();
     fragment_node_vector.push_back(this);
     // If we've reached an anchor node, there's no need to continue down this
@@ -191,7 +202,7 @@ class HypotheticalTreeNode {
   // in the hypothetical tree are guaranteed to also be unchanged from before
   // the SPR move. This method identifies the second kind.
   bool IsNonrootAnchorNode() {
-    if (not (IsLCAAncestor() or tree_.node_has_changed_topology[self])) {
+    if (not(IsLCAAncestor() or tree_.node_has_changed_topology[self])) {
       return (dag_node_.GetCompactGenome() == GetNewCompactGenome());
     } else {
       return false;
@@ -200,44 +211,48 @@ class HypotheticalTreeNode {
 
   std::optional<CompactGenome> new_compact_genome;
   std::set<size_t> changed_base_sites;
-  private:
-    HypotheticalTree tree_;
-    std::optional<Node&> dag_node_;
-    std::optional<MAT::Node&> mat_node_;
-    MAT::changed_major_allele_set& fitch_set_changes;
+
+ private:
+  HypotheticalTree tree_;
+  std::optional<Node&> dag_node_;
+  std::optional<MAT::Node&> mat_node_;
+  MAT::changed_major_allele_set& fitch_set_changes;
 }
 
 // HypotheticalTree is the wrapper for an unmodified sampled tree (DAG) and the
 // corresponding unmodified MAT, and for a proposed SPR move.
 class HypotheticalTree {
-
-  HypotheticalTree(const MADAG& sample_tree, const MAT& sample_mat, const Profitable_Moves& move, MAT::Node_With_Major_Allele_Set_Change& nodes_with_major_allele_set_change)
-    : sample_dag_{sample_tree},
-      sample_mat_{sample_mat},
-      move_{move} {
-        for (auto node_with_allele_set_change : nodes_with_major_allele_set_change) {
-          std::map<size_t, MAT::Mutation_Count_Change> node_map;
-          for (auto mutation_count_change : node_with_allele_set_change.major_allele_set_change) {
-            node_map.push_back({mutation_count_change.get_position(), mutation_count_change})
-          }
-          changed_fitch_set_map_.insert({node_with_allele_set_change.node, node_with_allele_set_change.major_allele_set_change})
-        }
-
-        //mark LCA ancestors
-        HypotheticalTreeNode lca = GetLCA();
-        LCAAncestors.insert(lca);
-        while (true) {
-          lca = lca.GetParent();
-          LCAAncestors.insert(lca);
-        }
-        //mark nodes with changed clade sets 
-        for (auto &current_node: {GetOldSourceParent(), GetMoveNew()}) {
-          while(not (current_node == GetLCA() or node_has_changed_topology[current_node]) ) {
-            node_has_changed_topology.insert({current_node, true});
-            current_node = current_node.GetSingleParent();
-          }
-        }
+  HypotheticalTree(
+      const MADAG& sample_tree, const MAT& sample_mat, const Profitable_Moves& move,
+      MAT::Node_With_Major_Allele_Set_Change& nodes_with_major_allele_set_change)
+      : sample_dag_{sample_tree}, sample_mat_{sample_mat}, move_{move} {
+    for (auto node_with_allele_set_change : nodes_with_major_allele_set_change) {
+      std::map<size_t, MAT::Mutation_Count_Change> node_map;
+      for (auto mutation_count_change :
+           node_with_allele_set_change.major_allele_set_change) {
+        node_map.push_back(
+            {mutation_count_change.get_position(), mutation_count_change})
       }
+      changed_fitch_set_map_.insert(
+          {node_with_allele_set_change.node,
+           node_with_allele_set_change.major_allele_set_change})
+    }
+
+    // mark LCA ancestors
+    HypotheticalTreeNode lca = GetLCA();
+    LCAAncestors.insert(lca);
+    while (true) {
+      lca = lca.GetParent();
+      LCAAncestors.insert(lca);
+    }
+    // mark nodes with changed clade sets
+    for (auto& current_node : {GetOldSourceParent(), GetMoveNew()}) {
+      while (not(current_node == GetLCA() or node_has_changed_topology[current_node])) {
+        node_has_changed_topology.insert({current_node, true});
+        current_node = current_node.GetSingleParent();
+      }
+    }
+  }
 
   // Get the LCA of source and target nodes
   HypotheticalTreeNode GetLCA();
@@ -245,7 +260,7 @@ class HypotheticalTree {
   // nodes (they're siblings in the hypothetical tree)
   HypotheticalTreeNode GetSource();
   HypotheticalTreeNode GetTarget();
-  
+
   // Returns the HypotheticalTreeNode that used to be the parent of source
   // before the SPR move. TODO: This node may (but need not be) unifurcating
   // after the SPR move, in which case the issue description says it should not
@@ -270,11 +285,13 @@ class HypotheticalTree {
     return oldest_changed_node
   }
 
-std::pair<std::vector<HypotheticalTreeNode>, std::vector<std::pair<HypotheticalTreeNode, HypotheticalTreeNode>>> GetFragment() {
+  std::pair<std::vector<HypotheticalTreeNode>,
+            std::vector<std::pair<HypotheticalTreeNode, HypotheticalTreeNode>>>
+  GetFragment() {
     std::vector<HypotheticalTreeNode> result_nodes;
     std::vector<std::pair<HypotheticalTreeNode, HypotheticalTreeNode>> result_edges;
     HypotheticalTreeNode& oldest_changed = GetOldestChangedNode();
-    if (oldest_changed.IsRoot()) {
+    if (oldest_changed.IsUA()) {
       // we need to add the UA node as the root anchor node of the fragment,
       // somehow
     } else {
@@ -284,13 +301,14 @@ std::pair<std::vector<HypotheticalTreeNode>, std::vector<std::pair<HypotheticalT
     return {result_nodes, result_edges};
   }
 
-  private:
-    const MADAG& sample_dag_;
-    const MAT& sample_mat_;
-    const Profitable_Moves& move;
-    std::map<MAT::Node*, std::map<size_t, MAT::Mutation_Count_Change&>> changed_fitch_set_map_;
-    std::map<HypotheticalTreeNode, bool> node_has_changed_topology_;
-    std::set<HypotheticalTreeNode> LCAAncestors;
+ private:
+  const MADAG& sample_dag_;
+  const MAT& sample_mat_;
+  const Profitable_Moves& move;
+  std::map<MAT::Node*, std::map<size_t, MAT::Mutation_Count_Change&>>
+      changed_fitch_set_map_;
+  std::map<HypotheticalTreeNode, bool> node_has_changed_topology_;
+  std::set<HypotheticalTreeNode> LCAAncestors;
 }
 
 // // From
@@ -302,9 +320,9 @@ std::pair<std::vector<HypotheticalTreeNode>, std::vector<std::pair<HypotheticalT
 //   MAT::Node* node;
 //   Mutation_Count_Change_Collection major_allele_set_change;
 // }
-// 
+//
 // typedef std::vector<Mutation_Count_Change> Mutation_Count_Change_Collection;
-// 
+//
 //
 // // Also, usher/src/matOptimize/mutation_annotated_tree.hpp contains
 // definition for MAT::Node, whose mutations attribute holds

@@ -47,12 +47,12 @@ void Merge<DAG>::AddDAG(D dag, N below) {
     if constexpr (std::is_same_v<N, std::nullopt_t>) {
       return false;
     } else {
-      return not below.IsRoot();
+      return not below.IsUA();
     }
   }();
   labels.resize(dag.GetNodesCount());
   for (auto node : dag.GetNodes()) {
-    if (is_subtree and node.IsRoot()) {
+    if (is_subtree and node.IsUA()) {
       continue;
     }
     auto cg_iter = ResultDAG().AddDeduplicated(node.Const().GetCompactGenome().Copy());
@@ -61,7 +61,7 @@ void Merge<DAG>::AddDAG(D dag, N below) {
 
   std::vector<LeafSet> computed_ls = LeafSet::ComputeLeafSets(dag, labels);
   for (auto node : dag.GetNodes()) {
-    if (is_subtree and node.IsRoot()) {
+    if (is_subtree and node.IsUA()) {
       continue;
     }
     auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node.GetId().value)));
@@ -93,7 +93,7 @@ void Merge<DAG>::AddDAG(D dag, N below) {
 
   std::vector<EdgeLabel> added_edges;
   for (auto edge : dag.GetEdges()) {
-    if (is_subtree and edge.IsRoot()) {
+    if (is_subtree and edge.IsUA()) {
       continue;
     }
     const auto& parent_label = labels.at(edge.GetParentId().value);

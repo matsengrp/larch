@@ -35,8 +35,8 @@ std::pair<NodeId, NodeId> FeatureConstView<Endpoints, CRTP, Tag>::GetNodeIds() c
 }
 
 template <typename CRTP, typename Tag>
-bool FeatureConstView<Endpoints, CRTP, Tag>::IsRoot() const {
-  return GetParent().IsRoot();
+bool FeatureConstView<Endpoints, CRTP, Tag>::IsUA() const {
+  return GetParent().IsUA();
 }
 
 template <typename CRTP, typename Tag>

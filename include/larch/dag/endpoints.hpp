@@ -19,7 +19,7 @@ struct FeatureConstView<Endpoints, CRTP, Tag> {
   NodeId GetParentId() const;
   NodeId GetChildId() const;
   std::pair<NodeId, NodeId> GetNodeIds() const;
-  bool IsRoot() const;
+  bool IsUA() const;
   bool IsLeaf() const;
 };
 
