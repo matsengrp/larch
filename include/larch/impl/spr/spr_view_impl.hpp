@@ -233,7 +233,7 @@ void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGeno
   result_nodes.push_back(node);
   // If we've reached an anchor node, there's no need to continue down this
   // branch.
-  if (not(node.IsNonrootAnchorNode() or result_nodes.size() < 2)) {
+  if (node.IsRoot() or (not(node.IsNonrootAnchorNode() or result_nodes.size() < 2))) {
     for (auto child : node.GetChildren()) {
       result_edges.push_back(child);
       child.GetChild().PreorderComputeCompactGenome(result_nodes, result_edges);

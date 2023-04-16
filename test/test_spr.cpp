@@ -269,6 +269,172 @@ static auto MakeSampleDAG() {
   spr.RecomputeCompactGenomes();
 }
 
+/* single-move test for debugging failing fragment merging. TO DELETE WHEN FIXED!! */
+template <typename DAG, typename MergeT>
+struct Test_Move_Found_Callback_Apply_One_Move : public Move_Found_Callback {
+  Test_Move_Found_Callback_Apply_One_Move(DAG sample_dag, MergeT& merge, size_t acceptable_src, size_t acceptable_dst)
+      : sample_dag_{sample_dag}, merge_{merge}, src_{acceptable_src}, dst_{acceptable_dst} {};
+
+  using Storage =
+      ExtendDAGStorage<DefaultDAGStorage,
+                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
+                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+
+  bool operator()(Profitable_Moves& move, int best_score_change,
+                  [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
+                      nodes_with_major_allele_set_change) override {
+    Assert(move.src != nullptr);
+    Assert(move.dst != nullptr);
+
+    if ((((*move.src).node_id == src_) and ((*move.dst).node_id == dst_))) {
+        auto storage = [this](std::string ref_seq) {
+          MAT::Tree* mat = sample_mat_.load();
+          Assert(mat != nullptr);
+          auto mat_conv = AddMATConversion(Storage{});
+          mat_conv.View().BuildFromMAT(*mat, ref_seq);
+          check_edge_mutations(mat_conv.View().Const());
+          mat_conv.View().RecomputeCompactGenomes();
+          return SPRStorage(std::move(mat_conv));
+        }(sample_dag_.GetReferenceSequence());
+
+        auto spr = storage.View();
+        spr.GetRoot().Validate(true);
+        std::cout << "Before move:\n";
+        MADAGToDOT(spr, std::cout);
+
+        if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
+          spr.GetRoot().Validate(true);
+          std::cout << "After move: " << spr.GetMoveSource().GetId().value <<
+            "->" << spr.GetMoveTarget().GetId().value << "\n";
+          MADAGToDOT(spr, std::cout);
+          auto fragment = spr.GetFragment();
+          std::cout << "Fragment:\n";
+          FragmentToDOT(spr, fragment.second, std::cout);
+          merge_.AddFragment(spr, fragment.first, fragment.second);
+        } else {
+          std::cout << "Skip move\n";
+          return false;
+        }
+        return move.score_change < best_score_change;
+    } else {
+      std::cout << "wrong move\n";
+      return false;
+    }
+  }
+
+  void operator()(MAT::Tree& tree) { sample_mat_.store(std::addressof(tree)); }
+
+  void OnReassignedStates(MAT::Tree& tree) {
+    reassigned_states_storage_.View().BuildFromMAT(tree,
+                                                   sample_dag_.GetReferenceSequence());
+    check_edge_mutations(reassigned_states_storage_.View().Const());
+    reassigned_states_storage_.View().RecomputeCompactGenomes();
+    merge_.AddDAG(reassigned_states_storage_.View());
+    merge_.ComputeResultEdgeMutations();
+  }
+
+  DAG sample_dag_;
+  MergeT& merge_;
+  decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
+      AddMATConversion(Storage{});
+  std::atomic<MAT::Tree*> sample_mat_ = nullptr;
+  size_t src_, dst_;
+};
+
+static void test_single_move_spr(const MADAGStorage& input_dag_storage, size_t src, size_t dst) {
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  MADAG input_dag = input_dag_storage.View();
+  Merge<MADAG> merge{input_dag.GetReferenceSequence()};
+  merge.AddDAG(input_dag);
+
+  merge.ComputeResultEdgeMutations();
+  SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
+
+  auto chosen_node = weight.GetDAG().GetRoot();
+  auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
+  MAT::Tree mat;
+  sample.View().BuildMAT(mat);
+  sample.View().GetRoot().Validate(true);
+  check_edge_mutations(sample.View().Const());
+
+  Test_Move_Found_Callback_Apply_One_Move callback{sample.View(), merge, src, dst};
+
+  optimize_dag_direct(sample.View(), callback, callback, callback);
+
+}
+
+static auto MakeSampleDAG1() {
+  MADAGStorage input_storage;
+  auto dag = input_storage.View();
+  dag.SetReferenceSequence("GAA");
+  dag.InitializeNodes(11);
+  dag.AddEdge({0}, {10}, {0}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
+  dag.AddEdge({1}, {1}, {2}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
+  dag.AddEdge({2}, {1}, {3}, {1}).GetMutableEdgeMutations()[{2}] = {'C', 'T'};
+  dag.AddEdge({3}, {0}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
+  dag.AddEdge({4}, {0}, {4}, {1}).GetMutableEdgeMutations()[{3}] = {'C', 'G'};
+  dag.AddEdge({5}, {4}, {5}, {0});
+  dag.AddEdge({6}, {4}, {6}, {1}).GetMutableEdgeMutations()[{2}] = {'C', 'G'};
+  dag.AddEdge({7}, {4}, {7}, {2}).GetMutableEdgeMutations()[{3}] = {'G', 'C'};
+  dag.AddEdge({8}, {7}, {8}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'G'};
+  dag.AddEdge({9}, {7}, {9}, {1});
+  dag.BuildConnections();
+  dag.Get(EdgeId{0}).GetMutableEdgeMutations()[{2}] = {'A', 'C'};
+  dag.Get(EdgeId{0}).GetMutableEdgeMutations()[{3}] = {'A', 'C'};
+  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{3}] = {'C', 'T'};
+  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{2}] = {'C', 'T'};
+  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{3}] = {'C', 'T'};
+  dag.RecomputeCompactGenomes();
+  return input_storage;
+}
+
+static auto MakeSampleDAG2() {
+  MADAGStorage input_storage;
+  auto dag = input_storage.View();
+  dag.SetReferenceSequence("GAA");
+  dag.InitializeNodes(11);
+  dag.AddEdge({0}, {0}, {10}, {0});
+  dag.AddEdge({1}, {7}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'T', 'A'};
+  dag.AddEdge({2}, {7}, {2}, {1}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
+  dag.AddEdge({3}, {8}, {3}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
+  dag.AddEdge({4}, {8}, {4}, {1}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
+  dag.AddEdge({5}, {9}, {5}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
+  dag.AddEdge({6}, {9}, {6}, {1}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
+  dag.AddEdge({7}, {8}, {7}, {2}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
+  dag.AddEdge({8}, {10}, {8}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'C'};
+  dag.AddEdge({9}, {10}, {9}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
+  dag.BuildConnections();
+  dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{2}] = {'G', 'C'};
+  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{2}] = {'G', 'T'};
+  dag.Get(EdgeId{3}).GetMutableEdgeMutations()[{2}] = {'T', 'G'};
+  dag.Get(EdgeId{4}).GetMutableEdgeMutations()[{2}] = {'T', 'C'};
+  dag.Get(EdgeId{5}).GetMutableEdgeMutations()[{2}] = {'G', 'T'};
+  dag.Get(EdgeId{6}).GetMutableEdgeMutations()[{2}] = {'G', 'C'};
+  dag.Get(EdgeId{7}).GetMutableEdgeMutations()[{2}] = {'T', 'G'};
+  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
+  dag.Get(EdgeId{9}).GetMutableEdgeMutations()[{2}] = {'A', 'G'};
+  dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{3}] = {'G', 'C'};
+  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{3}] = {'G', 'T'};
+  dag.Get(EdgeId{3}).GetMutableEdgeMutations()[{3}] = {'T', 'G'};
+  dag.Get(EdgeId{4}).GetMutableEdgeMutations()[{3}] = {'T', 'G'};
+  dag.Get(EdgeId{5}).GetMutableEdgeMutations()[{3}] = {'G', 'T'};
+  dag.Get(EdgeId{6}).GetMutableEdgeMutations()[{3}] = {'G', 'C'};
+  dag.Get(EdgeId{7}).GetMutableEdgeMutations()[{3}] = {'T', 'G'};
+  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{3}] = {'A', 'C'};
+  dag.Get(EdgeId{9}).GetMutableEdgeMutations()[{3}] = {'A', 'T'};
+  dag.RecomputeCompactGenomes();
+  return input_storage;
+}
+
+[[maybe_unused]] static const auto test_added111 =
+    add_test({[] { test_single_move_spr(MakeSampleDAG1(), 4, 6); }, "SPR: single_sample1"});
+
+[[maybe_unused]] static const auto test_added222 =
+    add_test({[] { test_single_move_spr(MakeSampleDAG2(), 9, 6); }, "SPR: single_sample2"});
+
+/* end single-move test for debugging failing fragment merging. TO DELETE WHEN FIXED!! */
+
+
 [[maybe_unused]] static const auto test_added0 = add_test(
     {[] {
        test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"), 3);
