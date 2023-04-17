@@ -207,10 +207,10 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNonrootAnchorNode() const {
   auto node = static_cast<const CRTP&>(*this).Const();
-  if (node.IsMoveNew()) {
+  if (node.IsMoveNew() or node.HasChangedTopology()) {
     return false;
   }
-  if (not IsLCAAncestor() or node.HasChangedTopology()) {
+  if (not IsLCAAncestor()) {
     return node.GetOld().GetCompactGenome() == node.GetCompactGenome();
   } else {
     return false;
