@@ -76,13 +76,12 @@ SubtreeWeight<WeightOps, DAG>::TrimToMinWeight(WeightOps&& weight_ops) {
   Storage result;
   result.View().SetReferenceSequence(dag_.GetReferenceSequence());
   std::vector<NodeId> result_dag_ids;
+  std::map<NodeId, NodeId> old_new_map;
 
-  ExtractTree(
-      dag_.GetRoot(), result.View().AppendNode(), std::forward<WeightOps>(weight_ops),
+  ExtractTrim(
+      dag_.GetRoot(), old_new_map, std::forward<WeightOps>(weight_ops),
       [this](Node node, CladeIdx clade_idx) {
-        return node.GetDAG().Get(
-            // Probably don't want just the first one...?
-            cached_min_weight_edges_.at(node.GetId().value).at(clade_idx.value)[0]);
+        return cached_min_weight_edges_.at(node.GetId().value).at(clade_idx.value) | Transform::ToEdges(node.GetDAG());
       },
       result.View(), result_dag_ids);
 
@@ -257,5 +256,55 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTree(Node input_node, NodeId result_n
     ExtractTree(input_edge.GetChild(), result_child_id,
                 std::forward<WeightOps>(weight_ops),
                 std::forward<EdgeSelector>(edge_selector), result, result_dag_ids);
+  }
+}
+
+template <typename WeightOps, typename DAG>
+template <typename EdgesSelector>
+void SubtreeWeight<WeightOps, DAG>::ExtractTrim(Node input_node, std::map<NodeId, NodeId>& old_new_map,
+                                                WeightOps&& weight_ops,
+                                                EdgesSelector&& edges_selector,
+                                                MutableDAG result,
+                                                std::vector<NodeId>& result_dag_ids) {
+  ComputeWeightBelow(input_node, std::forward<WeightOps>(weight_ops));
+
+  auto get_or_create_node = [&old_new_map, &result](NodeId old_id) -> std::pair<NodeId, bool> {
+    // returns new node id, and true if node was added, false if node was
+    // already in DAG.
+    auto search = old_new_map.find(old_id);
+    if (search != old_new_map.end()) {
+      return {search->first, false};
+    } else {
+      NodeId new_id{result.GetNodesCount()};
+      result.AppendNode();
+      old_new_map.insert({old_id, new_id});
+      return {new_id, true};
+    }
+  };
+
+  auto [result_node_id, added_node] = get_or_create_node(input_node.GetId());
+  GetOrInsert(result_dag_ids, result_node_id) = input_node.GetId();
+
+  result.Get(result_node_id) = input_node.GetCompactGenome().Copy();
+
+  CladeIdx clade_idx{0};
+  for (auto clade : input_node.GetClades()) {
+    Assert(not clade.empty());
+
+    for (Edge input_edge : edges_selector(input_node, clade_idx)){
+
+      auto [result_child_id, added_child] = get_or_create_node(input_node.GetId());
+      typename MutableDAG::EdgeView result_edge =
+          result.AppendEdge(result_node_id, result_child_id, input_edge.GetClade());
+
+      result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
+
+      if (added_child) {
+        ExtractTrim(input_edge.GetChild(), old_new_map,
+                    std::forward<WeightOps>(weight_ops),
+                    std::forward<EdgesSelector>(edges_selector), result, result_dag_ids);
+      }
+    }
+    ++clade_idx.value;
   }
 }

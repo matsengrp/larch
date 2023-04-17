@@ -74,6 +74,11 @@ class SubtreeWeight {
                    EdgeSelector&& edge_selector, MutableDAG result,
                    std::vector<NodeId>& result_dag_ids);
 
+  template <typename EdgesSelector>
+  void ExtractTrim(Node input_node, std::map<NodeId, NodeId>& old_new_map, WeightOps&& weight_ops,
+                   EdgesSelector&& edges_selector, MutableDAG result,
+                   std::vector<NodeId>& result_dag_ids);
+
   DAG dag_;
 
   // Indexed by NodeId.
