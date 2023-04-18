@@ -13,8 +13,32 @@ struct FitchSet {
           return decode.at(one_hot_to_two_bit(base));
         }(one_hot)} {}
 
-  bool find(char base) const { return value_ == base; }
-  char at(size_t) const { return value_; }
+  bool find(char base) const {
+    switch (base) {
+      case 'A':
+        return value_ & 1;
+      case 'C':
+        return value_ & 2;
+      case 'G':
+        return value_ & 4;
+      case 'T':
+        return value_ & 8;
+    }
+    Fail("Unreachable");
+  }
+  char at(size_t pos) const {
+    Assert(pos == 0);
+    if (value_ & 1) {
+      return 'A';
+    } else if (value_ & 2) {
+      return 'C';
+    } else if (value_ & 4) {
+      return 'G';
+    } else if (value_ & 8) {
+      return 'T';
+    }
+    Fail("Unreachable");
+  }
 
  private:
   char value_ = 0;
