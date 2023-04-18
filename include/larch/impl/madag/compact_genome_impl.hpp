@@ -35,10 +35,6 @@ static void ComputeMutations(const EdgeMutations& edge_mutations,
 CompactGenome::CompactGenome(ContiguousMap<MutationPosition, char>&& mutations)
     : mutations_{std::move(mutations)}, hash_{ComputeHash(mutations_)} {
   for (auto [pos, mut] : mutations_) {
-    if (not (mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T')) {
-      auto it = mutations_.find(pos);
-      mutations_.erase(it);
-    }
     AssertMut(pos, mut);
   }
 }

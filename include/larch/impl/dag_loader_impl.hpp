@@ -149,9 +149,9 @@ static std::string CompactGenomeToString(Node node) {
     return std::to_string(node.GetId().value);
   }
   std::string result = std::to_string(node.GetId().value);
-  if (node.HasChangedTopology()) {
-    result += " [X]";
-  }
+  //if (node.HasChangedTopology()) {
+  //  result += " [X]";
+  //}
   result += "\\n";
   size_t count = 0;
   for (auto [pos, base] : node.Const().GetCompactGenome()) {

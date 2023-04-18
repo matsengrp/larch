@@ -92,6 +92,9 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{})), MAT::Tree>>
       optimized_dags;
 
+  std::cout << "Before reassign_states:\n";
+  MADAGToDOT(input_dag, std::cout);
+
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};

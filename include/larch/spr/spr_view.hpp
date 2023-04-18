@@ -24,7 +24,9 @@ struct FitchSet {
       case 'T':
         return value_ & 8;
     }
-    Fail("Unreachable");
+    std::cout << "failed! to find " << base << " in "<< static_cast<std::bitset<8>>(value_) << std::flush;
+//static_cast<std::bitset<8>>(base)<< std::flush;
+    Fail(":(");
   }
   char at(size_t pos) const {
     Assert(pos == 0);
@@ -37,12 +39,27 @@ struct FitchSet {
     } else if (value_ & 8) {
       return 'T';
     }
-    Fail("Unreachable");
+    std::cout << "failed! " << static_cast<std::bitset<8>>(value_)<< std::flush;
+    Fail("Unreachable--pos??");
   }
 
  private:
   char value_ = 0;
 };
+
+nuc_one_hot base_to_singleton(char base){
+    switch (base) {
+      case 'A':
+        return 1;
+      case 'C':
+        return 2;
+      case 'G':
+        return 4;
+      case 'T':
+        return 8;
+    }
+    Fail("unrecognized base");
+}
 
 struct HypotheticalNode {
   HypotheticalNode Copy() const {
