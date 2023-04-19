@@ -256,7 +256,7 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGenome(
     std::vector<NodeId>& result_nodes, std::vector<EdgeId>& result_edges) const {
   auto& node = static_cast<const CRTP&>(*this);
-  if (not node.IsRoot() and not node.IsMoveNew()) {  // TODO
+  if (not node.IsRoot() and not node.IsMoveNew()) {
     node.template SetOverlay<Deduplicate<CompactGenome>>();
     node = node.ComputeNewCompactGenome();
   }
@@ -276,7 +276,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveLCA() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.GetNodeFromMAT(self.data_->move_.LCA);
-};
+}
 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {

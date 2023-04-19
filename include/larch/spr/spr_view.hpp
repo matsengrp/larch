@@ -7,12 +7,6 @@
 struct FitchSet {
   FitchSet(char base) : value_{base} {}
   FitchSet(int base) : value_{static_cast<char>(base)} {}  // TODO
-  FitchSet(nuc_one_hot one_hot)
-      : value_{[](nuc_one_hot base) {
-          static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
-          return decode.at(one_hot_to_two_bit(base));
-        }(one_hot)} {}
-
   bool find(char base) const {
     switch (base) {
       case 'A':
@@ -24,9 +18,7 @@ struct FitchSet {
       case 'T':
         return value_ & 8;
     }
-    std::cout << "failed! to find " << base << " in "<< static_cast<std::bitset<8>>(value_) << std::flush;
-//static_cast<std::bitset<8>>(base)<< std::flush;
-    Fail(":(");
+    Fail("Unreachable");
   }
   char at(size_t pos) const {
     Assert(pos == 0);
@@ -39,8 +31,7 @@ struct FitchSet {
     } else if (value_ & 8) {
       return 'T';
     }
-    std::cout << "failed! " << static_cast<std::bitset<8>>(value_)<< std::flush;
-    Fail("Unreachable--pos??");
+    Fail("Unreachable");
   }
 
  private:
