@@ -40,6 +40,11 @@ bool FeatureConstView<Endpoints, CRTP, Tag>::IsUA() const {
 }
 
 template <typename CRTP, typename Tag>
+bool FeatureConstView<Endpoints, CRTP, Tag>::IsTreeRoot() const {
+  return GetParent().IsTreeRoot();
+}
+
+template <typename CRTP, typename Tag>
 bool FeatureConstView<Endpoints, CRTP, Tag>::IsLeaf() const {
   return GetChild().IsLeaf();
 }

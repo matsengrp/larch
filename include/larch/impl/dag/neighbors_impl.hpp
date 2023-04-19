@@ -67,6 +67,14 @@ bool FeatureConstView<Neighbors, CRTP, Tag>::IsUA() const {
 }
 
 template <typename CRTP, typename Tag>
+bool FeatureConstView<Neighbors, CRTP, Tag>::IsTreeRoot() const {
+  if (GetParentsCount() != 1) {
+    return false;
+  }
+  return GetSingleParent().IsUA();
+}
+
+template <typename CRTP, typename Tag>
 bool FeatureConstView<Neighbors, CRTP, Tag>::IsLeaf() const {
   return ranges::all_of(GetFeatureStorage(this).clades_,
                         [](const auto& clade) { return clade.empty(); });

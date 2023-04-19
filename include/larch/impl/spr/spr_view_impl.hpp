@@ -361,7 +361,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId src, NodeId dst) {
   Assert(dag.IsTree());
 
   auto src_node = dag.Get(src);
-  Assert(not src_node.IsUA() and not src_node.GetSingleParent().IsUA());
+  Assert(not src_node.IsUA() and not src_node.IsTreeRoot());
   auto dst_node = dag.Get(dst);
   Assert(src_node.GetId() != dst_node.GetId());
   auto src_edge = src_node.GetSingleParent();
