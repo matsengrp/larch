@@ -90,21 +90,34 @@ FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetParts() const {
 }
 
 template <typename CRTP, typename Tag>
-FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
+FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetAtSite(
     MutationPosition site) const {
   auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
   Assert(site.value <= dag.GetReferenceSequence().size());
   auto [old_fitch_sets, changes] = GetFitchSetParts(); // TODO: modify to also return boundary alleles
 
-  auto intersect_union_bases = [&node](nuc_one_hot old_set, nuc_one_hot rem_set, nuc_one_hot add_set) -> FitchSet {
-    nuc_one_hot result = (old_set & (~rem_set)) | add_set;
-    if (result == 0) {
-      return FitchSet({old_set});
-      std::cout << "is mat leaf node? " << node.GetMATNode()->is_leaf() << "\n";
-      std::cout << "with node " << node.GetOld().GetId().value << "old_set: " << static_cast<std::bitset<8>>(old_set) << "; rem_set: " << static_cast<std::bitset<8>>(rem_set) << "; add_set: " << static_cast<std::bitset<8>>(add_set) << std::flush;
+  auto build_new_fitch_set = [&node](nuc_one_hot old_major_alleles, nuc_one_hot old_boundary_alleles, nuc_one_hot rem_set, nuc_one_hot add_set) -> FitchSet {
+
+    Assert(old_major_alleles <= 16);
+    Assert(old_boundary_alleles <= 16);
+    Assert(rem_set <= 16);
+    Assert(add_set <= 16);
+    if (old_major_alleles & add_set) {
+      auto result = old_major_alleles & add_set;
+      Assert(0 < result);
+      Assert(result <= 16);
+      return FitchSet(result);
+    } else {
+      auto result = (old_major_alleles & ~rem_set) | (old_boundary_alleles & add_set);
+      Assert(result <= 16);
+      if (result > 0) {
+        return FitchSet(result);
+      } else {
+        result = old_major_alleles | (old_boundary_alleles & ~rem_set);
+        return FitchSet(result);
+      }
     }
-    return FitchSet({result});
   };
 
   if (old_fitch_sets.find(static_cast<int>(site.value)) ==
@@ -114,24 +127,24 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
     // a singleton set containing the base at this site in the parent compact genome
     // In the special case that the node is the new move, its Fitch sets (and Fitch set changes) should be calculated relative to the old parent of GetMoveTarget, and so we will retrieve the base of that parent for the Fitch set in this case.
 
+    nuc_one_hot boundary_allele = 0; // from the 3 conditions for empty fitch set (see Cheng's comment) 
     auto old_parent_base = node.IsMoveNew()
                   ? base_to_singleton(dag.GetMoveTarget().GetOld().GetSingleParent().GetParent().GetCompactGenome().GetBase(site, dag.GetReferenceSequence()))
                   : base_to_singleton(node.GetOld().GetSingleParent().GetParent().GetCompactGenome().GetBase(site, dag.GetReferenceSequence()));
     if (changes.has_value() and changes.value().Contains(site)) {
-      return intersect_union_bases(old_parent_base, 
-                       changes.value().at(site).get_decremented(),
+      return build_new_fitch_set(old_parent_base, boundary_allele,
+                        changes.value().at(site).get_decremented(),
                         changes.value().at(site).get_incremented());
     } else {
       return FitchSet(old_parent_base);
     }
   } else if (changes.has_value() and changes.value().Contains(site)) {
-std::cout << "case 2\n";
     return FitchSet(
-        intersect_union_bases(old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele(),
-         (~changes.value().at(site).get_decremented()),
-        changes.value().at(site).get_incremented()));
+        build_new_fitch_set(old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele(),
+                              old_fitch_sets.find(static_cast<int>(site.value))->get_boundary1_one_hot(),
+                              changes.value().at(site).get_decremented(),
+                              changes.value().at(site).get_incremented()));
   } else {
-std::cout << "case 3\n";
     return FitchSet(
         old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele());
   }
@@ -185,7 +198,7 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
     // already in that site before the SPR move
     ContiguousSet<MutationPosition> focus_sites = GetSitesWithChangedFitchSets();
     for (auto site : focus_sites) {
-      FitchSet site_fitch_set = GetFitchSet(site);
+      FitchSet site_fitch_set = GetFitchSetAtSite(site);
       char oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
       if (not site_fitch_set.find(oldbase)) {
         cg_changes.insert({site, site_fitch_set.at(0)});
@@ -201,7 +214,7 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
     ContiguousSet<MutationPosition> focus_sites = node.GetSitesWithChangedFitchSets();
     focus_sites.Union(node.GetParentChangedBaseSites());
     for (auto site : focus_sites) {
-      FitchSet site_fitch_set = node.GetFitchSet(site);
+      FitchSet site_fitch_set = node.GetFitchSetAtSite(site);
       char oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
       char parent_base = node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
           site, node.GetDAG().GetReferenceSequence());

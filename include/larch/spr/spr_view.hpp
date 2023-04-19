@@ -98,7 +98,7 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
   GetFitchSetParts() const;
 
   // get the (possibly modified) fitch set at this node at the provided site.
-  [[nodiscard]] FitchSet GetFitchSet(MutationPosition site) const;
+  [[nodiscard]] FitchSet GetFitchSetAtSite(MutationPosition site) const;
 
   // Most of the time this can just return the parent node's
   // changed_base_sites. However, it's different if the node in question is the
