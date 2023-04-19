@@ -419,35 +419,52 @@ static auto SampleDAGAfterMove() {
 }
 
 static void test_single_fragment() {
-  //auto orig_dag_storage = CurrentSampleDAG();
-  auto orig_dag_storage = LoadDAGFromProtobuf("radius_iter.pb");
-  std::cout << "loaded the DAG\n" << std::flush;
-  auto dag = orig_dag_storage.View();
-  std::cout << "loaded the DAG\n"<< std::flush;
-  dag.RecomputeCompactGenomes();
-  Merge<MADAG> merge{dag.GetReferenceSequence()};
-  merge.AddDAG(dag);
-  merge.ComputeResultEdgeMutations();
 
+  // load the DAG that has the broken move from "SPR: sample" test
+  auto orig_dag_storage = LoadDAGFromProtobuf("radius_iter.pb");
+  auto orig_dag = orig_dag_storage.View();
+  orig_dag.RecomputeCompactGenomes();
+  Merge<MADAG> merge_orig_dag{orig_dag.GetReferenceSequence()};
+  merge_orig_dag.AddDAG(orig_dag);
+  merge_orig_dag.ComputeResultEdgeMutations();
+
+  // create the DAG that matches the sample_dag from the broken move of "SPR: sample" test(DOT output for "before_move")
+  auto current_dag_storage = CurrentSampleDAG();
+  auto current_dag = current_dag_storage.View();
+  current_dag.RecomputeCompactGenomes();
+  Merge<MADAG> merge_current_dag{current_dag.GetReferenceSequence()};
+  merge_current_dag.AddDAG(current_dag);
+  merge_current_dag.ComputeResultEdgeMutations();
+
+  // create the DAG that matches the after-move-dag from the broken move of "SPR: sample" test
   auto altered_dag_storage = SampleDAGAfterMove();
   auto altered_dag = altered_dag_storage.View();
+
+  // extract nodes/edges from altered_dag that create the fragment of interest
   auto node_ids = {0, 5, 7, 2, 3, 4, 6};
   auto edge_ids = {2, 5, 4, 6, 7, 8};
   std::vector<NodeId> fragment_nodes;
   std::vector<EdgeId> fragment_edges;
-
   for (auto &nid: node_ids) {fragment_nodes.push_back(NodeId({size_t(nid)}));}
   for (auto &eid: edge_ids) {fragment_edges.push_back(EdgeId({size_t(eid)}));}
-  std::cout << "original dag: \n";
-  MADAGToDOT(dag, std::cout);
 
-  std::cout << "other dag: \n";
+  std::cout << "original full dag: \n";
+  MADAGToDOT(orig_dag, std::cout);
+
+  std::cout << "before-move sample dag: \n";
+  MADAGToDOT(current_dag, std::cout);
+
+  std::cout << "after-move sample dag: \n";
   MADAGToDOT(altered_dag, std::cout);
 
   std::cout << "fragment: \n";
   FragmentToDOT(altered_dag, fragment_edges, std::cout);
 
-  merge.AddFragment(altered_dag, fragment_nodes, fragment_edges);
+  std::cout << "merge fragment into before-move sample dag...\n";
+  merge_current_dag.AddFragment(altered_dag, fragment_nodes, fragment_edges);
+
+  std::cout << "merge fragment into original full dag...\n";
+  merge_orig_dag.AddFragment(altered_dag, fragment_nodes, fragment_edges);
 }
 
 
