@@ -366,74 +366,86 @@ static void test_single_move_spr(const MADAGStorage& input_dag_storage, size_t s
 
 }
 
-static auto MakeSampleDAG1() {
+static auto CurrentSampleDAG() {
   MADAGStorage input_storage;
   auto dag = input_storage.View();
   dag.SetReferenceSequence("GAA");
-  dag.InitializeNodes(11);
-  dag.AddEdge({0}, {10}, {0}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
-  dag.AddEdge({1}, {1}, {2}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
-  dag.AddEdge({2}, {1}, {3}, {1}).GetMutableEdgeMutations()[{2}] = {'C', 'T'};
-  dag.AddEdge({3}, {0}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
-  dag.AddEdge({4}, {0}, {4}, {1}).GetMutableEdgeMutations()[{3}] = {'C', 'G'};
-  dag.AddEdge({5}, {4}, {5}, {0});
-  dag.AddEdge({6}, {4}, {6}, {1}).GetMutableEdgeMutations()[{2}] = {'C', 'G'};
-  dag.AddEdge({7}, {4}, {7}, {2}).GetMutableEdgeMutations()[{3}] = {'G', 'C'};
-  dag.AddEdge({8}, {7}, {8}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'G'};
-  dag.AddEdge({9}, {7}, {9}, {1});
+  dag.InitializeNodes(10);
+  dag.AddEdge({0}, {9}, {0}, {0}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
+  dag.AddEdge({1}, {0}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'C'};
+  dag.AddEdge({2}, {0}, {2}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
+  dag.AddEdge({3}, {0}, {8}, {2});
+  dag.AddEdge({4}, {2}, {3}, {0});
+  dag.AddEdge({5}, {2}, {4}, {1}).GetMutableEdgeMutations()[{2}] = {'C', 'G'};
+  dag.AddEdge({6}, {2}, {5}, {2}).GetMutableEdgeMutations()[{3}] = {'G', 'C'};
+  dag.AddEdge({7}, {5}, {6}, {0});
+  dag.AddEdge({8}, {5}, {7}, {1}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
   dag.BuildConnections();
-  dag.Get(EdgeId{0}).GetMutableEdgeMutations()[{2}] = {'A', 'C'};
-  dag.Get(EdgeId{0}).GetMutableEdgeMutations()[{3}] = {'A', 'C'};
-  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{3}] = {'C', 'T'};
-  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{2}] = {'C', 'T'};
-  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{3}] = {'C', 'T'};
+
+  dag.Get(EdgeId{0}).GetMutableEdgeMutations()[{3}] = {'A', 'T'};
+  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{2}] = {'T', 'C'};
+  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{3}] = {'T', 'G'};
+
   dag.RecomputeCompactGenomes();
   return input_storage;
 }
 
-static auto MakeSampleDAG2() {
+static auto SampleDAGAfterMove() {
   MADAGStorage input_storage;
   auto dag = input_storage.View();
   dag.SetReferenceSequence("GAA");
-  dag.InitializeNodes(11);
-  dag.AddEdge({0}, {0}, {10}, {0});
-  dag.AddEdge({1}, {7}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'T', 'A'};
-  dag.AddEdge({2}, {7}, {2}, {1}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
-  dag.AddEdge({3}, {8}, {3}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
-  dag.AddEdge({4}, {8}, {4}, {1}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
-  dag.AddEdge({5}, {9}, {5}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
-  dag.AddEdge({6}, {9}, {6}, {1}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
-  dag.AddEdge({7}, {8}, {7}, {2}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
-  dag.AddEdge({8}, {10}, {8}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'C'};
-  dag.AddEdge({9}, {10}, {9}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
+  dag.InitializeNodes(10);
+  dag.AddEdge({0}, {9}, {0}, {0}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
+  dag.AddEdge({1}, {0}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'C'};
+  dag.AddEdge({2}, {0}, {5}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
+  dag.AddEdge({3}, {0}, {8}, {2});
+  dag.AddEdge({4}, {5}, {2}, {0}).GetMutableEdgeMutations()[{3}] = {'C', 'G'};
+  dag.AddEdge({5}, {5}, {7}, {1}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
+  dag.AddEdge({6}, {2}, {3}, {0});
+  dag.AddEdge({7}, {2}, {4}, {1}).GetMutableEdgeMutations()[{2}] = {'C', 'G'};
+  dag.AddEdge({8}, {2}, {6}, {2}).GetMutableEdgeMutations()[{3}] = {'G', 'C'};
   dag.BuildConnections();
-  dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{2}] = {'G', 'C'};
-  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{2}] = {'G', 'T'};
-  dag.Get(EdgeId{3}).GetMutableEdgeMutations()[{2}] = {'T', 'G'};
-  dag.Get(EdgeId{4}).GetMutableEdgeMutations()[{2}] = {'T', 'C'};
-  dag.Get(EdgeId{5}).GetMutableEdgeMutations()[{2}] = {'G', 'T'};
-  dag.Get(EdgeId{6}).GetMutableEdgeMutations()[{2}] = {'G', 'C'};
-  dag.Get(EdgeId{7}).GetMutableEdgeMutations()[{2}] = {'T', 'G'};
-  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
-  dag.Get(EdgeId{9}).GetMutableEdgeMutations()[{2}] = {'A', 'G'};
-  dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{3}] = {'G', 'C'};
-  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{3}] = {'G', 'T'};
-  dag.Get(EdgeId{3}).GetMutableEdgeMutations()[{3}] = {'T', 'G'};
-  dag.Get(EdgeId{4}).GetMutableEdgeMutations()[{3}] = {'T', 'G'};
-  dag.Get(EdgeId{5}).GetMutableEdgeMutations()[{3}] = {'G', 'T'};
-  dag.Get(EdgeId{6}).GetMutableEdgeMutations()[{3}] = {'G', 'C'};
-  dag.Get(EdgeId{7}).GetMutableEdgeMutations()[{3}] = {'T', 'G'};
-  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{3}] = {'A', 'C'};
-  dag.Get(EdgeId{9}).GetMutableEdgeMutations()[{3}] = {'A', 'T'};
+  dag.Get(EdgeId{0}).GetMutableEdgeMutations()[{3}] = {'A', 'T'};
+  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{2}] = {'T', 'C'};
+  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{3}] = {'T', 'C'};
+  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{1}] = {'A', 'A'};
   dag.RecomputeCompactGenomes();
+  dag.Get(EdgeId{4}).GetMutableEdgeMutations()[{3}] = {};
+
   return input_storage;
 }
 
-[[maybe_unused]] static const auto test_added111 =
-    add_test({[] { test_single_move_spr(MakeSampleDAG1(), 4, 6); }, "SPR: single_sample1"});
+static void test_single_fragment() {
+  auto orig_dag_storage = CurrentSampleDAG();
+  auto dag = orig_dag_storage.View();
+  Merge<MADAG> merge{dag.GetReferenceSequence()};
+  merge.AddDAG(dag);
+  merge.ComputeResultEdgeMutations();
 
-[[maybe_unused]] static const auto test_added222 =
-    add_test({[] { test_single_move_spr(MakeSampleDAG2(), 9, 6); }, "SPR: single_sample2"});
+  auto altered_dag_storage = SampleDAGAfterMove();
+  auto altered_dag = altered_dag_storage.View();
+  auto node_ids = {0, 5, 7, 2, 3, 4, 6};
+  auto edge_ids = {2, 5, 4, 6, 7, 8};
+  std::vector<NodeId> fragment_nodes;
+  std::vector<EdgeId> fragment_edges;
+
+  for (auto &nid: node_ids) {fragment_nodes.push_back(NodeId({size_t(nid)}));}
+  for (auto &eid: edge_ids) {fragment_edges.push_back(EdgeId({size_t(eid)}));}
+  std::cout << "original dag: \n";
+  MADAGToDOT(dag, std::cout);
+
+  std::cout << "other dag: \n";
+  MADAGToDOT(altered_dag, std::cout);
+
+  std::cout << "fragment: \n";
+  FragmentToDOT(altered_dag, fragment_edges, std::cout);
+
+  merge.AddFragment(altered_dag, fragment_nodes, fragment_edges);
+}
+
+
+[[maybe_unused]] static const auto test_added_breaking_case =
+    add_test({[] { test_single_fragment(); }, "SPR: breaking move"});
 
 /* end single-move test for debugging failing fragment merging. TO DELETE WHEN FIXED!! */
 
