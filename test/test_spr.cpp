@@ -57,7 +57,10 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     return move.score_change < best_score_change;
   }
 
-  void operator()(MAT::Tree& tree) { sample_mat_.store(std::addressof(tree)); }
+  void operator()(MAT::Tree& tree) { sample_mat_.store(std::addressof(tree)); 
+    merge_.ComputeResultEdgeMutations();
+    StoreDAGToProtobuf(merge_.GetResult(), "radius_iter.pb");
+}
 
   void OnReassignedStates(MAT::Tree& tree) {
     reassigned_states_storage_.View().BuildFromMAT(tree,
@@ -416,8 +419,12 @@ static auto SampleDAGAfterMove() {
 }
 
 static void test_single_fragment() {
-  auto orig_dag_storage = CurrentSampleDAG();
+  //auto orig_dag_storage = CurrentSampleDAG();
+  auto orig_dag_storage = LoadDAGFromProtobuf("radius_iter.pb");
+  std::cout << "loaded the DAG\n" << std::flush;
   auto dag = orig_dag_storage.View();
+  std::cout << "loaded the DAG\n"<< std::flush;
+  dag.RecomputeCompactGenomes();
   Merge<MADAG> merge{dag.GetReferenceSequence()};
   merge.AddDAG(dag);
   merge.ComputeResultEdgeMutations();
