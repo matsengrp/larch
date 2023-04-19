@@ -67,10 +67,11 @@ std::pair<MAT::Mutations_Collection,
 FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetParts() const {
   auto& node = static_cast<const CRTP&>(*this);
   auto dag = node.GetDAG();
-  if (node.IsMoveTarget()) {
-    // then fitch sets can't have changed, but the fitch sets recorded in
-    // tree_'s changed fitch set map relative to this node are meant for this
-    // node's new parent!
+  if (node.GetOld().IsLeaf() or node.IsMoveTarget()) {
+    // if it's a leaf node, then the fitch sets don't change. 
+    // if it's the target node, then fitch sets can't have changed, 
+    // but the fitch sets recorded in tree_'s changed fitch set map 
+    // relative to this node are meant for this node's new parent!
     return {node.GetMATNode()->mutations, std::nullopt};
   } else if (node.IsMoveNew()) {
     // Then fitch set changes are relative to the target node
@@ -94,10 +95,12 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
   auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
   Assert(site.value <= dag.GetReferenceSequence().size());
-  auto [old_fitch_sets, changes] = GetFitchSetParts();
+  auto [old_fitch_sets, changes] = GetFitchSetParts(); // TODO: modify to also return boundary alleles
+
   auto intersect_union_bases = [&node](nuc_one_hot old_set, nuc_one_hot rem_set, nuc_one_hot add_set) -> FitchSet {
     nuc_one_hot result = (old_set & (~rem_set)) | add_set;
     if (result == 0) {
+      return FitchSet({old_set});
       std::cout << "is mat leaf node? " << node.GetMATNode()->is_leaf() << "\n";
       std::cout << "with node " << node.GetOld().GetId().value << "old_set: " << static_cast<std::bitset<8>>(old_set) << "; rem_set: " << static_cast<std::bitset<8>>(rem_set) << "; add_set: " << static_cast<std::bitset<8>>(add_set) << std::flush;
     }
@@ -106,17 +109,20 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
 
   if (old_fitch_sets.find(static_cast<int>(site.value)) ==
       old_fitch_sets.mutations.end()) {
-std::cout << "case 1\n";
+
     // if no fitch set is recorded on the corresponding MAT node, we can use
     // a singleton set containing the base at this site in the parent compact genome
+    // In the special case that the node is the new move, its Fitch sets (and Fitch set changes) should be calculated relative to the old parent of GetMoveTarget, and so we will retrieve the base of that parent for the Fitch set in this case.
+
+    auto old_parent_base = node.IsMoveNew()
+                  ? base_to_singleton(dag.GetMoveTarget().GetOld().GetSingleParent().GetParent().GetCompactGenome().GetBase(site, dag.GetReferenceSequence()))
+                  : base_to_singleton(node.GetOld().GetSingleParent().GetParent().GetCompactGenome().GetBase(site, dag.GetReferenceSequence()));
     if (changes.has_value() and changes.value().Contains(site)) {
-      return intersect_union_bases(base_to_singleton(node.GetOld().GetSingleParent().GetParent().GetCompactGenome().GetBase(
-                           site, dag.GetReferenceSequence())),
+      return intersect_union_bases(old_parent_base, 
                        changes.value().at(site).get_decremented(),
                         changes.value().at(site).get_incremented());
     } else {
-      return FitchSet({node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
-          site, dag.GetReferenceSequence())});
+      return FitchSet(old_parent_base);
     }
   } else if (changes.has_value() and changes.value().Contains(site)) {
 std::cout << "case 2\n";
