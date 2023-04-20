@@ -40,15 +40,15 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
 
-      std::cout << "After move: " << spr.GetMoveSource().GetId().value <<
-        "->" << spr.GetMoveTarget().GetId().value << "\n";
+      std::cout << "After move: " << spr.GetMoveSource().GetId().value << "->"
+                << spr.GetMoveTarget().GetId().value << "\n";
       MADAGToDOT(spr, std::cout);
-      
+
       auto fragment = spr.GetFragment();
 
       std::cout << "Fragment:\n";
       FragmentToDOT(spr, fragment.second, std::cout);
-      
+
       merge_.AddFragment(spr, fragment.first, fragment.second);
     } else {
       std::cout << "Skip move\n";
@@ -57,10 +57,15 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     return move.score_change < best_score_change;
   }
 
-  void operator()(MAT::Tree& tree) { sample_mat_.store(std::addressof(tree)); 
+  void operator()(MAT::Tree& tree) {
+    decltype(AddMATConversion(Storage{})) storage;
+    storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
+    storage.View().RecomputeCompactGenomes();
+    merge_.AddDAG(storage.View());
+    sample_mat_.store(std::addressof(tree));
     merge_.ComputeResultEdgeMutations();
     StoreDAGToProtobuf(merge_.GetResult(), "radius_iter.pb");
-}
+  }
 
   void OnReassignedStates(MAT::Tree& tree) {
     reassigned_states_storage_.View().BuildFromMAT(tree,
@@ -278,8 +283,12 @@ static auto MakeSampleDAG() {
 /* single-move test for debugging failing fragment merging. TO DELETE WHEN FIXED!! */
 template <typename DAG, typename MergeT>
 struct Test_Move_Found_Callback_Apply_One_Move : public Move_Found_Callback {
-  Test_Move_Found_Callback_Apply_One_Move(DAG sample_dag, MergeT& merge, size_t acceptable_src, size_t acceptable_dst)
-      : sample_dag_{sample_dag}, merge_{merge}, src_{acceptable_src}, dst_{acceptable_dst} {};
+  Test_Move_Found_Callback_Apply_One_Move(DAG sample_dag, MergeT& merge,
+                                          size_t acceptable_src, size_t acceptable_dst)
+      : sample_dag_{sample_dag},
+        merge_{merge},
+        src_{acceptable_src},
+        dst_{acceptable_dst} {};
 
   using Storage =
       ExtendDAGStorage<DefaultDAGStorage,
@@ -293,35 +302,35 @@ struct Test_Move_Found_Callback_Apply_One_Move : public Move_Found_Callback {
     Assert(move.dst != nullptr);
 
     if ((((*move.src).node_id == src_) and ((*move.dst).node_id == dst_))) {
-        auto storage = [this](std::string ref_seq) {
-          MAT::Tree* mat = sample_mat_.load();
-          Assert(mat != nullptr);
-          auto mat_conv = AddMATConversion(Storage{});
-          mat_conv.View().BuildFromMAT(*mat, ref_seq);
-          check_edge_mutations(mat_conv.View().Const());
-          mat_conv.View().RecomputeCompactGenomes();
-          return SPRStorage(std::move(mat_conv));
-        }(sample_dag_.GetReferenceSequence());
+      auto storage = [this](std::string ref_seq) {
+        MAT::Tree* mat = sample_mat_.load();
+        Assert(mat != nullptr);
+        auto mat_conv = AddMATConversion(Storage{});
+        mat_conv.View().BuildFromMAT(*mat, ref_seq);
+        check_edge_mutations(mat_conv.View().Const());
+        mat_conv.View().RecomputeCompactGenomes();
+        return SPRStorage(std::move(mat_conv));
+      }(sample_dag_.GetReferenceSequence());
 
-        auto spr = storage.View();
+      auto spr = storage.View();
+      spr.GetRoot().Validate(true);
+      std::cout << "Before move:\n";
+      MADAGToDOT(spr, std::cout);
+
+      if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
         spr.GetRoot().Validate(true);
-        std::cout << "Before move:\n";
+        std::cout << "After move: " << spr.GetMoveSource().GetId().value << "->"
+                  << spr.GetMoveTarget().GetId().value << "\n";
         MADAGToDOT(spr, std::cout);
-
-        if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
-          spr.GetRoot().Validate(true);
-          std::cout << "After move: " << spr.GetMoveSource().GetId().value <<
-            "->" << spr.GetMoveTarget().GetId().value << "\n";
-          MADAGToDOT(spr, std::cout);
-          auto fragment = spr.GetFragment();
-          std::cout << "Fragment:\n";
-          FragmentToDOT(spr, fragment.second, std::cout);
-          merge_.AddFragment(spr, fragment.first, fragment.second);
-        } else {
-          std::cout << "Skip move\n";
-          return false;
-        }
-        return move.score_change < best_score_change;
+        auto fragment = spr.GetFragment();
+        std::cout << "Fragment:\n";
+        FragmentToDOT(spr, fragment.second, std::cout);
+        merge_.AddFragment(spr, fragment.first, fragment.second);
+      } else {
+        std::cout << "Skip move\n";
+        return false;
+      }
+      return move.score_change < best_score_change;
     } else {
       std::cout << "wrong move\n";
       return false;
@@ -347,7 +356,8 @@ struct Test_Move_Found_Callback_Apply_One_Move : public Move_Found_Callback {
   size_t src_, dst_;
 };
 
-static void test_single_move_spr(const MADAGStorage& input_dag_storage, size_t src, size_t dst) {
+[[maybe_unused]] static void test_single_move_spr(const MADAGStorage& input_dag_storage,
+                                                  size_t src, size_t dst) {
   tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
@@ -366,7 +376,6 @@ static void test_single_move_spr(const MADAGStorage& input_dag_storage, size_t s
   Test_Move_Found_Callback_Apply_One_Move callback{sample.View(), merge, src, dst};
 
   optimize_dag_direct(sample.View(), callback, callback, callback);
-
 }
 
 static auto CurrentSampleDAG() {
@@ -419,7 +428,6 @@ static auto SampleDAGAfterMove() {
 }
 
 static void test_single_fragment() {
-
   // load the DAG that has the broken move from "SPR: sample" test
   auto orig_dag_storage = LoadDAGFromProtobuf("radius_iter.pb");
   auto orig_dag = orig_dag_storage.View();
@@ -428,7 +436,8 @@ static void test_single_fragment() {
   merge_orig_dag.AddDAG(orig_dag);
   merge_orig_dag.ComputeResultEdgeMutations();
 
-  // create the DAG that matches the sample_dag from the broken move of "SPR: sample" test(DOT output for "before_move")
+  // create the DAG that matches the sample_dag from the broken move of "SPR: sample"
+  // test(DOT output for "before_move")
   auto current_dag_storage = CurrentSampleDAG();
   auto current_dag = current_dag_storage.View();
   current_dag.RecomputeCompactGenomes();
@@ -436,7 +445,8 @@ static void test_single_fragment() {
   merge_current_dag.AddDAG(current_dag);
   merge_current_dag.ComputeResultEdgeMutations();
 
-  // create the DAG that matches the after-move-dag from the broken move of "SPR: sample" test
+  // create the DAG that matches the after-move-dag from the broken move of "SPR:
+  // sample" test
   auto altered_dag_storage = SampleDAGAfterMove();
   auto altered_dag = altered_dag_storage.View();
 
@@ -445,8 +455,12 @@ static void test_single_fragment() {
   auto edge_ids = {2, 5, 4, 6, 7, 8};
   std::vector<NodeId> fragment_nodes;
   std::vector<EdgeId> fragment_edges;
-  for (auto &nid: node_ids) {fragment_nodes.push_back(NodeId({size_t(nid)}));}
-  for (auto &eid: edge_ids) {fragment_edges.push_back(EdgeId({size_t(eid)}));}
+  for (auto& nid : node_ids) {
+    fragment_nodes.push_back(NodeId({size_t(nid)}));
+  }
+  for (auto& eid : edge_ids) {
+    fragment_edges.push_back(EdgeId({size_t(eid)}));
+  }
 
   std::cout << "original full dag: \n";
   MADAGToDOT(orig_dag, std::cout);
@@ -467,12 +481,11 @@ static void test_single_fragment() {
   merge_orig_dag.AddFragment(altered_dag, fragment_nodes, fragment_edges);
 }
 
-
 [[maybe_unused]] static const auto test_added_breaking_case =
     add_test({[] { test_single_fragment(); }, "SPR: breaking move"});
 
-/* end single-move test for debugging failing fragment merging. TO DELETE WHEN FIXED!! */
-
+/* end single-move test for debugging failing fragment merging. TO DELETE WHEN FIXED!!
+ */
 
 [[maybe_unused]] static const auto test_added0 = add_test(
     {[] {

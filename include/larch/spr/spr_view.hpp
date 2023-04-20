@@ -5,8 +5,12 @@
 #include "larch/contiguous_set.hpp"
 
 struct FitchSet {
-  FitchSet(char base) : value_{base} {}
-  FitchSet(int base) : value_{static_cast<char>(base)} {}  // TODO
+  FitchSet(char base) : value_{base} {
+    Assert(value_ > 0);
+  }
+  FitchSet(int base) : value_{static_cast<char>(base)} {
+    Assert(value_ > 0);
+  }
   bool find(char base) const {
     switch (base) {
       case 'A':
