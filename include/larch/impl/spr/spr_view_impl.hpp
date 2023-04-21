@@ -68,9 +68,9 @@ FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetParts() const {
   auto& node = static_cast<const CRTP&>(*this);
   auto dag = node.GetDAG();
   if (node.GetOld().IsLeaf() or node.IsMoveTarget()) {
-    // if it's a leaf node, then the fitch sets don't change. 
-    // if it's the target node, then fitch sets can't have changed, 
-    // but the fitch sets recorded in tree_'s changed fitch set map 
+    // if it's a leaf node, then the fitch sets don't change.
+    // if it's the target node, then fitch sets can't have changed,
+    // but the fitch sets recorded in tree_'s changed fitch set map
     // relative to this node are meant for this node's new parent!
     return {node.GetMATNode()->mutations, std::nullopt};
   } else if (node.IsMoveNew()) {
@@ -95,10 +95,12 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetAtSite(
   auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
   Assert(site.value <= dag.GetReferenceSequence().size());
-  auto [old_fitch_sets, changes] = GetFitchSetParts(); // TODO: modify to also return boundary alleles
+  auto [old_fitch_sets, changes] =
+      GetFitchSetParts();  // TODO: modify to also return boundary alleles
 
-  auto build_new_fitch_set = [&node](nuc_one_hot old_major_alleles, nuc_one_hot old_boundary_alleles, nuc_one_hot rem_set, nuc_one_hot add_set) -> FitchSet {
-
+  auto build_new_fitch_set =
+      [&node](nuc_one_hot old_major_alleles, nuc_one_hot old_boundary_alleles,
+              nuc_one_hot rem_set, nuc_one_hot add_set) -> FitchSet {
     Assert(old_major_alleles <= 16);
     Assert(old_boundary_alleles <= 16);
     Assert(rem_set <= 16);
@@ -122,28 +124,40 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetAtSite(
 
   if (old_fitch_sets.find(static_cast<int>(site.value)) ==
       old_fitch_sets.mutations.end()) {
-
     // if no fitch set is recorded on the corresponding MAT node, we can use
     // a singleton set containing the base at this site in the parent compact genome
-    // In the special case that the node is the new move, its Fitch sets (and Fitch set changes) should be calculated relative to the old parent of GetMoveTarget, and so we will retrieve the base of that parent for the Fitch set in this case.
+    // In the special case that the node is the new move, its Fitch sets (and Fitch set
+    // changes) should be calculated relative to the old parent of GetMoveTarget, and so
+    // we will retrieve the base of that parent for the Fitch set in this case.
 
-    nuc_one_hot boundary_allele = 0; // from the 3 conditions for empty fitch set (see Cheng's comment) 
-    auto old_parent_base = node.IsMoveNew()
-                  ? base_to_singleton(dag.GetMoveTarget().GetOld().GetSingleParent().GetParent().GetCompactGenome().GetBase(site, dag.GetReferenceSequence()))
-                  : base_to_singleton(node.GetOld().GetSingleParent().GetParent().GetCompactGenome().GetBase(site, dag.GetReferenceSequence()));
+    nuc_one_hot boundary_allele =
+        0;  // from the 3 conditions for empty fitch set (see Cheng's comment)
+    auto old_parent_base =
+        node.IsMoveNew()
+            ? base_to_singleton(dag.GetMoveTarget()
+                                    .GetOld()
+                                    .GetSingleParent()
+                                    .GetParent()
+                                    .GetCompactGenome()
+                                    .GetBase(site, dag.GetReferenceSequence()))
+            : base_to_singleton(node.GetOld()
+                                    .GetSingleParent()
+                                    .GetParent()
+                                    .GetCompactGenome()
+                                    .GetBase(site, dag.GetReferenceSequence()));
     if (changes.has_value() and changes.value().Contains(site)) {
       return build_new_fitch_set(old_parent_base, boundary_allele,
-                        changes.value().at(site).get_decremented(),
-                        changes.value().at(site).get_incremented());
+                                 changes.value().at(site).get_decremented(),
+                                 changes.value().at(site).get_incremented());
     } else {
       return FitchSet(old_parent_base);
     }
   } else if (changes.has_value() and changes.value().Contains(site)) {
-    return FitchSet(
-        build_new_fitch_set(old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele(),
-                              old_fitch_sets.find(static_cast<int>(site.value))->get_boundary1_one_hot(),
-                              changes.value().at(site).get_decremented(),
-                              changes.value().at(site).get_incremented()));
+    return FitchSet(build_new_fitch_set(
+        old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele(),
+        old_fitch_sets.find(static_cast<int>(site.value))->get_boundary1_one_hot(),
+        changes.value().at(site).get_decremented(),
+        changes.value().at(site).get_incremented()));
   } else {
     return FitchSet(
         old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele());
@@ -514,22 +528,20 @@ HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move, NodeId new_node,
                                       nodes_with_major_allele_set_change)
     : move_{move}, new_node_{new_node}, collapse_{collapse} {
   for (auto& node_with_allele_set_change : nodes_with_major_allele_set_change) {
-
     if (not node_with_allele_set_change.node->is_leaf()) {
-        Assert(node_with_allele_set_change.node != nullptr);
-        ContiguousMap<MutationPosition, Mutation_Count_Change> node_map;
-        for (auto& mutation_count_change :
-             node_with_allele_set_change.major_allele_set_change) {
-          if (mutation_count_change.get_position() >= 2147483647) {
-            continue;
-          }
-          MutationPosition pos = {
-              static_cast<size_t>(mutation_count_change.get_position())};
-          node_map.insert({pos, mutation_count_change});
+      Assert(node_with_allele_set_change.node != nullptr);
+      ContiguousMap<MutationPosition, Mutation_Count_Change> node_map;
+      for (auto& mutation_count_change :
+           node_with_allele_set_change.major_allele_set_change) {
+        if (mutation_count_change.get_position() >= 2147483647) {
+          continue;
         }
-        changed_fitch_set_map_.insert(
-            {node_with_allele_set_change.node, std::move(node_map)});
+        MutationPosition pos = {
+            static_cast<size_t>(mutation_count_change.get_position())};
+        node_map.insert({pos, mutation_count_change});
       }
-
-   }
+      changed_fitch_set_map_.insert(
+          {node_with_allele_set_change.node, std::move(node_map)});
+    }
+  }
 }

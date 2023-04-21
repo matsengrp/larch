@@ -34,24 +34,14 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 
     auto spr = storage.View();
     spr.GetRoot().Validate(true);
-    std::cout << "Before move:\n";
-    MADAGToDOT(spr, std::cout);
 
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
 
-      std::cout << "After move: " << spr.GetMoveSource().GetId().value << "->"
-                << spr.GetMoveTarget().GetId().value << "\n";
-      MADAGToDOT(spr, std::cout);
-
       auto fragment = spr.GetFragment();
-
-      std::cout << "Fragment:\n";
-      FragmentToDOT(spr, fragment.second, std::cout);
-
+      std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddFragment(spr, fragment.first, fragment.second);
     } else {
-      std::cout << "Skip move\n";
       return false;
     }
     return move.score_change < best_score_change;
@@ -61,10 +51,13 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     decltype(AddMATConversion(Storage{})) storage;
     storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
     storage.View().RecomputeCompactGenomes();
-    merge_.AddDAG(storage.View());
-    sample_mat_.store(std::addressof(tree));
-    merge_.ComputeResultEdgeMutations();
-    StoreDAGToProtobuf(merge_.GetResult(), "radius_iter.pb");
+    {
+      std::scoped_lock<std::mutex> lock{merge_mtx_};
+      merge_.AddDAG(storage.View());
+      sample_mat_.store(std::addressof(tree));
+      merge_.ComputeResultEdgeMutations();
+    }
+    // StoreDAGToProtobuf(merge_.GetResult(), "radius_iter.pb");
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
@@ -72,8 +65,11 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
                                                    sample_dag_.GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes();
-    merge_.AddDAG(reassigned_states_storage_.View());
-    merge_.ComputeResultEdgeMutations();
+    {
+      std::scoped_lock<std::mutex> lock{merge_mtx_};
+      merge_.AddDAG(reassigned_states_storage_.View());
+      merge_.ComputeResultEdgeMutations();
+    }
   }
 
   DAG sample_dag_;
@@ -81,6 +77,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
       AddMATConversion(Storage{});
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
+  std::mutex merge_mtx_;
 };
 
 static MADAGStorage Load(std::string_view input_dag_path,
@@ -93,15 +90,12 @@ static MADAGStorage Load(std::string_view input_dag_path,
 }
 
 static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
-  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAG(input_dag);
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{})), MAT::Tree>>
       optimized_dags;
-
-  std::cout << "Before reassign_states:\n";
-  MADAGToDOT(input_dag, std::cout);
 
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();
@@ -314,25 +308,16 @@ struct Test_Move_Found_Callback_Apply_One_Move : public Move_Found_Callback {
 
       auto spr = storage.View();
       spr.GetRoot().Validate(true);
-      std::cout << "Before move:\n";
-      MADAGToDOT(spr, std::cout);
 
       if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
         spr.GetRoot().Validate(true);
-        std::cout << "After move: " << spr.GetMoveSource().GetId().value << "->"
-                  << spr.GetMoveTarget().GetId().value << "\n";
-        MADAGToDOT(spr, std::cout);
         auto fragment = spr.GetFragment();
-        std::cout << "Fragment:\n";
-        FragmentToDOT(spr, fragment.second, std::cout);
         merge_.AddFragment(spr, fragment.first, fragment.second);
       } else {
-        std::cout << "Skip move\n";
         return false;
       }
       return move.score_change < best_score_change;
     } else {
-      std::cout << "wrong move\n";
       return false;
     }
   }

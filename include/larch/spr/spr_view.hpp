@@ -5,12 +5,8 @@
 #include "larch/contiguous_set.hpp"
 
 struct FitchSet {
-  FitchSet(char base) : value_{base} {
-    Assert(value_ > 0);
-  }
-  FitchSet(int base) : value_{static_cast<char>(base)} {
-    Assert(value_ > 0);
-  }
+  FitchSet(char base) : value_{base} { Assert(value_ > 0); }
+  FitchSet(int base) : value_{static_cast<char>(base)} { Assert(value_ > 0); }
   bool find(char base) const {
     switch (base) {
       case 'A':
@@ -42,18 +38,18 @@ struct FitchSet {
   char value_ = 0;
 };
 
-nuc_one_hot base_to_singleton(char base){
-    switch (base) {
-      case 'A':
-        return 1;
-      case 'C':
-        return 2;
-      case 'G':
-        return 4;
-      case 'T':
-        return 8;
-    }
-    Fail("unrecognized base");
+nuc_one_hot base_to_singleton(char base) {
+  switch (base) {
+    case 'A':
+      return 1;
+    case 'C':
+      return 2;
+    case 'G':
+      return 4;
+    case 'T':
+      return 8;
+  }
+  Fail("unrecognized base");
 }
 
 struct HypotheticalNode {

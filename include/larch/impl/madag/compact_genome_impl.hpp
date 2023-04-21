@@ -3,11 +3,8 @@ const CompactGenome* CompactGenome::Empty() {
   return &empty;
 }
 
-static inline void AssertMut(MutationPosition pos, char mut) {
-    if (not (mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T')) {
-      std::cout << "At pos: " << pos.value << " base: " << mut << "\n";
-    }
-    // Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T');
+static inline void AssertMut(MutationPosition, char mut) {
+  Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T');
 }
 
 static void ComputeMutations(const EdgeMutations& edge_mutations,
