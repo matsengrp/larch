@@ -226,7 +226,7 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGenome(
     std::vector<NodeId>& result_nodes, std::vector<EdgeId>& result_edges) const {
   auto& node = static_cast<const CRTP&>(*this);
-  if (not node.IsRoot() and not node.IsMoveNew()) {  // TODO
+  if (not node.IsUA() and not node.IsMoveNew()) {  // TODO
     node.template SetOverlay<Deduplicate<CompactGenome>>();
     node = node.ComputeNewCompactGenome();
   }
@@ -315,7 +315,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
     Fail("Unreachable");
   }();
 
-  while (not dag.Get(oldest).IsRoot() and IsChanged(dag.Get(oldest).Const())) {
+  while (not dag.Get(oldest).IsUA() and IsChanged(dag.Get(oldest).Const())) {
     oldest = dag.Get(oldest).GetSingleParent().GetParent();
   }
   return dag.Get(oldest);
@@ -328,7 +328,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
   auto oldest_changed = dag.GetOldestChangedNode().GetSingleParent().GetParent();
-  if (oldest_changed.IsRoot()) {
+  if (oldest_changed.IsUA()) {
     // we need to add the UA node as the root anchor node of the fragment,
     // somehow
   } else {
@@ -361,7 +361,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId src, NodeId dst) {
   Assert(dag.IsTree());
 
   auto src_node = dag.Get(src);
-  Assert(not src_node.IsRoot() and not src_node.GetSingleParent().IsRoot());
+  Assert(not src_node.IsUA() and not src_node.IsTreeRoot());
   auto dst_node = dag.Get(dst);
   Assert(src_node.GetId() != dst_node.GetId());
   auto src_edge = src_node.GetSingleParent();
@@ -450,21 +450,21 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
       typename HypotheticalTree<DAG>::Data{move, new_node, collapse,
                                            nodes_with_major_allele_set_change});
 
-  if (dag.GetMoveLCA().IsRoot()) {
+  if (dag.GetMoveLCA().IsUA()) {
     return true;
   }
   NodeId lca = dag.GetMoveLCA();
   do {
     self.data_->lca_ancestors_.insert(lca);
     lca = dag.Get(lca).GetSingleParent().GetParent();
-  } while (not dag.Get(lca).IsRoot());
+  } while (not dag.Get(lca).IsUA());
 
   auto mark_changed = [&dag](NodeId current_node) {
     while (not(current_node == dag.GetMoveLCA().GetId() or
                dag.Get(current_node).HasChangedTopology())) {
       dag.Get(current_node).template SetOverlay<HypotheticalNode>();
       dag.Get(current_node).SetHasChangedTopology();
-      if (dag.Get(current_node).IsRoot()) {
+      if (dag.Get(current_node).IsUA()) {
         break;
       }
       current_node = dag.Get(current_node).GetSingleParent().GetParent();

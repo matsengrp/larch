@@ -214,7 +214,7 @@ SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
     }
   }
 
-  if (not below.IsRoot()) {
+  if (not below.IsUA()) {
     Assert(not below.GetCompactGenome().empty());
     EdgeMutations muts = CompactGenome::ToEdgeMutations(dag_.GetReferenceSequence(), {},
                                                         below.GetCompactGenome());

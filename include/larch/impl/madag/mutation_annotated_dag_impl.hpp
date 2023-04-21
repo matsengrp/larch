@@ -51,7 +51,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes()
   new_cgs.resize(dag.GetNodesCount());
   auto ComputeCG = [&new_cgs, dag](auto& self, Node for_node) {
     CompactGenome& compact_genome = new_cgs.at(for_node.GetId().value);
-    if (for_node.IsRoot()) {
+    if (for_node.IsUA()) {
       compact_genome = {};
       return;
     }

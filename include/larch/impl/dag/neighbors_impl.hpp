@@ -46,7 +46,7 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetSingleParent() const {
 
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetFirstParent() const {
-  Assert(not IsRoot());
+  Assert(not IsUA());
   return *GetParents().begin();
 }
 
@@ -62,8 +62,16 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetFirstClade() const {
 }
 
 template <typename CRTP, typename Tag>
-bool FeatureConstView<Neighbors, CRTP, Tag>::IsRoot() const {
+bool FeatureConstView<Neighbors, CRTP, Tag>::IsUA() const {
   return GetFeatureStorage(this).parents_.empty();
+}
+
+template <typename CRTP, typename Tag>
+bool FeatureConstView<Neighbors, CRTP, Tag>::IsTreeRoot() const {
+  if (GetParentsCount() != 1) {
+    return false;
+  }
+  return GetSingleParent().IsUA();
 }
 
 template <typename CRTP, typename Tag>

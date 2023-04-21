@@ -29,18 +29,18 @@ LCA FindLCA(Node n0, Node n1) {
 
     Node current_node0 = dag.Get(current_node_id0);
     Node current_node1 = dag.Get(current_node_id1);
-    if (current_node0.IsRoot() and current_node1.IsRoot()) {
+    if (current_node0.IsUA() and current_node1.IsUA()) {
       break;
     }
 
-    if (not current_node0.IsRoot()) {
+    if (not current_node0.IsUA()) {
       auto parent_edge = current_node0.GetSingleParent();
       result.path0.push_back(parent_edge);
       current_node_id0 = parent_edge.GetParent();
       path0.insert(current_node_id0);
     }
 
-    if (not current_node1.IsRoot()) {
+    if (not current_node1.IsUA()) {
       auto parent_edge = current_node1.GetSingleParent();
       result.path1.push_back(parent_edge);
       current_node_id1 = parent_edge.GetParent();

@@ -24,7 +24,8 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
   auto GetFirstParent() const;
   auto GetFirstChild() const;
   auto GetFirstClade() const;
-  bool IsRoot() const;
+  bool IsUA() const;
+  bool IsTreeRoot() const;
   bool IsLeaf() const;
   auto GetLeafsBelow() const;
   void Validate(bool recursive = false) const;

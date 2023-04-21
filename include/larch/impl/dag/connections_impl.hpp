@@ -40,7 +40,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
     for (auto clade : node.GetClades()) {
       Assert(not clade.empty() && "Empty clade");
     }
-    if (node.IsRoot()) {
+    if (node.IsUA()) {
       if (storage.root_.value != NoId) {
         std::cout << "Duplicate root: " << storage.root_.value << " and "
                   << node.GetId().value << "\n";
