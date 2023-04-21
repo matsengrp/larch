@@ -375,6 +375,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
   if (oldest_changed.IsRoot()) {
     // we need to add the UA node as the root anchor node of the fragment,
     // somehow
+    // TODO how is this being done, then? (Things seem to be working...)
   } else {
     result_nodes.push_back(oldest_changed.GetSingleParent().GetParent());
     result_edges.push_back(oldest_changed.GetSingleParent());
@@ -391,12 +392,33 @@ void FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEd
 
   std::vector<NodeId> nodes_to_remove;
   std::vector<EdgeId> edges_to_remove;
-  for (auto edge_id: fragment_edges) {
+  /* std::vector<NodeId> nodes_to_add; */
+  std::vector<EdgeId> edges_to_add;
+  auto first_edge_id = fragment_edges.at(0);
+  for (auto edge_id: fragment_edges){
     auto edge = dag.Get(edge_id);
     auto parent = edge.GetParent();
     auto child = edge.GetChild();
 
-    if (parent.GetCompactGenome() == child.GetCompactGenome()) { // CHECK THIS!
+    if (parent.GetCompactGenome() == child.GetCompactGenome() and
+        not (parent.IsRoot() or child.IsLeaf())) { // CHECK THIS!
+      if (child.IsNonrootAnchorNode()){
+        for (auto add_child : child.GetChildren()) {
+          fragment_nodes.push_back(add_child.GetChildId());
+          edges_to_add.push_back(add_child.GetId());
+        }
+      } else if (edge_id == first_edge_id){
+        //that is, if parent is root anchor node...
+        auto grandparent_edge = parent.GetSingleParent();
+        fragment_nodes.push_back(grandparent_edge.GetParentId());
+        edges_to_add.push_back(grandparent_edge);
+        for (auto add_child : parent.GetChildren()) {
+          if (add_child != edge_id) {
+            fragment_nodes.push_back(add_child.GetChildId());
+            edges_to_add.push_back(add_child.GetId());
+          }
+        }
+      }
       edges_to_remove.push_back(edge);
       nodes_to_remove.push_back(parent);
 
@@ -424,6 +446,9 @@ void FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEd
     auto edge = dag.Get(edge_id);
     edge.GetParent().RemoveChild(edge.GetClade(), edge);
     std::remove(fragment_edges.begin(), fragment_edges.end(), edge);
+  }
+  for (auto edge_to_add : edges_to_add) {
+    fragment_edges.push_back(edge_to_add);
   }
   for (auto node: nodes_to_remove) {
     std::remove(fragment_nodes.begin(), fragment_nodes.end(), node);
