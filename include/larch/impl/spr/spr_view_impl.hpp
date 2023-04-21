@@ -380,8 +380,57 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
     result_edges.push_back(oldest_changed.GetSingleParent());
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
+
+  dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
   return {result_nodes, result_edges};
 }
+
+template <typename DAG, typename CRTP, typename Tag>
+void FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(std::vector<NodeId>fragment_nodes, std::vector<EdgeId>fragment_edges) const {
+  auto& dag = static_cast<const CRTP&>(*this);
+
+  std::vector<NodeId> nodes_to_remove;
+  std::vector<EdgeId> edges_to_remove;
+  for (auto edge_id: fragment_edges) {
+    auto edge = dag.Get(edge_id);
+    auto parent = edge.GetParent();
+    auto child = edge.GetChild();
+
+    if (parent.GetCompactGenome() == child.GetCompactGenome()) { // CHECK THIS!
+      edges_to_remove.push_back(edge);
+      nodes_to_remove.push_back(parent);
+
+      edge.template SetOverlay<Endpoints> ();
+      parent.template SetOverlay<Neighbors> ();
+      child.template SetOverlay<Neighbors> ();
+
+      parent.SetHasChangedTopology();
+      child.SetHasChangedTopology();
+
+      for (CladeIdx i = edge.GetClade(); i.value < parent.GetCladesCount(); ++i.value) {
+        (*parent.GetClade(i).begin()).template SetOverlay<Endpoints>();
+      }
+      auto current_clade = edge.GetClade().value;
+      for (auto child_edge: child.GetChildren()){
+        child_edge.template SetOverlay<Endpoints> ();
+        child_edge.GetParent().template SetOverlay<Neighbors> ();
+        child_edge.GetChild().template SetOverlay<Neighbors> ();
+        child_edge.Set(parent, child_edge.GetChild(), {current_clade});
+        current_clade = current_clade >= parent.GetCladesCount() ? current_clade + 1 : parent.GetCladesCount();
+      }
+    }
+  }
+  for (auto edge_id: edges_to_remove) {
+    auto edge = dag.Get(edge_id);
+    edge.GetParent().RemoveChild(edge.GetClade(), edge);
+    std::remove(fragment_edges.begin(), fragment_edges.end(), edge);
+  }
+  for (auto node: nodes_to_remove) {
+    std::remove(fragment_nodes.begin(), fragment_nodes.end(), node);
+  }
+  return;
+}
+
 template <typename DAG, typename CRTP, typename Tag>
 const ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>&
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetChangedFitchSetMap() const {
