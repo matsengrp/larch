@@ -117,12 +117,12 @@ struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {
 template <typename DAG>
 struct HypotheticalTree {
   struct Data {
-    Data(const Profitable_Moves& move, NodeId new_node, bool collapse,
+    Data(const Profitable_Moves& move, NodeId new_node, bool has_unifurcation_after_move,
          const std::vector<Node_With_Major_Allele_Set_Change>&
              nodes_with_major_allele_set_change);
     Profitable_Moves move_;
     NodeId new_node_;
-    bool collapse_;
+    bool has_unifurcation_after_move_;
     ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>
         changed_fitch_set_map_;
     ContiguousSet<NodeId> lca_ancestors_;
@@ -139,7 +139,7 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   auto GetMoveSource() const;
   auto GetMoveTarget() const;
   auto GetMoveNew() const;
-  bool HaveCollapse() const;
+  bool HasUnifurcationAfterMove() const;
 
   // Returns the HypotheticalTreeNode that used to be the parent of source
   // before the SPR move. TODO: This node may (but need not be) unifurcating
@@ -155,8 +155,9 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   // changes, whichever is higher in the tree.
   [[nodiscard]] auto GetOldestChangedNode() const;
 
-  void CollapseEmptyFragmentEdges(std::vector<NodeId> fragment_nodes, std::vector<EdgeId>fragment_edges) const;
   [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>> GetFragment() const;
+
+  [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>> CollapseEmptyFragmentEdges(std::vector<NodeId> fragment_nodes, std::vector<EdgeId>fragment_edges) const;
 
   const ContiguousMap<MATNodePtr,
                       ContiguousMap<MutationPosition, Mutation_Count_Change>>&
