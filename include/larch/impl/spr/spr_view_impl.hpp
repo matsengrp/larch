@@ -382,8 +382,9 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
-  auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
-  return {collapsed.first, collapsed.second};
+  //auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
+  //return {collapsed.first, collapsed.second};
+  return {result_nodes, result_edges};
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -438,29 +439,32 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>> FeatureConstView<Hypothetica
         child_edge.Set(parent, grandchild_node, {current_clade});
         current_clade = current_clade >= parent.GetCladesCount() ? current_clade + 1 : parent.GetCladesCount();
       }
+      //parent.RemoveChild(edge.GetClade(), edge);
       child.ClearConnections();
-      parent.RemoveChild(edge.GetClade(), edge);
     }
   }
-  std::vector<NodeId> current_nodes(fragment_nodes);
-  std::vector<EdgeId> current_edges(fragment_edges);
 
   if (edges_to_add.size() > 0 or edges_to_remove.size() > 0) {
     for (auto edge_id: edges_to_add) {
-      current_edges.push_back(edge_id);
+      fragment_edges.push_back(edge_id);
     }
     for (auto edge_id: edges_to_remove) {
-      std::remove(current_edges.begin(), current_edges.end(), edge_id);
+      std::remove(fragment_edges.begin(), fragment_edges.end(), edge_id);
     }
-    current_edges.resize(current_edges.size() - edges_to_remove.size());
+    fragment_edges.resize(fragment_edges.size() - edges_to_remove.size());
     for (auto node_id: nodes_to_remove) {
-      std::remove(current_nodes.begin(), current_nodes.end(), node_id);
+      std::remove(fragment_nodes.begin(), fragment_nodes.end(), node_id);
     }
-    current_nodes.resize(current_nodes.size() - nodes_to_remove.size());
-    //for (auto id: current_edges) {
-    //  std::cout << "edge " << id.value << " (" << dag.Get(id).GetParent().GetId().value << "->" << dag.Get(id).GetChild().GetId().value << ")\n";
-    //}
+
+    fragment_nodes.resize(fragment_nodes.size() - nodes_to_remove.size());
+    for (auto id: fragment_edges) {
+      std::cout << "edge " << id.value << " (" << dag.Get(id).GetParent().GetId().value << "->" << dag.Get(id).GetChild().GetId().value << ")\n";
+    }
   }
+
+  std::vector<NodeId> current_nodes(std::move(fragment_nodes));
+  std::vector<EdgeId> current_edges(std::move(fragment_edges));
+
   return {current_nodes, current_edges};
 }
 
