@@ -390,81 +390,101 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
 template <typename DAG, typename CRTP, typename Tag>
 std::pair<std::vector<NodeId>, std::vector<EdgeId>> FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(std::vector<NodeId>fragment_nodes, std::vector<EdgeId>fragment_edges) const {
   auto& dag = static_cast<const CRTP&>(*this);
-  std::vector<NodeId> nodes_to_remove;
-  std::vector<EdgeId> edges_to_remove;
-  std::vector<EdgeId> edges_to_add;
 
-  auto first_edge_id = fragment_edges.front();
+  // fragment_nodes is computed in a preorder traversal
+  auto fragment_root = fragment_nodes.front();
+
+  // keep track of edges/nodes that are collapsible
+  std::unordered_map<NodeId, bool> is_parent_of_collapsible_edge;
+  std::unordered_map<NodeId, bool> is_child_of_collapsible_edge;
+  std::unordered_map<EdgeId, bool> is_collapsible_edge;
   for (auto edge_id: fragment_edges) {
     auto edge = dag.Get(edge_id);
     auto parent = edge.GetParent();
     auto child = edge.GetChild();
+    if (not (parent.Const().GetCompactGenome() != child.Const().GetCompactGenome() or child.IsLeaf() or parent.IsRoot())) {
+      is_parent_of_collapsible_edge.insert({parent, true});
+      is_child_of_collapsible_edge.insert({child, true});
+      is_collapsible_edge.insert({edge, true});
+    }
+  }
 
-    if (not (parent.Const().GetCompactGenome() != child.Const().GetCompactGenome() or
-        parent.IsRoot() or child.IsLeaf())) {
+  std::vector<NodeId> current_nodes;
+  std::vector<EdgeId> current_edges;
 
-      parent.template SetOverlay<Neighbors>();
+  for (auto node_id: fragment_nodes) {
+    if (not is_child_of_collapsible_edge[node_id]) {
+      current_nodes.push_back(node_id);
+      if (is_parent_of_collapsible_edge[node_id]) {
+        auto parent = dag.Get(node_id);
 
-      if (child.IsNonrootAnchorNode()){
-        child.template SetOverlay<HypotheticalNode>();
-        for (auto add_child : child.GetChildren()) {
-          fragment_nodes.push_back(add_child.GetChild());
-          edges_to_add.push_back(add_child);
+        std::vector<EdgeId> current_children;
+        if (parent.IsMoveNew()) {
+          current_children.push_back(dag.GetMoveSource().GetSingleParent());
+          current_children.push_back(dag.GetMoveTarget().GetSingleParent());
+        } else {
+          for (auto c: parent.GetChildren() | Transform::GetId()) {
+            current_children.push_back(c);
+          }
         }
-      } else if (edge_id == first_edge_id){
-        //that is, if parent is root anchor node...
         auto grandparent_edge = parent.GetSingleParent();
-        fragment_nodes.insert(fragment_nodes.begin(), grandparent_edge.GetParent());
-        edges_to_add.push_back(grandparent_edge);
-        for (auto add_child: parent.Const().GetChildren()) {
-          if (not (add_child.GetChild() == child)) {
-            edges_to_add.push_back(add_child);
-            fragment_nodes.push_back(add_child.GetChild());
+        size_t current_clade = 0;
+
+        parent.template SetOverlay<Neighbors>();
+        parent.ClearConnections();
+
+        bool collapsed_all_children = false;
+        while (not collapsed_all_children) {
+          collapsed_all_children = true;
+          std::vector<EdgeId> still_to_collapse;
+
+          // try to add all (non-collapsible) edges below current node, as well as the children of any collapsible edges
+          for (auto edge_id: current_children){
+            auto edge = dag.Get(edge_id);
+            auto child = edge.GetChild();
+            if (is_collapsible_edge[edge]) {
+
+              if (child.IsNonrootAnchorNode()){
+                child.template SetOverlay<HypotheticalNode>();
+              } else if (node_id == fragment_root) {
+                //that is, if parent is root anchor node...
+                current_nodes.insert(current_nodes.begin(), grandparent_edge.GetParent().GetId());
+              }
+              for (auto child_edge: child.GetChildren()) {
+                if (is_collapsible_edge[child_edge]) {
+                  still_to_collapse.push_back(child_edge);
+                } else {
+                  auto grandchild_node = child_edge.GetChild();
+                  child_edge.template SetOverlay<Endpoints>();
+                  child_edge.Set(parent, grandchild_node, {current_clade});
+                  parent.AddEdge({current_clade++}, child_edge, true);
+                }
+              }
+            } else {
+              edge.template SetOverlay<Endpoints>();
+              edge.Set(parent, child, {current_clade});
+              parent.AddEdge({current_clade++}, edge, true);
+            }
+          }
+          // check if any of the grandchildren/edges we're trying to add are in turn collapsible
+          if (still_to_collapse.size() > 0) {
+            current_children.clear();
+            collapsed_all_children = false;
+            current_children.insert(current_children.begin(), still_to_collapse.begin(), still_to_collapse.end());
           }
         }
       }
-      child.template SetOverlay<Neighbors>();
-
-      edges_to_remove.push_back(edge);
-      nodes_to_remove.push_back(child);
-
-      auto current_clade = edge.GetClade().value;
-      for (auto child_edge: child.GetChildren()){
-        auto grandchild_node = child_edge.GetChild();
-
-        grandchild_node.template SetOverlay<Neighbors> ();
-        child_edge.template SetOverlay<Endpoints>();
-
-        parent.AddEdge({current_clade}, child_edge, true);
-        child_edge.Set(parent, grandchild_node, {current_clade});
-        current_clade = current_clade >= parent.GetCladesCount() ? current_clade + 1 : parent.GetCladesCount();
-      }
-      //parent.RemoveChild(edge.GetClade(), edge);
-      child.ClearConnections();
     }
   }
-
-  if (edges_to_add.size() > 0 or edges_to_remove.size() > 0) {
-    for (auto edge_id: edges_to_add) {
-      fragment_edges.push_back(edge_id);
-    }
-    for (auto edge_id: edges_to_remove) {
-      std::remove(fragment_edges.begin(), fragment_edges.end(), edge_id);
-    }
-    fragment_edges.resize(fragment_edges.size() - edges_to_remove.size());
-    for (auto node_id: nodes_to_remove) {
-      std::remove(fragment_nodes.begin(), fragment_nodes.end(), node_id);
-    }
-
-    fragment_nodes.resize(fragment_nodes.size() - nodes_to_remove.size());
-    for (auto id: fragment_edges) {
-      std::cout << "edge " << id.value << " (" << dag.Get(id).GetParent().GetId().value << "->" << dag.Get(id).GetChild().GetId().value << ")\n";
+  for (auto node_id: current_nodes) {
+    auto node = dag.Get(node_id);
+    for (auto child: node.GetChildren()) {
+      current_edges.push_back(child);
     }
   }
-
-  std::vector<NodeId> current_nodes(std::move(fragment_nodes));
-  std::vector<EdgeId> current_edges(std::move(fragment_edges));
-
+  for (auto id: current_edges) {
+    std::cout << "edge " << id.value << " (" << dag.Get(id).GetParent().GetId().value << "->" << dag.Get(id).GetChild().GetId().value << ")\n";
+  }
   return {current_nodes, current_edges};
 }
 
@@ -631,3 +651,5 @@ HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move, NodeId new_node,
     }
   }
 }
+
+
