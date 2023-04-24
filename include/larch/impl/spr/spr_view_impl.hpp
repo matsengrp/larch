@@ -382,9 +382,9 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
-  //auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
-  //return {collapsed.first, collapsed.second};
-  return {result_nodes, result_edges};
+  auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
+  return {collapsed.first, collapsed.second};
+  //return {result_nodes, result_edges};
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -481,9 +481,6 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>> FeatureConstView<Hypothetica
     for (auto child: node.GetChildren()) {
       current_edges.push_back(child);
     }
-  }
-  for (auto id: current_edges) {
-    std::cout << "edge " << id.value << " (" << dag.Get(id).GetParent().GetId().value << "->" << dag.Get(id).GetChild().GetId().value << ")\n";
   }
   return {current_nodes, current_edges};
 }
