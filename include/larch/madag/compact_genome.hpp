@@ -13,6 +13,7 @@
 #include <set>
 
 #include "larch/dag/dag.hpp"
+#include "larch/madag/mutation_base.hpp"
 #include "larch/madag/edge_mutations.hpp"
 #include "larch/contiguous_map.hpp"
 #include "larch/contiguous_set.hpp"

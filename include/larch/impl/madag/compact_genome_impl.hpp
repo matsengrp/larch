@@ -4,10 +4,10 @@ const CompactGenome* CompactGenome::Empty() {
 }
 
 static inline void AssertMut(MutationPosition pos, char mut) {
-    if (not (mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T')) {
-      std::cout << "At pos: " << pos.value << " base: " << mut << "\n";
-    }
-    // Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T');
+  if (not(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T')) {
+    std::cout << "At pos: " << pos.value << " base: " << mut << "\n";
+  }
+  // Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T');
 }
 
 static void ComputeMutations(const EdgeMutations& edge_mutations,
@@ -35,7 +35,7 @@ static void ComputeMutations(const EdgeMutations& edge_mutations,
 CompactGenome::CompactGenome(ContiguousMap<MutationPosition, char>&& mutations)
     : mutations_{std::move(mutations)}, hash_{ComputeHash(mutations_)} {
   for (auto [pos, mut] : mutations_) {
-    if (not (mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T')) {
+    if (not(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T')) {
       auto it = mutations_.find(pos);
       mutations_.erase(it);
     }
