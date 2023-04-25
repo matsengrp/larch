@@ -2,6 +2,8 @@
 #error "Don't include this header"
 #endif
 
+#include <iostream>
+
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Connections, CRTP, Tag>::IsTree() const {
   auto& dag = static_cast<const CRTP&>(*this);

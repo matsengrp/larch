@@ -143,8 +143,25 @@ template <typename DAG>
 template <typename D>
 void Merge<DAG>::AddFragment(D dag, const std::vector<NodeId>& nodes,
                              const std::vector<EdgeId>& edges) {
+  // std::vector<NodeId> leafs =
+  //     dag.GetLeafs() | Transform::GetId() | ranges::to<std::vector>();
+  // leafs |= ranges::actions::sort(std::less<NodeId>());
+
+  // std::vector<NodeId> dag_leafs =
+  //     ResultDAG().GetLeafs() | Transform::GetId() | ranges::to<std::vector>();
+  // dag_leafs |= ranges::actions::sort(std::less<NodeId>());
+
+  // const bool leafs_subset =
+  //     ranges::includes(dag_leafs, leafs, [dag, this](NodeId lhs, NodeId rhs) {
+  //       return ResultDAG().Get(lhs).GetCompactGenome() ==
+  //              dag.Get(rhs).Const().GetCompactGenome();
+  //     });
+
+  // Assert(leafs_subset);
+
   std::vector<NodeLabel> labels;
   labels.resize(dag.GetNodesCount());
+
   for (auto node : dag.GetNodes()) {
     auto cg_iter = ResultDAG().AddDeduplicated(node.Const().GetCompactGenome().Copy());
     labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
@@ -207,6 +224,7 @@ void Merge<DAG>::AddFragment(D dag, const std::vector<NodeId>& nodes,
 
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   Assert(result_node_labels_.size() == ResultDAG().GetNodesCount());
+  Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
 
   ResultDAG().BuildConnections();
 

@@ -146,11 +146,27 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetAtSite(
                                     .GetCompactGenome()
                                     .GetBase(site, dag.GetReferenceSequence()));
     if (changes.has_value() and changes.value().Contains(site)) {
+<<<<<<< HEAD
+      return FitchSet({node.GetSingleParent()
+                           .GetParent()
+                           .GetCompactGenome()
+                           .GetBase(site, dag.GetReferenceSequence())
+                           .ToChar() &
+                       (~changes.value().at(site).get_decremented() |
+                        changes.value().at(site).get_incremented())});
+    } else {
+      return FitchSet({node.GetSingleParent()
+                           .GetParent()
+                           .GetCompactGenome()
+                           .GetBase(site, dag.GetReferenceSequence())
+                           .ToChar()});
+=======
       return build_new_fitch_set(old_parent_base, boundary_allele,
                                  changes.value().at(site).get_decremented(),
                                  changes.value().at(site).get_incremented());
     } else {
       return FitchSet(old_parent_base);
+>>>>>>> origin/fitch-sets-wd-mb-exploring
     }
   } else if (changes.has_value() and changes.value().Contains(site)) {
     return FitchSet(build_new_fitch_set(
@@ -212,9 +228,15 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
     // already in that site before the SPR move
     ContiguousSet<MutationPosition> focus_sites = GetSitesWithChangedFitchSets();
     for (auto site : focus_sites) {
-      FitchSet site_fitch_set = GetFitchSetAtSite(site);
+<<<<<<< HEAD
+      FitchSet site_fitch_set = GetFitchSet(site);
       auto oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
       if (not site_fitch_set.find(oldbase.ToChar())) {
+=======
+      FitchSet site_fitch_set = GetFitchSetAtSite(site);
+      char oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
+      if (not site_fitch_set.find(oldbase)) {
+>>>>>>> origin/fitch-sets-wd-mb-exploring
         cg_changes.insert({site, site_fitch_set.at(0)});
         changed_base_sites.insert(site);
       }
@@ -228,9 +250,15 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
     ContiguousSet<MutationPosition> focus_sites = node.GetSitesWithChangedFitchSets();
     focus_sites.Union(node.GetParentChangedBaseSites());
     for (auto site : focus_sites) {
+<<<<<<< HEAD
       FitchSet site_fitch_set = node.GetFitchSet(site);
       auto oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
       auto parent_base = node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
+=======
+      FitchSet site_fitch_set = node.GetFitchSetAtSite(site);
+      char oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
+      char parent_base = node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
+>>>>>>> origin/fitch-sets-wd-mb-exploring
           site, node.GetDAG().GetReferenceSequence());
       if (site_fitch_set.find(parent_base.ToChar())) {
         if (oldbase != parent_base) {
@@ -270,7 +298,11 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGenome(
     std::vector<NodeId>& result_nodes, std::vector<EdgeId>& result_edges) const {
   auto& node = static_cast<const CRTP&>(*this);
-  if (not node.IsUA() and not node.IsMoveNew()) {
+<<<<<<< HEAD
+  if (not node.IsUA() and not node.IsMoveNew()) {  // TODO
+=======
+  if (not node.IsRoot() and not node.IsMoveNew()) {
+>>>>>>> origin/fitch-sets-wd-mb-exploring
     node.template SetOverlay<Deduplicate<CompactGenome>>();
     node = node.ComputeNewCompactGenome();
   }
@@ -648,3 +680,5 @@ HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move, NodeId new_node,
     }
   }
 }
+
+

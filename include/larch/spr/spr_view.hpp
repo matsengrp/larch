@@ -5,14 +5,8 @@
 #include "larch/contiguous_set.hpp"
 
 struct FitchSet {
-  FitchSet(char base) : value_{base} {}
-  FitchSet(int base) : value_{static_cast<char>(base)} {}  // TODO
-  FitchSet(nuc_one_hot one_hot)
-      : value_{[](nuc_one_hot base) {
-          static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
-          return decode.at(one_hot_to_two_bit(base));
-        }(one_hot)} {}
-
+  FitchSet(char base) : value_{base} { Assert(value_ > 0); }
+  FitchSet(int base) : value_{static_cast<char>(base)} { Assert(value_ > 0); }
   bool find(char base) const {
     switch (base) {
       case 'A':
@@ -43,6 +37,20 @@ struct FitchSet {
  private:
   char value_ = 0;
 };
+
+nuc_one_hot base_to_singleton(char base) {
+  switch (base) {
+    case 'A':
+      return 1;
+    case 'C':
+      return 2;
+    case 'G':
+      return 4;
+    case 'T':
+      return 8;
+  }
+  Fail("unrecognized base");
+}
 
 struct HypotheticalNode {
   HypotheticalNode Copy() const {
@@ -81,7 +89,7 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
   GetFitchSetParts() const;
 
   // get the (possibly modified) fitch set at this node at the provided site.
-  [[nodiscard]] FitchSet GetFitchSet(MutationPosition site) const;
+  [[nodiscard]] FitchSet GetFitchSetAtSite(MutationPosition site) const;
 
   // Most of the time this can just return the parent node's
   // changed_base_sites. However, it's different if the node in question is the
@@ -103,17 +111,18 @@ struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {
   void SetHasChangedTopology() const;
   void PreorderComputeCompactGenome(std::vector<NodeId>& result,
                                     std::vector<EdgeId>& result_edges) const;
+  void PreorderTraverseCollectFragmentEdges(std::vector<EdgeId>& fragment_edges) const;
 };
 
 template <typename DAG>
 struct HypotheticalTree {
   struct Data {
-    Data(const Profitable_Moves& move, NodeId new_node, bool collapse,
+    Data(const Profitable_Moves& move, NodeId new_node, bool has_unifurcation_after_move,
          const std::vector<Node_With_Major_Allele_Set_Change>&
              nodes_with_major_allele_set_change);
     Profitable_Moves move_;
     NodeId new_node_;
-    bool collapse_;
+    bool has_unifurcation_after_move_;
     ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>
         changed_fitch_set_map_;
     ContiguousSet<NodeId> lca_ancestors_;
@@ -130,7 +139,7 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   auto GetMoveSource() const;
   auto GetMoveTarget() const;
   auto GetMoveNew() const;
-  bool HaveCollapse() const;
+  bool HasUnifurcationAfterMove() const;
 
   // Returns the HypotheticalTreeNode that used to be the parent of source
   // before the SPR move. TODO: This node may (but need not be) unifurcating
@@ -147,6 +156,8 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   [[nodiscard]] auto GetOldestChangedNode() const;
 
   [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>> GetFragment() const;
+
+  [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>> CollapseEmptyFragmentEdges(std::vector<NodeId> fragment_nodes, std::vector<EdgeId>fragment_edges) const;
 
   const ContiguousMap<MATNodePtr,
                       ContiguousMap<MutationPosition, Mutation_Count_Change>>&

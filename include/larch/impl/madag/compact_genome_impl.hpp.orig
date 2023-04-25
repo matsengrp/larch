@@ -3,8 +3,16 @@ const CompactGenome* CompactGenome::Empty() {
   return &empty;
 }
 
+<<<<<<< HEAD
+static inline void AssertMut(MutationPosition pos, MutationBase mut) {
+  if (not(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T')) {
+    std::cout << "At pos: " << pos.value << " base: " << mut << "\n";
+  }
+  // Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T');
+=======
 static inline void AssertMut(MutationPosition, char mut) {
   Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T');
+>>>>>>> origin/fitch-sets-wd-mb-exploring
 }
 
 static void ComputeMutations(const EdgeMutations& edge_mutations,
@@ -32,6 +40,13 @@ static void ComputeMutations(const EdgeMutations& edge_mutations,
 CompactGenome::CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mutations)
     : mutations_{std::move(mutations)}, hash_{ComputeHash(mutations_)} {
   for (auto [pos, mut] : mutations_) {
+<<<<<<< HEAD
+    if (not(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T')) {
+      auto it = mutations_.find(pos);
+      mutations_.erase(it);
+    }
+=======
+>>>>>>> origin/fitch-sets-wd-mb-exploring
     AssertMut(pos, mut);
   }
 }
