@@ -25,7 +25,6 @@
 
 #include "larch/dag/dag.hpp"
 #include "larch/madag/mutation_base.hpp"
-#include "larch/madag/mutation_base.hpp"
 #include "larch/madag/compact_genome.hpp"
 #include "larch/madag/edge_mutations.hpp"
 

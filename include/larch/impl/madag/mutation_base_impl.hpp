@@ -1,5 +1,3 @@
-// ** Static objects
-
 inline const MutationBase MutationBase::DNA::A{{0, 0}};
 inline const MutationBase MutationBase::DNA::C{{0, 1}};
 inline const MutationBase MutationBase::DNA::G{{1, 0}};
@@ -15,8 +13,6 @@ inline const std::map<MutationBase, MutationBase> MutationBase::DNA::complement_
     {MutationBase::DNA::G, MutationBase::DNA::C},
     {MutationBase::DNA::T, MutationBase::DNA::A}};
 
-// ** Constructors
-
 MutationBase::MutationBase(const MutationBase::BitArray m_value) { value = m_value; };
 
 MutationBase::MutationBase(const char m_char_in) {
@@ -29,14 +25,10 @@ MutationBase::MutationBase(const char m_char_in) {
   Fail("ERROR: Invalid char given for MutationBase constructor.");
 }
 
-// ** Miscellaneous
-
 MutationBase MutationBase::GetComplementaryBase() const {
   MutationBase m_out{{!value[0], !value[1]}};
   return m_out;
 }
-
-// ** I/O
 
 char MutationBase::ToChar() const { return DNA::mut_to_char_map.find(value)->second; }
 
@@ -63,8 +55,6 @@ inline std::string &operator+=(std::string &str, const MutationBase m_in) {
   str += m_in.ToChar();
   return str;
 }
-
-// ** Comparators
 
 bool MutationBase::operator==(const MutationBase &rhs) const {
   return value == rhs.value;
