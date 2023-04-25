@@ -19,31 +19,42 @@ bool add_test(const Test& test) noexcept {
 int main(int argc, char* argv[]) {
   int ignored{};
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
+
   bool no_catch = false;
-  bool list_names = false;
+  bool opt_list_names = false;
+  bool opt_test_range = false;
+  std::pair<size_t, size_t> range;
   std::regex regex{".*"};
   for (int i = 1; i < argc; ++i) {
     if (std::string("nocatch") == argv[i]) {
       no_catch = true;
     } else if (std::string("--list") == argv[i]) {
-      list_names = true;
+      opt_list_names = true;
+    } else if (std::string("--range") == argv[i]) {
+      opt_test_range = true;
+      range.first = atoi(argv[++i]);
+      range.second = atoi(argv[++i]);
     } else {
       regex = argv[i];
     }
   }
 
+  std::cout << "Tests:" << std::endl;
   std::vector<Test> tests;
+  size_t test_counter = 1;
   for (auto& test : get_all_tests()) {
     std::smatch match;
     if (std::regex_match(test.name, match, regex)) {
-      tests.push_back(test);
+      if ((!opt_test_range) ||
+          ((test_counter >= range.first) && (test_counter <= range.second))) {
+        tests.push_back(test);
+        std::cout << "[" << test_counter << "] " << test.name << std::endl;
+      }
     }
+    test_counter++;
   }
 
-  if (list_names) {
-    for (auto& test : tests) {
-      std::cout << test.name << std::endl;
-    }
+  if (opt_list_names) {
     return EXIT_SUCCESS;
   }
 
