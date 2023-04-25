@@ -59,18 +59,51 @@ inline std::ostream &operator<<(std::ostream &os,
   return os;
 }
 
+inline std::string &operator+=(std::string &str, const MutationBase m_in) {
+  str += m_in.ToChar();
+  return str;
+}
+
 // ** Comparators
 
-bool MutationBase::operator==(const MutationBase rhs) const {
+bool MutationBase::operator==(const MutationBase &rhs) const {
   return value == rhs.value;
 }
 
-bool MutationBase::operator<(const MutationBase rhs) const { return value < rhs.value; }
+bool MutationBase::operator!=(const MutationBase &rhs) const {
+  return value != rhs.value;
+}
 
-bool MutationBase::operator==(const MutationBase::BitArray rhs) const {
+bool MutationBase::operator<(const MutationBase &rhs) const {
+  return value < rhs.value;
+}
+
+bool MutationBase::operator==(const MutationBase::BitArray &rhs) const {
   return value == rhs;
 }
 
-bool MutationBase::operator==(const char rhs) const { return ToChar() == rhs; }
+bool MutationBase::operator!=(const MutationBase::BitArray &rhs) const {
+  return value != rhs;
+}
 
-bool MutationBase::operator!=(const char rhs) const { return ToChar() != rhs; }
+bool MutationBase::operator<(const MutationBase::BitArray &rhs) const {
+  return value < rhs;
+}
+
+bool MutationBase::operator==(const char &rhs) const { return ToChar() == rhs; }
+
+bool MutationBase::operator!=(const char &rhs) const { return ToChar() != rhs; }
+
+bool MutationBase::operator<(const char &rhs) const { return ToChar() < rhs; }
+
+inline bool operator==(const char &lhs, const MutationBase &rhs) {
+  return lhs == rhs.ToChar();
+}
+
+inline bool operator!=(const char &lhs, const MutationBase &rhs) {
+  return lhs != rhs.ToChar();
+}
+
+inline bool operator<(const char &lhs, const MutationBase &rhs) {
+  return lhs < rhs.ToChar();
+}

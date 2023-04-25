@@ -13,6 +13,7 @@
 struct MutationBase {
   using BitArray = std::array<bool, 2>;
 
+  MutationBase() = default;
   inline MutationBase(const BitArray m_value);
   inline MutationBase(const char m_char_in);
 
@@ -20,15 +21,23 @@ struct MutationBase {
 
   inline char ToChar() const;
   static inline std::string ToString(std::vector<MutationBase> m_in);
+  friend std::string &operator+=(std::string &str, const MutationBase m_in);
   friend std::ostream &operator<<(std::ostream &os, const MutationBase m_in);
   friend std::ostream &operator<<(std::ostream &os,
                                   const std::vector<MutationBase> m_in);
 
-  inline bool operator==(const MutationBase rhs) const;
-  inline bool operator<(const MutationBase rhs) const;
-  inline bool operator==(const BitArray rhs) const;
-  inline bool operator==(const char rhs) const;
-  inline bool operator!=(const char rhs) const;
+  inline bool operator==(const MutationBase &rhs) const;
+  inline bool operator!=(const MutationBase &rhs) const;
+  inline bool operator<(const MutationBase &rhs) const;
+  inline bool operator==(const BitArray &rhs) const;
+  inline bool operator!=(const BitArray &rhs) const;
+  inline bool operator<(const BitArray &rhs) const;
+  inline bool operator==(const char &rhs) const;
+  inline bool operator!=(const char &rhs) const;
+  inline bool operator<(const char &rhs) const;
+  friend bool operator==(const char &lhs, const MutationBase &rhs);
+  friend bool operator!=(const char &lhs, const MutationBase &rhs);
+  friend bool operator<(const char &lhs, const MutationBase &rhs);
 
   struct DNA {
     static constexpr size_t DNACount = 4;
@@ -38,7 +47,14 @@ struct MutationBase {
     static const std::map<MutationBase, MutationBase> complement_map;
   };
 
-  BitArray value;
+  BitArray value = {0, 0};
 };
+
+namespace std {
+template <>
+struct hash<MutationBase> {
+  std::size_t operator()(const MutationBase &obj) const { return obj.ToChar(); }
+};
+}  // namespace std
 
 #include "larch/impl/madag/mutation_base_impl.hpp"

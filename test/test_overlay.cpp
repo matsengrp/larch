@@ -24,11 +24,11 @@ static void test_overlay(std::string_view input_dag_path,
   Assert(not overlay_node.GetCompactGenome().empty());
   Assert(input_node.GetCompactGenome() == overlay_node.GetCompactGenome());
 
-  ContiguousMap<MutationPosition, char> new_cg;
-  new_cg.insert({{5}, 'A'});
-  new_cg.insert({{10}, 'G'});
-  new_cg.insert({{15}, 'T'});
-  new_cg.insert({{20}, 'C'});
+  ContiguousMap<MutationPosition, MutationBase> new_cg;
+  new_cg.insert({{5}, {'A'}});
+  new_cg.insert({{10}, {'G'}});
+  new_cg.insert({{15}, {'T'}});
+  new_cg.insert({{20}, {'C'}});
   overlay_node = CompactGenome{std::move(new_cg)};
 
   Assert(not overlay_node.GetCompactGenome().empty());

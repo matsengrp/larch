@@ -19,21 +19,21 @@
 #include "larch/contiguous_set.hpp"
 
 class CompactGenome {
-  ContiguousMap<MutationPosition, char> mutations_ = {};
+  ContiguousMap<MutationPosition, MutationBase> mutations_ = {};
   size_t hash_ = {};
 
  public:
   inline static const CompactGenome* Empty();
   CompactGenome() = default;
   MOVE_ONLY(CompactGenome);
-  inline CompactGenome(ContiguousMap<MutationPosition, char>&& mutations);
+  inline CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mutations);
 
   inline bool operator==(const CompactGenome& rhs) const noexcept;
   inline bool operator!=(const CompactGenome& rhs) const noexcept;
   inline bool operator<(const CompactGenome& rhs) const noexcept;
   [[nodiscard]] inline size_t Hash() const noexcept;
 
-  inline std::optional<char> operator[](MutationPosition pos) const;
+  inline std::optional<MutationBase> operator[](MutationPosition pos) const;
   inline std::string ToString() const;
 
   inline auto begin() const -> decltype(mutations_.begin());
@@ -46,9 +46,11 @@ class CompactGenome {
   inline void AddParentEdge(const EdgeMutations& mutations, const CompactGenome& parent,
                             std::string_view reference_sequence);
 
-  inline void ApplyChanges(const ContiguousMap<MutationPosition, char>& changes);
+  inline void ApplyChanges(
+      const ContiguousMap<MutationPosition, MutationBase>& changes);
 
-  inline char GetBase(MutationPosition pos, std::string_view reference_sequence) const;
+  inline MutationBase GetBase(MutationPosition pos,
+                              std::string_view reference_sequence) const;
 
   inline ContiguousSet<MutationPosition> DifferingSites(
       const CompactGenome& other) const;
@@ -59,7 +61,7 @@ class CompactGenome {
 
  private:
   inline static size_t ComputeHash(
-      const ContiguousMap<MutationPosition, char>& mutations);
+      const ContiguousMap<MutationPosition, MutationBase>& mutations);
 };
 
 template <>

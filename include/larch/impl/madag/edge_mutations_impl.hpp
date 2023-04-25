@@ -19,7 +19,7 @@ EdgeMutations::EdgeMutations(T&& mutations_view,
 }
 
 EdgeMutations::EdgeMutations(
-    ContiguousMap<MutationPosition, std::pair<char, char>>&& mutations)
+    ContiguousMap<MutationPosition, std::pair<MutationBase, MutationBase>>&& mutations)
     : mutations_{std::forward<decltype(mutations_)>(mutations)} {}
 
 EdgeMutations EdgeMutations::Copy() const { return EdgeMutations{mutations_.Copy()}; }
@@ -39,7 +39,8 @@ auto EdgeMutations::operator[](MutationPosition pos) -> decltype(mutations_[pos]
   return mutations_[pos];
 }
 
-auto EdgeMutations::insert(std::pair<MutationPosition, std::pair<char, char>> mut) {
+auto EdgeMutations::insert(
+    std::pair<MutationPosition, std::pair<MutationBase, MutationBase>> mut) {
   Assert(mut.first.value != NoId);
   return mutations_.insert(mut);
 }

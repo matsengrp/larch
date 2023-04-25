@@ -18,7 +18,7 @@ inline bool operator!=(MutationPosition lhs, MutationPosition rhs);
 inline bool operator<(MutationPosition lhs, MutationPosition rhs);
 
 class EdgeMutations {
-  ContiguousMap<MutationPosition, std::pair<char, char>> mutations_;
+  ContiguousMap<MutationPosition, std::pair<MutationBase, MutationBase>> mutations_;
 
  public:
   EdgeMutations() = default;
@@ -32,7 +32,8 @@ class EdgeMutations {
   inline auto end() const -> decltype(mutations_.end());
   inline size_t size() const;
   inline auto operator[](MutationPosition pos) -> decltype(mutations_[pos]);
-  inline auto insert(std::pair<MutationPosition, std::pair<char, char>> mut);
+  inline auto insert(
+      std::pair<MutationPosition, std::pair<MutationBase, MutationBase>> mut);
   inline bool operator==(const EdgeMutations& rhs) const;
   inline bool operator!=(const EdgeMutations& rhs) const;
 
@@ -50,7 +51,8 @@ class EdgeMutations {
 
  private:
   inline explicit EdgeMutations(
-      ContiguousMap<MutationPosition, std::pair<char, char>>&& mutations);
+      ContiguousMap<MutationPosition, std::pair<MutationBase, MutationBase>>&&
+          mutations);
 };
 
 template <typename CRTP, typename Tag>
