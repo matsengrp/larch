@@ -24,6 +24,7 @@
 #include <optional>
 
 #include "larch/dag/dag.hpp"
+#include "larch/madag/mutation_base.hpp"
 #include "larch/madag/compact_genome.hpp"
 #include "larch/madag/edge_mutations.hpp"
 
@@ -33,7 +34,7 @@ struct ReferenceSequence {
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<ReferenceSequence, CRTP, Tag> {
-  const std::string& GetReferenceSequence() const;
+  const std::string &GetReferenceSequence() const;
   void AssertUA() const;
   bool HaveUA() const;
 };
@@ -41,7 +42,7 @@ struct FeatureConstView<ReferenceSequence, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
   void SetReferenceSequence(std::string_view reference_sequence) const;
-  void AddUA(const EdgeMutations& mutations_at_root) const;
+  void AddUA(const EdgeMutations &mutations_at_root) const;
   void RecomputeCompactGenomes() const;
   void RecomputeEdgeMutations() const;
 };
@@ -52,12 +53,12 @@ struct SampleId {
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<SampleId, CRTP, Tag> {
-  const std::optional<std::string>& GetSampleId() const;
+  const std::optional<std::string> &GetSampleId() const;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<SampleId, CRTP, Tag> {
-  void SetSampleId(const std::optional<std::string>& sample_id) const;
+  void SetSampleId(const std::optional<std::string> &sample_id) const;
 };
 
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"

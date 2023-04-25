@@ -59,8 +59,8 @@ void StoreDAGToProtobuf(DAG dag, std::string_view path) {
     for (auto [pos, nucs] : edge.GetEdgeMutations()) {
       auto* proto_mut = proto_edge->add_edge_mutations();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
-      proto_mut->set_par_nuc(EncodeBasePB(nucs.first));
-      proto_mut->add_mut_nuc(EncodeBasePB(nucs.second));
+      proto_mut->set_par_nuc(EncodeBasePB(nucs.first.ToChar()));
+      proto_mut->add_mut_nuc(EncodeBasePB(nucs.second.ToChar()));
     }
   }
 
@@ -115,8 +115,8 @@ void StoreTreeToProtobuf(DAG dag, std::string_view path) {
       auto* proto_mut = proto->add_mutation();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
       proto_mut->set_ref_nuc(EncodeBasePB(ref_seq.at(pos.value - 1)));
-      proto_mut->set_par_nuc(EncodeBasePB(mut.first));
-      proto_mut->add_mut_nuc(EncodeBasePB(mut.second));
+      proto_mut->set_par_nuc(EncodeBasePB(mut.first.ToChar()));
+      proto_mut->add_mut_nuc(EncodeBasePB(mut.second.ToChar()));
       proto_mut->set_chromosome("leaf_0");
     }
     for (Edge child : edge.GetChild().GetChildren()) {

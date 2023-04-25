@@ -101,13 +101,19 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSet(
     // if no fitch set is recorded on the corresponding MAT node, we can use
     // a singleton set containing the base at this site in the parent compact genome
     if (changes.has_value() and changes.value().Contains(site)) {
-      return FitchSet({node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
-                           site, dag.GetReferenceSequence()) &
+      return FitchSet({node.GetSingleParent()
+                           .GetParent()
+                           .GetCompactGenome()
+                           .GetBase(site, dag.GetReferenceSequence())
+                           .ToChar() &
                        (~changes.value().at(site).get_decremented() |
                         changes.value().at(site).get_incremented())});
     } else {
-      return FitchSet({node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
-          site, dag.GetReferenceSequence())});
+      return FitchSet({node.GetSingleParent()
+                           .GetParent()
+                           .GetCompactGenome()
+                           .GetBase(site, dag.GetReferenceSequence())
+                           .ToChar()});
     }
   } else if (changes.has_value() and changes.value().Contains(site)) {
     return FitchSet(
@@ -160,7 +166,7 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
   ContiguousSet<MutationPosition> changed_base_sites =
       node.GetSitesWithChangedFitchSets();
   const CompactGenome& old_cg = node.GetOld().GetCompactGenome();
-  ContiguousMap<MutationPosition, char> cg_changes;
+  ContiguousMap<MutationPosition, MutationBase> cg_changes;
   if (node.IsMATRoot()) {
     // If this node is the root node of the tree, we don't have to worry
     // about parent bases, we just
@@ -169,8 +175,8 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
     ContiguousSet<MutationPosition> focus_sites = GetSitesWithChangedFitchSets();
     for (auto site : focus_sites) {
       FitchSet site_fitch_set = GetFitchSet(site);
-      char oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
-      if (not site_fitch_set.find(oldbase)) {
+      auto oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
+      if (not site_fitch_set.find(oldbase.ToChar())) {
         cg_changes.insert({site, site_fitch_set.at(0)});
         changed_base_sites.insert(site);
       }
@@ -185,15 +191,15 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
     focus_sites.Union(node.GetParentChangedBaseSites());
     for (auto site : focus_sites) {
       FitchSet site_fitch_set = node.GetFitchSet(site);
-      char oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
-      char parent_base = node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
+      auto oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
+      auto parent_base = node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
           site, node.GetDAG().GetReferenceSequence());
-      if (site_fitch_set.find(parent_base)) {
+      if (site_fitch_set.find(parent_base.ToChar())) {
         if (oldbase != parent_base) {
           cg_changes.insert({site, parent_base});
           changed_base_sites.insert(site);
         }
-      } else if (not site_fitch_set.find(oldbase)) {
+      } else if (not site_fitch_set.find(oldbase.ToChar())) {
         cg_changes.insert({site, site_fitch_set.at(0)});
         changed_base_sites.insert(site);
       }
@@ -233,7 +239,7 @@ void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGeno
   result_nodes.push_back(node);
   // If we've reached an anchor node, there's no need to continue down this
   // branch.
-  if (node.IsRoot() or (not(node.IsNonrootAnchorNode() or result_nodes.size() < 2))) {
+  if (node.IsUA() or (not(node.IsNonrootAnchorNode() or result_nodes.size() < 2))) {
     for (auto child : node.GetChildren()) {
       result_edges.push_back(child);
       child.GetChild().PreorderComputeCompactGenome(result_nodes, result_edges);

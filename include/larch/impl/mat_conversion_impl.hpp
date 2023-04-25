@@ -117,9 +117,9 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT(MAT::Tree& tree) con
   mat_root_node->mutations.reserve(tree_root_mutations.size());
   for (auto [pos, muts] : tree_root_mutations) {
     Assert(pos.value != NoId);
-    MAT::Mutation mat_mut("ref", static_cast<int>(pos.value),
-                          EncodeBaseMAT(muts.second), EncodeBaseMAT(muts.first),
-                          EncodeBaseMAT(muts.second));
+    MAT::Mutation mat_mut(
+        "ref", static_cast<int>(pos.value), EncodeBaseMAT(muts.second.ToChar()),
+        EncodeBaseMAT(muts.first.ToChar()), EncodeBaseMAT(muts.second.ToChar()));
     mat_root_node->mutations.push_back(mat_mut);
   }
 
@@ -161,9 +161,9 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(Node dag_node,
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
       Assert(pos.value != NoId);
-      MAT::Mutation mat_mut("ref", static_cast<int>(pos.value),
-                            EncodeBaseMAT(muts.second), EncodeBaseMAT(muts.first),
-                            EncodeBaseMAT(muts.second));
+      MAT::Mutation mat_mut(
+          "ref", static_cast<int>(pos.value), EncodeBaseMAT(muts.second.ToChar()),
+          EncodeBaseMAT(muts.first.ToChar()), EncodeBaseMAT(muts.second.ToChar()));
       node->mutations.push_back(mat_mut);
     }
     node->parent = mat_par_node;

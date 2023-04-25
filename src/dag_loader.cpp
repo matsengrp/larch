@@ -165,7 +165,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
 static CompactGenome GetCompactGenome(const nlohmann::json& json,
                                       size_t compact_genome_index) {
-  ContiguousMap<MutationPosition, char> result;
+  ContiguousMap<MutationPosition, MutationBase> result;
   result.reserve(json["compact_genomes"][compact_genome_index].size());
   for (const auto& mutation : json["compact_genomes"][compact_genome_index]) {
     MutationPosition position = {mutation[0]};
