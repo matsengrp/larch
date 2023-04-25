@@ -91,7 +91,7 @@ static MADAGStorage Load(std::string_view input_dag_path,
 }
 
 static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
-   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAG(input_dag);

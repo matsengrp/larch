@@ -38,8 +38,8 @@ struct FitchSet {
   char value_ = 0;
 };
 
-nuc_one_hot base_to_singleton(char base) {
-  switch (base) {
+nuc_one_hot base_to_singleton(MutationBase base) {
+  switch (base.ToChar()) {
     case 'A':
       return 1;
     case 'C':
@@ -117,7 +117,8 @@ struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {
 template <typename DAG>
 struct HypotheticalTree {
   struct Data {
-    Data(const Profitable_Moves& move, NodeId new_node, bool has_unifurcation_after_move,
+    Data(const Profitable_Moves& move, NodeId new_node,
+         bool has_unifurcation_after_move,
          const std::vector<Node_With_Major_Allele_Set_Change>&
              nodes_with_major_allele_set_change);
     Profitable_Moves move_;
@@ -157,7 +158,9 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
 
   [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>> GetFragment() const;
 
-  [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>> CollapseEmptyFragmentEdges(std::vector<NodeId> fragment_nodes, std::vector<EdgeId>fragment_edges) const;
+  [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>>
+  CollapseEmptyFragmentEdges(std::vector<NodeId> fragment_nodes,
+                             std::vector<EdgeId> fragment_edges) const;
 
   const ContiguousMap<MATNodePtr,
                       ContiguousMap<MutationPosition, Mutation_Count_Change>>&

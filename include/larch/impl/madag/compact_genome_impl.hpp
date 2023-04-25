@@ -3,7 +3,7 @@ const CompactGenome* CompactGenome::Empty() {
   return &empty;
 }
 
-static inline void AssertMut(MutationPosition, char mut) {
+static inline void AssertMut(MutationPosition, MutationBase mut) {
   Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T');
 }
 

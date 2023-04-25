@@ -228,7 +228,7 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
     ContiguousSet<MutationPosition> focus_sites = node.GetSitesWithChangedFitchSets();
     focus_sites.Union(node.GetParentChangedBaseSites());
     for (auto site : focus_sites) {
-      FitchSet site_fitch_set = node.GetFitchSet(site);
+      FitchSet site_fitch_set = node.GetFitchSetAtSite(site);
       auto oldbase = old_cg.GetBase(site, node.GetDAG().GetReferenceSequence());
       auto parent_base = node.GetSingleParent().GetParent().GetCompactGenome().GetBase(
           site, node.GetDAG().GetReferenceSequence());
@@ -314,7 +314,8 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveNew() const {
 }
 
 template <typename DAG, typename CRTP, typename Tag>
-bool FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::HasUnifurcationAfterMove() const {
+bool FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::HasUnifurcationAfterMove()
+    const {
   auto& self = GetFeatureStorage(this);
   return self.data_->has_unifurcation_after_move_;
 }
@@ -384,11 +385,13 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
 
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
   return {collapsed.first, collapsed.second};
-  //return {result_nodes, result_edges};
+  // return {result_nodes, result_edges};
 }
 
 template <typename DAG, typename CRTP, typename Tag>
-std::pair<std::vector<NodeId>, std::vector<EdgeId>> FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(std::vector<NodeId>fragment_nodes, std::vector<EdgeId>fragment_edges) const {
+std::pair<std::vector<NodeId>, std::vector<EdgeId>>
+FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
+    std::vector<NodeId> fragment_nodes, std::vector<EdgeId> fragment_edges) const {
   auto& dag = static_cast<const CRTP&>(*this);
 
   // fragment_nodes is computed in a preorder traversal
@@ -398,11 +401,12 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>> FeatureConstView<Hypothetica
   std::unordered_map<NodeId, bool> is_parent_of_collapsible_edge;
   std::unordered_map<NodeId, bool> is_child_of_collapsible_edge;
   std::unordered_map<EdgeId, bool> is_collapsible_edge;
-  for (auto edge_id: fragment_edges) {
+  for (auto edge_id : fragment_edges) {
     auto edge = dag.Get(edge_id);
     auto parent = edge.GetParent();
     auto child = edge.GetChild();
-    if (not (parent.Const().GetCompactGenome() != child.Const().GetCompactGenome() or child.IsLeaf() or parent.IsRoot())) {
+    if (not(parent.Const().GetCompactGenome() != child.Const().GetCompactGenome() or
+            child.IsLeaf() or parent.IsUA())) {
       is_parent_of_collapsible_edge.insert({parent, true});
       is_child_of_collapsible_edge.insert({child, true});
       is_collapsible_edge.insert({edge, true});
@@ -412,7 +416,7 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>> FeatureConstView<Hypothetica
   std::vector<NodeId> current_nodes;
   std::vector<EdgeId> current_edges;
 
-  for (auto node_id: fragment_nodes) {
+  for (auto node_id : fragment_nodes) {
     if (not is_child_of_collapsible_edge[node_id]) {
       current_nodes.push_back(node_id);
       if (is_parent_of_collapsible_edge[node_id]) {
@@ -423,7 +427,7 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>> FeatureConstView<Hypothetica
           current_children.push_back(dag.GetMoveSource().GetSingleParent());
           current_children.push_back(dag.GetMoveTarget().GetSingleParent());
         } else {
-          for (auto c: parent.GetChildren() | Transform::GetId()) {
+          for (auto c : parent.GetChildren() | Transform::GetId()) {
             current_children.push_back(c);
           }
         }
@@ -438,19 +442,20 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>> FeatureConstView<Hypothetica
           collapsed_all_children = true;
           std::vector<EdgeId> still_to_collapse;
 
-          // try to add all (non-collapsible) edges below current node, as well as the children of any collapsible edges
-          for (auto edge_id: current_children){
+          // try to add all (non-collapsible) edges below current node, as well as the
+          // children of any collapsible edges
+          for (auto edge_id : current_children) {
             auto edge = dag.Get(edge_id);
             auto child = edge.GetChild();
             if (is_collapsible_edge[edge]) {
-
-              if (child.IsNonrootAnchorNode()){
+              if (child.IsNonrootAnchorNode()) {
                 child.template SetOverlay<HypotheticalNode>();
               } else if (node_id == fragment_root) {
-                //that is, if parent is root anchor node...
-                current_nodes.insert(current_nodes.begin(), grandparent_edge.GetParent().GetId());
+                // that is, if parent is root anchor node...
+                current_nodes.insert(current_nodes.begin(),
+                                     grandparent_edge.GetParent().GetId());
               }
-              for (auto child_edge: child.GetChildren()) {
+              for (auto child_edge : child.GetChildren()) {
                 if (is_collapsible_edge[child_edge]) {
                   still_to_collapse.push_back(child_edge);
                 } else {
@@ -466,19 +471,21 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>> FeatureConstView<Hypothetica
               parent.AddEdge({current_clade++}, edge, true);
             }
           }
-          // check if any of the grandchildren/edges we're trying to add are in turn collapsible
+          // check if any of the grandchildren/edges we're trying to add are in turn
+          // collapsible
           if (still_to_collapse.size() > 0) {
             current_children.clear();
             collapsed_all_children = false;
-            current_children.insert(current_children.begin(), still_to_collapse.begin(), still_to_collapse.end());
+            current_children.insert(current_children.begin(), still_to_collapse.begin(),
+                                    still_to_collapse.end());
           }
         }
       }
     }
   }
-  for (auto node_id: current_nodes) {
+  for (auto node_id : current_nodes) {
     auto node = dag.Get(node_id);
-    for (auto child: node.GetChildren()) {
+    for (auto child : node.GetChildren()) {
       current_edges.push_back(child);
     }
   }
@@ -629,7 +636,9 @@ HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move, NodeId new_node,
                                   bool has_unifurcation_after_move,
                                   const std::vector<Node_With_Major_Allele_Set_Change>&
                                       nodes_with_major_allele_set_change)
-    : move_{move}, new_node_{new_node}, has_unifurcation_after_move_{has_unifurcation_after_move} {
+    : move_{move},
+      new_node_{new_node},
+      has_unifurcation_after_move_{has_unifurcation_after_move} {
   for (auto& node_with_allele_set_change : nodes_with_major_allele_set_change) {
     if (not node_with_allele_set_change.node->is_leaf()) {
       Assert(node_with_allele_set_change.node != nullptr);
