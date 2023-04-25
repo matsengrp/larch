@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  std::cout << "Tests:" << std::endl;
+  std::cout << "Run tests:" << std::endl;
   std::vector<Test> tests;
   size_t test_counter = 1;
   for (auto& test : get_all_tests()) {

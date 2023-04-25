@@ -1,6 +1,6 @@
 /**
- * MutationBase represents a DNA base value in the MADAG. Does not support ambiguity or
- * gap characters. Bases are encoded as a two-bit array. Bases are ordered such that
+ * MutationBase represents a DNA base nucleotid in the MADAG. Does not support ambiguity
+ * or gap characters. Bases are encoded as a two-bit array. Bases are ordered such that
  * complementary bases are represented by inverting the bits.
  */
 
