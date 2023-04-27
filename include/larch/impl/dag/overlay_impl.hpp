@@ -49,6 +49,9 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   auto& element_view = static_cast<const CRTP&>(*this);
   auto id = element_view.GetId();
   auto& storage = element_view.GetDAG().GetStorage();
+  static_assert(
+      element_view.template contains_feature<F>,
+      "Attempted to SetOverlay on a Feature not supported by given DAG Element.");
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     if (id.value < storage.GetTarget().GetNodesCount()) {
       if constexpr (std::is_copy_assignable_v<F>) {
