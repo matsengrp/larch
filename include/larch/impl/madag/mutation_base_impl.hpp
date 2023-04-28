@@ -13,7 +13,7 @@ inline const std::map<MutationBase, MutationBase> MutationBase::DNA::complement_
     {MutationBase::DNA::G, MutationBase::DNA::C},
     {MutationBase::DNA::T, MutationBase::DNA::A}};
 
-MutationBase::MutationBase(const MutationBase::BitArray m_value) { value = m_value; };
+MutationBase::MutationBase(const MutationBase::BitArray m_value) { value = m_value; }
 
 MutationBase::MutationBase(const char m_char_in) {
   for (const auto &[m_base, m_char] : DNA::mut_to_char_map) {
