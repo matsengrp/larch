@@ -17,6 +17,7 @@
 #include "larch/subtree/parsimony_score.hpp"
 #include "larch/spr/spr_view.hpp"
 #include "larch/merge/merge.hpp"
+#include "larch/merge/leaf_set.hpp"
 #include "benchmark.hpp"
 #include <mpi.h>
 
@@ -320,16 +321,20 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
 
       auto fragment = spr.GetFragment();
       if (move_score_coeffs_.first != 0) {
-        auto src_leaf_set = merge_.GetResultNodeLabels().at(spr.GetMoveSource().GetId().value).GetLeafSet()->GetClades();
-        auto dst_leaf_set = merge_.GetResultNodeLabels().at(spr.GetMoveTarget().GetId().value).GetLeafSet()->GetClades();
+        auto src_leaf_set = merge_.GetResultNodeLabels().at(sample_dag_.Get(spr.GetMoveSource().GetId()).GetOriginalId().value).GetLeafSet()->GetClades();
+        auto dst_leaf_set = merge_.GetResultNodeLabels().at(sample_dag_.Get(spr.GetMoveTarget().GetId()).GetOriginalId().value).GetLeafSet()->GetClades();
         for (auto node_id: fragment.first) {
           auto hypothetical_node = spr.Get(node_id);
           if (hypothetical_node.IsMoveNew()) {
             const auto& current_leaf_sets = clades_union(merge_.GetResultNodeLabels().at(
-                                                            spr.GetMoveSource().GetOld().GetId().value
+                                                            sample_dag_.Get(
+                                                              spr.GetMoveSource().GetOld().GetId()
+                                                            ).GetOriginalId().value
                                                           ).GetLeafSet()->GetClades(),
                                                           merge_.GetResultNodeLabels().at(
-                                                            spr.GetMoveTarget().GetOld().GetId().value
+                                                            sample_dag_.Get(
+                                                              spr.GetMoveTarget().GetOld().GetId()
+                                                            ).GetOriginalId().value
                                                           ).GetLeafSet()->GetClades()
                                             );
             if (not (merge_.ContainsLeafset(clades_difference(current_leaf_sets, src_leaf_set))
@@ -338,7 +343,9 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
             }
           } else if (hypothetical_node.HasChangedTopology()) {
             const auto& current_leaf_sets = merge_.GetResultNodeLabels().at(
-                                              hypothetical_node.GetOld().GetId().value
+                                              sample_dag_.Get(
+                                                hypothetical_node.GetOld().GetId()
+                                              ).GetOriginalId().value
                                             ).GetLeafSet()->GetClades();
             if (not (merge_.ContainsLeafset(clades_difference(current_leaf_sets, src_leaf_set))
                  and merge_.ContainsLeafset(clades_difference(current_leaf_sets, dst_leaf_set)))) {
@@ -428,16 +435,20 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback : public Move_Found_
 
       auto fragment = spr.GetFragment();
       if (move_score_coeffs_.first != 0) {
-        auto src_leaf_set = merge_.GetResultNodeLabels().at(spr.GetMoveSource().GetId().value).GetLeafSet()->GetClades();
-        auto dst_leaf_set = merge_.GetResultNodeLabels().at(spr.GetMoveTarget().GetId().value).GetLeafSet()->GetClades();
+        auto src_leaf_set = merge_.GetResultNodeLabels().at(sample_dag_.Get(spr.GetMoveSource().GetId()).GetOriginalId().value).GetLeafSet()->GetClades();
+        auto dst_leaf_set = merge_.GetResultNodeLabels().at(sample_dag_.Get(spr.GetMoveTarget().GetId()).GetOriginalId().value).GetLeafSet()->GetClades();
         for (auto node_id: fragment.first) {
           auto hypothetical_node = spr.Get(node_id);
           if (hypothetical_node.IsMoveNew()) {
             const auto& current_leaf_sets = clades_union(merge_.GetResultNodeLabels().at(
-                                                            spr.GetMoveSource().GetOld().GetId().value
+                                                            sample_dag_.Get(
+                                                              spr.GetMoveSource().GetOld().GetId()
+                                                            ).GetOriginalId().value
                                                           ).GetLeafSet()->GetClades(),
                                                           merge_.GetResultNodeLabels().at(
-                                                            spr.GetMoveTarget().GetOld().GetId().value
+                                                            sample_dag_.Get(
+                                                              spr.GetMoveTarget().GetOld().GetId()
+                                                            ).GetOriginalId().value
                                                           ).GetLeafSet()->GetClades()
                                             );
             if (not (merge_.ContainsLeafset(clades_difference(current_leaf_sets, src_leaf_set))
@@ -446,7 +457,9 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback : public Move_Found_
             }
           } else if (hypothetical_node.HasChangedTopology()) {
             const auto& current_leaf_sets = merge_.GetResultNodeLabels().at(
-                                              hypothetical_node.GetOld().GetId().value
+                                              sample_dag_.Get(
+                                                hypothetical_node.GetOld().GetId()
+                                              ).GetOriginalId().value
                                             ).GetLeafSet()->GetClades();
             if (not (merge_.ContainsLeafset(clades_difference(current_leaf_sets, src_leaf_set))
                  and merge_.ContainsLeafset(clades_difference(current_leaf_sets, dst_leaf_set)))) {
@@ -533,16 +546,20 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
 
       auto fragment = spr.GetFragment();
       if (move_score_coeffs_.first != 0) {
-        auto src_leaf_set = merge_.GetResultNodeLabels().at(spr.GetMoveSource().GetId().value).GetLeafSet()->GetClades();
-        auto dst_leaf_set = merge_.GetResultNodeLabels().at(spr.GetMoveTarget().GetId().value).GetLeafSet()->GetClades();
+        auto src_leaf_set = merge_.GetResultNodeLabels().at(sample_dag_.Get(spr.GetMoveSource().GetId()).GetOriginalId().value).GetLeafSet()->GetClades();
+        auto dst_leaf_set = merge_.GetResultNodeLabels().at(sample_dag_.Get(spr.GetMoveTarget().GetId()).GetOriginalId().value).GetLeafSet()->GetClades();
         for (auto node_id: fragment.first) {
           auto hypothetical_node = spr.Get(node_id);
           if (hypothetical_node.IsMoveNew()) {
             const auto& current_leaf_sets = clades_union(merge_.GetResultNodeLabels().at(
-                                                            spr.GetMoveSource().GetOld().GetId().value
+                                                            sample_dag_.Get(
+                                                              spr.GetMoveSource().GetOld().GetId()
+                                                            ).GetOriginalId().value
                                                           ).GetLeafSet()->GetClades(),
                                                           merge_.GetResultNodeLabels().at(
-                                                            spr.GetMoveTarget().GetOld().GetId().value
+                                                            sample_dag_.Get(
+                                                              spr.GetMoveTarget().GetOld().GetId()
+                                                            ).GetOriginalId().value
                                                           ).GetLeafSet()->GetClades()
                                             );
             if (not (merge_.ContainsLeafset(clades_difference(current_leaf_sets, src_leaf_set))
@@ -551,7 +568,9 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
             }
           } else if (hypothetical_node.HasChangedTopology()) {
             const auto& current_leaf_sets = merge_.GetResultNodeLabels().at(
-                                              hypothetical_node.GetOld().GetId().value
+                                              sample_dag_.Get(
+                                                hypothetical_node.GetOld().GetId()
+                                              ).GetOriginalId().value
                                             ).GetLeafSet()->GetClades();
             if (not (merge_.ContainsLeafset(clades_difference(current_leaf_sets, src_leaf_set))
                  and merge_.ContainsLeafset(clades_difference(current_leaf_sets, dst_leaf_set)))) {
