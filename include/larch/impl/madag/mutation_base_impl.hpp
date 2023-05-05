@@ -1,17 +1,19 @@
-inline const MutationBase MutationBase::DNA::A{{0, 0}};
-inline const MutationBase MutationBase::DNA::C{{0, 1}};
-inline const MutationBase MutationBase::DNA::G{{1, 0}};
-inline const MutationBase MutationBase::DNA::T{{1, 1}};
+inline const MutationBase MutationBase::DNA::A{{1, 0, 0, 0}};
+inline const MutationBase MutationBase::DNA::C{{0, 1, 0, 0}};
+inline const MutationBase MutationBase::DNA::G{{0, 0, 1, 0}};
+inline const MutationBase MutationBase::DNA::T{{0, 0, 0, 1}};
+inline const char MutationBase::DNA::ambiguous_char = 'N';
 inline const std::map<MutationBase, char> MutationBase::DNA::mut_to_char_map = {
     {MutationBase::DNA::A, 'A'},
     {MutationBase::DNA::C, 'C'},
     {MutationBase::DNA::G, 'G'},
     {MutationBase::DNA::T, 'T'}};
-inline const std::map<MutationBase, MutationBase> MutationBase::DNA::complement_map = {
-    {MutationBase::DNA::A, MutationBase::DNA::T},
-    {MutationBase::DNA::C, MutationBase::DNA::G},
-    {MutationBase::DNA::G, MutationBase::DNA::C},
-    {MutationBase::DNA::T, MutationBase::DNA::A}};
+inline const std::map<MutationBase, MutationBase>
+    MutationBase::DNA::mut_to_complement_map = {
+        {MutationBase::DNA::A, MutationBase::DNA::T},
+        {MutationBase::DNA::C, MutationBase::DNA::G},
+        {MutationBase::DNA::G, MutationBase::DNA::C},
+        {MutationBase::DNA::T, MutationBase::DNA::A}};
 
 MutationBase::MutationBase(const MutationBase::BitArray m_value) { value = m_value; };
 
@@ -25,12 +27,39 @@ MutationBase::MutationBase(const char m_char_in) {
   Fail("ERROR: Invalid char given for MutationBase constructor.");
 }
 
+bool MutationBase::IsAmbiguous() const {
+  auto count = std::count(value.begin(), value.end(), true);
+  return count != 1;
+}
+
+bool MutationBase::HasCommonBase(MutationBase other) const {
+  BitArray tmp;
+  for (size_t i = 0; i < tmp.size(); i++) {
+    tmp[i] = value[i] & other.value[i];
+  }
+  auto count = std::count(tmp.begin(), tmp.end(), true);
+  return count > 0;
+}
+
 MutationBase MutationBase::GetComplementaryBase() const {
-  MutationBase m_out{{!value[0], !value[1]}};
+  if (IsAmbiguous()) {
+    MutationBase m_out;
+    m_out.value[0] = value[3];
+    m_out.value[1] = value[2];
+    m_out.value[2] = value[1];
+    m_out.value[3] = value[0];
+    return m_out;
+  }
+  MutationBase m_out{DNA::mut_to_complement_map.find(*this)->second};
   return m_out;
 }
 
-char MutationBase::ToChar() const { return DNA::mut_to_char_map.find(value)->second; }
+char MutationBase::ToChar() const {
+  if (IsAmbiguous()) {
+    return DNA::ambiguous_char;
+  }
+  return DNA::mut_to_char_map.find(value)->second;
+}
 
 std::string MutationBase::ToString(std::vector<MutationBase> m_in) {
   std::string str_out = "";

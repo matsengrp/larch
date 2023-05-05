@@ -11,15 +11,18 @@
 #include <map>
 
 struct MutationBase {
-  using BitArray = std::array<bool, 2>;
+  using BitArray = std::array<bool, 4>;
 
   MutationBase() = default;
   inline MutationBase(const BitArray m_value);
   inline MutationBase(const char m_char_in);
 
+  inline bool IsAmbiguous() const;
+  inline bool HasCommonBase(MutationBase other) const;
   inline MutationBase GetComplementaryBase() const;
 
   inline char ToChar() const;
+  inline std::string ToString() const;
   static inline std::string ToString(std::vector<MutationBase> m_in);
   friend std::string &operator+=(std::string &str, const MutationBase m_in);
   friend std::ostream &operator<<(std::ostream &os, const MutationBase m_in);
@@ -43,11 +46,13 @@ struct MutationBase {
     static constexpr size_t DNACount = 4;
     static const MutationBase A, C, G, T;
     static const std::array<MutationBase, DNACount> bases;
+    static const char ambiguous_char;
     static const std::map<MutationBase, char> mut_to_char_map;
-    static const std::map<MutationBase, MutationBase> complement_map;
+    static const std::map<MutationBase, char> mut_to_index_map;
+    static const std::map<MutationBase, MutationBase> mut_to_complement_map;
   };
 
-  BitArray value = {0, 0};
+  BitArray value = {0, 0, 0, 0};
 };
 
 namespace std {
