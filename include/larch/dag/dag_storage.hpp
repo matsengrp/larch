@@ -11,6 +11,8 @@ template <typename NodesContainerT, typename EdgesContainerT, typename... Featur
 struct DAGStorage {
  public:
   using FeatureTypes = std::tuple<Features...>;
+  using AllNodeFeatures = typename NodesContainerT::AllFeatureTypes;
+  using AllEdgeFeatures = typename EdgesContainerT::AllFeatureTypes;
 
   template <typename Id, typename CRTP>
   using ConstElementViewBase =

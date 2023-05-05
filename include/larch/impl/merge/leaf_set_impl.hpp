@@ -68,6 +68,39 @@ const std::vector<std::vector<const CompactGenome*>>& LeafSet::GetClades() const
   return clades_;
 }
 
+std::string LeafSet::ToString() const {
+  std::string result = "{";
+  for (auto& clade : GetClades()) {
+    for (auto* cg : clade) {
+      result += cg->ToString();
+      result += ", ";
+    }
+    result += "; ";
+  }
+  return result + "}";
+}
+
+template <typename DAGType>
+std::vector<LeafSet> LeafSet::ComputeLeafSets(DAGType dag,
+                                              const std::vector<NodeLabel>& labels) {
+  std::vector<LeafSet> result;
+  result.resize(dag.GetNodesCount());
+  auto ComputeLS = [&](auto& self, auto for_node) {
+    const LeafSet& leaf_set = result.at(for_node.GetId().value);
+    if (not leaf_set.empty()) {
+      return;
+    }
+    for (auto child : for_node.GetChildren() | Transform::GetChild()) {
+      self(self, child);
+    }
+    result.at(for_node.GetId().value) = LeafSet{for_node, labels, result};
+  };
+  for (auto node : dag.GetNodes()) {
+    ComputeLS(ComputeLS, node);
+  }
+  return result;
+}
+
 size_t LeafSet::ComputeHash(
     const std::vector<std::vector<const CompactGenome*>>& clades) noexcept {
   size_t hash = 0;

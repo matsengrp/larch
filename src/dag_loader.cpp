@@ -1,6 +1,7 @@
 #include <fstream>
 #include <vector>
 #include <unordered_map>
+#include <ostream>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -120,8 +121,8 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
   Assert(static_cast<size_t>(data.node_mutations_size()) ==
          result.View().GetNodesCount() - 1);
   using Edge = MutableMADAG::EdgeView;
-  auto apply_mutations = [&result](auto& self, Edge edge, const auto& node_mutations,
-                                   size_t& idx) -> void {
+  auto apply_mutations = [](auto& self, Edge edge, const auto& node_mutations,
+                            size_t& idx) -> void {
     const auto& pb_muts = node_mutations.Get(static_cast<int>(idx++)).mutation();
     EdgeMutations muts;
     for (auto i : pb_muts | ranges::views::transform(DecodeMutation)) {
@@ -164,19 +165,14 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
 static CompactGenome GetCompactGenome(const nlohmann::json& json,
                                       size_t compact_genome_index) {
-  std::vector<std::pair<MutationPosition, char>> result;
+  ContiguousMap<MutationPosition, MutationBase> result;
   result.reserve(json["compact_genomes"][compact_genome_index].size());
   for (const auto& mutation : json["compact_genomes"][compact_genome_index]) {
     MutationPosition position = {mutation[0]};
     std::string mut_nuc = mutation[1][1].get<std::string>();
     Assert(mut_nuc.size() == 1);
-    result.emplace_back(position, mut_nuc.at(0));
+    result.insert({position, mut_nuc.at(0)});
   }
-  std::sort(result.begin(), result.end(),
-            [](auto lhs, auto rhs) { return lhs.first < rhs.first; });
-  result.erase(std::unique(result.begin(), result.end(),
-                           [](auto lhs, auto rhs) { return lhs.first == rhs.first; }),
-               result.end());
   return result;
 }
 
@@ -242,46 +238,40 @@ void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut)
   proto_mut->add_mut_nuc(EncodeBasePB(mut));
 }
 
-static std::string EdgeMutationsToString(MADAG::EdgeView edge) {
-  std::string result;
-  size_t count = 0;
-  for (auto [pos, muts] : edge.GetEdgeMutations()) {
-    result += muts.first;
-    result += std::to_string(pos.value);
-    result += muts.second;
-    result += ++count % 3 == 0 ? "\\n" : " ";
+std::string ToEdgeMutationsString(const MAT::Node* node) {
+  static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
+  std::string result = "<";
+  for (const MAT::Mutation& mut : node->mutations) {
+    result += decode.at(one_hot_to_two_bit(mut.get_par_one_hot()));
+    result += std::to_string(mut.get_position());
+    result += decode.at(one_hot_to_two_bit(mut.get_mut_one_hot()));
+    result += ", ";
   }
-  return result;
+  return result + ">";
 }
 
-static std::string CompactGenomeToString(MADAG::NodeView node) {
-  if (node.IsRoot()) {
-    return "p";
+static void MATToDOT(const MAT::Node* node, std::ostream& out,
+                     std::set<const MAT::Node*> visited) {
+  Assert(visited.insert(node).second);
+
+  for (auto* i : node->children) {
+    MATToDOT(i, out, visited);
+    out << "  \"" << node->node_id << " " << ToEdgeMutationsString(node) << "\" -> \""
+        << i->node_id << " " << ToEdgeMutationsString(i) << "\"";
+    // out << "[ headlabel=\"";
+    // out << ToEdgeMutationsString(i);
+    // out << "\" ]";
+    out << "\n";
   }
-  std::string result = std::to_string(node.GetId().value);
-  result += "\\n";
-  size_t count = 0;
-  for (auto [pos, base] : node.GetCompactGenome()) {
-    result += std::to_string(pos.value);
-    result += base;
-    result += ++count % 3 == 0 ? "\\n" : " ";
-  }
-  return result;
 }
 
-void MADAGToDOT(MADAG dag, std::ostream& out) {
+void MATToDOT(const MAT::Tree& mat, std::ostream& out) {
   out << "digraph {\n";
   out << "  forcelabels=true\n";
   out << "  nodesep=1.0\n";
   out << "  ranksep=2.0\n";
   out << "  ratio=1.0\n";
-  for (MADAG::EdgeView edge : dag.GetEdges()) {
-    out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
-        << CompactGenomeToString(edge.GetChild()) << "\"";
-    out << "[ xlabel=\"";
-    out << EdgeMutationsToString(edge);
-    out << "\" ]";
-    out << "\n";
-  }
+  std::set<const MAT::Node*> visited;
+  MATToDOT(mat.root, out, visited);
   out << "}\n";
 }

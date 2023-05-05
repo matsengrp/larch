@@ -3,6 +3,11 @@
 #endif
 
 template <typename Id, typename DAGViewType>
+template <typename Feature>
+inline constexpr bool ElementView<Id, DAGViewType>::contains_feature =
+    DAGViewType::template contains_element_feature<Id, Feature>;
+
+template <typename Id, typename DAGViewType>
 ElementView<Id, DAGViewType>::ElementView(DAGViewType dag_view, Id id)
     : dag_view_{dag_view}, id_{id} {
   Assert(id.value not_eq NoId);
@@ -11,6 +16,11 @@ ElementView<Id, DAGViewType>::ElementView(DAGViewType dag_view, Id id)
 template <typename Id, typename DAGViewType>
 ElementView<Id, DAGViewType>::operator Id() const {
   return GetId();
+}
+
+template <typename Id, typename DAGViewType>
+auto ElementView<Id, DAGViewType>::Const() const {
+  return dag_view_.Const().Get(id_);
 }
 
 template <typename Id, typename DAGViewType>

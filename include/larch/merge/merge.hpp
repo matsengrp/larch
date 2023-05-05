@@ -26,11 +26,10 @@ template <typename K, typename V>
 using ConcurrentUnorderedMap =
     tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
-using MergeDAGStorage = DAGStorage<
-    ElementsContainer<NodeId,
-                      ElementStorage<Neighbors, Deduplicate<CompactGenome>, SampleId>>,
-    ElementsContainer<EdgeId, ElementStorage<Endpoints, EdgeMutations>>, Connections,
-    ReferenceSequence>;
+using MergeDAGStorage =
+    ExtendDAGStorage<DefaultDAGStorage,
+                     Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
+                     Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
 using MergeDAG = DAGView<const MergeDAGStorage>;
 using MutableMergeDAG = DAGView<MergeDAGStorage>;
@@ -63,7 +62,11 @@ class Merge {
   inline void AddDAGs(const std::vector<DAG>& dags);
 
   template <typename D, typename N = std::nullopt_t>
-  std::map<NodeId, NodeId> AddDAG(D dag, N below = std::nullopt);
+  void AddDAG(D dag, N below = std::nullopt);
+
+  template <typename D>
+  void AddFragment(D dag, const std::vector<NodeId>& nodes,
+                   const std::vector<EdgeId>& edges);
 
   /**
    * Get the DAG resulting from merge
@@ -92,9 +95,6 @@ class Merge {
   inline void ComputeLeafSets(const std::vector<size_t>& tree_idxs);
 
   inline void MergeTrees(const std::vector<size_t>& tree_idxs);
-
-  inline static std::vector<LeafSet> ComputeLeafSets(
-      DAG dag, const std::vector<NodeLabel>& labels);
 
   // Vector of externally owned input DAGs.
   std::vector<DAG> trees_;

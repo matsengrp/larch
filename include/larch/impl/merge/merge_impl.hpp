@@ -39,7 +39,7 @@ void Merge<DAG>::AddDAGs(const std::vector<DAG>& dags) {
 
 template <typename DAG>
 template <typename D, typename N>
-std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
+void Merge<DAG>::AddDAG(D dag, N below) {
   dag.AssertUA();
   tree_labels_.emplace_back(std::vector<NodeLabel>{});
   std::vector<NodeLabel>& labels = tree_labels_.back();
@@ -47,21 +47,21 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
     if constexpr (std::is_same_v<N, std::nullopt_t>) {
       return false;
     } else {
-      return not below.IsRoot();
+      return not below.IsUA();
     }
   }();
   labels.resize(dag.GetNodesCount());
   for (auto node : dag.GetNodes()) {
-    if (is_subtree and node.IsRoot()) {
+    if (is_subtree and node.IsUA()) {
       continue;
     }
-    auto cg_iter = ResultDAG().AddDeduplicated(node.GetCompactGenome().Copy());
+    auto cg_iter = ResultDAG().AddDeduplicated(node.Const().GetCompactGenome().Copy());
     labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
   }
 
-  std::vector<LeafSet> computed_ls = ComputeLeafSets(dag, labels);
+  std::vector<LeafSet> computed_ls = LeafSet::ComputeLeafSets(dag, labels);
   for (auto node : dag.GetNodes()) {
-    if (is_subtree and node.IsRoot()) {
+    if (is_subtree and node.IsUA()) {
       continue;
     }
     auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node.GetId().value)));
@@ -69,7 +69,7 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
   }
 
   // maps NodeIds in dag to corresponding NodeIds in merge object
-  std::map<NodeId, NodeId> node_map;
+
   NodeId node_id{ResultDAG().GetNodesCount()};
   for (size_t i = 0; i < labels.size(); ++i) {
     // labels indices are nodeID values
@@ -80,16 +80,20 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
     auto insert_pair = result_nodes_.try_emplace(label, node_id);
     if (insert_pair.second) {
       GetOrInsert(result_node_labels_, node_id) = label;
-      node_map.emplace(NodeId{i}, node_id);
+      if constexpr (D::template contains_element_feature<NodeId, MappedNodes>) {
+        dag.Get(NodeId{i}).SetOriginalId(node_id);
+      }
       ++node_id.value;
     } else if (i != dag.GetNodesCount() - 1) {
-      node_map.emplace(NodeId{i}, insert_pair.first->second);
+      if constexpr (D::template contains_element_feature<NodeId, MappedNodes>) {
+        dag.Get(NodeId{i}).SetOriginalId(insert_pair.first->second);
+      }
     }
   }
 
   std::vector<EdgeLabel> added_edges;
   for (auto edge : dag.GetEdges()) {
-    if (is_subtree and edge.IsRoot()) {
+    if (is_subtree and edge.IsUA()) {
       continue;
     }
     const auto& parent_label = labels.at(edge.GetParentId().value);
@@ -133,7 +137,98 @@ std::map<NodeId, NodeId> Merge<DAG>::AddDAG(D dag, N below) {
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   // TODO Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
   ResultDAG().BuildConnections();
-  return node_map;
+}
+
+template <typename DAG>
+template <typename D>
+void Merge<DAG>::AddFragment(D dag, const std::vector<NodeId>& nodes,
+                             const std::vector<EdgeId>& edges) {
+  // std::vector<NodeId> leafs =
+  //     dag.GetLeafs() | Transform::GetId() | ranges::to<std::vector>();
+  // leafs |= ranges::actions::sort(std::less<NodeId>());
+
+  // std::vector<NodeId> dag_leafs =
+  //     ResultDAG().GetLeafs() | Transform::GetId() | ranges::to<std::vector>();
+  // dag_leafs |= ranges::actions::sort(std::less<NodeId>());
+
+  // const bool leafs_subset =
+  //     ranges::includes(dag_leafs, leafs, [dag, this](NodeId lhs, NodeId rhs) {
+  //       return ResultDAG().Get(lhs).GetCompactGenome() ==
+  //              dag.Get(rhs).Const().GetCompactGenome();
+  //     });
+
+  // Assert(leafs_subset);
+
+  std::vector<NodeLabel> labels;
+  labels.resize(dag.GetNodesCount());
+
+  for (auto node : dag.GetNodes()) {
+    auto cg_iter = ResultDAG().AddDeduplicated(node.Const().GetCompactGenome().Copy());
+    labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
+  }
+  std::vector<LeafSet> computed_ls = LeafSet::ComputeLeafSets(dag, labels);
+  for (auto node : dag.GetNodes()) {
+    auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node.GetId().value)));
+    labels.at(node.GetId().value).SetLeafSet(std::addressof(*ls_iter.first));
+  }
+
+  NodeId node_id{ResultDAG().GetNodesCount()};
+  for (NodeId id : nodes) {
+    auto& label = labels.at(id.value);
+    if (label == NodeLabel{}) {
+      continue;
+    }
+    auto insert_pair = result_nodes_.try_emplace(label, node_id);
+    if (insert_pair.second) {
+      GetOrInsert(result_node_labels_, node_id) = label;
+      if constexpr (D::template contains_element_feature<NodeId, MappedNodes>) {
+        dag.Get(id).SetOriginalId(node_id);
+      }
+      ++node_id.value;
+    } else {
+      if (id.value != dag.GetNodesCount() - 1) {
+        if constexpr (D::template contains_element_feature<NodeId, MappedNodes>) {
+          dag.Get(id).SetOriginalId(insert_pair.first->second);
+        }
+      }
+    }
+  }
+
+  std::vector<EdgeLabel> added_edges;
+  for (auto edge : edges | Transform::ToEdges(dag)) {
+    const auto& parent_label = labels.at(edge.GetParentId().value);
+    const auto& child_label = labels.at(edge.GetChildId().value);
+    auto ins = result_edges_.insert({{parent_label, child_label}, {}});
+    if (ins.second) {
+      added_edges.push_back({parent_label, child_label});
+    }
+  }
+
+  ResultDAG().InitializeNodes(result_nodes_.size());
+  EdgeId edge_id{ResultDAG().GetEdgesCount()};
+  for (auto edge : added_edges) {
+    auto parent = result_nodes_.find(edge.GetParent());
+    auto child = result_nodes_.find(edge.GetChild());
+    Assert(parent != result_nodes_.end());
+    Assert(child != result_nodes_.end());
+    Assert(parent->second.value < ResultDAG().GetNodesCount());
+    Assert(child->second.value < ResultDAG().GetNodesCount());
+    ResultDAG().AddEdge(edge_id, parent->second, child->second, edge.ComputeCladeIdx());
+    ResultDAG().Get(parent->second) = parent->first.GetCompactGenome();
+    ResultDAG().Get(child->second) = child->first.GetCompactGenome();
+    auto result_edge_it = result_edges_.find(edge);
+    Assert(result_edge_it != result_edges_.end());
+    result_edge_it->second = edge_id;
+    ++edge_id.value;
+  }
+
+  Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
+  Assert(result_node_labels_.size() == ResultDAG().GetNodesCount());
+  Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
+
+  ResultDAG().BuildConnections();
+
+  ComputeResultEdgeMutations();
 }
 
 template <typename DAG>
@@ -178,7 +273,7 @@ void Merge<DAG>::ComputeLeafSets(const std::vector<size_t>& tree_idxs) {
   tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
     DAG tree = trees_.at(tree_idx);
     std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-    std::vector<LeafSet> computed_ls = ComputeLeafSets(tree, labels);
+    std::vector<LeafSet> computed_ls = LeafSet::ComputeLeafSets(tree, labels);
     for (size_t node_idx = 0; node_idx < tree.GetNodesCount(); ++node_idx) {
       auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node_idx)));
       labels.at(node_idx).SetLeafSet(std::addressof(*ls_iter.first));
@@ -230,25 +325,4 @@ void Merge<DAG>::MergeTrees(const std::vector<size_t>& tree_idxs) {
     result_edge_it->second = edge_id;
     edge_id.value++;
   }
-}
-
-template <typename DAG>
-std::vector<LeafSet> Merge<DAG>::ComputeLeafSets(DAG dag,
-                                                 const std::vector<NodeLabel>& labels) {
-  std::vector<LeafSet> result;
-  result.resize(dag.GetNodesCount());
-  auto ComputeLS = [&](auto& self, Node for_node) {
-    const LeafSet& leaf_set = result.at(for_node.GetId().value);
-    if (not leaf_set.empty()) {
-      return;
-    }
-    for (Node child : for_node.GetChildren() | Transform::GetChild()) {
-      self(self, child);
-    }
-    result.at(for_node.GetId().value) = LeafSet{for_node, labels, result};
-  };
-  for (Node node : dag.GetNodes()) {
-    ComputeLS(ComputeLS, node);
-  }
-  return result;
 }

@@ -19,13 +19,14 @@ auto& GetFeatureStorage(
 }
 
 template <typename Feature, typename CRTP>
-auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(Feature&& feature) {
-  auto& deduplicated = static_cast<CRTP&>(*this)
+auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
+    Feature&& feature) const {
+  auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<Deduplicate<Feature>>()
                            .deduplicated_;
   const Feature* result =
       std::addressof(*deduplicated.insert(std::forward<Feature>(feature)).first);
-  static_cast<CRTP&>(*this)
+  static_cast<const CRTP&>(*this)
       .template GetFeatureStorage<Deduplicate<Feature>>()
       .feature_ = result;
   return *this;
@@ -33,8 +34,8 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(Feature&& featur
 
 template <typename Feature, typename CRTP>
 auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
-    const Feature* feature) {
-  static_cast<CRTP&>(*this)
+    const Feature* feature) const {
+  static_cast<const CRTP&>(*this)
       .template GetFeatureStorage<Deduplicate<Feature>>()
       .feature_ = feature;
   return *this;
@@ -58,6 +59,7 @@ const Feature* ExtraFeatureConstView<Deduplicate<Feature>, CRTP>::FindDeduplicat
 
 template <typename Feature, typename CRTP>
 std::pair<const Feature*, bool>
+// TODO: take const reference and copy only if needed
 ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>::AddDeduplicated(
     Feature&& feature) {
   using Id = std::conditional_t<

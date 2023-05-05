@@ -59,8 +59,8 @@ void StoreDAGToProtobuf(DAG dag, std::string_view path) {
     for (auto [pos, nucs] : edge.GetEdgeMutations()) {
       auto* proto_mut = proto_edge->add_edge_mutations();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
-      proto_mut->set_par_nuc(EncodeBasePB(nucs.first));
-      proto_mut->add_mut_nuc(EncodeBasePB(nucs.second));
+      proto_mut->set_par_nuc(EncodeBasePB(nucs.first.ToChar()));
+      proto_mut->add_mut_nuc(EncodeBasePB(nucs.second.ToChar()));
     }
   }
 
@@ -108,15 +108,15 @@ void StoreTreeToProtobuf(DAG dag, std::string_view path) {
   newick += ';';
   data.set_newick(newick);
   using Edge = typename DAG::EdgeView;
-  auto store_mutations = [&dag](auto& self, Edge edge, Parsimony::data& result,
-                                std::string_view ref_seq) -> void {
+  auto store_mutations = [](auto& self, Edge edge, Parsimony::data& result,
+                            std::string_view ref_seq) -> void {
     auto* proto = result.add_node_mutations();
     for (auto [pos, mut] : edge.GetEdgeMutations()) {
       auto* proto_mut = proto->add_mutation();
       proto_mut->set_position(static_cast<int32_t>(pos.value));
       proto_mut->set_ref_nuc(EncodeBasePB(ref_seq.at(pos.value - 1)));
-      proto_mut->set_par_nuc(EncodeBasePB(mut.first));
-      proto_mut->add_mut_nuc(EncodeBasePB(mut.second));
+      proto_mut->set_par_nuc(EncodeBasePB(mut.first.ToChar()));
+      proto_mut->add_mut_nuc(EncodeBasePB(mut.second.ToChar()));
       proto_mut->set_chromosome("leaf_0");
     }
     for (Edge child : edge.GetChild().GetChildren()) {
@@ -128,4 +128,72 @@ void StoreTreeToProtobuf(DAG dag, std::string_view path) {
 
   std::ofstream file{std::string{path}};
   data.SerializeToOstream(&file);
+}
+
+template <typename Edge>
+static std::string EdgeMutationsToString(Edge edge) {
+  std::string result;
+  size_t count = 0;
+  for (auto [pos, muts] : edge.GetEdgeMutations()) {
+    result += muts.first;
+    result += std::to_string(pos.value);
+    result += muts.second;
+    result += ++count % 3 == 0 ? "\\n" : " ";
+  }
+  return result;
+}
+
+template <typename Node>
+static std::string CompactGenomeToString(Node node) {
+  if (node.IsUA()) {
+    return std::to_string(node.GetId().value);
+  }
+  std::string result = std::to_string(node.GetId().value);
+  // if (node.HasChangedTopology()) {
+  //   result += " [X]";
+  // }
+  result += "\\n";
+  size_t count = 0;
+  for (auto [pos, base] : node.Const().GetCompactGenome()) {
+    result += std::to_string(pos.value);
+    result += base;
+    result += ++count % 3 == 0 ? "\\n" : " ";
+  }
+  return result;
+}
+
+template <typename DAG>
+void MADAGToDOT(DAG dag, std::ostream& out) {
+  out << "digraph {\n";
+  out << "  forcelabels=true\n";
+  out << "  nodesep=1.0\n";
+  out << "  ranksep=2.0\n";
+  out << "  ratio=1.0\n";
+  for (auto edge : dag.Const().GetEdges()) {
+    out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
+        << CompactGenomeToString(edge.GetChild()) << "\"";
+    out << "[ xlabel=\"";
+    out << EdgeMutationsToString(edge);
+    out << "\" ]";
+    out << "\n";
+  }
+  out << "}\n";
+}
+
+template <typename DAG>
+void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, std::ostream& out) {
+  out << "digraph {\n";
+  out << "  forcelabels=true\n";
+  out << "  nodesep=1.0\n";
+  out << "  ranksep=2.0\n";
+  out << "  ratio=1.0\n";
+  for (auto edge : edges | Transform::ToEdges(dag)) {
+    out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
+        << CompactGenomeToString(edge.GetChild()) << "\"";
+    out << "[ xlabel=\"";
+    out << EdgeMutationsToString(edge);
+    out << "\" ]";
+    out << "\n";
+  }
+  out << "}\n";
 }

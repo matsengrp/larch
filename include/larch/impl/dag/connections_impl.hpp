@@ -2,6 +2,8 @@
 #error "Don't include this header"
 #endif
 
+#include <iostream>
+
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Connections, CRTP, Tag>::IsTree() const {
   auto& dag = static_cast<const CRTP&>(*this);
@@ -40,7 +42,11 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
     for (auto clade : node.GetClades()) {
       Assert(not clade.empty() && "Empty clade");
     }
-    if (node.IsRoot()) {
+    if (node.IsUA()) {
+      if (storage.root_.value != NoId) {
+        std::cout << "Duplicate root: " << storage.root_.value << " and "
+                  << node.GetId().value << "\n";
+      }
       Assert(storage.root_.value == NoId && "Duplicate root");
       storage.root_ = node;
     }
@@ -61,6 +67,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
     Assert(edge.GetParentId().value != NoId && "Edge has no parent");
     Assert(edge.GetChildId().value != NoId && "Edge has no child");
     Assert(edge.GetClade().value != NoId && "Edge has no clade index");
+    Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
     edge.GetParent().AddEdge(edge.GetClade(), edge, true);
     edge.GetChild().AddEdge(edge.GetClade(), edge, false);
     ++edge_id.value;

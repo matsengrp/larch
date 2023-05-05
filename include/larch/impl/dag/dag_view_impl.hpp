@@ -19,6 +19,11 @@ DAGView<Storage, Base>::operator DAGView<const Storage, Base>() const {
 }
 
 template <typename Storage, template <typename, typename> typename Base>
+DAGView<const Storage, Base> DAGView<Storage, Base>::Const() const {
+  return DAGView<const Storage, Base>{dag_storage_};
+}
+
+template <typename Storage, template <typename, typename> typename Base>
 ElementView<NodeId, DAGView<Storage, Base>> DAGView<Storage, Base>::Get(
     NodeId id) const {
   return {*this, id};
@@ -49,6 +54,12 @@ ElementView<NodeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AddNode(Node
 }
 
 template <typename Storage, template <typename, typename> typename Base>
+ElementView<EdgeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AddEdge(EdgeId id) {
+  dag_storage_.AddEdge(id);
+  return {*this, id};
+}
+
+template <typename Storage, template <typename, typename> typename Base>
 ElementView<EdgeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AddEdge(
     EdgeId id, NodeId parent, NodeId child,
     CladeIdx clade) {  // TODO
@@ -75,6 +86,11 @@ size_t DAGView<Storage, Base>::GetNodesCount() const {
 template <typename Storage, template <typename, typename> typename Base>
 size_t DAGView<Storage, Base>::GetEdgesCount() const {
   return dag_storage_.GetEdgesCount();
+}
+
+template <typename Storage, template <typename, typename> typename Base>
+bool DAGView<Storage, Base>::IsEmpty() const {
+  return GetNodesCount() == 0 and GetEdgesCount() == 0;
 }
 
 template <typename Storage, template <typename, typename> typename Base>
@@ -120,4 +136,14 @@ template <typename Storage, template <typename, typename> typename Base>
 template <typename Id, typename Feature>
 auto& DAGView<Storage, Base>::GetFeatureExtraStorage() const {
   return dag_storage_.template GetFeatureExtraStorage<Id, Feature>();
+}
+
+template <typename Storage, template <typename, typename> typename Base>
+const Storage& DAGView<Storage, Base>::GetStorage() const {
+  return dag_storage_;
+}
+
+template <typename Storage, template <typename, typename> typename Base>
+Storage& DAGView<Storage, Base>::GetStorage() {
+  return dag_storage_;
 }

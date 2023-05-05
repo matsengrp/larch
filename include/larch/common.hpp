@@ -3,28 +3,16 @@
 #include <cstddef>
 #include <limits>
 #include <vector>
+#include <tuple>
+#include <typeinfo>
+
+//////////////////////////////////////////////////////////////////////////////////////
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wstack-usage="
-#include <range/v3/action/push_back.hpp>
-#include <range/v3/action/sort.hpp>
-#include <range/v3/action/unique.hpp>
-#include <range/v3/algorithm/unique.hpp>
-#include <range/v3/algorithm/for_each.hpp>
-#include <range/v3/algorithm/all_of.hpp>
-#include <range/v3/range/conversion.hpp>
-#include <range/v3/view/counted.hpp>
-#include <range/v3/view/drop.hpp>
-#include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/group_by.hpp>
-#include <range/v3/view/indices.hpp>
-#include <range/v3/view/join.hpp>
-#include <range/v3/view/reverse.hpp>
-#include <range/v3/view/subrange.hpp>
-#include <range/v3/view/transform.hpp>
-#include <range/v3/view/zip.hpp>
+#include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
 
 struct NodeId;
@@ -74,14 +62,35 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
+#ifndef NDEBUG
+#include <csignal>
+#include <iostream>
+#define Assert(x)                                                       \
+  {                                                                     \
+    if (not(x)) {                                                       \
+      std::cerr << "Assert failed: \"" #x "\" in " __FILE__             \
+                   ":" TOSTRING(__LINE__) "\n";                         \
+      /*std::raise(SIGTRAP);*/                                          \
+      throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
+                               ":" TOSTRING(__LINE__));                 \
+    }                                                                   \
+  }
+#else
 #define Assert(x)                                                       \
   {                                                                     \
     if (not(x))                                                         \
       throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
                                ":" TOSTRING(__LINE__));                 \
   }
+#endif
 
-[[noreturn]] inline void Fail(const char* msg) { throw std::runtime_error(msg); }
+[[noreturn]] inline void Fail(const char* msg) {
+#ifndef NDEBUG
+  std::cerr << msg << "\n";
+  std::raise(SIGTRAP);
+#endif
+  throw std::runtime_error(msg);
+}
 
 #define MOVE_ONLY(x)                    \
   x(x&&) noexcept = default;            \
@@ -112,5 +121,29 @@ struct tuple_contains<std::tuple<Types...>, Type>
 
 template <typename Tuple, typename Type>
 inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Wc++20-extensions"
+template <typename T>
+inline constexpr auto tuple_to_string_impl =
+    []<std::size_t... I>(std::index_sequence<I...>) {
+  std::string result = "std::tuple<";
+  result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
+                    std::string{", "}));
+  result.pop_back();
+  result.pop_back();
+  result += ">";
+  return result;
+};
+
+template <typename T>
+inline constexpr std::string tuple_to_string() {
+  return tuple_to_string_impl<T>(std::make_index_sequence<std::tuple_size_v<T>>());
+}
+#pragma GCC diagnostic pop
 
 //////////////////////////////////////////////////////////////////////////////////////

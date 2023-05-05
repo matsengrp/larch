@@ -2,6 +2,20 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+/*
++--------------------------------------------------+
+| +--------------------+   +---------------------+ |
+| | +---------------+  |   |  +---------------+  | |
+| | | Node: Element |  |   |  | Edge: Element |  | |
+| | +---------------+  |   |  +---------------+  | |
+| |                    |   |                     | |
+| |  Nodes: Container  |   |  Edges: Container   | |
+| +--------------------+   +---------------------+ |
+|                                                  |
+|                       DAG                        |
++--------------------------------------------------+
+*/
+
 /**
  * Used by specialization on the Feature parameter to add functions to
  * an attachable feature. Functions declared in FeatureConstView are
@@ -85,6 +99,11 @@ struct EdgeId {
   size_t value = NoId;
 };
 
+template <>
+struct std::hash<EdgeId> {
+  inline size_t operator()(EdgeId id) const noexcept;
+};
+
 inline bool operator==(EdgeId lhs, EdgeId rhs);
 inline bool operator!=(EdgeId lhs, EdgeId rhs);
 inline bool operator<(EdgeId lhs, EdgeId rhs);
@@ -106,6 +125,7 @@ template <typename DAG>
 auto ToNodes(DAG dag);
 template <typename DAG>
 auto ToEdges(DAG dag);
+inline auto ToConst();
 
 }  // namespace Transform
 
@@ -113,3 +133,41 @@ template <template <typename...> typename Template, size_t I, typename... Ts>
 static constexpr auto select_argument();
 template <template <typename...> typename Template, typename... Ts>
 using select_argument_t = decltype(select_argument<Template, 0, Ts...>());
+
+template <typename... Ts>
+struct CombineBases : Ts... {
+  static_assert(std::conjunction_v<std::is_empty<Ts>...>);
+};
+
+template <typename... Ts>
+struct CombineBases<std::tuple<Ts...>> : Ts... {
+  static_assert(std::conjunction_v<std::is_empty<Ts>...>);
+};
+
+template <typename T>
+auto ViewOf(T&& storage);
+
+template <typename, template <typename, typename> typename>
+struct DAGView;
+
+template <typename Storage, template <typename, typename> typename Base>
+auto ViewOf(DAGView<Storage, Base> view) -> DAGView<Storage, Base>;
+
+template <typename, typename, typename...>
+struct DAGStorage;
+
+template <typename, typename, typename...>
+struct ElementsContainer;
+
+template <typename...>
+struct ElementStorage;
+
+struct Neighbors;
+
+struct Endpoints;
+
+struct Connections;
+
+using DefaultDAGStorage =
+    DAGStorage<ElementsContainer<NodeId, ElementStorage<Neighbors>>,
+               ElementsContainer<EdgeId, ElementStorage<Endpoints>>, Connections>;

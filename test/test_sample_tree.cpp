@@ -18,11 +18,11 @@
 static void test_sample_tree(MADAG dag) {
   SubtreeWeight<ParsimonyScore, MADAG> weight(dag);
 
-  auto result = weight.SampleTree({}).first;
+  auto result = weight.SampleTree({});
   assert_true(result.View().IsTree(), "Tree");
 
   SubtreeWeight<TreeCount, MADAG> tree_count{dag};
-  auto result2 = tree_count.UniformSampleTree({}).first;
+  auto result2 = tree_count.UniformSampleTree({});
   assert_true(result2.View().IsTree(), "Tree");
 }
 
@@ -31,7 +31,8 @@ static void test_sample_tree(std::string_view path) {
   test_sample_tree(dag.View());
 }
 
-static void bench_sampling(std::string_view path, std::string_view refseq_path) {
+[[maybe_unused]] static void bench_sampling(std::string_view path,
+                                            std::string_view refseq_path) {
   MADAGStorage dag = LoadTreeFromProtobuf(path, LoadReferenceSequence(refseq_path));
   dag.View().RecomputeCompactGenomes();
 #if defined(CALLGRIND_START_INSTRUMENTATION)
@@ -59,23 +60,23 @@ static void bench_sampling(std::string_view path, std::string_view refseq_path) 
     add_test({[] { test_sample_tree("data/testcase1/full_dag.pb.gz"); },
               "Sample tree: testcase1"});
 
-[[maybe_unused]] static const auto test_added2 =
-    add_test({[] {
-                bench_sampling("data/AY.103/AY.103_start_tree_no_ancestral.pb.gz",
-                               "data/AY.103/ref_seq_noancestral.txt.gz");
-              },
-              "Bench sample tree: AY.103"});
+// [[maybe_unused]] static const auto test_added2 =
+//     add_test({[] {
+//                 bench_sampling("data/AY.103/AY.103_start_tree_no_ancestral.pb.gz",
+//                                "data/AY.103/ref_seq_noancestral.txt.gz");
+//               },
+//               "Bench sample tree: AY.103"});
 
-[[maybe_unused]] static const auto test_added3 =
-    add_test({[] {
-                bench_sampling("data/20B/20B_start_tree_no_ancestral.pb.gz",
-                               "data/20B/ref_seq_noancestral.txt.gz");
-              },
-              "Bench sample tree: 20B"});
+// [[maybe_unused]] static const auto test_added3 =
+//     add_test({[] {
+//                 bench_sampling("data/20B/20B_start_tree_no_ancestral.pb.gz",
+//                                "data/20B/ref_seq_noancestral.txt.gz");
+//               },
+//               "Bench sample tree: 20B"});
 
-[[maybe_unused]] static const auto test_added4 =
-    add_test({[] {
-                bench_sampling("data/B.1.1.529/B.1.1.529_start_tree_no_ancestral.pb.gz",
-                               "data/B.1.1.529/ref_seq_noancestral.txt.gz");
-              },
-              "Bench sample tree: B.1.1.529"});
+// [[maybe_unused]] static const auto test_added4 =
+//     add_test({[] {
+//                 bench_sampling("data/B.1.1.529/B.1.1.529_start_tree_no_ancestral.pb.gz",
+//                                "data/B.1.1.529/ref_seq_noancestral.txt.gz");
+//               },
+//               "Bench sample tree: B.1.1.529"});

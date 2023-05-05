@@ -9,12 +9,17 @@ template <typename Id, typename DAGViewType>
 struct ElementView : DAGViewType::BaseType::template ElementViewBase<Id> {
  public:
   /**
-   * This operator= is used for setting specailly handles per-element
+   * This operator= is used for setting specailly handled per-element
    * features, like Deduplicate.
    */
   using DAGViewType::BaseType::template ElementViewBase<Id>::operator=;
 
+  template <typename Feature>
+  static const bool contains_feature;
+
   ElementView(DAGViewType dag_view, Id id);
+
+  auto Const() const;
 
   operator Id() const;
 

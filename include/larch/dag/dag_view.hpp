@@ -38,6 +38,8 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   operator DAGView<const Storage, Base>() const;
 
+  DAGView<const Storage, Base> Const() const;
+
   /**
    * Get a Node or Edge view by its id
    * @{
@@ -50,6 +52,8 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   ElementView<EdgeId, DAGView<Storage, Base>> AppendEdge() const;
 
   ElementView<NodeId, DAGView<Storage, Base>> AddNode(NodeId id);
+  ElementView<EdgeId, DAGView<Storage, Base>> AddEdge(EdgeId id);
+
   ElementView<EdgeId, DAGView<Storage, Base>> AddEdge(EdgeId id, NodeId parent,
                                                       NodeId child,
                                                       CladeIdx clade);  // TODO
@@ -58,6 +62,7 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
+  bool IsEmpty() const;
 
   /**
    * Return a range containing Node views for each node in the DAG
@@ -79,6 +84,9 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   auto& GetFeatureStorage(EdgeId id) const;
   template <typename Id, typename Feature>
   auto& GetFeatureExtraStorage() const;
+
+  const Storage& GetStorage() const;
+  Storage& GetStorage();
 
  private:
   Storage& dag_storage_;

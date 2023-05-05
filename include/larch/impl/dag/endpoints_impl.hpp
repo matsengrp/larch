@@ -35,8 +35,13 @@ std::pair<NodeId, NodeId> FeatureConstView<Endpoints, CRTP, Tag>::GetNodeIds() c
 }
 
 template <typename CRTP, typename Tag>
-bool FeatureConstView<Endpoints, CRTP, Tag>::IsRoot() const {
-  return GetParent().IsRoot();
+bool FeatureConstView<Endpoints, CRTP, Tag>::IsUA() const {
+  return GetParent().IsUA();
+}
+
+template <typename CRTP, typename Tag>
+bool FeatureConstView<Endpoints, CRTP, Tag>::IsTreeRoot() const {
+  return GetParent().IsTreeRoot();
 }
 
 template <typename CRTP, typename Tag>
@@ -46,12 +51,30 @@ bool FeatureConstView<Endpoints, CRTP, Tag>::IsLeaf() const {
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Endpoints, CRTP, Tag>::Set(NodeId parent, NodeId child,
-                                                   CladeIdx clade) {
+                                                   CladeIdx clade) const {
   Assert(parent.value != NoId);
   Assert(child.value != NoId);
   Assert(parent.value != child.value);
   Assert(clade.value != NoId);
   GetFeatureStorage(this).parent_ = parent;
   GetFeatureStorage(this).child_ = child;
+  GetFeatureStorage(this).clade_ = clade;
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Endpoints, CRTP, Tag>::SetParent(NodeId parent) const {
+  Assert(parent.value != NoId);
+  GetFeatureStorage(this).parent_ = parent;
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Endpoints, CRTP, Tag>::SetChild(NodeId child) const {
+  Assert(child.value != NoId);
+  GetFeatureStorage(this).child_ = child;
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Endpoints, CRTP, Tag>::SetClade(CladeIdx clade) const {
+  Assert(clade.value != NoId);
   GetFeatureStorage(this).clade_ = clade;
 }

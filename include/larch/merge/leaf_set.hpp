@@ -42,6 +42,12 @@ class LeafSet {
 
   inline const std::vector<std::vector<const CompactGenome*>>& GetClades() const;
 
+  inline std::string ToString() const;
+
+  template <typename DAGType>
+  inline static std::vector<LeafSet> ComputeLeafSets(
+      DAGType dag, const std::vector<NodeLabel>& labels);
+
  private:
   inline static size_t ComputeHash(
       const std::vector<std::vector<const CompactGenome*>>& clades) noexcept;

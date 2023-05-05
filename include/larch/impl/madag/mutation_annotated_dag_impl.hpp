@@ -51,7 +51,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes()
   new_cgs.resize(dag.GetNodesCount());
   auto ComputeCG = [&new_cgs, dag](auto& self, Node for_node) {
     CompactGenome& compact_genome = new_cgs.at(for_node.GetId().value);
-    if (for_node.IsRoot()) {
+    if (for_node.IsUA()) {
       compact_genome = {};
       return;
     }
@@ -76,14 +76,12 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes()
       bool success =
           leaf_cgs.emplace(node.GetCompactGenome().Copy(), node.GetId()).second;
       if (not success) {
-        /*
-        std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
-                  << node.GetId().value << " also seen at "
-                  << leaf_cgs.at(node.GetCompactGenome().Copy()).value
-                  << "\nCompact Genome is\n"
-                  << node.GetCompactGenome().ToString() << "\n"
-                  << std::flush;
-        */
+        // std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
+        //           << node.GetId().value << " also seen at "
+        //           << leaf_cgs.at(node.GetCompactGenome().Copy()).value
+        //           << "\nCompact Genome is\n"
+        //           << node.GetCompactGenome().ToString() << "\n"
+        //           << std::flush;
         Fail("Error in ComputeCompactGenomes: had a non-unique leaf node");
       }
     }

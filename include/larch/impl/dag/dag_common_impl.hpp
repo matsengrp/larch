@@ -9,7 +9,7 @@ auto& GetFeatureStorage(const FeatureMutableView<Feature, CRTP, Tag>* feature) {
 
 template <typename CRTP, typename Feature, typename Tag>
 const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* feature) {
-  return static_cast<const CRTP&>(*feature).template GetFeatureStorage<Tag>();
+  return static_cast<const CRTP&>(*feature).Const().template GetFeatureStorage<Tag>();
 }
 
 bool operator==(NodeId lhs, NodeId rhs) { return lhs.value == rhs.value; }
@@ -20,6 +20,7 @@ size_t std::hash<NodeId>::operator()(NodeId id) const noexcept { return id.value
 bool operator==(EdgeId lhs, EdgeId rhs) { return lhs.value == rhs.value; }
 bool operator!=(EdgeId lhs, EdgeId rhs) { return lhs.value != rhs.value; }
 bool operator<(EdgeId lhs, EdgeId rhs) { return lhs.value < rhs.value; }
+size_t std::hash<EdgeId>::operator()(EdgeId id) const noexcept { return id.value; }
 
 bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs.value == rhs.value; }
 bool operator!=(CladeIdx lhs, CladeIdx rhs) { return lhs.value != rhs.value; }
@@ -48,6 +49,9 @@ auto ToEdges(DAG dag) {
     return typename DAG::EdgeView{dag, i};
   });
 }
+auto ToConst() {
+  return ranges::views::transform([](auto&& i) { return i.Const(); });
+}
 
 }  // namespace Transform
 
@@ -63,4 +67,14 @@ static constexpr auto select_argument() {
   } else {
     return Template<>{};
   }
+}
+
+template <typename T>
+auto ViewOf(T&& storage) {
+  return storage.View();
+}
+
+template <typename Storage, template <typename, typename> typename Base>
+auto ViewOf(DAGView<Storage, Base> view) -> DAGView<Storage, Base> {
+  return view;
 }

@@ -3,3 +3,7 @@ build
 .vscode
 compile_commands.json
 .cache
+tags
+.kak*
+cscope.*
+*.code-workspace

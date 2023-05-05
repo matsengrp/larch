@@ -4,6 +4,7 @@
 #include <type_traits>
 
 #include "larch/dag/dag.hpp"
+#include "larch/contiguous_map.hpp"
 
 /**
  * A wrapper for size_t, storing a 1-based index on the reference sequence.
@@ -17,7 +18,7 @@ inline bool operator!=(MutationPosition lhs, MutationPosition rhs);
 inline bool operator<(MutationPosition lhs, MutationPosition rhs);
 
 class EdgeMutations {
-  std::map<MutationPosition, std::pair<char, char>> mutations_;
+  ContiguousMap<MutationPosition, std::pair<MutationBase, MutationBase>> mutations_;
 
  public:
   EdgeMutations() = default;
@@ -31,8 +32,8 @@ class EdgeMutations {
   inline auto end() const -> decltype(mutations_.end());
   inline size_t size() const;
   inline auto operator[](MutationPosition pos) -> decltype(mutations_[pos]);
-  inline auto insert(std::pair<MutationPosition, std::pair<char, char>> mut)
-      -> decltype(mutations_.insert(mut));
+  inline auto insert(
+      std::pair<MutationPosition, std::pair<MutationBase, MutationBase>> mut);
   inline bool operator==(const EdgeMutations& rhs) const;
   inline bool operator!=(const EdgeMutations& rhs) const;
 
@@ -50,7 +51,8 @@ class EdgeMutations {
 
  private:
   inline explicit EdgeMutations(
-      std::map<MutationPosition, std::pair<char, char>>&& mutations);
+      ContiguousMap<MutationPosition, std::pair<MutationBase, MutationBase>>&&
+          mutations);
 };
 
 template <typename CRTP, typename Tag>
@@ -61,6 +63,7 @@ struct FeatureConstView<EdgeMutations, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<EdgeMutations, CRTP, Tag> {
   void SetEdgeMutations(EdgeMutations&& edge_mutations) const;
+  EdgeMutations& GetMutableEdgeMutations() const;
 };
 
 #include "larch/impl/madag/edge_mutations_impl.hpp"

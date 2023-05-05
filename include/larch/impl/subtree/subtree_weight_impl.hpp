@@ -75,8 +75,6 @@ typename SubtreeWeight<WeightOps, DAG>::Storage
 SubtreeWeight<WeightOps, DAG>::TrimToMinWeight(WeightOps&& weight_ops) {
   Storage result;
   result.View().SetReferenceSequence(dag_.GetReferenceSequence());
-  std::vector<NodeId> result_dag_ids;
-
   ExtractTree(
       dag_.GetRoot(), result.View().AppendNode(), std::forward<WeightOps>(weight_ops),
       [this](Node node, CladeIdx clade_idx) {
@@ -84,13 +82,13 @@ SubtreeWeight<WeightOps, DAG>::TrimToMinWeight(WeightOps&& weight_ops) {
             // Probably don't want just the first one...?
             cached_min_weight_edges_.at(node.GetId().value).at(clade_idx.value)[0]);
       },
-      result.View(), result_dag_ids);
+      result.View());
 
   return result;
 }
 
 template <typename WeightOps, typename DAG>
-std::pair<typename SubtreeWeight<WeightOps, DAG>::Storage, std::vector<NodeId>>
+typename SubtreeWeight<WeightOps, DAG>::SampledDAGStorage
 SubtreeWeight<WeightOps, DAG>::SampleTree(WeightOps&& weight_ops,
                                           std::optional<NodeId> below) {
   Node below_node = below.has_value() ? dag_.Get(*below) : dag_.GetRoot();
@@ -104,7 +102,7 @@ SubtreeWeight<WeightOps, DAG>::SampleTree(WeightOps&& weight_ops,
 
 struct TreeCount;
 template <typename WeightOps, typename DAG>
-std::pair<typename SubtreeWeight<WeightOps, DAG>::Storage, std::vector<NodeId>>
+typename SubtreeWeight<WeightOps, DAG>::SampledDAGStorage
 SubtreeWeight<WeightOps, DAG>::UniformSampleTree(WeightOps&& weight_ops,
                                                  std::optional<NodeId> below) {
   static_assert(std::is_same_v<std::decay_t<WeightOps>, TreeCount>,
@@ -133,7 +131,7 @@ SubtreeWeight<WeightOps, DAG>::UniformSampleTree(WeightOps&& weight_ops,
 }
 
 template <typename WeightOps, typename DAG>
-std::pair<typename SubtreeWeight<WeightOps, DAG>::Storage, std::vector<NodeId>>
+typename SubtreeWeight<WeightOps, DAG>::SampledDAGStorage
 SubtreeWeight<WeightOps, DAG>::MinWeightSampleTree(WeightOps&& weight_ops,
                                                    std::optional<NodeId> below) {
   Node below_node = below.has_value() ? dag_.Get(*below) : dag_.GetRoot();
@@ -188,16 +186,14 @@ typename WeightOps::Weight SubtreeWeight<WeightOps, DAG>::CladeWeight(
 
 template <typename WeightOps, typename DAG>
 template <typename DistributionMaker>
-std::pair<typename SubtreeWeight<WeightOps, DAG>::Storage, std::vector<NodeId>>
+typename SubtreeWeight<WeightOps, DAG>::SampledDAGStorage
 SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
                                               DistributionMaker&& distribution_maker,
                                               Node below) {
   Assert(not below.IsLeaf());
   dag_.AssertUA();
-  Storage result;
+  SampledDAGStorage result;
   result.View().SetReferenceSequence(dag_.GetReferenceSequence());
-  std::vector<NodeId> result_dag_ids;
-
   ExtractTree(
       below, result.View().AppendNode(), std::forward<WeightOps>(weight_ops),
       [this, &distribution_maker](Node node, CladeIdx clade_idx) {
@@ -206,40 +202,41 @@ SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
         return clade.at(static_cast<ranges::range_difference_t<decltype(clade)>>(
             distribution_maker(clade)(random_generator_)));
       },
-      result.View(), result_dag_ids);
+      result.View());
 
   result.View().BuildConnections();
 
-  for (typename MutableDAG::NodeView node : result.View().GetNodes()) {
+  for (auto node : result.View().GetNodes()) {
     const std::optional<std::string>& old_sample_id =
-        dag_.Get(result_dag_ids.at(node.GetId().value)).GetSampleId();
+        dag_.Get(node.GetOriginalId()).GetSampleId();
     if (node.IsLeaf() and old_sample_id.has_value()) {
       node.SetSampleId(std::optional<std::string>{old_sample_id});
     }
   }
 
-  if (not below.IsRoot()) {
+  if (not below.IsUA()) {
     Assert(not below.GetCompactGenome().empty());
     EdgeMutations muts = CompactGenome::ToEdgeMutations(dag_.GetReferenceSequence(), {},
                                                         below.GetCompactGenome());
     result.View().AddUA(muts);
   }
 
-  return {std::move(result), std::move(result_dag_ids)};
+  return result;
 }
 
 template <typename WeightOps, typename DAG>
-template <typename EdgeSelector>
-void SubtreeWeight<WeightOps, DAG>::ExtractTree(Node input_node, NodeId result_node_id,
+template <typename NodeType, typename EdgeSelector, typename MutableDAGType>
+void SubtreeWeight<WeightOps, DAG>::ExtractTree(NodeType input_node,
+                                                NodeId result_node_id,
                                                 WeightOps&& weight_ops,
                                                 EdgeSelector&& edge_selector,
-                                                MutableDAG result,
-                                                std::vector<NodeId>& result_dag_ids) {
+                                                MutableDAGType result) {
   ComputeWeightBelow(input_node, std::forward<WeightOps>(weight_ops));
-
-  GetOrInsert(result_dag_ids, result_node_id) = input_node.GetId();
-
-  result.Get(result_node_id) = input_node.GetCompactGenome().Copy();
+  auto result_node = result.Get(result_node_id);
+  if constexpr (decltype(result_node)::template contains_feature<MappedNodes>) {
+    result_node.SetOriginalId(input_node.GetId());
+  }
+  result_node = input_node.GetCompactGenome().Copy();
 
   CladeIdx clade_idx{0};
   for (auto clade : input_node.GetClades()) {
@@ -249,13 +246,13 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTree(Node input_node, NodeId result_n
     ++clade_idx.value;
 
     NodeId result_child_id = result.AppendNode();
-    typename MutableDAG::EdgeView result_edge =
+    auto result_edge =
         result.AppendEdge(result_node_id, result_child_id, input_edge.GetClade());
 
     result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
 
     ExtractTree(input_edge.GetChild(), result_child_id,
                 std::forward<WeightOps>(weight_ops),
-                std::forward<EdgeSelector>(edge_selector), result, result_dag_ids);
+                std::forward<EdgeSelector>(edge_selector), result);
   }
 }
