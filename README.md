@@ -3,16 +3,9 @@
 Requirements
 ------------
 
-* GCC 7.5
-* cmake 3.16
-* clang-tidy
-* protobuf libraries and compiler
-* zlib
-* TBB
+For Ubuntu 22.04 LTS the following commands installs the requirements:
 
-For Ubuntu 18.04 LTS the following commands installs the requirements:
-
-`sudo apt get install make g++ protobuf-compiler libprotobuf-dev zlib1g-dev libtbb-dev clang-tidy`
+`sudo apt install --no-install-recommends git cmake make g++-10 mpi-default-dev libprotobuf-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-date-time-dev protobuf-compiler pkg-config pybind11-dev libcurl4-openssl-dev python3.10-dev libhts-dev libtabixpp-dev libtabixpp0 libbz2-dev`
 
 To get a recent cmake, download from `https://cmake.org/download/`, for example:
 
@@ -25,11 +18,7 @@ Building
 
 `cd build`
 
-`wget https://github.com/oneapi-src/oneTBB/archive/2019_U9.tar.gz`
-
-`tar -xvzf 2019_U9.tar.gz`
-
-`cmake -DTBB_DIR=${PWD}/oneTBB-2019_U9 -DCMAKE_PREFIX_PATH=${PWD}/oneTBB-2019_U9/cmake ..`
+`cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER="g++-10" ..`
 
 `make -j16`
 

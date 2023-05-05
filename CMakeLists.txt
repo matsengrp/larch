@@ -42,6 +42,19 @@ ExternalProject_Add(range-v3
   PREFIX range-v3
   INSTALL_DIR range-v3/install
 )
+
+ExternalProject_Add(vcflib-gh
+  GIT_REPOSITORY https://github.com/vcflib/vcflib.git
+  GIT_TAG v1.0.9
+  GIT_SUBMODULES_RECURSE true
+  GIT_SHALLOW true
+  GIT_PROGRESS true
+  UPDATE_DISCONNECTED true
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/vcflib-gh/install -DCMAKE_BUILD_TYPE=Release -DBUILD_DOC=OFF -DZIG=OFF -DWFA_GITMODULE=ON
+  PREFIX vcflib-gh
+  INSTALL_DIR vcflib-gh/install
+)
+
 find_package(ZLIB)
 
 add_library(larch-autogen OBJECT
@@ -72,7 +85,7 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
-  add_dependencies(${PRODUCT} range-v3)
+  add_dependencies(${PRODUCT} range-v3 vcflib-gh)
 endfunction()
 
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
@@ -111,6 +124,7 @@ function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
+  target_link_libraries(${PRODUCT} PUBLIC -L${CMAKE_CURRENT_BINARY_DIR}/vcflib-gh/src/vcflib-gh-build -lvcflib)
 endfunction()
 
 function(larch_executable PRODUCT)
