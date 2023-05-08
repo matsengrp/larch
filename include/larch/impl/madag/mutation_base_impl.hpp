@@ -13,9 +13,9 @@ inline const std::map<MutationBase, MutationBase> MutationBase::DNA::complement_
     {MutationBase::DNA::G, MutationBase::DNA::C},
     {MutationBase::DNA::T, MutationBase::DNA::A}};
 
-MutationBase::MutationBase(const MutationBase::BitArray m_value) { value = m_value; }
+MutationBase::MutationBase(const MutationBase::BitArray &m_value) { value = m_value; }
 
-MutationBase::MutationBase(const char m_char_in) {
+MutationBase::MutationBase(char m_char_in) {
   for (const auto &[m_base, m_char] : DNA::mut_to_char_map) {
     if (m_char_in == m_char) {
       value = m_base.value;
@@ -32,26 +32,26 @@ MutationBase MutationBase::GetComplementaryBase() const {
 
 char MutationBase::ToChar() const { return DNA::mut_to_char_map.find(value)->second; }
 
-std::string MutationBase::ToString(std::vector<MutationBase> m_in) {
+std::string MutationBase::ToString(const std::vector<MutationBase> &m_in) {
   std::string str_out = "";
   for (size_t i = 0; i < m_in.size(); i++) {
-    str_out[i] += m_in[i].ToChar();
+    str_out += m_in[i].ToChar();
   }
   return str_out;
 }
 
-inline std::ostream &operator<<(std::ostream &os, const MutationBase m_in) {
+inline std::ostream &operator<<(std::ostream &os, const MutationBase &m_in) {
   os << m_in.ToChar();
   return os;
 }
 
 inline std::ostream &operator<<(std::ostream &os,
-                                const std::vector<MutationBase> m_in) {
+                                const std::vector<MutationBase> &m_in) {
   os << MutationBase::ToString(m_in);
   return os;
 }
 
-inline std::string &operator+=(std::string &str, const MutationBase m_in) {
+inline std::string &operator+=(std::string &str, const MutationBase &m_in) {
   str += m_in.ToChar();
   return str;
 }

@@ -14,17 +14,17 @@ struct MutationBase {
   using BitArray = std::array<bool, 2>;
 
   MutationBase() = default;
-  inline MutationBase(const BitArray m_value);
-  inline MutationBase(const char m_char_in);
+  inline MutationBase(const BitArray &m_value);
+  inline MutationBase(char m_char_in);
 
   inline MutationBase GetComplementaryBase() const;
 
   inline char ToChar() const;
-  static inline std::string ToString(std::vector<MutationBase> m_in);
-  friend std::string &operator+=(std::string &str, const MutationBase m_in);
-  friend std::ostream &operator<<(std::ostream &os, const MutationBase m_in);
+  static inline std::string ToString(const std::vector<MutationBase> &m_in);
+  friend std::string &operator+=(std::string &str, const MutationBase &m_in);
+  friend std::ostream &operator<<(std::ostream &os, const MutationBase &m_in);
   friend std::ostream &operator<<(std::ostream &os,
-                                  const std::vector<MutationBase> m_in);
+                                  const std::vector<MutationBase> &m_in);
 
   inline bool operator==(const MutationBase &rhs) const;
   inline bool operator!=(const MutationBase &rhs) const;
@@ -53,7 +53,9 @@ struct MutationBase {
 namespace std {
 template <>
 struct hash<MutationBase> {
-  std::size_t operator()(const MutationBase &obj) const { return obj.ToChar(); }
+  std::size_t operator()(const MutationBase &obj) const {
+    return static_cast<size_t>(obj.ToChar());
+  }
 };
 }  // namespace std
 

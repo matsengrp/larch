@@ -187,7 +187,7 @@ void FeatureMutableView<Neighbors, CRTP, Tag>::RemoveChild(CladeIdx clade,
   Assert(it != children.end());
   children.erase(it);
   if (children.empty()) {
-    clades.erase(clades.begin() + clade.value);
+    clades.erase(clades.begin() + static_cast<ssize_t>(clade.value));
     for (size_t i = clade.value; i < clades.size(); ++i) {
       for (EdgeId edge : clades.at(i)) {
         node.GetDAG().Get(edge).SetClade({i});

@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
       opt_list_names = true;
     } else if (std::string("--range") == argv[i]) {
       opt_test_range = true;
-      range.first = atoi(argv[++i]);
-      range.second = atoi(argv[++i]);
+      range.first = static_cast<size_t>(atoi(argv[++i]));
+      range.second = static_cast<size_t>(atoi(argv[++i]));
     } else {
       regex = argv[i];
     }

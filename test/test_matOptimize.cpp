@@ -19,7 +19,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   return subtree_weight.GetDAG().GetRoot();
 };
 
-static auto choose_random = [](const auto& weight) {
+[[maybe_unused]] static auto choose_random = [](const auto& weight) {
   std::random_device random_device;
   std::mt19937 random_generator(random_device());
 

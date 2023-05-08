@@ -42,6 +42,19 @@ ExternalProject_Add(range-v3
   PREFIX range-v3
   INSTALL_DIR range-v3/install
 )
+
+ExternalProject_Add(htslib
+  GIT_REPOSITORY https://github.com/samtools/htslib.git
+  GIT_TAG 1.17
+  GIT_SHALLOW true
+  GIT_PROGRESS true
+  UPDATE_DISCONNECTED true
+  PREFIX htslib
+  BUILD_IN_SOURCE true
+  CONFIGURE_COMMAND autoreconf -i COMMAND ./configure --prefix=${PROJECT_BINARY_DIR}/htslib/install
+  BUILD_COMMAND make -j
+  INSTALL_COMMAND make install
+)
 find_package(ZLIB)
 
 add_library(larch-autogen OBJECT
@@ -72,7 +85,7 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
-  add_dependencies(${PRODUCT} range-v3)
+  add_dependencies(${PRODUCT} range-v3 htslib)
 endfunction()
 
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)

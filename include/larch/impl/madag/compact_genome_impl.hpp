@@ -164,7 +164,7 @@ size_t CompactGenome::ComputeHash(
   size_t result = 0;
   for (auto [pos, base] : mutations) {
     result = HashCombine(result, pos.value);
-    result = HashCombine(result, base.ToChar());
+    result = HashCombine(result, static_cast<size_t>(base.ToChar()));
   }
   return result;
 }

@@ -10,8 +10,8 @@ template <typename Id, typename ElementStorageT, typename... Features>
 struct ElementsContainer {
  public:
   using FeatureTypes = std::tuple<Features...>;
-  using AllFeatureTypes = decltype(std::tuple_cat(
-      FeatureTypes{}, typename ElementStorageT::FeatureTypes{}));
+  using AllFeatureTypes = decltype(
+      std::tuple_cat(FeatureTypes{}, typename ElementStorageT::FeatureTypes{}));
 
   template <typename Feature>
   static const bool contains_element_feature;

@@ -98,9 +98,9 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetAtSite(
   auto [old_fitch_sets, changes] =
       GetFitchSetParts();  // TODO: modify to also return boundary alleles
 
-  auto build_new_fitch_set =
-      [&node](nuc_one_hot old_major_alleles, nuc_one_hot old_boundary_alleles,
-              nuc_one_hot rem_set, nuc_one_hot add_set) -> FitchSet {
+  auto build_new_fitch_set = [](nuc_one_hot old_major_alleles,
+                                nuc_one_hot old_boundary_alleles, nuc_one_hot rem_set,
+                                nuc_one_hot add_set) -> FitchSet {
     Assert(old_major_alleles <= 16);
     Assert(old_boundary_alleles <= 16);
     Assert(rem_set <= 16);
