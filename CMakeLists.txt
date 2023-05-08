@@ -85,6 +85,7 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
+  target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/include)
   add_dependencies(${PRODUCT} range-v3 htslib)
 endfunction()
 
@@ -111,6 +112,7 @@ file(GLOB MATOPTIMIZE_SRC
 )
 
 function(larch_link_opts PRODUCT)
+  target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/lib)
   target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
 
   if(${USE_ASAN})
@@ -124,6 +126,7 @@ function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
+  target_link_libraries(${PRODUCT} PUBLIC -lhts)
 endfunction()
 
 function(larch_executable PRODUCT)
@@ -196,6 +199,7 @@ larch_executable(larch-test
   test/test_weight_accum.cpp
   test/test_weight_counter.cpp
   test/test_write_parsimony.cpp
+  test/test_vcf.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
