@@ -7,34 +7,49 @@
 #include "larch/common.hpp"
 #include "larch/vcf/include_hts.hpp"
 
-template <typename FnCreate, typename FnDestroy, typename... Args>
-auto MakeCObject(FnCreate&& create, FnDestroy&& destroy, Args&&... args) {
-  using type = std::invoke_result_t<FnCreate, Args...>;
-  return std::unique_ptr<std::remove_pointer_t<type>, FnDestroy>(
-      std::invoke(std::forward<FnCreate>(create), std::forward<Args>(args)...),
-      std::forward<FnDestroy>(destroy));
-}
+template <typename T, auto* FnDestroy>
+struct CObject {
+  struct Deleter {
+    void operator()(T* ptr) const noexcept { FnDestroy(ptr); };
+  };
+  using ptr = std::unique_ptr<T, Deleter>;
+  static ptr null() { return {nullptr, {}}; }
+  template <auto* FnCreate, typename... Args>
+  static ptr make(Args&&... args) {
+    T* result = FnCreate(std::forward<Args>(args)...);
+    Assert(result != nullptr);
+    return {result, {}};
+  }
+};
 
 namespace libhts {
-using file = decltype(MakeCObject(hts_open, hts_close, "", ""));
-using record = decltype(MakeCObject(bcf_init, bcf_destroy));
-using header = decltype(
-    MakeCObject(bcf_hdr_read, bcf_hdr_destroy, static_cast<htsFile*>(nullptr)));
+using file = CObject<::htsFile, ::hts_close>;
+using header = CObject<::bcf_hdr_t, ::bcf_hdr_destroy>;
+using record = CObject<::bcf1_t, ::bcf_destroy>;
+
+file::ptr make_file(std::string_view path, std::string_view mode) {
+  return file::make<::hts_open>(std::string{path}.c_str(), std::string{mode}.c_str());
+}
+
+header::ptr make_header(const file::ptr& file) {
+  Assert(file);
+  return header::make<::bcf_hdr_read>(file.get());
+}
+
+record::ptr make_record() { return record::make<::bcf_init>(); }
+
 };  // namespace libhts
 
 class VcfFile {
  public:
-  explicit VcfFile(std::string_view path)
-      : hts_file_{MakeCObject(hts_open, hts_close, std::string{path}.c_str(), "r")},
-        rec_{MakeCObject(bcf_init, bcf_destroy)},
-        hdr_{MakeCObject(bcf_hdr_read, bcf_hdr_destroy, hts_file_.get())} {
-    Assert(hts_file_ != nullptr);
-    Assert(rec_ != nullptr);
-    Assert(hdr_ != nullptr);
+  explicit VcfFile(std::string_view path) {
+    file_ = libhts::make_file(path, "r");
+    header_ = libhts::make_header(file_);
+    record_ = libhts::make_record();
   }
 
  private:
-  libhts::file hts_file_;
-  libhts::record rec_;
-  libhts::header hdr_;
+  libhts::file::ptr file_ = libhts::file::null();
+  libhts::header::ptr header_ = libhts::header::null();
+  libhts::record::ptr record_ = libhts::record::null();
 };
