@@ -40,16 +40,47 @@ record::ptr make_record() { return record::make<::bcf_init>(); }
 
 };  // namespace libhts
 
+class VcfRecord {
+ public:
+  VcfRecord() : record_{libhts::make_record()} {}
+
+  hts_pos_t GetPos() const { return record_->pos; }
+
+  hts_pos_t GetRefLength() const { return record_->rlen; }
+
+  std::string_view GetId() const { return record_->d.id; }
+
+  std::string_view GetRef() const { return record_->d.als; }
+
+  float GetQual() const { return record_->qual; }
+
+ private:
+  friend class VcfFile;
+  libhts::record::ptr record_;
+};
+
 class VcfFile {
  public:
   explicit VcfFile(std::string_view path) {
     file_ = libhts::make_file(path, "r");
     header_ = libhts::make_header(file_);
-    record_ = libhts::make_record();
+  }
+
+  std::optional<VcfRecord> read() {
+    VcfRecord result{};
+    int error = ::bcf_read(file_.get(), header_.get(), result.record_.get());
+    if (error < -1) {
+      std::cerr << "bcf_read failed with " << error << "\n";
+      Fail("bcf_read");
+    } else if (error == 0) {
+      Assert(::bcf_unpack(result.record_.get(), BCF_UN_ALL) == 0);
+      return result;
+    } else {
+      return std::nullopt;
+    }
   }
 
  private:
   libhts::file::ptr file_ = libhts::file::null();
   libhts::header::ptr header_ = libhts::header::null();
-  libhts::record::ptr record_ = libhts::record::null();
 };
