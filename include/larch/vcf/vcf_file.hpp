@@ -46,13 +46,27 @@ class VcfRecord {
 
   hts_pos_t GetPos() const { return record_->pos; }
 
+  int32_t GetChromId() const { return record_->rid; }
+
+  std::string_view GetChrom(const libhts::header::ptr& header) const {
+    return ::bcf_hdr_id2name(header.get(), record_->rid);
+  }
+
   hts_pos_t GetRefLength() const { return record_->rlen; }
 
   std::string_view GetId() const { return record_->d.id; }
 
   std::string_view GetRef() const { return record_->d.als; }
 
+  std::string_view GetAlt() const { return record_->d.als + GetRef().size() + 1; }
+
   float GetQual() const { return record_->qual; }
+
+  auto GetAlleles() {
+    size_t count = static_cast<size_t>(record_->n_allele);
+    return ranges::subrange(record_->d.allele, record_->d.allele + count) |
+           ranges::views::transform([](char* i) { return std::string_view(i); });
+  }
 
  private:
   friend class VcfFile;
@@ -66,6 +80,15 @@ class VcfFile {
     header_ = libhts::make_header(file_);
   }
 
+  const libhts::header::ptr& GetHeader() { return header_; }
+
+  auto GetSamples() {
+    auto* hdr = header_.get();
+    size_t count = static_cast<size_t>(bcf_hdr_nsamples(hdr));
+    return ranges::subrange(hdr->samples, hdr->samples + count) |
+           ranges::views::transform([](char* i) { return std::string_view(i); });
+  }
+
   std::optional<VcfRecord> read() {
     VcfRecord result{};
     int error = ::bcf_read(file_.get(), header_.get(), result.record_.get());
@@ -74,6 +97,9 @@ class VcfFile {
       Fail("bcf_read");
     } else if (error == 0) {
       Assert(::bcf_unpack(result.record_.get(), BCF_UN_ALL) == 0);
+      if (result.GetPos() == 0) {
+        return std::nullopt;
+      }
       return result;
     } else {
       return std::nullopt;
