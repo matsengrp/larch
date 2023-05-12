@@ -97,9 +97,6 @@ class VcfFile {
       Fail("bcf_read");
     } else if (error == 0) {
       Assert(::bcf_unpack(result.record_.get(), BCF_UN_ALL) == 0);
-      if (result.GetPos() == 0) {
-        return std::nullopt;
-      }
       return result;
     } else {
       return std::nullopt;
