@@ -162,22 +162,12 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
         for (auto node_id : fragment.first) {
           auto hypothetical_node = spr.Get(node_id);
           if (hypothetical_node.IsMoveNew()) {
-            const auto& current_leaf_sets =
-                clades_union(merge_.GetResultNodeLabels()
-                                 .at(spr.GetMoveSource().GetOld().GetId().value)
-                                 .GetLeafSet()
-                                 ->GetClades(),
-                             merge_.GetResultNodeLabels()
-                                 .at(spr.GetMoveTarget().GetOld().GetId().value)
-                                 .GetLeafSet()
-                                 ->GetClades());
-            if (not(merge_.ContainsLeafset(
-                        clades_difference(current_leaf_sets, src_leaf_set)) and
-                    merge_.ContainsLeafset(
-                        clades_difference(current_leaf_sets, dst_leaf_set)))) {
+            if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
               ++node_id_map_count;
             }
-          } else if (hypothetical_node.HasChangedTopology()) {
+          } else if (hypothetical_node.HasChangedTopology()
+                     and node_id != spr.GetMoveSource().GetId()
+                     and node_id != spr.GetMoveTarget().GetId()) {
             const auto& current_leaf_sets =
                 merge_.GetResultNodeLabels()
                     .at(hypothetical_node.GetOld().GetId().value)
@@ -353,26 +343,12 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
         for (auto node_id : fragment.first) {
           auto hypothetical_node = spr.Get(node_id);
           if (hypothetical_node.IsMoveNew()) {
-            const auto& current_leaf_sets = clades_union(
-                merge_.GetResultNodeLabels()
-                    .at(sample_dag_.Get(spr.GetMoveSource().GetOld().GetId())
-                            .GetOriginalId()
-                            .value)
-                    .GetLeafSet()
-                    ->GetClades(),
-                merge_.GetResultNodeLabels()
-                    .at(sample_dag_.Get(spr.GetMoveTarget().GetOld().GetId())
-                            .GetOriginalId()
-                            .value)
-                    .GetLeafSet()
-                    ->GetClades());
-            if (not(merge_.ContainsLeafset(
-                        clades_difference(current_leaf_sets, src_leaf_set)) and
-                    merge_.ContainsLeafset(
-                        clades_difference(current_leaf_sets, dst_leaf_set)))) {
+            if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
               ++node_id_map_count;
             }
-          } else if (hypothetical_node.HasChangedTopology()) {
+          } else if (hypothetical_node.HasChangedTopology()
+                     and node_id != spr.GetMoveSource().GetId()
+                     and node_id != spr.GetMoveTarget().GetId()) {
             const auto& current_leaf_sets =
                 merge_.GetResultNodeLabels()
                     .at(sample_dag_.Get(hypothetical_node.GetOld().GetId())
@@ -485,26 +461,12 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
         for (auto node_id : fragment.first) {
           auto hypothetical_node = spr.Get(node_id);
           if (hypothetical_node.IsMoveNew()) {
-            const auto& current_leaf_sets = clades_union(
-                merge_.GetResultNodeLabels()
-                    .at(sample_dag_.Get(spr.GetMoveSource().GetOld().GetId())
-                            .GetOriginalId()
-                            .value)
-                    .GetLeafSet()
-                    ->GetClades(),
-                merge_.GetResultNodeLabels()
-                    .at(sample_dag_.Get(spr.GetMoveTarget().GetOld().GetId())
-                            .GetOriginalId()
-                            .value)
-                    .GetLeafSet()
-                    ->GetClades());
-            if (not(merge_.ContainsLeafset(
-                        clades_difference(current_leaf_sets, src_leaf_set)) and
-                    merge_.ContainsLeafset(
-                        clades_difference(current_leaf_sets, dst_leaf_set)))) {
+            if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
               ++node_id_map_count;
             }
-          } else if (hypothetical_node.HasChangedTopology()) {
+          } else if (hypothetical_node.HasChangedTopology()
+                     and node_id != spr.GetMoveSource().GetId()
+                     and node_id != spr.GetMoveTarget().GetId()) {
             const auto& current_leaf_sets =
                 merge_.GetResultNodeLabels()
                     .at(sample_dag_.Get(hypothetical_node.GetOld().GetId())
@@ -614,26 +576,12 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
         for (auto node_id : fragment.first) {
           auto hypothetical_node = spr.Get(node_id);
           if (hypothetical_node.IsMoveNew()) {
-            const auto& current_leaf_sets = clades_union(
-                merge_.GetResultNodeLabels()
-                    .at(sample_dag_.Get(spr.GetMoveSource().GetOld().GetId())
-                            .GetOriginalId()
-                            .value)
-                    .GetLeafSet()
-                    ->GetClades(),
-                merge_.GetResultNodeLabels()
-                    .at(sample_dag_.Get(spr.GetMoveTarget().GetOld().GetId())
-                            .GetOriginalId()
-                            .value)
-                    .GetLeafSet()
-                    ->GetClades());
-            if (not(merge_.ContainsLeafset(
-                        clades_difference(current_leaf_sets, src_leaf_set)) and
-                    merge_.ContainsLeafset(
-                        clades_difference(current_leaf_sets, dst_leaf_set)))) {
+            if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
               ++node_id_map_count;
             }
-          } else if (hypothetical_node.HasChangedTopology()) {
+          } else if (hypothetical_node.HasChangedTopology()
+                     and node_id != spr.GetMoveSource().GetId()
+                     and node_id != spr.GetMoveTarget().GetId()) {
             const auto& current_leaf_sets =
                 merge_.GetResultNodeLabels()
                     .at(sample_dag_.Get(hypothetical_node.GetOld().GetId())
