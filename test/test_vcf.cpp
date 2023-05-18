@@ -8,7 +8,7 @@ static void test_vcf() {
   auto orig_state = MakeOriginalState(file);
   auto dag_storage = AddMATConversion(MakeSampleDAG());
   MAT::Tree tree;
-  dag_storage.View().BuildMAT(tree); 
+  dag_storage.View().BuildMAT(tree);
   reassign_states(tree, orig_state);
 
   // for (auto i : file.GetSamples()) {
@@ -30,5 +30,4 @@ static void test_vcf() {
   // }
 }
 
-[[maybe_unused]] static const auto test_added0 =
-    add_test({[] { test_vcf(); }, "VCF"});
+[[maybe_unused]] static const auto test_added0 = add_test({[] { test_vcf(); }, "VCF"});

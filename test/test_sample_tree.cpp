@@ -40,8 +40,8 @@ static void test_sample_tree(std::string_view path) {
 #endif
   Benchmark bench;
   bench.start();
-  Merge<MADAG> merge{dag.View().GetReferenceSequence()};
-  merge.AddDAGs({dag.View()});
+  Merge merge{dag.View().GetReferenceSequence()};
+  merge.AddDAGs(std::vector{dag.View()});
   merge.ComputeResultEdgeMutations();
   SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
   std::ignore = weight.SampleTree({});

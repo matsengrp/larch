@@ -1,27 +1,24 @@
 #include <mutex>
 
-template <typename DAG>
-Merge<DAG>::Merge(std::string_view reference_sequence) {
+Merge::Merge(std::string_view reference_sequence) {
   ResultDAG().SetReferenceSequence(reference_sequence);
 }
 
-template <typename DAG>
-void Merge<DAG>::AddDAGs(const std::vector<DAG>& dags) {
+template <typename DAGSRange>
+void Merge::AddDAGs(const DAGSRange& dags) {
   for (auto dag : dags) {
     dag.AssertUA();
   }
-  std::vector<size_t> dag_idxs;
-  dag_idxs.resize(dags.size());
-  std::iota(dag_idxs.begin(), dag_idxs.end(), trees_.size());
 
-  for (DAG i : dags) {
-    trees_.emplace_back(i);
-  }
-  tree_labels_.resize(trees_.size());
+  std::vector<size_t> idxs;
+  idxs.resize(dags.size());
+  std::iota(idxs.begin(), idxs.end(), 0);
+  std::vector<std::vector<NodeLabel>> dags_labels;
+  dags_labels.resize(dags.size());
 
-  tbb::parallel_for_each(dag_idxs.begin(), dag_idxs.end(), [&](size_t dag_idx) {
-    DAG dag = trees_.at(dag_idx);
-    std::vector<NodeLabel>& labels = tree_labels_.at(dag_idx);
+  tbb::parallel_for_each(idxs, [&](size_t i) {
+    auto& dag = dags.at(i);
+    auto& labels = dags_labels.at(i);
     labels.resize(dag.GetNodesCount());
     for (size_t node_idx = 0; node_idx < dag.GetNodesCount(); ++node_idx) {
       auto cg_iter = ResultDAG().AddDeduplicated(
@@ -30,19 +27,17 @@ void Merge<DAG>::AddDAGs(const std::vector<DAG>& dags) {
     }
   });
 
-  ComputeLeafSets(dag_idxs);
-  MergeTrees(dag_idxs);
+  ComputeLeafSets(dags, dags_labels);
+  MergeTrees(dags, dags_labels);
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
   ResultDAG().BuildConnections();
 }
 
-template <typename DAG>
 template <typename D, typename N>
-void Merge<DAG>::AddDAG(D dag, N below) {
+void Merge::AddDAG(D dag, N below) {
   dag.AssertUA();
-  tree_labels_.emplace_back(std::vector<NodeLabel>{});
-  std::vector<NodeLabel>& labels = tree_labels_.back();
+  std::vector<NodeLabel> labels;
   const bool is_subtree = [=] {
     if constexpr (std::is_same_v<N, std::nullopt_t>) {
       return false;
@@ -139,10 +134,9 @@ void Merge<DAG>::AddDAG(D dag, N below) {
   ResultDAG().BuildConnections();
 }
 
-template <typename DAG>
 template <typename D>
-void Merge<DAG>::AddFragment(D dag, const std::vector<NodeId>& nodes,
-                             const std::vector<EdgeId>& edges) {
+void Merge::AddFragment(D dag, const std::vector<NodeId>& nodes,
+                        const std::vector<EdgeId>& edges) {
   // std::vector<NodeId> leafs =
   //     dag.GetLeafs() | Transform::GetId() | ranges::to<std::vector>();
   // leafs |= ranges::actions::sort(std::less<NodeId>());
@@ -231,28 +225,19 @@ void Merge<DAG>::AddFragment(D dag, const std::vector<NodeId>& nodes,
   ComputeResultEdgeMutations();
 }
 
-template <typename DAG>
-MergeDAG Merge<DAG>::GetResult() const {
-  return result_dag_storage_.View();
-}
+MergeDAG Merge::GetResult() const { return result_dag_storage_.View(); }
 
-template <typename DAG>
-MutableMergeDAG Merge<DAG>::ResultDAG() {
-  return result_dag_storage_.View();
-}
+MutableMergeDAG Merge::ResultDAG() { return result_dag_storage_.View(); }
 
-template <typename DAG>
-const std::unordered_map<NodeLabel, NodeId>& Merge<DAG>::GetResultNodes() const {
+const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
   return result_nodes_;
 }
 
-template <typename DAG>
-const std::vector<NodeLabel>& Merge<DAG>::GetResultNodeLabels() const {
+const std::vector<NodeLabel>& Merge::GetResultNodeLabels() const {
   return result_node_labels_;
 }
 
-template <typename DAG>
-void Merge<DAG>::ComputeResultEdgeMutations() {
+void Merge::ComputeResultEdgeMutations() {
   for (auto& [label, edge_id] : result_edges_) {
     Assert(label.GetParent().GetCompactGenome());
     Assert(label.GetChild().GetCompactGenome());
@@ -263,31 +248,32 @@ void Merge<DAG>::ComputeResultEdgeMutations() {
   }
 }
 
-template <typename DAG>
-bool Merge<DAG>::ContainsLeafset(const LeafSet& leafset) const {
+bool Merge::ContainsLeafset(const LeafSet& leafset) const {
   return all_leaf_sets_.find(leafset) != all_leaf_sets_.end();
 }
 
-template <typename DAG>
-void Merge<DAG>::ComputeLeafSets(const std::vector<size_t>& tree_idxs) {
-  tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    DAG tree = trees_.at(tree_idx);
-    std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-    std::vector<LeafSet> computed_ls = LeafSet::ComputeLeafSets(tree, labels);
-    for (size_t node_idx = 0; node_idx < tree.GetNodesCount(); ++node_idx) {
+template <typename DAGSRange, typename LabelsRange>
+void Merge::ComputeLeafSets(const DAGSRange& dags, LabelsRange& dags_labels) {
+  std::vector<size_t> idxs;
+  idxs.resize(dags.size());
+  std::iota(idxs.begin(), idxs.end(), 0);
+  tbb::parallel_for_each(idxs, [&](size_t i) {
+    auto& dag = dags.at(i);
+    std::vector<NodeLabel>& labels = dags_labels.at(i);
+    std::vector<LeafSet> computed_ls = LeafSet::ComputeLeafSets(dag, labels);
+    for (size_t node_idx = 0; node_idx < dag.GetNodesCount(); ++node_idx) {
       auto ls_iter = all_leaf_sets_.insert(std::move(computed_ls.at(node_idx)));
       labels.at(node_idx).SetLeafSet(std::addressof(*ls_iter.first));
     }
   });
 }
 
-template <typename DAG>
-void Merge<DAG>::MergeTrees(const std::vector<size_t>& tree_idxs) {
+template <typename DAGSRange, typename LabelsRange>
+void Merge::MergeTrees(const DAGSRange& dags, const LabelsRange& dags_labels) {
   NodeId node_id{ResultDAG().GetNodesCount()};
   std::mutex mtx;
-  tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-    for (auto label : labels) {
+  tbb::parallel_for_each(dags_labels.begin(), dags_labels.end(), [&](auto& i) {
+    for (auto& label : i) {
       std::unique_lock<std::mutex> lock{mtx};
       if (result_nodes_.try_emplace(label, node_id).second) {
         GetOrInsert(result_node_labels_, node_id) = label;
@@ -296,10 +282,13 @@ void Merge<DAG>::MergeTrees(const std::vector<size_t>& tree_idxs) {
     }
   });
   tbb::concurrent_vector<EdgeLabel> added_edges;
-  tbb::parallel_for_each(tree_idxs.begin(), tree_idxs.end(), [&](size_t tree_idx) {
-    DAG tree = trees_.at(tree_idx);
-    const std::vector<NodeLabel>& labels = tree_labels_.at(tree_idx);
-    for (Edge edge : tree.GetEdges()) {
+  std::vector<size_t> idxs;
+  idxs.resize(dags.size());
+  std::iota(idxs.begin(), idxs.end(), 0);
+  tbb::parallel_for_each(idxs, [&](size_t idx) {
+    auto& dag = dags.at(idx);
+    const std::vector<NodeLabel>& labels = dags_labels.at(idx);
+    for (auto edge : dag.GetEdges()) {
       const auto& parent_label = labels.at(edge.GetParentId().value);
       const auto& child_label = labels.at(edge.GetChildId().value);
       auto ins = result_edges_.insert({{parent_label, child_label}, {}});

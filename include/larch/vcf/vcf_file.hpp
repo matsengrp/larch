@@ -31,9 +31,9 @@ file::ptr make_file(std::string_view path, std::string_view mode) {
   return file::make<::hts_open>(std::string{path}.c_str(), std::string{mode}.c_str());
 }
 
-header::ptr make_header(const file::ptr& file) {
-  Assert(file);
-  return header::make<::bcf_hdr_read>(file.get());
+header::ptr make_header(const file::ptr& f) {
+  Assert(f);
+  return header::make<::bcf_hdr_read>(f.get());
 }
 
 record::ptr make_record() { return record::make<::bcf_init>(); }

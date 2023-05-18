@@ -81,7 +81,7 @@ static void test_write_protobuf() {
   treedag.View().RecomputeEdgeMutations();
   compare_treedags(treedag.View(), sample_tree.View());
 
-  Merge<MADAG> merge{treedag.View().GetReferenceSequence()};
+  Merge merge{treedag.View().GetReferenceSequence()};
   merge.AddDAG(treedag.View());
   merge.AddDAG(sample_tree.View());
   merge.ComputeResultEdgeMutations();

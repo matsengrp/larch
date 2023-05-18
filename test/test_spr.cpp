@@ -94,7 +94,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
-  Merge<MADAG> merge{input_dag.GetReferenceSequence()};
+  Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAG(input_dag);
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{})), MAT::Tree>>
       optimized_dags;
@@ -119,7 +119,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
 
 template <typename SampleDAG>
 struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback {
-  Single_Move_Callback_With_Hypothetical_Tree(Merge<MADAG>& merge, SampleDAG sample)
+  Single_Move_Callback_With_Hypothetical_Tree(Merge& merge, SampleDAG sample)
       : merge_{merge}, sample_{sample}, approved_a_move_{false} {}
 
   bool operator()(Profitable_Moves& move, int /*best_score_change*/,
@@ -169,7 +169,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
   void OnReassignedStates(const MAT::Tree&) {}
 
-  Merge<MADAG>& merge_;
+  Merge& merge_;
   SampleDAG sample_;
   std::mutex mutex_;
   MAT::Tree* sample_mat_ = nullptr;
@@ -181,7 +181,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   // this test takes a tree and uses matOptimize to apply a single move.
 
-  Merge<MADAG> dag_altered_in_callback{tree_shaped_dag.View().GetReferenceSequence()};
+  Merge dag_altered_in_callback{tree_shaped_dag.View().GetReferenceSequence()};
   dag_altered_in_callback.AddDAG(tree_shaped_dag.View());
   dag_altered_in_callback.ComputeResultEdgeMutations();
 
@@ -201,7 +201,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
       sample.View(), single_move_callback, single_move_callback, single_move_callback);
 
   optimized_dag.View().RecomputeCompactGenomes();
-  Merge<MADAG> two_tree_dag{tree_shaped_dag.View().GetReferenceSequence()};
+  Merge two_tree_dag{tree_shaped_dag.View().GetReferenceSequence()};
   two_tree_dag.AddDAG(sample.View());
   two_tree_dag.AddDAG(optimized_dag.View());
 

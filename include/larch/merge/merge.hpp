@@ -34,11 +34,8 @@ using MergeDAGStorage =
 using MergeDAG = DAGView<const MergeDAGStorage>;
 using MutableMergeDAG = DAGView<MergeDAGStorage>;
 
-template <typename DAG>
 class Merge {
  public:
-  using Node = typename DAG::NodeView;
-  using Edge = typename DAG::EdgeView;
   /**
    * Construct a new Merge object, with the common reference sequence for all input
    * DAGs that will be merged later via the AddDAGs() method. The reference sequence is
@@ -59,7 +56,8 @@ class Merge {
    * Otherwise the compact genomes stored in the DAGs will be used, and will be moved
    * into the Merge object storage to avoid duplication.
    */
-  inline void AddDAGs(const std::vector<DAG>& dags);
+  template <typename DAGSRange>
+  inline void AddDAGs(const DAGSRange& dags);
 
   template <typename D, typename N = std::nullopt_t>
   void AddDAG(D dag, N below = std::nullopt);
@@ -92,19 +90,14 @@ class Merge {
  private:
   inline MutableMergeDAG ResultDAG();
 
-  inline void ComputeLeafSets(const std::vector<size_t>& tree_idxs);
+  template <typename DAGSRange, typename LabelsRange>
+  void ComputeLeafSets(const DAGSRange& dags, LabelsRange& labels);
 
-  inline void MergeTrees(const std::vector<size_t>& tree_idxs);
-
-  // Vector of externally owned input DAGs.
-  std::vector<DAG> trees_;
+  template <typename DAGSRange, typename LabelsRange>
+  void MergeTrees(const DAGSRange& dags, const LabelsRange& labels);
 
   // Every unique node leaf set, found among all input DAGs.
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
-
-  // Node labels for all input DAGs. Outer vector is indexed by input tree idx, inner
-  // vector is indexed by node id.
-  std::vector<std::vector<NodeLabel>> tree_labels_;
 
   // Node ids of the resulting DAG's nodes.
   std::unordered_map<NodeLabel, NodeId> result_nodes_;

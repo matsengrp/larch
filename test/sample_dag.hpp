@@ -46,4 +46,3 @@ static auto MakeSampleDAG() {
   dag.RecomputeCompactGenomes();
   return input_storage;
 }
-

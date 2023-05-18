@@ -75,10 +75,10 @@ std::vector<std::vector<const CompactGenome*>> clades_difference(
 // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
 template <typename SampleDAG>
 struct Larch_Move_Found_Callback : public Move_Found_Callback {
-  Larch_Move_Found_Callback(const Merge<MADAG>& merge, SampleDAG sample)
+  Larch_Move_Found_Callback(const Merge& merge, SampleDAG sample)
       : merge_{merge}, sample_{sample}, move_score_coeffs_{1, 1} {}
   Larch_Move_Found_Callback(
-      const Merge<MADAG>& merge, SampleDAG sample,
+      const Merge& merge, SampleDAG sample,
       std::pair<int, int> move_score_coeffs)  // NOLINT(modernize-pass-by-value)
       : merge_{merge}, sample_{sample}, move_score_coeffs_{move_score_coeffs} {}
   bool operator()(Profitable_Moves& move, int /* best_score_change */,
@@ -148,7 +148,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     return sample_.GetNodeFromMAT(node).GetOriginalId();
   }
 
-  const Merge<MADAG>& merge_;
+  const Merge& merge_;
   SampleDAG sample_;
   const std::pair<int, int> move_score_coeffs_;
   std::map<MATNodePtr, NodeId> node_id_map_;
@@ -163,8 +163,8 @@ static void test_matOptimize(std::string_view input_dag_path,
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
   input_dag_storage.View().RecomputeCompactGenomes();
   MADAG input_dag = input_dag_storage.View();
-  Merge<MADAG> merge{input_dag.GetReferenceSequence()};
-  merge.AddDAGs({input_dag});
+  Merge merge{input_dag.GetReferenceSequence()};
+  merge.AddDAGs(std::vector{input_dag});
   std::vector<decltype(AddMappedNodes(AddMATConversion(MADAGStorage{})))>
       optimized_dags;
 

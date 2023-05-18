@@ -24,7 +24,7 @@ static void test_protobuf(const std::string& correct_path,
   MADAGStorage correct_result = LoadDAGFromJson(correct_path);
   correct_result.View().RecomputeEdgeMutations();
 
-  Merge<MADAG> merge(correct_result.View().GetReferenceSequence());
+  Merge merge(correct_result.View().GetReferenceSequence());
   merge.AddDAGs(tree_views);
 
   assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
@@ -98,7 +98,7 @@ static void test_case_20d() {
   }
 
   Benchmark merge_time;
-  Merge<MADAG> merge(correct_result.View().GetReferenceSequence());
+  Merge merge(correct_result.View().GetReferenceSequence());
   merge_time.start();
   merge.AddDAGs(tree_views);
   merge_time.stop();
@@ -132,7 +132,7 @@ static void test_add_trees() {
   MADAGStorage correct_result = LoadDAGFromJson(correct_path);
   correct_result.View().RecomputeEdgeMutations();
 
-  Merge<MADAG> merge(correct_result.View().GetReferenceSequence());
+  Merge merge(correct_result.View().GetReferenceSequence());
   std::vector<MADAG> tree_views1;
   for (auto& i : trees1) {
     tree_views1.emplace_back(i);
@@ -160,7 +160,7 @@ static void test_subtree() {
 
   MADAGStorage correct_result = LoadDAGFromJson(correct_path);
   correct_result.View().RecomputeEdgeMutations();
-  Merge<MADAG> merge(correct_result.View().GetReferenceSequence());
+  Merge merge(correct_result.View().GetReferenceSequence());
 
   std::vector<MADAGStorage> trees;
   for (auto& path : paths) {
