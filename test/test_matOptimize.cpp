@@ -161,7 +161,7 @@ static void test_matOptimize(std::string_view input_dag_path,
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
   MADAGStorage input_dag_storage =
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
-  input_dag_storage.View().RecomputeCompactGenomes();
+  input_dag_storage.View().RecomputeCompactGenomes(true);
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs({input_dag});
@@ -187,7 +187,7 @@ static void test_matOptimize(std::string_view input_dag_path,
     auto radius_callback = [&](MAT::Tree& tree) -> void {
       auto temp_result = AddMappedNodes(AddMATConversion(MADAGStorage{}));
       temp_result.View().BuildFromMAT(tree, merge.GetResult().GetReferenceSequence());
-      temp_result.View().RecomputeCompactGenomes();
+      temp_result.View().RecomputeCompactGenomes(true);
       optimized_dags.push_back(std::move(temp_result));
       auto result = optimized_dags.back().View();
       std::map<MATNodePtr, NodeId> full_map = [&] {

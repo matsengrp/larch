@@ -27,11 +27,34 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SetReferenceSequence(
 }
 
 template <typename CRTP, typename Tag>
+void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
+    SetLeafCompactGenomesFromSequenceMap(
+        const std::unordered_map<NodeId, std::string>& leaf_sequence_map) const {
+  auto dag = static_cast<const CRTP&>(*this);
+  using Node = typename decltype(dag)::NodeView;
+
+  auto ref_seq = dag.GetReferenceSequence();
+  auto ComputeCGFromSequence = [&dag, &ref_seq](const std::string& leaf_seq,
+                                                Node for_node) {
+    CompactGenome new_cg(leaf_seq, ref_seq);
+    for_node = std::move(new_cg);
+  };
+
+  for (auto node : dag.GetNodes()) {
+    if (leaf_sequence_map.find(node.GetId()) != leaf_sequence_map.end()) {
+      auto& leaf_seq = leaf_sequence_map.find(node.GetId())->second;
+      ComputeCGFromSequence(leaf_seq, node);
+    }
+  }
+}
+
+template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::AddUA(
     const EdgeMutations& mutations_at_root) const {
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
   using Edge = typename decltype(dag)::EdgeView;
+
   Assert(not dag.HaveUA());
   Node root = dag.GetRoot();
   Node ua_node = dag.AppendNode();
@@ -42,7 +65,8 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::AddUA(
 }
 
 template <typename CRTP, typename Tag>
-void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes() const {
+void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
+    bool recompute_leaves) const {
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
   using Edge = typename decltype(dag)::EdgeView;
@@ -64,11 +88,16 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes()
     const CompactGenome& parent = new_cgs.at(edge.GetParentId().value);
     compact_genome.AddParentEdge(mutations, parent, dag.GetReferenceSequence());
   };
+
   for (Node node : dag.GetNodes()) {
-    ComputeCG(ComputeCG, node);
+    if (recompute_leaves || !node.IsLeaf()) {
+      ComputeCG(ComputeCG, node);
+    }
   }
   for (Node node : dag.GetNodes()) {
-    node = std::move(new_cgs.at(node.GetId().value));
+    if (recompute_leaves || !node.IsLeaf()) {
+      node = std::move(new_cgs.at(node.GetId().value));
+    }
   }
   std::unordered_map<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {

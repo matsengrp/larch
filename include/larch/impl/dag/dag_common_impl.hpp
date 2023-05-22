@@ -12,16 +12,29 @@ const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* featur
   return static_cast<const CRTP&>(*feature).Const().template GetFeatureStorage<Tag>();
 }
 
+std::ostream& operator<<(std::ostream& os, const NodeId node_id) {
+  os << "NodeId::" << node_id.value;
+  return os;
+}
 bool operator==(NodeId lhs, NodeId rhs) { return lhs.value == rhs.value; }
 bool operator!=(NodeId lhs, NodeId rhs) { return lhs.value != rhs.value; }
 bool operator<(NodeId lhs, NodeId rhs) { return lhs.value < rhs.value; }
+
 size_t std::hash<NodeId>::operator()(NodeId id) const noexcept { return id.value; }
 
+std::ostream& operator<<(std::ostream& os, const EdgeId edge_id) {
+  os << "EdgeId::" << edge_id.value;
+  return os;
+}
 bool operator==(EdgeId lhs, EdgeId rhs) { return lhs.value == rhs.value; }
 bool operator!=(EdgeId lhs, EdgeId rhs) { return lhs.value != rhs.value; }
 bool operator<(EdgeId lhs, EdgeId rhs) { return lhs.value < rhs.value; }
 size_t std::hash<EdgeId>::operator()(EdgeId id) const noexcept { return id.value; }
 
+std::ostream& operator<<(std::ostream& os, const CladeIdx clade_id) {
+  os << "CladeId::" << clade_id.value;
+  return os;
+}
 bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs.value == rhs.value; }
 bool operator!=(CladeIdx lhs, CladeIdx rhs) { return lhs.value != rhs.value; }
 bool operator<(CladeIdx lhs, CladeIdx rhs) { return lhs.value < rhs.value; }

@@ -74,8 +74,8 @@ static void test_write_protobuf() {
   StoreTreeToProtobuf(sample_tree.View(), "test_write_protobuf.pb");
   compare_treedags(treedag.View(), sample_tree.View());
 
-  sample_tree.View().RecomputeCompactGenomes();
-  treedag.View().RecomputeCompactGenomes();
+  sample_tree.View().RecomputeCompactGenomes(true);
+  treedag.View().RecomputeCompactGenomes(true);
   compare_treedags(treedag.View(), sample_tree.View());
 
   treedag.View().RecomputeEdgeMutations();
