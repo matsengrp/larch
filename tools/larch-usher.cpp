@@ -152,11 +152,11 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
       auto fragment = spr.GetFragment();
       if (move_score_coeffs_.first != 0) {
         auto src_leaf_set = merge_.GetResultNodeLabels()
-                                .at(spr.GetMoveSource().GetId().value)
+                                .at(sample_dag_.Get(spr.GetMoveSource().GetId()).GetOriginalId().value)
                                 .GetLeafSet()
                                 ->GetClades();
         auto dst_leaf_set = merge_.GetResultNodeLabels()
-                                .at(spr.GetMoveTarget().GetId().value)
+                                .at(sample_dag_.Get(spr.GetMoveTarget().GetId()).GetOriginalId().value)
                                 .GetLeafSet()
                                 ->GetClades();
         for (auto node_id : fragment.first) {
