@@ -84,6 +84,8 @@ class Merge {
 
   inline NodeId GetResultNodeFromTree(size_t tree_idx, NodeId node_id) const;
 
+  size_t NumberOfMergedTrees() const;
+
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
    */

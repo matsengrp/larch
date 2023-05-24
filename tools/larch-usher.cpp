@@ -332,12 +332,12 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
       if (move_score_coeffs_.first != 0) {
         auto src_leaf_set =
             merge_.GetResultNodeLabels()
-                .at(merge_.GetResultNodeFromTree(-1, spr.GetMoveSource().GetId()).value)
+                .at(merge_.GetResultNodeFromTree(current_index_of_sample_dag_in_merge, spr.GetMoveSource().GetId()).value)
                 .GetLeafSet()
                 ->GetClades();
         auto dst_leaf_set =
             merge_.GetResultNodeLabels()
-                .at(merge_.GetResultNodeFromTree(-1, spr.GetMoveTarget().GetId()).value)
+                .at(merge_.GetResultNodeFromTree(current_index_of_sample_dag_in_merge, spr.GetMoveTarget().GetId()).value)
                 .GetLeafSet()
                 ->GetClades();
         for (auto node_id : fragment.first) {
@@ -351,7 +351,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
                      and node_id != spr.GetMoveTarget().GetId()) {
             const auto& current_leaf_sets =
                 merge_.GetResultNodeLabels()
-                    .at(merge_.GetResultNodeFromTree(-1, hypothetical_node.GetOld().GetId()).value)
+                    .at(merge_.GetResultNodeFromTree(current_index_of_sample_dag_in_merge, hypothetical_node.GetOld().GetId()).value)
                     .GetLeafSet()
                     ->GetClades();
             if (not(merge_.ContainsLeafset(
@@ -384,6 +384,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
       merge_.AddDAG(storage.View());
       sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
+      current_index_of_sample_dag_in_merge = merge_.NumberOfMergedTrees();
     }
   }
 
@@ -406,6 +407,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
+  size_t current_index_of_sample_dag_in_merge = 0;
 };
 
 template <typename DAG, typename MergeT>

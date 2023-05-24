@@ -334,3 +334,8 @@ NodeId Merge<DAG>::GetResultNodeFromTree(size_t tree_idx, NodeId node_id) const 
   }
   return GetResultNodes().at(tree_labels_.at(tree_idx).at(node_id.value));
 }
+
+template <typename DAG>
+size_t Merge<DAG>::NumberOfMergedTrees() const {
+  return tree_labels_.size();
+}
