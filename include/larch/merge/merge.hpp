@@ -82,6 +82,8 @@ class Merge {
 
   inline const std::vector<NodeLabel>& GetResultNodeLabels() const;
 
+  inline NodeId GetResultNodeFromTree(size_t tree_idx, NodeId node_id) const;
+
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
    */

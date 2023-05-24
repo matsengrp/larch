@@ -326,3 +326,11 @@ void Merge<DAG>::MergeTrees(const std::vector<size_t>& tree_idxs) {
     edge_id.value++;
   }
 }
+
+template <typename DAG>
+NodeId Merge<DAG>::GetResultNodeFromTree(size_t tree_idx, NodeId node_id) const {
+  if (tree_idx < 0 or tree_idx >= tree_labels_.size()) {
+    tree_idx = tree_labels_.size() - 1;
+  }
+  return GetResultNodes().at(tree_labels_.at(tree_idx).at(node_id.value));
+}
