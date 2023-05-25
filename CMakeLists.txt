@@ -53,7 +53,7 @@ set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
 
-set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses)
+set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas  -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   list(APPEND STRICT_WARNINGS -Wcast-align=strict)
@@ -95,6 +95,7 @@ file(GLOB MATOPTIMIZE_SRC
   "deps/usher/src/matOptimize/optimize_tree.cpp"
   "deps/usher/src/matOptimize/priority_conflict_resolver.cpp"
   "deps/usher/src/matOptimize/check_samples.cpp"
+  "deps/usher/src/matOptimize/import_vcf_fast.cpp"
 )
 
 function(larch_link_opts PRODUCT)

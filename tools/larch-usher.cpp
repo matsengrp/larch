@@ -707,6 +707,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string matoptimize_path = "matOptimize";
   std::string logfile_path = "optimization_log";
   std::string refseq_path;
+  std::string vcf_path;
   std::string callback_config = "best-moves";
   bool sample_best_tree = true;
   size_t count = 1;
@@ -788,6 +789,12 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         Fail();
       }
       refseq_path = *params.begin();
+    } else if (name == "-v" or name == "--VCF-file") {
+      if (params.empty()) {
+        std::cerr << "Mutation annotated tree refsequence fasta path not specified.\n";
+        Fail();
+      }
+      vcf_path = *params.begin();
     } else if (name == "--callback-option") {
       if (params.empty()) {
         std::cerr << "Callback configuration not specified.\n";
@@ -822,7 +829,9 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   MADAGStorage input_dag =
       refseq_path.empty()
           ? LoadDAGFromProtobuf(input_dag_path)
-          : LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path));
+          : vcf_path.empty()
+          ? LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path))
+          : LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path), vcf_path);
 
   input_dag.View().RecomputeCompactGenomes();
   Merge<MADAG> merge{input_dag.View().GetReferenceSequence()};

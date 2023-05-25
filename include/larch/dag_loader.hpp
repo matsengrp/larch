@@ -14,6 +14,10 @@
 [[nodiscard]] MADAGStorage LoadTreeFromProtobuf(std::string_view path,
                                                 std::string_view reference_sequence);
 
+[[nodiscard]] MADAGStorage LoadTreeFromProtobuf(std::string_view path,
+                                                std::string_view reference_sequence,
+                                                std::string_view vcf_path);
+
 [[nodiscard]] MADAGStorage LoadDAGFromJson(std::string_view path);
 
 [[nodiscard]] std::string LoadReferenceSequence(std::string_view path);
