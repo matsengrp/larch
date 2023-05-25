@@ -192,9 +192,9 @@ static void test_matOptimize(std::string_view input_dag_path,
       auto result = optimized_dags.back().View();
       std::map<MATNodePtr, NodeId> full_map = [&] {
         if (subtrees) {
-          merge.AddDAG(result, merge.GetResult().Get(chosen_node));
+          merge.AddDAGs(std::vector{result}, merge.GetResult().Get(chosen_node));
         } else {
-          merge.AddDAG(result);
+          merge.AddDAGs(std::vector{result});
         }
         // mat_node_map is not the identity, so all pairs in mat_node_map must be used
         // to build remaped

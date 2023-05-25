@@ -169,7 +169,9 @@ static void test_subtree() {
   }
 
   for (auto& tree : trees) {
-    merge.AddDAG(tree.View());
+    Fragment frag{tree.View(), {}, {}};
+    merge.AddDAGs(std::vector{frag});
+    merge.AddDAGs(std::vector{tree.View()});
   }
 
   assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),

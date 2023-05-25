@@ -34,6 +34,42 @@ using MergeDAGStorage =
 using MergeDAG = DAGView<const MergeDAGStorage>;
 using MutableMergeDAG = DAGView<MergeDAGStorage>;
 
+template <typename DAG>
+class Fragment {
+ public:
+  template <typename Id, typename Feature>
+  static const bool contains_element_feature =
+      DAG::template contains_element_feature<Id, Feature>;
+
+  Fragment(DAG dag, std::vector<NodeId>&& nodes, std::vector<EdgeId> edges)
+      : dag_{dag}, nodes_{nodes}, edges_{edges} {}
+
+  void AssertUA() const { dag_.AssertUA(); }
+
+  size_t GetNodesCount() const { return nodes_.size(); }
+
+  size_t GetEdgesCount() const { return edges_.size(); }
+
+  auto Get(NodeId id) const { return dag_.Get(id); }
+
+  auto Get(EdgeId id) const { return dag_.Get(id); }
+
+  auto GetNodes() const {
+    return ranges::views::all(nodes_) | Transform::ToNodes(dag_);
+  }
+
+  auto GetEdges() const {
+    return ranges::views::all(edges_) | Transform::ToEdges(dag_);
+  }
+
+  auto GetRoot() const { return dag_.GetRoot(); }
+
+ private:
+  DAG dag_;
+  const std::vector<NodeId> nodes_;
+  const std::vector<EdgeId> edges_;
+};
+
 class Merge {
  public:
   /**
@@ -57,14 +93,7 @@ class Merge {
    * into the Merge object storage to avoid duplication.
    */
   template <typename DAGSRange>
-  inline void AddDAGs(const DAGSRange& dags);
-
-  template <typename D, typename N = std::nullopt_t>
-  void AddDAG(D dag, N below = std::nullopt);
-
-  template <typename D>
-  void AddFragment(D dag, const std::vector<NodeId>& nodes,
-                   const std::vector<EdgeId>& edges);
+  inline void AddDAGs(const DAGSRange& dags, NodeId below = {});
 
   /**
    * Get the DAG resulting from merge
@@ -90,11 +119,13 @@ class Merge {
  private:
   inline MutableMergeDAG ResultDAG();
 
-  template <typename DAGSRange, typename LabelsRange>
-  void ComputeLeafSets(const DAGSRange& dags, LabelsRange& labels);
+  template <typename DAGSRange>
+  void ComputeLeafSets(const DAGSRange& dags,
+                       std::vector<std::vector<NodeLabel>>& dags_labels, NodeId below);
 
-  template <typename DAGSRange, typename LabelsRange>
-  void MergeTrees(const DAGSRange& dags, const LabelsRange& labels);
+  template <typename DAGSRange>
+  void MergeDAGs(const DAGSRange& dags,
+                 const std::vector<std::vector<NodeLabel>>& dags_labels, NodeId below);
 
   // Every unique node leaf set, found among all input DAGs.
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;

@@ -72,6 +72,7 @@ std::string LeafSet::ToString() const {
   std::string result = "{";
   for (auto& clade : GetClades()) {
     for (auto* cg : clade) {
+      Assert(cg != nullptr);
       result += cg->ToString();
       result += ", ";
     }

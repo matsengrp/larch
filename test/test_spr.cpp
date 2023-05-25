@@ -42,7 +42,10 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       auto fragment = spr.GetFragment();
 
       std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddFragment(spr, fragment.first, fragment.second);
+      auto frag =
+          Fragment{spr.Const(), std::move(fragment.first), std::move(fragment.second)};
+      merge_.AddDAGs(std::vector{frag});
+      // merge_.AddFragment(spr, fragment.first, fragment.second);
     } else {
       return false;
     }
@@ -55,7 +58,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     storage.View().RecomputeCompactGenomes();
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAG(storage.View());
+      merge_.AddDAGs(std::vector{storage.View()});
       sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
@@ -69,7 +72,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAG(reassigned_states_storage_.View());
+      merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
       merge_.ComputeResultEdgeMutations();
     }
   }
@@ -95,7 +98,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
-  merge.AddDAG(input_dag);
+  merge.AddDAGs(std::vector{input_dag});
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{})), MAT::Tree>>
       optimized_dags;
 
@@ -113,7 +116,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
     optimized_dags.back().first.View().RecomputeCompactGenomes();
-    merge.AddDAG(optimized_dags.back().first.View(), chosen_node);
+    merge.AddDAGs(std::vector{optimized_dags.back().first.View()}, chosen_node);
   }
 }
 
@@ -182,7 +185,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   // this test takes a tree and uses matOptimize to apply a single move.
 
   Merge dag_altered_in_callback{tree_shaped_dag.View().GetReferenceSequence()};
-  dag_altered_in_callback.AddDAG(tree_shaped_dag.View());
+  dag_altered_in_callback.AddDAGs(std::vector{tree_shaped_dag.View()});
   dag_altered_in_callback.ComputeResultEdgeMutations();
 
   // sample tree
@@ -202,8 +205,8 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
   optimized_dag.View().RecomputeCompactGenomes();
   Merge two_tree_dag{tree_shaped_dag.View().GetReferenceSequence()};
-  two_tree_dag.AddDAG(sample.View());
-  two_tree_dag.AddDAG(optimized_dag.View());
+  two_tree_dag.AddDAGs(std::vector{sample.View()});
+  two_tree_dag.AddDAGs(std::vector{optimized_dag.View()});
 
   // check topologies of the two DAGs match in feature count
   Assert(two_tree_dag.GetResult().GetNodesCount() ==

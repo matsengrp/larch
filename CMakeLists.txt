@@ -76,7 +76,7 @@ function(larch_compile_opts PRODUCT)
   target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17)
 
   if(${USE_ASAN})
-    target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover)
+    target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=address,undefined -fno-sanitize-recover)
   elseif(${USE_TSAN})
     target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=thread)
   endif()
