@@ -28,11 +28,13 @@ using MATNodePtr = MAT::Node*;
 
 struct MATConversion {
   MATNodePtr mat_node_ptr_ = nullptr;
+  bool is_condensed_ = false;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATConversion, CRTP, Tag> {
   bool HaveMATNode() const;
+  bool IsCondensed() const;
   MATNodePtr GetMATNode() const;
 };
 
@@ -44,6 +46,7 @@ struct FeatureMutableView<MATConversion, CRTP, Tag> {
   template <typename, typename>
   friend struct ExtraFeatureMutableView;
   void SetMATNode(MATNodePtr id) const;
+  void SetMATNode(MATNodePtr id, bool is_condensed) const;
 };
 
 template <>
