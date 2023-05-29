@@ -121,14 +121,6 @@ class Merge {
  private:
   inline MutableMergeDAG ResultDAG();
 
-  template <typename DAGSRange>
-  void ComputeLeafSets(const DAGSRange& dags,
-                       std::vector<std::vector<NodeLabel>>& dags_labels, NodeId below);
-
-  template <typename DAGSRange>
-  void MergeDAGs(const DAGSRange& dags,
-                 const std::vector<std::vector<NodeLabel>>& dags_labels, NodeId below);
-
   // Every unique node leaf set, found among all input DAGs.
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
 

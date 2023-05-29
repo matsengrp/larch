@@ -45,7 +45,6 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       auto frag =
           Fragment{spr.Const(), std::move(fragment.first), std::move(fragment.second)};
       merge_.AddDAGs(std::vector{frag});
-      // merge_.AddFragment(spr, fragment.first, fragment.second);
     } else {
       return false;
     }
