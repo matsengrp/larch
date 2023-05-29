@@ -41,8 +41,10 @@ class Fragment {
   static const bool contains_element_feature =
       DAG::template contains_element_feature<Id, Feature>;
 
-  Fragment(DAG dag, std::vector<NodeId>&& nodes, std::vector<EdgeId> edges)
-      : dag_{dag}, nodes_{nodes}, edges_{edges} {}
+  Fragment(DAG dag, std::vector<NodeId>&& nodes, std::vector<EdgeId>&& edges)
+      : dag_{dag},
+        nodes_{std::forward<std::vector<NodeId>>(nodes)},
+        edges_{std::forward<std::vector<EdgeId>>(edges)} {}
 
   void AssertUA() const { dag_.AssertUA(); }
 

@@ -24,14 +24,14 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     auto dag = dags.at(i).GetRoot().GetDAG();
     dag.AssertUA();
     auto& labels = dags_labels.at(i);
-    labels.reserve(dag.GetNodesCount());
+    labels.resize(dag.GetNodesCount());
     for (auto node : dag.GetNodes()) {
       if (below.value != NoId and node.IsUA()) {
         continue;
       }
-      auto cg_iter = ResultDAG().AddDeduplicated(node.GetCompactGenome().Copy());
-      labels.push_back({});
-      labels.back().SetCompactGenome(cg_iter.first);
+      auto cg_iter =
+          ResultDAG().AddDeduplicated(node.Const().GetCompactGenome().Copy());
+      labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
     }
   });
 
@@ -103,6 +103,7 @@ void Merge::MergeDAGs(const DAGSRange& dags,
   std::iota(idxs.begin(), idxs.end(), 0);
   std::mutex mtx;
   tbb::parallel_for_each(idxs, [&](size_t idx) {
+    NodeId id{0};
     for (auto& label : dags_labels.at(idx)) {
       label.AssertNonEmpty();
       auto dag = dags.at(idx);
@@ -112,18 +113,18 @@ void Merge::MergeDAGs(const DAGSRange& dags,
         GetOrInsert(result_node_labels_, node_id) = label;
         if constexpr (decltype(dag)::template contains_element_feature<NodeId,
                                                                        MappedNodes>) {
-          // dag.Get(id).SetOriginalId(node_id);
+          dag.Get(id).SetOriginalId(node_id);
         }
         ++node_id.value;
       } else {
-        // if (id.value != dag.GetNodesCount() - 1) {
-        //   if constexpr (decltype(dag)::template contains_element_feature<NodeId,
-        //                                                                  MappedNodes>)
-        //                                                                  {
-        // dag.Get(id).SetOriginalId(insert_pair.first->second);
-        // }
-        // }
+        if (id.value != dag.GetNodesCount() - 1) {
+          if constexpr (decltype(dag)::template contains_element_feature<NodeId,
+                                                                         MappedNodes>) {
+            dag.Get(id).SetOriginalId(insert_pair.first->second);
+          }
+        }
       }
+      ++id.value;
     }
   });
   tbb::concurrent_vector<EdgeLabel> added_edges;
