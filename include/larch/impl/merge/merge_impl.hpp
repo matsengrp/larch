@@ -58,6 +58,9 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     auto& labels = dags_labels.at(idx); 
     for (auto node : dag.GetNodes()) {
       auto& label = labels.at(node.GetId().value);
+      if (below.value != NoId and node.IsUA()) {
+        continue;
+      }
       Assert(not label.Empty());
       std::unique_lock<std::mutex> lock{mtx};
       auto insert_pair = result_nodes_.insert({label, node_id});
@@ -99,17 +102,17 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     }
   });
 
-  if (below.value != NoId) {
-    auto below_node = dags.at(0).Get(below);
-    EdgeLabel below_edge = {
-        result_node_labels_.at(below_node.GetFirstParent().GetParent().GetId().value),
-        dags_labels.at(0).at(
-            dags.at(0).GetRoot().GetFirstChild().GetChild().GetId().value)};
-    auto ins = result_edges_.insert({below_edge, {}});
-    if (ins.second) {
-      added_edges.push_back(below_edge);
-    }
-  }
+//  if (below.value != NoId) {
+//    auto below_node = dags.at(0).Get(below);
+//    EdgeLabel below_edge = {
+//        result_node_labels_.at(below_node.GetFirstParent().GetParent().GetId().value),
+//        dags_labels.at(0).at(
+//            dags.at(0).GetRoot().GetFirstChild().GetChild().GetId().value)};
+//    auto ins = result_edges_.insert({below_edge, {}});
+//    if (ins.second) {
+//      added_edges.push_back(below_edge);
+//    }
+//  }
 
   ResultDAG().InitializeNodes(result_nodes_.size());
   EdgeId edge_id{ResultDAG().GetEdgesCount()};
