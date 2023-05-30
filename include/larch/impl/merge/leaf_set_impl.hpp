@@ -24,6 +24,7 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
             }
           }
           clade_leafs |= ranges::actions::sort | ranges::actions::unique;
+          Assert(not clade_leafs.empty());
           clades.emplace_back(std::move(clade_leafs));
         }
         clades |= ranges::actions::sort;

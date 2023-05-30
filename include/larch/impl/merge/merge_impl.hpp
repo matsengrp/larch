@@ -25,12 +25,11 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     dag.AssertUA();
     auto& labels = dags_labels.at(i);
     labels.resize(dag.GetNodesCount());
-    for (auto node : dag.GetNodes()) {
+    for (auto node : dag.Const().GetNodes()) {
       if (below.value != NoId and node.IsUA()) {
         continue;
       }
-      auto cg_iter =
-          ResultDAG().AddDeduplicated(node.Const().GetCompactGenome().Copy());
+      auto cg_iter = ResultDAG().AddDeduplicated(node.GetCompactGenome().Copy());
       labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
     }
   });
@@ -43,9 +42,11 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
       if (below.value != NoId and node.IsUA()) {
         continue;
       }
-      auto ls_iter =
-          all_leaf_sets_.insert(std::move(computed_ls.at(node.GetId().value)));
-      labels.at(node.GetId().value).SetLeafSet(std::addressof(*ls_iter.first));
+      auto& ls = computed_ls.at(node.GetId().value);
+      auto& label = labels.at(node.GetId().value);
+      auto ls_iter = all_leaf_sets_.insert(std::move(ls));
+      label.SetLeafSet(std::addressof(*ls_iter.first));
+      Assert(not label.Empty());
     }
   });
 
@@ -53,9 +54,11 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   std::mutex mtx;
   tbb::parallel_for_each(idxs, [&](size_t idx) {
     NodeId id{0};
-    for (auto& label : dags_labels.at(idx)) {
-      label.AssertNonEmpty();
-      auto dag = dags.at(idx);
+    auto dag = dags.at(idx);
+    auto& labels = dags_labels.at(idx); 
+    for (auto node : dag.GetNodes()) {
+      auto& label = labels.at(node.GetId().value);
+      Assert(not label.Empty());
       std::unique_lock<std::mutex> lock{mtx};
       auto insert_pair = result_nodes_.insert({label, node_id});
       if (insert_pair.second) {
@@ -86,9 +89,9 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
         continue;
       }
       const auto& parent_label = labels.at(edge.GetParentId().value);
-      parent_label.AssertNonEmpty();
       const auto& child_label = labels.at(edge.GetChildId().value);
-      child_label.AssertNonEmpty();
+      Assert(not parent_label.Empty());
+      Assert(not child_label.Empty());
       auto ins = result_edges_.insert({{parent_label, child_label}, {}});
       if (ins.second) {
         added_edges.push_back({parent_label, child_label});

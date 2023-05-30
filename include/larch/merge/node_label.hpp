@@ -25,11 +25,17 @@ class NodeLabel {
 
   [[nodiscard]] inline size_t Hash() const noexcept;
 
-  inline void AssertNonEmpty() const {
-    Assert(compact_genome_ != nullptr);
-    Assert(leaf_set_ != nullptr);
-    Assert(compact_genome_ != CompactGenome::Empty());
-    Assert(leaf_set_ != LeafSet::Empty());
+  inline bool Empty() const {
+    if (compact_genome_ == nullptr or leaf_set_ == nullptr) {
+      return true;
+    }
+    if (compact_genome_ == CompactGenome::Empty() or leaf_set_ == LeafSet::Empty()) {
+      return true;
+    }
+    if (compact_genome_->empty() and leaf_set_->empty()) {
+      // return true;
+    }
+    return false;
   }
 
   inline std::string ToString() const {
