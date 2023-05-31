@@ -17,13 +17,14 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       ExtendDAGStorage<DefaultDAGStorage,
                        Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
                        Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+  using SPRType = decltype(SPRStorage(AddMATConversion(Storage{})));
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
                       nodes_with_major_allele_set_change) override {
     Assert(move.src != nullptr);
     Assert(move.dst != nullptr);
-    auto storage = [this](std::string ref_seq) {
+    SPRType storage = [this](std::string ref_seq) {
       MAT::Tree* mat = sample_mat_.load();
       Assert(mat != nullptr);
       auto mat_conv = AddMATConversion(Storage{});
@@ -33,15 +34,13 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       return SPRStorage(std::move(mat_conv));
     }(sample_dag_.GetReferenceSequence());
 
-    auto spr = storage.View();
-    spr.GetRoot().Validate(true);
+    storage.View().GetRoot().Validate(true);
 
-    if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
-      spr.GetRoot().Validate(true);
-
-      auto fragment = spr.GetFragment();
-      std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAG(fragment);
+    if (storage.View().InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
+      auto& batched_storage = *batch_storage_.push_back(std::move(storage));
+      batched_storage.View().GetRoot().Validate(true);
+      auto fragment = batched_storage.View().GetFragment();
+      batch_.push_back(std::move(fragment));
     } else {
       return false;
     }
@@ -54,6 +53,9 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     storage.View().RecomputeCompactGenomes();
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
+      merge_.AddDAGs(batch_);
+      batch_.clear();
+      batch_storage_.clear();
       merge_.AddDAGs(std::vector{storage.View()});
       sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
@@ -79,6 +81,8 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       AddMATConversion(Storage{});
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
+  tbb::concurrent_vector<SPRType> batch_storage_;
+  tbb::concurrent_vector<Fragment<decltype(std::declval<SPRType>().View())>> batch_;
 };
 
 [[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path,
@@ -237,13 +241,13 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 //      },
 //      "SPR: seedtree"});
 
-// [[maybe_unused]] static const auto test_added1 =
-//     add_test({[] {
-//                 test_spr(Load("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
-//                               "data/20D_from_fasta/refseq.txt.gz"),
-//                          3);
-//               },
-//               "SPR: tree 20D_from_fasta"});
+[[maybe_unused]] static const auto test_added1 =
+    add_test({[] {
+                test_spr(Load("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
+                              "data/20D_from_fasta/refseq.txt.gz"),
+                         3);
+              },
+              "SPR: tree 20D_from_fasta"});
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[] { test_spr(MakeSampleDAG(), 3); }, "SPR: sample"});
