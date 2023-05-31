@@ -156,7 +156,7 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   // changes, whichever is higher in the tree.
   [[nodiscard]] auto GetOldestChangedNode() const;
 
-  [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>> GetFragment() const;
+  [[nodiscard]] auto GetFragment() const;
 
   [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>>
   CollapseEmptyFragmentEdges(std::vector<NodeId> fragment_nodes,

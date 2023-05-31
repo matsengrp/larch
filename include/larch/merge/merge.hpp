@@ -34,44 +34,6 @@ using MergeDAGStorage =
 using MergeDAG = DAGView<const MergeDAGStorage>;
 using MutableMergeDAG = DAGView<MergeDAGStorage>;
 
-template <typename DAG>
-class Fragment {
- public:
-  template <typename Id, typename Feature>
-  static const bool contains_element_feature =
-      DAG::template contains_element_feature<Id, Feature>;
-
-  Fragment(DAG dag, std::vector<NodeId>&& nodes, std::vector<EdgeId>&& edges)
-      : dag_{dag},
-        nodes_{std::forward<std::vector<NodeId>>(nodes)},
-        edges_{std::forward<std::vector<EdgeId>>(edges)} {}
-
-  void AssertUA() const { dag_.AssertUA(); }
-
-  size_t GetNodesCount() const { return nodes_.size(); }
-
-  size_t GetEdgesCount() const { return edges_.size(); }
-
-  auto Get(NodeId id) const { return dag_.Get(id); }
-
-  auto Get(EdgeId id) const { return dag_.Get(id); }
-
-  auto GetNodes() const {
-    return ranges::views::all(nodes_) | Transform::ToNodes(dag_);
-  }
-
-  auto GetEdges() const {
-    return ranges::views::all(edges_) | Transform::ToEdges(dag_);
-  }
-
-  auto GetRoot() const { return dag_.GetRoot(); }
-
- private:
-  DAG dag_;
-  const std::vector<NodeId> nodes_;
-  const std::vector<EdgeId> edges_;
-};
-
 class Merge {
  public:
   /**
@@ -96,6 +58,9 @@ class Merge {
    */
   template <typename DAGSRange>
   inline void AddDAGs(const DAGSRange& dags, NodeId below = {});
+
+  template <typename DAG>
+  inline void AddDAG(DAG& dag, NodeId below = {});
 
   /**
    * Get the DAG resulting from merge

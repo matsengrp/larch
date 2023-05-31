@@ -54,27 +54,35 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   std::mutex mtx;
   tbb::parallel_for_each(idxs, [&](size_t idx) {
     NodeId id{0};
-    auto dag = dags.at(idx);
-    auto& labels = dags_labels.at(idx); 
+    auto& dag = dags.at(idx);
+    auto& labels = dags_labels.at(idx);
     for (auto node : dag.GetNodes()) {
       auto& label = labels.at(node.GetId().value);
       if (below.value != NoId and node.IsUA()) {
         continue;
       }
       Assert(not label.Empty());
-      std::unique_lock<std::mutex> lock{mtx};
-      auto insert_pair = result_nodes_.insert({label, node_id});
-      if (insert_pair.second) {
-        GetOrInsert(result_node_labels_, node_id) = label;
-        if constexpr (decltype(dag)::template contains_element_feature<NodeId,
-                                                                       MappedNodes>) {
-          dag.Get(id).SetOriginalId(node_id);
+      auto [insert_pair, orig_id] = [&] {
+        std::unique_lock<std::mutex> lock{mtx};
+        auto ins_pair = result_nodes_.insert({label, node_id});
+        if (ins_pair.second) {
+          GetOrInsert(result_node_labels_, node_id) = label;
         }
-        ++node_id.value;
+        auto result = std::make_pair(ins_pair, node_id);
+        if (ins_pair.second) {
+          ++node_id.value;
+        }
+        return result;
+      }();
+      if (insert_pair.second) {
+        if constexpr (std::decay_t<decltype(dag)>::template contains_element_feature<
+                          NodeId, MappedNodes>) {
+          dag.Get(id).SetOriginalId(orig_id);
+        }
       } else {
         if (id.value != dag.GetNodesCount() - 1) {
-          if constexpr (decltype(dag)::template contains_element_feature<NodeId,
-                                                                         MappedNodes>) {
+          if constexpr (std::decay_t<decltype(dag)>::template contains_element_feature<
+                            NodeId, MappedNodes>) {
             dag.Get(id).SetOriginalId(insert_pair.first->second);
           }
         }
@@ -102,18 +110,6 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     }
   });
 
-//  if (below.value != NoId) {
-//    auto below_node = dags.at(0).Get(below);
-//    EdgeLabel below_edge = {
-//        result_node_labels_.at(below_node.GetFirstParent().GetParent().GetId().value),
-//        dags_labels.at(0).at(
-//            dags.at(0).GetRoot().GetFirstChild().GetChild().GetId().value)};
-//    auto ins = result_edges_.insert({below_edge, {}});
-//    if (ins.second) {
-//      added_edges.push_back(below_edge);
-//    }
-//  }
-
   ResultDAG().InitializeNodes(result_nodes_.size());
   EdgeId edge_id{ResultDAG().GetEdgesCount()};
   for (auto& edge : added_edges) {
@@ -139,6 +135,30 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
   ResultDAG().BuildConnections();
   ComputeResultEdgeMutations();
+}
+
+template <typename DAG>
+void Merge::AddDAG(DAG& dag, NodeId below) {
+  if (below.value != NoId and dag.Get(below).IsUA()) {
+    below.value = NoId;
+  }
+  struct {
+    DAG& dag_;
+    size_t size() const { return 1; }
+    const auto* begin() const { return &dag_; }
+    const auto* end() const { return &dag_ + 1; }
+    const auto& at(size_t i) const {
+      Assert(i == 0);
+      return dag_;
+    }
+    auto* begin() { return &dag_; }
+    auto* end() { return &dag_ + 1; }
+    auto& at(size_t i) {
+      Assert(i == 0);
+      return dag_;
+    }
+  } dags{dag};
+  AddDAGs(dags, below);
 }
 
 MergeDAG Merge::GetResult() const { return result_dag_storage_.View(); }

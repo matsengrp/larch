@@ -40,11 +40,8 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       spr.GetRoot().Validate(true);
 
       auto fragment = spr.GetFragment();
-
       std::scoped_lock<std::mutex> lock{merge_mtx_};
-      auto frag =
-          Fragment{spr.Const(), std::move(fragment.first), std::move(fragment.second)};
-      merge_.AddDAGs(std::vector{frag});
+      merge_.AddDAG(fragment);
     } else {
       return false;
     }

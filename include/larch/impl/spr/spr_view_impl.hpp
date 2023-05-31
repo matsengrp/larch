@@ -368,8 +368,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
 }
 
 template <typename DAG, typename CRTP, typename Tag>
-std::pair<std::vector<NodeId>, std::vector<EdgeId>>
-FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
   auto& dag = static_cast<const CRTP&>(*this);
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
@@ -385,8 +384,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
-  return {collapsed.first, collapsed.second};
-  // return {result_nodes, result_edges};
+  return Fragment{dag, std::move(collapsed.first), std::move(collapsed.second)};
 }
 
 template <typename DAG, typename CRTP, typename Tag>
