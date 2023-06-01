@@ -140,6 +140,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
   return result;
 }
 
+/*
 MADAGStorage LoadTreeFromProtobuf(std::string_view path,
                                   std::string_view reference_sequence,
                                   std::string_view vcf_path) {
@@ -198,6 +199,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
   return result;
 }
+*/
 
 [[nodiscard]] nlohmann::json LoadJson(std::string_view path) {
   if (IsGzipped(path)) {

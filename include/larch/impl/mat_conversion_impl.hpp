@@ -5,8 +5,8 @@ bool FeatureConstView<MATConversion, CRTP, Tag>::HaveMATNode() const {
 }
 
 template <typename CRTP, typename Tag>
-bool FeatureConstView<MATConversion, CRTP, Tag>::IsCondensed() const {
-  return GetFeatureStorage(this).is_condensed_;
+bool FeatureConstView<MATConversion, CRTP, Tag>::IsCondensedInMAT() const {
+  return GetFeatureStorage(this).is_condensed_in_mat_;
 }
 
 template <typename CRTP, typename Tag>
@@ -26,7 +26,6 @@ MATNodePtr FeatureMutableView<MATConversion, CRTP, Tag>::GetMutableMATNode() con
 template <typename CRTP, typename Tag>
 void FeatureMutableView<MATConversion, CRTP, Tag>::SetMATNode(MATNodePtr ptr) const {
   GetFeatureStorage(this).mat_node_ptr_ = ptr;
-  GetFeatureStorage(this).is_condensed_ = false;
   auto& node = static_cast<const CRTP&>(*this);
   node.GetDAG()
       .template GetFeatureExtraStorage<NodeId, MATConversion>()
@@ -34,13 +33,17 @@ void FeatureMutableView<MATConversion, CRTP, Tag>::SetMATNode(MATNodePtr ptr) co
 }
 
 template <typename CRTP, typename Tag>
-void FeatureMutableView<MATConversion, CRTP, Tag>::SetMATNode(MATNodePtr ptr, bool is_condensed) const {
+void FeatureMutableView<MATConversion, CRTP, Tag>::SetUncondensedMATNode(MATNodePtr ptr) const {
   GetFeatureStorage(this).mat_node_ptr_ = ptr;
-  GetFeatureStorage(this).is_condensed_ = is_condensed;
+  GetFeatureStorage(this).is_condensed_in_mat_ = true;
   auto& node = static_cast<const CRTP&>(*this);
-  node.GetDAG()
-      .template GetFeatureExtraStorage<NodeId, MATConversion>()
-      .reverse_map_.insert({ptr, node.GetId()});
+
+  if (node.GetDAG().template GetFeatureExtraStorage<NodeId, MATConversion>().uncondensed_reverse_map_.Contains(ptr)) {
+node.GetDAG().template GetFeatureExtraStorage<NodeId, MATConversion>().uncondensed_reverse_map_.at(ptr).emplace_back(node.GetId());
+  } else {
+    std::vector<NodeId> nodevec{node.GetId()};
+node.GetDAG().template GetFeatureExtraStorage<NodeId, MATConversion>().uncondensed_reverse_map_.insert({ptr, nodevec});
+  }
 }
 
 template <typename CRTP>
@@ -56,6 +59,38 @@ auto ExtraFeatureConstView<MATConversion, CRTP>::GetNodeFromMAT(MATNodePtr node)
       dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(
           node);
   return dag.Get(id);
+}
+
+template <typename CRTP>
+auto ExtraFeatureConstView<MATConversion, CRTP>::GetUncondensedNodeFromMAT(MATNodePtr node) const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  if (dag.reverse_map_.at(node).IsCondensedInMAT()) {
+    return dag.template GetFeatureExtraStorage<NodeId, MATConversion>().uncondensed_reverse_map_.at(node);
+  } else {
+    std::vector<NodeId> condensed_nodes{dag.reverse_map_.at(node)};
+    return condensed_nodes;
+  }
+/*
+  using Node = typename CRTP::NodeView;
+  std::vector<Node> condensed_nodes;
+  if (dag.Get(id).IsCondensedInMAT()) {
+    auto& mat = *dag.template GetFeatureExtraStorage<NodeId, MATConversion>().mat_tree_;
+    for (auto cn = mat.condensed_nodes.begin(); cn != mat.condensed_nodes.end(); cn++) {
+      if (mat.get_node(cn->first) == node) {
+        for (auto cn_iter: cn->second) {
+          auto mat_node = mat.get_node(cn_iter);
+          NodeId dag_node =
+              dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(
+                  mat_node);
+          condensed_nodes.emplace_back(dag.Get(dag_node));
+        }
+        return condensed_nodes;
+      }
+    }
+  }
+  condensed_nodes.emplace_back(dag.Get(id));
+  return condensed_nodes;
+*/
 }
 
 template <typename CRTP>
@@ -161,14 +196,15 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
     for (auto cn = mat.condensed_nodes.begin(); cn != mat.condensed_nodes.end(); cn++) {
       auto node_to_uncondense = mat.get_node(cn->first);
       auto parent_node = (node_to_uncondense-> parent != NULL) ? node_to_uncondense->parent : node_to_uncondense;
-      auto dag_parent_node = dag.GetNodeFromMAT(parent_node);
+      auto dag_parent_node = dag.GetNodeFromMAT(parent_node); // there's only ever one parent because MATs are tree-shaped
       size_t num_samples = cn->second.size();
       if (num_samples > 0) {
         // reset the DAG node that points to the condensed node so that it
         // now points to the first node in the vector of condensed nodes.
         for (auto node: dag_parent_node.GetChildren() | Transform::GetChild()) {
           if (node.GetMATNode() == node_to_uncondense) {
-            node.SetMATNode(mat.get_node(cn->second[0]), true);
+            node.SetMATNode(mat.get_node(cn->second[0]));
+            node.SetUncondensedMATNode(mat.get_node(cn->second[0]));
             break;
           }
         }
@@ -177,7 +213,8 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
         for (size_t s = 1; s < num_samples; s++) {
           auto dag_child_node = dag.AppendNode();
           auto mat_child_node = mat.get_node(cn->second[s]);
-          dag_child_node.SetMATNode(mat_child_node, true);
+          dag_child_node.SetUncondensedMATNode(mat_child_node);
+
           auto child_edge = dag.AppendEdge(dag_parent_node, dag_child_node, clade_idx);
           child_edge.SetEdgeMutations({mutations_view(mat_child_node)});
           ++clade_idx.value;

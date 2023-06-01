@@ -7,13 +7,17 @@ bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMATRoot() const {
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveSource() const {
   auto& node = static_cast<const CRTP&>(*this);
-  return node.GetDAG().GetMoveSource().GetId() == node.GetId();
+  auto move_src = node.GetDAG().GetMoveSource();
+  return (std::find(move_src.begin(), move_src.end(), node.GetId()) != move_src.end());
+  //return node.GetDAG().GetMoveSource().GetId() == node.GetId();
 }
 
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveTarget() const {
   auto& node = static_cast<const CRTP&>(*this);
-  return node.GetDAG().GetMoveTarget().GetId() == node.GetId();
+  auto move_dst = node.GetDAG().GetMoveTarget();
+  return (std::find(move_dst.begin(), move_dst.end(), node.GetId()) != move_dst.end());
+  //return node.GetDAG().GetMoveTarget().GetId() == node.GetId();
 }
 
 template <typename CRTP, typename Tag>
@@ -296,8 +300,17 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveLCA() const {
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {
   auto& self = GetFeatureStorage(this);
+  Assert(self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.GetNodeFromMAT(self.data_->move_.src);
+}
+
+template <typename DAG, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSources() const {
+  auto& self = GetFeatureStorage(this);
+  Assert(self.data_);
+  auto& dag = static_cast<const CRTP&>(*this);
+  return dag.GetUncondensedNodeFromMAT(self.data_->move_.src);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -305,6 +318,13 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTarget() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.GetNodeFromMAT(self.data_->move_.dst);
+}
+
+template <typename DAG, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTargets() const {
+  auto& self = GetFeatureStorage(this);
+  auto& dag = static_cast<const CRTP&>(*this);
+  return dag.GetUncondensedNodeFromMAT(self.data_->move_.dst);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -354,7 +374,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
       return lca;
     }
     for (auto node : lca.GetChildren() | Transform::GetChild()) {
-      if (node.GetId() != dag.GetMoveSource().GetId()) {
+      if (std::find(dag.GetMovesSources().begin, dag.GetMovesSources().end(), node.GetId()) != dag.GetMoveSources().end()) { //node.GetId() != dag.GetMoveSource().GetId()) {
         return node;
       }
     }
@@ -512,70 +532,122 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetLCAAncestors() const {
 namespace {
 
 template <typename DAG>
-std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId src, NodeId dst) {
+std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, std::vector<NodeId>& src, std::vector<NodeId>& dst) {
   Assert(dag.IsTree());
 
-  auto src_node = dag.Get(src);
-  Assert(not src_node.IsUA() and not src_node.IsTreeRoot());
-  auto dst_node = dag.Get(dst);
-  Assert(src_node.GetId() != dst_node.GetId());
-  auto src_edge = src_node.GetSingleParent();
-  auto dst_edge = dst_node.GetSingleParent();
-  auto src_parent_node = src_edge.GetParent();
-  auto dst_parent_node = dst_edge.GetParent();
+  auto first_src_node = dag.Get(src[0]);
+  Assert(not first_src_node.IsUA() and not first_src_node.IsTreeRoot());
+  auto first_dst_node = dag.Get(dst[0]);
+  Assert(first_src_node.GetId() != first_dst_node.GetId());
+
+  auto src_parent_node = first_src_node.GetSingleParent().GetParent();
+  auto dst_parent_node = first_dst_node.GetSingleParent().GetParent();
   const bool is_sibling_move = src_parent_node.GetId() == dst_parent_node.GetId();
-  const bool has_unifurcation_after_move = src_parent_node.GetCladesCount() == 2;
+
+  const bool has_unifurcation_after_move = src_parent_node.GetCladesCount() == src.size() + 1;
   if (is_sibling_move and has_unifurcation_after_move) {
     // no-op
     return {};
   }
 
-  auto src_parent_edge = src_parent_node.GetSingleParent();
-  auto src_sibling_edge = [src_parent_node, src_edge] {
-    auto clades = src_parent_node.GetClades();
-    auto i = clades.begin();
-    if ((*(*i).begin()).GetId() != src_edge) {
-      return *(*i).begin();
-    } else {
-      return *(*++i).begin();
-    }
-  }();
-  auto src_sibling_node = src_sibling_edge.GetChild();
-
   auto new_node = has_unifurcation_after_move ? src_parent_node : dag.AppendNode();
-  auto new_edge = has_unifurcation_after_move ? src_sibling_edge : dag.AppendEdge();
+  auto new_edge = has_unifurcation_after_move ? src_parent_node.GetSingleParent() : dag.AppendEdge();
 
-  dst_node.template SetOverlay<Neighbors>();
-  src_edge.template SetOverlay<Endpoints>();
-  dst_edge.template SetOverlay<Endpoints>();
-
-  if (has_unifurcation_after_move) {
-    src_sibling_node.template SetOverlay<Neighbors>();
-    new_node.template SetOverlay<Neighbors>();
-    src_parent_edge.template SetOverlay<Endpoints>();
-    new_edge.template SetOverlay<Endpoints>();
-    new_node.ClearConnections();
-    new_edge.template SetOverlay<EdgeMutations>();
-    new_edge.SetEdgeMutations({});
-
-    src_parent_edge.SetChild(src_sibling_node);
-    src_sibling_node.SetSingleParent(src_parent_edge);
-  } else {
-    src_parent_node.template SetOverlay<Neighbors>();
-    for (CladeIdx i = src_edge.GetClade(); i.value < src_parent_node.GetCladesCount();
-         ++i.value) {
-      (*src_parent_node.GetClade(i).begin()).template SetOverlay<Endpoints>();
+  std::vector<EdgeId> src_edges;
+  std::vector<EdgeId> src_sibling_edges;
+  for (auto e: src_parent_node.GetChildren()) {
+    if (e.GetChild().IsMoveSource()) {
+      src_edges.push_back(e);
+    } else {
+      src_sibling_edges.push_back(e);
     }
-    src_parent_node.RemoveChild(src_edge.GetClade(), src_edge);
+  }
+  std::vector<EdgeId> dst_edges;
+  std::vector<EdgeId> dst_sibling_edges;
+  for (auto e: dst_parent_node.GetChildren()) {
+    if (e.GetChild().IsMoveTarget()) {
+      dst_edges.push_back(e);
+    } else {
+      dst_sibling_edges.push_back(e);
+    }
   }
 
-  src_edge.Set(new_node, src_node, {0});
-  new_edge.Set(new_node, dst_node, {1});
-  dst_edge.SetChild(new_node);
-  new_node.SetSingleParent(dst_edge);
-  new_node.AddEdge({0}, src_edge, true);
-  new_node.AddEdge({1}, new_edge, true);
-  dst_node.SetSingleParent(new_edge);
+  src_parent_node.template SetOverlay<Neighbors>();
+  for (auto src_edge: src_edges) {
+    dag.Get(src_edge).template SetOverlay<Endpoints>();
+  }
+  for (auto dst_edge: dst_edges) {
+    dag.Get(dst_edge).template SetOverlay<Endpoints>();
+  }
+
+  if (has_unifurcation_after_move) {
+    auto src_grandparent = new_node.GetSingleParent().GetParent();
+    auto src_grandparent_children = src_grandparent.GetChildren();
+
+    new_node.template SetOverlay<Neighbors>();
+    new_node.ClearConnections();
+    src_grandparent.template SetOverlay<Neighbors>();
+    src_grandparent.ClearConnections();
+
+    // re-number the edges/clades below src grandparent to remove src_parent and add in all of src_sibling_edges
+    size_t clade_ctr = 0;
+    for (auto gp_below_edge: src_grandparent_children) {
+      auto child_node = gp_below_edge.GetChild();
+      if (gp_below_edge.GetChild().GetId() != src_parent_node.GetId()) {
+        gp_below_edge.template SetOverlay<Endpoints>();
+        gp_below_edge.Set(src_grandparent, child_node, {clade_ctr++});
+      }
+    }
+    // add src_sibling_edges as children of src_grandparent
+    for (auto src_sibling_edge_id: src_sibling_edges) {
+      auto src_sibling_edge = dag.Get(src_sibling_edge_id);
+      auto src_sibling_node = src_sibling_edge.GetChild();
+      src_sibling_edge.template SetOverlay<Endpoints>();
+      src_sibling_edge.template SetOverlay<EdgeMutations>();
+      src_sibling_edge.SetEdgeMutations({});
+      src_sibling_edge.Set(src_grandparent, src_sibling_node, {clade_ctr++});
+    }
+  } else {
+/*
+    new_node.template SetOverlay<Neighbors>();
+    new_node.ClearConnections();
+    src_node.ClearConnections();
+    size_t clade_ctr = 0;
+    for (auto src_sibling_edge_id: src_sibling_edges) {
+      auto src_sibling_edge = dag.Get(src_sibling_edge_id);
+      auto src_sibling_node = src_sibling_edge.GetChild();
+      src_sibling_edge.template SetOverlay<Endpoints>();
+      src_sibling_edge.template SetOverlay<EdgeMutations>();
+      src_sibling_edge.SetEdgeMutations({});
+      src_sibling_edge.Set(src_grandparent, src_sibling_node, {clade_ctr++});
+    }
+*/
+  }
+
+  auto dst_parent_children = dst_parent_node.GetChildren();
+  dst_parent_node.template SetOverlay<Neighbors>();
+  dst_parent_node.ClearConnections();
+
+  size_t clade_ctr = 0;
+  for (auto dst_parent_child: dst_parent_children) {
+    if (not dst_parent_child.GetChild().IsMoveTarget()) {
+      dst_parent_child.Set(dst_parent_node, dst_parent_child.GetChild(), {clade_ctr++});
+    }
+  }
+  new_edge.Set(dst_parent_node, new_node, {clade_ctr});
+
+  for (size_t src_idx = 0; src_idx < src.size(); src_idx++) {
+    auto src_edge = dag.Get(src_edges.at(src_idx));
+    auto src_node = dag.Get(src.at(src_idx));
+    src_edge.Set(new_node, src_node, {src_idx});
+    src_node.SetSingleParent(src_edge);
+  }
+  for (size_t dst_idx = 0; dst_idx < dst.size(); dst_idx++) {
+    auto dst_edge = dag.Get(dst_edges.at(dst_idx));
+    auto dst_node = dag.Get(dst.at(dst_idx));
+    dst_edge.Set(new_node, dst_node, {src.size() + dst_idx});
+    dst_node.SetSingleParent(dst_edge);
+  }
   return {new_node, has_unifurcation_after_move};
 }
 
@@ -584,6 +656,15 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId src, NodeId dst) {
 template <typename DAG, typename CRTP, typename Tag>
 std::pair<NodeId, bool> FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(
     NodeId src, NodeId dst) const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  std::vector<NodeId> srcs{src};
+  std::vector<NodeId> dsts{dst};
+  return ApplyMoveImpl(dag, srcs, dsts);
+}
+
+template <typename DAG, typename CRTP, typename Tag>
+std::pair<NodeId, bool> FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(
+    std::vector<NodeId>& src, std::vector<NodeId>& dst) const {
   auto& dag = static_cast<const CRTP&>(*this);
   return ApplyMoveImpl(dag, src, dst);
 }
@@ -596,7 +677,7 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   Assert(not self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
   auto [new_node, has_unifurcation_after_move] =
-      dag.ApplyMove(dag.GetNodeFromMAT(move.src), dag.GetNodeFromMAT(move.dst));
+      dag.ApplyMove(dag.GetUncondensedNodeFromMAT(move.src), dag.GetUncondensedNodeFromMAT(move.dst));
   if (new_node.value == NoId) {
     return false;
   }
