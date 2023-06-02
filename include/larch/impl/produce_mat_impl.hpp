@@ -53,7 +53,7 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   check_samples(tree.root, origin_states, &tree);
   reassign_states(tree, origin_states);
   reassign_callback.OnReassignedStates(tree);
-  //radius_callback(tree);
+  // radius_callback(tree);
 
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
   // NOLINTNEXTLINE

@@ -127,7 +127,7 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
 
   using Storage =
       ExtendDAGStorage<DefaultDAGStorage,
-                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId, MappedNodes>,
+                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
                        Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
   bool operator()(Profitable_Moves& move, int /*best_score_change*/,
@@ -276,7 +276,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
 
   using Storage =
       ExtendDAGStorage<DefaultDAGStorage,
-                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId, MappedNodes>,
+                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
                        Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
   bool operator()(Profitable_Moves& move, int /*best_score_change*/,
@@ -284,6 +284,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
                       nodes_with_major_allele_set_change) override {
     auto storage = [this](std::string ref_seq) {
       MAT::Tree* mat = sample_mat_.load();
+      Assert(mat != nullptr);
       auto mat_conv = AddMATConversion(Storage{});
       mat_conv.View().BuildFromMAT(*mat, ref_seq);
       check_edge_mutations(mat_conv.View().Const());
@@ -302,12 +303,18 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
       if (move_score_coeffs_.first != 0) {
         auto src_leaf_set =
             merge_.GetResultNodeLabels()
-                .at(reassigned_states_storage_.View().GetNodeFromMAT(spr.GetMoveSource().GetMATNode()).GetOriginalId().value)
+                .at(reassigned_states_storage_.View()
+                        .GetNodeFromMAT(spr.GetMoveSource().GetMATNode())
+                        .GetOriginalId()
+                        .value)
                 .GetLeafSet()
                 ->GetClades();
         auto dst_leaf_set =
             merge_.GetResultNodeLabels()
-                .at(reassigned_states_storage_.View().GetNodeFromMAT(spr.GetMoveTarget().GetMATNode()).GetOriginalId().value)
+                .at(reassigned_states_storage_.View()
+                        .GetNodeFromMAT(spr.GetMoveTarget().GetMATNode())
+                        .GetOriginalId()
+                        .value)
                 .GetLeafSet()
                 ->GetClades();
         for (auto node_id : fragment.first) {
@@ -316,12 +323,15 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
             if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
               ++node_id_map_count;
             }
-          } else if (hypothetical_node.HasChangedTopology()
-                     and node_id != spr.GetMoveSource().GetId()
-                     and node_id != spr.GetMoveTarget().GetId()) {
+          } else if (hypothetical_node.HasChangedTopology() and
+                     node_id != spr.GetMoveSource().GetId() and
+                     node_id != spr.GetMoveTarget().GetId()) {
             const auto& current_leaf_sets =
                 merge_.GetResultNodeLabels()
-                    .at(reassigned_states_storage_.View().GetNodeFromMAT(hypothetical_node.GetMATNode()).GetOriginalId().value)
+                    .at(reassigned_states_storage_.View()
+                            .GetNodeFromMAT(hypothetical_node.GetMATNode())
+                            .GetOriginalId()
+                            .value)
                     .GetLeafSet()
                     ->GetClades();
             if (not(merge_.ContainsLeafset(
@@ -355,6 +365,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
       merge_.AddDAG(reassigned_states_storage_.View());
       merge_.ComputeResultEdgeMutations();
     }
+    sample_mat_.store(std::addressof(tree));
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
@@ -367,12 +378,13 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
       merge_.AddDAG(reassigned_states_storage_.View());
       merge_.ComputeResultEdgeMutations();
     }
+    sample_mat_.store(std::addressof(tree));
   }
 
   DAG sample_dag_;
   MergeT& merge_;
-  decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
-      AddMATConversion(Storage{});
+  decltype(AddMappedNodes(AddMATConversion(Storage{}))) reassigned_states_storage_ =
+      AddMappedNodes(AddMATConversion(Storage{}));
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
@@ -392,11 +404,8 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
 
   using Storage =
       ExtendDAGStorage<DefaultDAGStorage,
-                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId, MappedNodes>,
+                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
                        Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
-      //ExtendDAGStorage<DefaultDAGStorage,
-      //                 Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
-      //                 Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
   bool operator()(Profitable_Moves& move, int /*best_score_change*/,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
@@ -476,11 +485,8 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
 
   using Storage =
       ExtendDAGStorage<DefaultDAGStorage,
-                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId, MappedNodes>,
+                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
                        Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
-      //ExtendDAGStorage<DefaultDAGStorage,
-      //                 Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
-      //                 Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
   bool operator()(Profitable_Moves& move, int /*best_score_change*/,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
@@ -839,4 +845,3 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   return EXIT_SUCCESS;
 }
-
