@@ -151,6 +151,49 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
 
       auto fragment = spr.GetFragment();
       if (move_score_coeffs_.first != 0) {
+        auto src_leaf_set =
+            merge_.GetResultNodeLabels()
+                .at(reassigned_states_storage_.View()
+                        .GetNodeFromMAT(spr.GetMoveSource().GetMATNode())
+                        .GetOriginalId()
+                        .value)
+                .GetLeafSet()
+                ->GetClades();
+        auto dst_leaf_set =
+            merge_.GetResultNodeLabels()
+                .at(reassigned_states_storage_.View()
+                        .GetNodeFromMAT(spr.GetMoveTarget().GetMATNode())
+                        .GetOriginalId()
+                        .value)
+                .GetLeafSet()
+                ->GetClades();
+        for (auto node_id : fragment.first) {
+          auto hypothetical_node = spr.Get(node_id);
+          if (not hypothetical_node.IsUA()) {
+            if (hypothetical_node.IsMoveNew()) {
+              if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
+                ++node_id_map_count;
+              }
+            } else if (hypothetical_node.HasChangedTopology() and
+                       node_id != spr.GetMoveSource().GetId() and
+                       node_id != spr.GetMoveTarget().GetId()) {
+              const auto& current_leaf_sets =
+                  merge_.GetResultNodeLabels()
+                      .at(reassigned_states_storage_.View()
+                              .GetNodeFromMAT(hypothetical_node.GetMATNode())
+                              .GetOriginalId()
+                              .value)
+                      .GetLeafSet()
+                      ->GetClades();
+              if (not(merge_.ContainsLeafset(
+                          clades_difference(current_leaf_sets, src_leaf_set)) and
+                      merge_.ContainsLeafset(
+                          clades_difference(current_leaf_sets, dst_leaf_set)))) {
+                ++node_id_map_count;
+              }
+            }
+          }
+        }
       }
     } else {
       return false;
@@ -161,15 +204,16 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
   }
 
   void operator()(MAT::Tree& tree) {
-    decltype(AddMATConversion(Storage{})) storage;
-    storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
-    storage.View().RecomputeCompactGenomes();
+    reassigned_states_storage_.View().BuildFromMAT(tree,
+                                                   sample_dag_.GetReferenceSequence());
+    check_edge_mutations(reassigned_states_storage_.View().Const());
+    reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAG(storage.View());
-      sample_mat_.store(std::addressof(tree));
+      merge_.AddDAG(reassigned_states_storage_.View());
       merge_.ComputeResultEdgeMutations();
     }
+    sample_mat_.store(std::addressof(tree));
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
@@ -182,12 +226,13 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
       merge_.AddDAG(reassigned_states_storage_.View());
       merge_.ComputeResultEdgeMutations();
     }
+    sample_mat_.store(std::addressof(tree));
   }
 
   DAG sample_dag_;
   MergeT& merge_;
-  decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
-      AddMATConversion(Storage{});
+  decltype(AddMappedNodes(AddMATConversion(Storage{}))) reassigned_states_storage_ =
+      AddMappedNodes(AddMATConversion(Storage{}));
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
@@ -319,26 +364,28 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
                 ->GetClades();
         for (auto node_id : fragment.first) {
           auto hypothetical_node = spr.Get(node_id);
-          if (hypothetical_node.IsMoveNew()) {
-            if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
-              ++node_id_map_count;
-            }
-          } else if (hypothetical_node.HasChangedTopology() and
-                     node_id != spr.GetMoveSource().GetId() and
-                     node_id != spr.GetMoveTarget().GetId()) {
-            const auto& current_leaf_sets =
-                merge_.GetResultNodeLabels()
-                    .at(reassigned_states_storage_.View()
-                            .GetNodeFromMAT(hypothetical_node.GetMATNode())
-                            .GetOriginalId()
-                            .value)
-                    .GetLeafSet()
-                    ->GetClades();
-            if (not(merge_.ContainsLeafset(
-                        clades_difference(current_leaf_sets, src_leaf_set)) and
-                    merge_.ContainsLeafset(
-                        clades_difference(current_leaf_sets, dst_leaf_set)))) {
-              ++node_id_map_count;
+          if (not hypothetical_node.IsUA()) {
+            if (hypothetical_node.IsMoveNew()) {
+              if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
+                ++node_id_map_count;
+              }
+            } else if (hypothetical_node.HasChangedTopology() and
+                       node_id != spr.GetMoveSource().GetId() and
+                       node_id != spr.GetMoveTarget().GetId()) {
+              const auto& current_leaf_sets =
+                  merge_.GetResultNodeLabels()
+                      .at(reassigned_states_storage_.View()
+                              .GetNodeFromMAT(hypothetical_node.GetMATNode())
+                              .GetOriginalId()
+                              .value)
+                      .GetLeafSet()
+                      ->GetClades();
+              if (not(merge_.ContainsLeafset(
+                          clades_difference(current_leaf_sets, src_leaf_set)) and
+                      merge_.ContainsLeafset(
+                          clades_difference(current_leaf_sets, dst_leaf_set)))) {
+                ++node_id_map_count;
+              }
             }
           }
         }
@@ -428,6 +475,49 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
 
       auto fragment = spr.GetFragment();
       if (move_score_coeffs_.first != 0) {
+        auto src_leaf_set =
+            merge_.GetResultNodeLabels()
+                .at(reassigned_states_storage_.View()
+                        .GetNodeFromMAT(spr.GetMoveSource().GetMATNode())
+                        .GetOriginalId()
+                        .value)
+                .GetLeafSet()
+                ->GetClades();
+        auto dst_leaf_set =
+            merge_.GetResultNodeLabels()
+                .at(reassigned_states_storage_.View()
+                        .GetNodeFromMAT(spr.GetMoveTarget().GetMATNode())
+                        .GetOriginalId()
+                        .value)
+                .GetLeafSet()
+                ->GetClades();
+        for (auto node_id : fragment.first) {
+          auto hypothetical_node = spr.Get(node_id);
+          if (not hypothetical_node.IsUA()) {
+            if (hypothetical_node.IsMoveNew()) {
+              if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
+                ++node_id_map_count;
+              }
+            } else if (hypothetical_node.HasChangedTopology() and
+                       node_id != spr.GetMoveSource().GetId() and
+                       node_id != spr.GetMoveTarget().GetId()) {
+              const auto& current_leaf_sets =
+                  merge_.GetResultNodeLabels()
+                      .at(reassigned_states_storage_.View()
+                              .GetNodeFromMAT(hypothetical_node.GetMATNode())
+                              .GetOriginalId()
+                              .value)
+                      .GetLeafSet()
+                      ->GetClades();
+              if (not(merge_.ContainsLeafset(
+                          clades_difference(current_leaf_sets, src_leaf_set)) and
+                      merge_.ContainsLeafset(
+                          clades_difference(current_leaf_sets, dst_leaf_set)))) {
+                ++node_id_map_count;
+              }
+            }
+          }
+        }
       }
       move.score_change = move_score_coeffs_.second * move.score_change -
                           move_score_coeffs_.first * node_id_map_count;
@@ -440,15 +530,16 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
   }
 
   void operator()(MAT::Tree& tree) {
-    decltype(AddMATConversion(Storage{})) storage;
-    storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
-    storage.View().RecomputeCompactGenomes();
+    reassigned_states_storage_.View().BuildFromMAT(tree,
+                                                   sample_dag_.GetReferenceSequence());
+    check_edge_mutations(reassigned_states_storage_.View().Const());
+    reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAG(storage.View());
-      sample_mat_.store(std::addressof(tree));
+      merge_.AddDAG(reassigned_states_storage_.View());
       merge_.ComputeResultEdgeMutations();
     }
+    sample_mat_.store(std::addressof(tree));
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
@@ -461,12 +552,13 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
       merge_.AddDAG(reassigned_states_storage_.View());
       merge_.ComputeResultEdgeMutations();
     }
+    sample_mat_.store(std::addressof(tree));
   }
 
   DAG sample_dag_;
   MergeT& merge_;
-  decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
-      AddMATConversion(Storage{});
+  decltype(AddMappedNodes(AddMATConversion(Storage{}))) reassigned_states_storage_ =
+      AddMappedNodes(AddMATConversion(Storage{}));
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
@@ -509,6 +601,49 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
 
       auto fragment = spr.GetFragment();
       if (move_score_coeffs_.first != 0) {
+        auto src_leaf_set =
+            merge_.GetResultNodeLabels()
+                .at(reassigned_states_storage_.View()
+                        .GetNodeFromMAT(spr.GetMoveSource().GetMATNode())
+                        .GetOriginalId()
+                        .value)
+                .GetLeafSet()
+                ->GetClades();
+        auto dst_leaf_set =
+            merge_.GetResultNodeLabels()
+                .at(reassigned_states_storage_.View()
+                        .GetNodeFromMAT(spr.GetMoveTarget().GetMATNode())
+                        .GetOriginalId()
+                        .value)
+                .GetLeafSet()
+                ->GetClades();
+        for (auto node_id : fragment.first) {
+          auto hypothetical_node = spr.Get(node_id);
+          if (not hypothetical_node.IsUA()) {
+            if (hypothetical_node.IsMoveNew()) {
+              if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
+                ++node_id_map_count;
+              }
+            } else if (hypothetical_node.HasChangedTopology() and
+                       node_id != spr.GetMoveSource().GetId() and
+                       node_id != spr.GetMoveTarget().GetId()) {
+              const auto& current_leaf_sets =
+                  merge_.GetResultNodeLabels()
+                      .at(reassigned_states_storage_.View()
+                              .GetNodeFromMAT(hypothetical_node.GetMATNode())
+                              .GetOriginalId()
+                              .value)
+                      .GetLeafSet()
+                      ->GetClades();
+              if (not(merge_.ContainsLeafset(
+                          clades_difference(current_leaf_sets, src_leaf_set)) and
+                      merge_.ContainsLeafset(
+                          clades_difference(current_leaf_sets, dst_leaf_set)))) {
+                ++node_id_map_count;
+              }
+            }
+          }
+        }
       }
       move.score_change = move_score_coeffs_.second * move.score_change -
                           move_score_coeffs_.first * node_id_map_count;
@@ -525,16 +660,16 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
   }
 
   void operator()(MAT::Tree& tree) {
-    decltype(AddMATConversion(Storage{})) storage;
-    storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
-    storage.View().RecomputeCompactGenomes();
+    reassigned_states_storage_.View().BuildFromMAT(tree,
+                                                   sample_dag_.GetReferenceSequence());
+    check_edge_mutations(reassigned_states_storage_.View().Const());
+    reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAG(storage.View());
-      sample_mat_.store(std::addressof(tree));
+      merge_.AddDAG(reassigned_states_storage_.View());
       merge_.ComputeResultEdgeMutations();
     }
-    running_best_score_change_ = INT_MAX;
+    sample_mat_.store(std::addressof(tree));
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
@@ -547,13 +682,14 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
       merge_.AddDAG(reassigned_states_storage_.View());
       merge_.ComputeResultEdgeMutations();
     }
+    sample_mat_.store(std::addressof(tree));
   }
 
   DAG sample_dag_;
   MergeT& merge_;
   int running_best_score_change_ = INT_MAX;
-  decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
-      AddMATConversion(Storage{});
+  decltype(AddMappedNodes(AddMATConversion(Storage{}))) reassigned_states_storage_ =
+      AddMappedNodes(AddMATConversion(Storage{}));
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
