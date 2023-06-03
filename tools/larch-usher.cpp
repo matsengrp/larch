@@ -403,6 +403,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
   }
 
   void operator()(MAT::Tree& tree) {
+    reassigned_states_storage_ = {};
     reassigned_states_storage_.View().BuildFromMAT(tree,
                                                    sample_dag_.GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
