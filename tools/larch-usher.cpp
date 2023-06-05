@@ -114,15 +114,14 @@ std::vector<std::vector<const CompactGenome*>> clades_difference(
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
-template <typename DAG, typename MergeT>
+template <typename MergeT>
 struct Treebased_Move_Found_Callback : public Move_Found_Callback {
-  Treebased_Move_Found_Callback(DAG sample_dag, MergeT& merge)
-      : sample_dag_{sample_dag}, merge_{merge}, move_score_coeffs_{1, 1} {};
+  Treebased_Move_Found_Callback(MergeT& merge)
+      : merge_{merge}, move_score_coeffs_{1, 1} {};
 
-  Treebased_Move_Found_Callback(DAG sample_dag, MergeT& merge,
+  Treebased_Move_Found_Callback(MergeT& merge,
                                 std::pair<int, int> move_score_coeffs)
-      : sample_dag_{sample_dag},
-        merge_{merge},
+      : merge_{merge},
         move_score_coeffs_{move_score_coeffs} {};
 
   using Storage =
@@ -140,7 +139,7 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
       check_edge_mutations(mat_conv.View().Const());
       mat_conv.View().RecomputeCompactGenomes();
       return SPRStorage(std::move(mat_conv));
-    }(sample_dag_.GetReferenceSequence());
+    }(merge_.GetResult().GetReferenceSequence());
 
     int node_id_map_count = 0;
     auto spr = storage.View();
@@ -204,8 +203,9 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
   }
 
   void operator()(MAT::Tree& tree) {
+    reassigned_states_storage_ = {};
     reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
+                                                   merge_.GetResult().GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
@@ -217,8 +217,9 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
+    reassigned_states_storage_ = {};
     reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
+                                                   merge_.GetResult().GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
@@ -229,7 +230,6 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
     sample_mat_.store(std::addressof(tree));
   }
 
-  DAG sample_dag_;
   MergeT& merge_;
   decltype(AddMappedNodes(AddMATConversion(Storage{}))) reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage{}));
@@ -238,10 +238,10 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
   std::pair<int, int> move_score_coeffs_;
 };
 
-template <typename DAG, typename MergeT>
+template <typename MergeT>
 struct Merge_All_Moves_Found_Callback : public Move_Found_Callback {
-  Merge_All_Moves_Found_Callback(DAG sample_dag, MergeT& merge)
-      : sample_dag_{sample_dag}, merge_{merge} {};
+  Merge_All_Moves_Found_Callback(MergeT& merge)
+      : merge_{merge} {};
 
   using Storage =
       ExtendDAGStorage<DefaultDAGStorage,
@@ -258,7 +258,7 @@ struct Merge_All_Moves_Found_Callback : public Move_Found_Callback {
       check_edge_mutations(mat_conv.View().Const());
       mat_conv.View().RecomputeCompactGenomes();
       return SPRStorage(std::move(mat_conv));
-    }(sample_dag_.GetReferenceSequence());
+    }(merge_.GetResult().GetReferenceSequence());
 
     auto spr = storage.View();
     spr.GetRoot().Validate(true);
@@ -278,7 +278,7 @@ struct Merge_All_Moves_Found_Callback : public Move_Found_Callback {
 
   void operator()(MAT::Tree& tree) {
     decltype(AddMATConversion(Storage{})) storage;
-    storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
+    storage.View().BuildFromMAT(tree, merge_.GetResult().GetReferenceSequence());
     storage.View().RecomputeCompactGenomes();
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
@@ -290,7 +290,7 @@ struct Merge_All_Moves_Found_Callback : public Move_Found_Callback {
 
   void OnReassignedStates(MAT::Tree& tree) {
     reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
+                                                   merge_.GetResult().GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
@@ -300,7 +300,6 @@ struct Merge_All_Moves_Found_Callback : public Move_Found_Callback {
     }
   }
 
-  DAG sample_dag_;
   MergeT& merge_;
   decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
       AddMATConversion(Storage{});
@@ -308,15 +307,14 @@ struct Merge_All_Moves_Found_Callback : public Move_Found_Callback {
   std::mutex merge_mtx_;
 };
 
-template <typename DAG, typename MergeT>
+template <typename MergeT>
 struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
-  Merge_All_Profitable_Moves_Found_Callback(DAG sample_dag, MergeT& merge)
-      : sample_dag_{sample_dag}, merge_{merge}, move_score_coeffs_{1, 1} {};
+  Merge_All_Profitable_Moves_Found_Callback(MergeT& merge)
+      : merge_{merge}, move_score_coeffs_{1, 1} {};
 
-  Merge_All_Profitable_Moves_Found_Callback(DAG sample_dag, MergeT& merge,
+  Merge_All_Profitable_Moves_Found_Callback(MergeT& merge,
                                             std::pair<int, int> move_score_coeffs)
-      : sample_dag_{sample_dag},
-        merge_{merge},
+      : merge_{merge},
         move_score_coeffs_{move_score_coeffs} {};
 
   using Storage =
@@ -335,7 +333,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
       check_edge_mutations(mat_conv.View().Const());
       mat_conv.View().RecomputeCompactGenomes();
       return SPRStorage(std::move(mat_conv));
-    }(sample_dag_.GetReferenceSequence());
+    }(merge_.GetResult().GetReferenceSequence());
 
     int node_id_map_count = 0;
     auto spr = storage.View();
@@ -405,7 +403,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
   void operator()(MAT::Tree& tree) {
     reassigned_states_storage_ = {};
     reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
+                                                   merge_.GetResult().GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
@@ -417,8 +415,9 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
+    reassigned_states_storage_ = {};
     reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
+                                                   merge_.GetResult().GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
@@ -429,7 +428,6 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
     sample_mat_.store(std::addressof(tree));
   }
 
-  DAG sample_dag_;
   MergeT& merge_;
   decltype(AddMappedNodes(AddMATConversion(Storage{}))) reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage{}));
@@ -438,16 +436,15 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
   std::pair<int, int> move_score_coeffs_;
 };
 
-template <typename DAG, typename MergeT>
+template <typename MergeT>
 struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     : public Move_Found_Callback {
-  Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(DAG sample_dag, MergeT& merge)
-      : sample_dag_{sample_dag}, merge_{merge}, move_score_coeffs_{1, 1} {};
+  Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(MergeT& merge)
+      : merge_{merge}, move_score_coeffs_{1, 1} {};
 
   Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(
-      DAG sample_dag, MergeT& merge, std::pair<int, int> move_score_coeffs)
-      : sample_dag_{sample_dag},
-        merge_{merge},
+      MergeT& merge, std::pair<int, int> move_score_coeffs)
+      : merge_{merge},
         move_score_coeffs_{move_score_coeffs} {};
 
   using Storage =
@@ -465,7 +462,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
       check_edge_mutations(mat_conv.View().Const());
       mat_conv.View().RecomputeCompactGenomes();
       return SPRStorage(std::move(mat_conv));
-    }(sample_dag_.GetReferenceSequence());
+    }(merge_.GetResult().GetReferenceSequence());
 
     int node_id_map_count = 0;
     auto spr = storage.View();
@@ -531,8 +528,9 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
   }
 
   void operator()(MAT::Tree& tree) {
+    reassigned_states_storage_ = {};
     reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
+                                                   merge_.GetResult().GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
@@ -544,8 +542,9 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
+    reassigned_states_storage_ = {};
     reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
+                                                   merge_.GetResult().GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
@@ -556,7 +555,6 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     sample_mat_.store(std::addressof(tree));
   }
 
-  DAG sample_dag_;
   MergeT& merge_;
   decltype(AddMappedNodes(AddMATConversion(Storage{}))) reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage{}));
@@ -565,15 +563,14 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
   std::pair<int, int> move_score_coeffs_;
 };
 
-template <typename DAG, typename MergeT>
+template <typename MergeT>
 struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Callback {
-  Merge_All_Profitable_Moves_Found_So_Far_Callback(DAG sample_dag, MergeT& merge)
-      : sample_dag_{sample_dag}, merge_{merge}, move_score_coeffs_{1, 1} {};
+  Merge_All_Profitable_Moves_Found_So_Far_Callback(MergeT& merge)
+      : merge_{merge}, move_score_coeffs_{1, 1} {};
 
   Merge_All_Profitable_Moves_Found_So_Far_Callback(
-      DAG sample_dag, MergeT& merge, std::pair<int, int> move_score_coeffs)
-      : sample_dag_{sample_dag},
-        merge_{merge},
+      MergeT& merge, std::pair<int, int> move_score_coeffs)
+      : merge_{merge},
         move_score_coeffs_{move_score_coeffs} {};
 
   using Storage =
@@ -591,7 +588,7 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
       check_edge_mutations(mat_conv.View().Const());
       mat_conv.View().RecomputeCompactGenomes();
       return SPRStorage(std::move(mat_conv));
-    }(sample_dag_.GetReferenceSequence());
+    }(merge_.GetResult().GetReferenceSequence());
 
     int node_id_map_count = 0;
     auto spr = storage.View();
@@ -661,8 +658,9 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
   }
 
   void operator()(MAT::Tree& tree) {
+    reassigned_states_storage_ = {};
     reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
+                                                   merge_.GetResult().GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
@@ -674,8 +672,9 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
+    reassigned_states_storage_ = {};
     reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
+                                                   merge_.GetResult().GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
@@ -686,7 +685,6 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
     sample_mat_.store(std::addressof(tree));
   }
 
-  DAG sample_dag_;
   MergeT& merge_;
   int running_best_score_change_ = INT_MAX;
   decltype(AddMappedNodes(AddMATConversion(Storage{}))) reassigned_states_storage_ =
@@ -945,27 +943,27 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     check_edge_mutations(sample.View().Const());
 
     if (callback_config == "all-moves") {
-      Merge_All_Moves_Found_Callback callback{sample.View(), merge};
+      Merge_All_Moves_Found_Callback callback{merge};
       optimized_dags.push_back(
           optimize_dag_direct(sample.View(), callback, callback, callback));
     } else if (callback_config == "best-moves-so-far") {
       Merge_All_Profitable_Moves_Found_So_Far_Callback callback{
-          sample.View(), merge, {move_coeff_nodes, move_coeff_pscore}};
+          merge, {move_coeff_nodes, move_coeff_pscore}};
       optimized_dags.push_back(
           optimize_dag_direct(sample.View(), callback, callback, callback));
     } else if (callback_config == "best-moves-fixed-tree") {
       Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback callback{
-          sample.View(), merge, {move_coeff_nodes, move_coeff_pscore}};
+          merge, {move_coeff_nodes, move_coeff_pscore}};
       optimized_dags.push_back(
           optimize_dag_direct(sample.View(), callback, callback, callback));
     } else if (callback_config == "best-moves-treebased") {
       Treebased_Move_Found_Callback callback{
-          sample.View(), merge, {move_coeff_nodes, move_coeff_pscore}};
+          merge, {move_coeff_nodes, move_coeff_pscore}};
       optimized_dags.push_back(
           optimize_dag_direct(sample.View(), callback, callback, callback));
     } else {
       Merge_All_Profitable_Moves_Found_Callback callback{
-          sample.View(), merge, {move_coeff_nodes, move_coeff_pscore}};
+          merge, {move_coeff_nodes, move_coeff_pscore}};
       optimized_dags.push_back(
           optimize_dag_direct(sample.View(), callback, callback, callback));
     }
