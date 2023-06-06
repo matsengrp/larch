@@ -211,9 +211,9 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
-    sample_mat_.store(std::addressof(tree));
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
@@ -225,9 +225,9 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
-    sample_mat_.store(std::addressof(tree));
   }
 
   MergeT& merge_;
@@ -296,6 +296,7 @@ struct Merge_All_Moves_Found_Callback : public Move_Found_Callback {
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
   }
@@ -409,9 +410,9 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
-    sample_mat_.store(std::addressof(tree));
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
@@ -423,9 +424,9 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
-    sample_mat_.store(std::addressof(tree));
   }
 
   MergeT& merge_;
@@ -536,9 +537,9 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
-    sample_mat_.store(std::addressof(tree));
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
@@ -550,9 +551,9 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
-    sample_mat_.store(std::addressof(tree));
   }
 
   MergeT& merge_;
@@ -666,9 +667,9 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
-    sample_mat_.store(std::addressof(tree));
   }
 
   void OnReassignedStates(MAT::Tree& tree) {
@@ -680,9 +681,9 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
-    sample_mat_.store(std::addressof(tree));
   }
 
   MergeT& merge_;
