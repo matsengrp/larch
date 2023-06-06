@@ -28,7 +28,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       auto mat_conv = AddMATConversion(Storage{});
       mat_conv.View().BuildFromMAT(*mat, ref_seq);
       check_edge_mutations(mat_conv.View().Const());
-      mat_conv.View().RecomputeCompactGenomes();
+      mat_conv.View().RecomputeCompactGenomes(true);
       return SPRStorage(std::move(mat_conv));
     }(sample_dag_.GetReferenceSequence());
 
@@ -51,7 +51,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   void operator()(MAT::Tree& tree) {
     decltype(AddMATConversion(Storage{})) storage;
     storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
-    storage.View().RecomputeCompactGenomes();
+    storage.View().RecomputeCompactGenomes(true);
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(storage.View());
@@ -65,7 +65,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     reassigned_states_storage_.View().BuildFromMAT(tree,
                                                    sample_dag_.GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
-    reassigned_states_storage_.View().RecomputeCompactGenomes();
+    reassigned_states_storage_.View().RecomputeCompactGenomes(true);
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
@@ -86,7 +86,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
   MADAGStorage input_dag_storage =
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
-  input_dag_storage.View().RecomputeCompactGenomes();
+  input_dag_storage.View().RecomputeCompactGenomes(true);
   return input_dag_storage;
 }
 
@@ -111,7 +111,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     Test_Move_Found_Callback callback{sample.View(), merge};
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
-    optimized_dags.back().first.View().RecomputeCompactGenomes();
+    optimized_dags.back().first.View().RecomputeCompactGenomes(true);
     merge.AddDAG(optimized_dags.back().first.View(), chosen_node);
   }
 }
@@ -136,7 +136,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
         auto mat_conv = AddMATConversion(Storage{});
         mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
         check_edge_mutations(mat_conv.View());
-        mat_conv.View().RecomputeCompactGenomes();
+        mat_conv.View().RecomputeCompactGenomes(true);
         return SPRStorage(std::move(mat_conv));
       }(sample_.GetReferenceSequence());
       auto spr = storage.View();
@@ -199,7 +199,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   auto [optimized_dag, optimized_mat] = optimize_dag_direct(
       sample.View(), single_move_callback, single_move_callback, single_move_callback);
 
-  optimized_dag.View().RecomputeCompactGenomes();
+  optimized_dag.View().RecomputeCompactGenomes(true);
   Merge<MADAG> two_tree_dag{tree_shaped_dag.View().GetReferenceSequence()};
   two_tree_dag.AddDAG(sample.View());
   two_tree_dag.AddDAG(optimized_dag.View());
@@ -209,51 +209,6 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
          dag_altered_in_callback.GetResult().GetNodesCount());
   Assert(two_tree_dag.GetResult().GetEdgesCount() ==
          dag_altered_in_callback.GetResult().GetEdgesCount());
-}
-
-static auto MakeSampleDAG() {
-  MADAGStorage input_storage;
-  auto dag = input_storage.View();
-
-  dag.SetReferenceSequence("GAA");
-
-  dag.InitializeNodes(11);
-
-  dag.AddEdge({0}, {0}, {10}, {0});
-  dag.AddEdge({1}, {7}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'T', 'A'};
-  dag.AddEdge({2}, {7}, {2}, {1}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
-  dag.AddEdge({3}, {8}, {3}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
-  dag.AddEdge({4}, {8}, {4}, {1}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
-  dag.AddEdge({5}, {9}, {5}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
-  dag.AddEdge({6}, {9}, {6}, {1}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
-  dag.AddEdge({7}, {8}, {7}, {2}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
-  dag.AddEdge({8}, {10}, {8}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'C'};
-  dag.AddEdge({9}, {10}, {9}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
-
-  dag.BuildConnections();
-
-  dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{2}] = {'G', 'C'};
-  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{2}] = {'G', 'T'};
-  dag.Get(EdgeId{3}).GetMutableEdgeMutations()[{2}] = {'T', 'G'};
-  dag.Get(EdgeId{4}).GetMutableEdgeMutations()[{2}] = {'T', 'C'};
-  dag.Get(EdgeId{5}).GetMutableEdgeMutations()[{2}] = {'G', 'T'};
-  dag.Get(EdgeId{6}).GetMutableEdgeMutations()[{2}] = {'G', 'C'};
-  dag.Get(EdgeId{7}).GetMutableEdgeMutations()[{2}] = {'T', 'G'};
-  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
-  dag.Get(EdgeId{9}).GetMutableEdgeMutations()[{2}] = {'A', 'G'};
-
-  dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{3}] = {'G', 'C'};
-  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{3}] = {'G', 'T'};
-  dag.Get(EdgeId{3}).GetMutableEdgeMutations()[{3}] = {'T', 'G'};
-  dag.Get(EdgeId{4}).GetMutableEdgeMutations()[{3}] = {'T', 'G'};
-  dag.Get(EdgeId{5}).GetMutableEdgeMutations()[{3}] = {'G', 'T'};
-  dag.Get(EdgeId{6}).GetMutableEdgeMutations()[{3}] = {'G', 'C'};
-  dag.Get(EdgeId{7}).GetMutableEdgeMutations()[{3}] = {'T', 'G'};
-  dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{3}] = {'A', 'C'};
-  dag.Get(EdgeId{9}).GetMutableEdgeMutations()[{3}] = {'A', 'T'};
-
-  dag.RecomputeCompactGenomes();
-  return input_storage;
 }
 
 [[maybe_unused]] static void test_sample() {
@@ -272,7 +227,7 @@ static auto MakeSampleDAG() {
     }
   }
 
-  spr.RecomputeCompactGenomes();
+  spr.RecomputeCompactGenomes(true);
 }
 
 // [[maybe_unused]] static const auto test_added0 = add_test(

@@ -169,6 +169,7 @@ set_target_properties(larch-usher-glue
 
 larch_executable(larch-test
   test/main.cpp
+  test/test_ambiguities.cpp
   test/test_compact_genome.cpp
   test/test_count_trees.cpp
   test/test_dag_trimming.cpp
@@ -178,6 +179,7 @@ larch_executable(larch-test
   test/test_overlay.cpp
   test/test_sample_tree.cpp
   test/test_sample_best_tree.cpp
+  test/test_spr_after_move.cpp
   test/test_spr.cpp
   test/test_subtree_weight.cpp
   test/test_weight_accum.cpp

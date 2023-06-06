@@ -164,18 +164,19 @@ static std::string CompactGenomeToString(Node node) {
 
 template <typename DAG>
 void MADAGToDOT(DAG dag, std::ostream& out) {
-  out << "digraph {\n";
+  out << "digraph G {\n";
   out << "  forcelabels=true\n";
   out << "  nodesep=1.0\n";
   out << "  ranksep=2.0\n";
   out << "  ratio=1.0\n";
+  out << "  node [color=azure4,fontcolor=black,penwidth=4]\n";
+  out << "  edge [color=azure3,fontcolor=black,penwidth=4]\n";
   for (auto edge : dag.Const().GetEdges()) {
     out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
         << CompactGenomeToString(edge.GetChild()) << "\"";
-    out << "[ xlabel=\"";
+    out << "[ headlabel=\"";
     out << EdgeMutationsToString(edge);
-    out << "\" ]";
-    out << "\n";
+    out << "\" ]\n";
   }
   out << "}\n";
 }

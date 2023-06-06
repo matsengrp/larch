@@ -38,7 +38,7 @@ struct FitchSet {
   char value_ = 0;
 };
 
-nuc_one_hot base_to_singleton(MutationBase base) {
+inline nuc_one_hot base_to_singleton(MutationBase base) {
   switch (base.ToChar()) {
     case 'A':
       return 1;
