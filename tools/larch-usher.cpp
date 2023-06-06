@@ -123,6 +123,8 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
                                 std::pair<int, int> move_score_coeffs)
       : merge_{merge},
         move_score_coeffs_{move_score_coeffs} {};
+  // this callback mimics the original larch-usher setup where only the subset
+  // of nonconflicting moves chosen by matOptimize were applied to the DAG.
 
   using Storage =
       ExtendDAGStorage<DefaultDAGStorage,
@@ -242,6 +244,7 @@ template <typename MergeT>
 struct Merge_All_Moves_Found_Callback : public Move_Found_Callback {
   Merge_All_Moves_Found_Callback(MergeT& merge)
       : merge_{merge} {};
+  // this callback option applies all moves found by matOptimize, regardless of optimality.
 
   using Storage =
       ExtendDAGStorage<DefaultDAGStorage,
@@ -317,6 +320,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
                                             std::pair<int, int> move_score_coeffs)
       : merge_{merge},
         move_score_coeffs_{move_score_coeffs} {};
+  // this callback option applies all of the optimal moves found by matOptimize directly to the DAG.
 
   using Storage =
       ExtendDAGStorage<DefaultDAGStorage,
@@ -447,6 +451,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
       MergeT& merge, std::pair<int, int> move_score_coeffs)
       : merge_{merge},
         move_score_coeffs_{move_score_coeffs} {};
+  // This callback option applies all optimal moves to the DAG directly, but it does not apply any moves to the tree that is used to explore the space of possible moves.
 
   using Storage =
       ExtendDAGStorage<DefaultDAGStorage,
@@ -557,137 +562,6 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
   }
 
   MergeT& merge_;
-  decltype(AddMappedNodes(AddMATConversion(Storage{}))) reassigned_states_storage_ =
-      AddMappedNodes(AddMATConversion(Storage{}));
-  std::atomic<MAT::Tree*> sample_mat_ = nullptr;
-  std::mutex merge_mtx_;
-  std::pair<int, int> move_score_coeffs_;
-};
-
-template <typename MergeT>
-struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Callback {
-  Merge_All_Profitable_Moves_Found_So_Far_Callback(MergeT& merge)
-      : merge_{merge}, move_score_coeffs_{1, 1} {};
-
-  Merge_All_Profitable_Moves_Found_So_Far_Callback(
-      MergeT& merge, std::pair<int, int> move_score_coeffs)
-      : merge_{merge},
-        move_score_coeffs_{move_score_coeffs} {};
-
-  using Storage =
-      ExtendDAGStorage<DefaultDAGStorage,
-                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
-                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
-
-  bool operator()(Profitable_Moves& move, int /*best_score_change*/,
-                  [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
-                      nodes_with_major_allele_set_change) override {
-    auto storage = [this](std::string ref_seq) {
-      MAT::Tree* mat = sample_mat_.load();
-      auto mat_conv = AddMATConversion(Storage{});
-      mat_conv.View().BuildFromMAT(*mat, ref_seq);
-      check_edge_mutations(mat_conv.View().Const());
-      mat_conv.View().RecomputeCompactGenomes();
-      return SPRStorage(std::move(mat_conv));
-    }(merge_.GetResult().GetReferenceSequence());
-
-    int node_id_map_count = 0;
-    auto spr = storage.View();
-    spr.GetRoot().Validate(true);
-
-    if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
-      spr.GetRoot().Validate(true);
-
-      auto fragment = spr.GetFragment();
-      if (move_score_coeffs_.first != 0) {
-        auto src_leaf_set =
-            merge_.GetResultNodeLabels()
-                .at(reassigned_states_storage_.View()
-                        .GetNodeFromMAT(spr.GetMoveSource().GetMATNode())
-                        .GetOriginalId()
-                        .value)
-                .GetLeafSet()
-                ->GetClades();
-        auto dst_leaf_set =
-            merge_.GetResultNodeLabels()
-                .at(reassigned_states_storage_.View()
-                        .GetNodeFromMAT(spr.GetMoveTarget().GetMATNode())
-                        .GetOriginalId()
-                        .value)
-                .GetLeafSet()
-                ->GetClades();
-        for (auto node_id : fragment.first) {
-          auto hypothetical_node = spr.Get(node_id);
-          if (not hypothetical_node.IsUA()) {
-            if (hypothetical_node.IsMoveNew()) {
-              if (not(merge_.ContainsLeafset(clades_union(src_leaf_set, dst_leaf_set)))) {
-                ++node_id_map_count;
-              }
-            } else if (hypothetical_node.HasChangedTopology() and
-                       node_id != spr.GetMoveSource().GetId() and
-                       node_id != spr.GetMoveTarget().GetId()) {
-              const auto& current_leaf_sets =
-                  merge_.GetResultNodeLabels()
-                      .at(reassigned_states_storage_.View()
-                              .GetNodeFromMAT(hypothetical_node.GetMATNode())
-                              .GetOriginalId()
-                              .value)
-                      .GetLeafSet()
-                      ->GetClades();
-              if (not(merge_.ContainsLeafset(
-                          clades_difference(current_leaf_sets, src_leaf_set)) and
-                      merge_.ContainsLeafset(
-                          clades_difference(current_leaf_sets, dst_leaf_set)))) {
-                ++node_id_map_count;
-              }
-            }
-          }
-        }
-      }
-      move.score_change = move_score_coeffs_.second * move.score_change -
-                          move_score_coeffs_.first * node_id_map_count;
-
-      if (move.score_change <= 0 or move.score_change <= running_best_score_change_) {
-        running_best_score_change_ = move.score_change;
-        std::scoped_lock<std::mutex> lock{merge_mtx_};
-        merge_.AddFragment(spr, fragment.first, fragment.second);
-      } else {
-        return false;
-      }
-    }
-    return move.score_change <= 0;
-  }
-
-  void operator()(MAT::Tree& tree) {
-    reassigned_states_storage_ = {};
-    reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   merge_.GetResult().GetReferenceSequence());
-    check_edge_mutations(reassigned_states_storage_.View().Const());
-    reassigned_states_storage_.View().RecomputeCompactGenomes();
-    {
-      std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAG(reassigned_states_storage_.View());
-      sample_mat_.store(std::addressof(tree));
-      merge_.ComputeResultEdgeMutations();
-    }
-  }
-
-  void OnReassignedStates(MAT::Tree& tree) {
-    reassigned_states_storage_ = {};
-    reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   merge_.GetResult().GetReferenceSequence());
-    check_edge_mutations(reassigned_states_storage_.View().Const());
-    reassigned_states_storage_.View().RecomputeCompactGenomes();
-    {
-      std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAG(reassigned_states_storage_.View());
-      sample_mat_.store(std::addressof(tree));
-      merge_.ComputeResultEdgeMutations();
-    }
-  }
-
-  MergeT& merge_;
-  int running_best_score_change_ = INT_MAX;
   decltype(AddMappedNodes(AddMATConversion(Storage{}))) reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage{}));
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
@@ -945,11 +819,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
     if (callback_config == "all-moves") {
       Merge_All_Moves_Found_Callback callback{merge};
-      optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), callback, callback, callback));
-    } else if (callback_config == "best-moves-so-far") {
-      Merge_All_Profitable_Moves_Found_So_Far_Callback callback{
-          merge, {move_coeff_nodes, move_coeff_pscore}};
       optimized_dags.push_back(
           optimize_dag_direct(sample.View(), callback, callback, callback));
     } else if (callback_config == "best-moves-fixed-tree") {
