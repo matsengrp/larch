@@ -15,7 +15,7 @@ FetchContent_Declare(oneTBB-src
 FetchContent_MakeAvailable(oneTBB-src)
 
 include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
-tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1)
+tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
 find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
@@ -66,19 +66,19 @@ set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
 
-set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses)
+set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   list(APPEND STRICT_WARNINGS -Wcast-align=strict)
 endif()
 
 function(larch_compile_opts PRODUCT)
-  target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17)
+  target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -fno-omit-frame-pointer)
 
   if(${USE_ASAN})
-    target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=address,undefined -fno-sanitize-recover)
+    target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
   elseif(${USE_TSAN})
-    target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=thread)
+    target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=thread)
   endif()
 
   target_include_directories(${PRODUCT} PUBLIC include tools test)
@@ -153,12 +153,12 @@ larch_link_opts(larch)
 add_library(usher
   ${MATOPTIMIZE_SRC}
   src/usher_globals.cpp)
-target_compile_options(usher PRIVATE -march=native -std=c++17 -w)
+target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer)
 
 if(${USE_ASAN})
-  target_compile_options(usher PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover)
+  target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
 elseif(${USE_TSAN})
-  target_compile_options(usher PUBLIC -Og -g3 -fsanitize=thread)
+  target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=thread)
 endif()
 
 target_include_directories(usher PUBLIC include)

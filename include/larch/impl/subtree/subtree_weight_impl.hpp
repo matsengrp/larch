@@ -178,7 +178,7 @@ typename WeightOps::Weight SubtreeWeight<WeightOps, DAG>::CladeWeight(
     optimum_edgeids.push_back(
         clade.at(static_cast<ranges::range_difference_t<decltype(clade)>>(i)));
   }
-  Edge first_edge = dag_.Get(clade[0]);
+  Edge first_edge = dag_.Get(clade.at(0));
   GetOrInsert(GetOrInsert(cached_min_weight_edges_, first_edge.GetParentId().value),
               first_edge.GetClade().value) = optimum_edgeids;
   return clade_result.first;

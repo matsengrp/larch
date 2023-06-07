@@ -23,8 +23,8 @@ void compareDAG(Node1 dag1, Node2 dag2) {
             dag2.GetCladesCount());
   }
   for (size_t child_idx = 0; child_idx < dag1.GetCladesCount(); child_idx++) {
-    auto edge1 = dag1.GetClade(CladeIdx{child_idx})[0];
-    auto edge2 = dag2.GetClade(CladeIdx{child_idx})[0];
+    auto edge1 = dag1.GetClade(CladeIdx{child_idx}).at(0);
+    auto edge2 = dag2.GetClade(CladeIdx{child_idx}).at(0);
     if (edge1.GetEdgeMutations() != edge2.GetEdgeMutations()) {
       fprintf(stderr, "edge %zu and edge %zu  have mismatch mutation\n",
               edge1.GetId().value, edge2.GetId().value);

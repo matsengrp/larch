@@ -153,10 +153,11 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(Node dag_node,
     Assert(clade.size() == 1);
     auto edge = *clade.begin();
     const auto& mutations = edge.GetEdgeMutations();
-    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
     size_t node_id = edge.GetChild().GetId().value;
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
     auto* node = new MAT::Node(node_id);
     edge.GetChild().SetMATNode(node);
+    node->clade_annotations.resize(new_tree.get_num_annotations(), "");
     new_tree.register_node_serial(node);
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
@@ -192,7 +193,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(MATNodePtr par_no
                                                                Node node, DAG dag) {
   for (CladeIdx clade_idx = {0}; clade_idx.value < par_node->children.size();
        ++clade_idx.value) {
-    MATNodePtr mat_child = par_node->children[clade_idx.value];
+    MATNodePtr mat_child = par_node->children.at(clade_idx.value);
     auto child_node = dag.AppendNode();
     child_node.SetMATNode(mat_child);
     auto child_edge = dag.AppendEdge(node, child_node, clade_idx);

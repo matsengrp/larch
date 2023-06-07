@@ -50,7 +50,7 @@ typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::Abov
   auto edgepair = edgeweight.GetWeights().begin();
   std::map<typename WeightOps::Weight, Count> result;
   for (auto const& childitem : childnodeweight.GetWeights()) {
-    result[weight_ops_.AboveNode(edgepair->first, childitem.first)] += childitem.second;
+    result.at(weight_ops_.AboveNode(edgepair->first, childitem.first)) += childitem.second;
   }
   return WeightCounter<WeightOps>(std::move(result),
                                   std::forward<WeightOps>(weight_ops_));
@@ -66,7 +66,7 @@ WeightCounter<WeightOps>::WeightCounter(
     const WeightOps& weight_ops)
     : weight_ops_{weight_ops} {
   for (const auto& weight : inweights) {
-    weights_[weight]++;
+    weights_.at(weight)++;
   }
 }
 
@@ -92,7 +92,7 @@ WeightCounter<WeightOps> WeightCounter<WeightOps>::operator+(
     const WeightCounter<WeightOps>& rhs) const {
   std::map<typename WeightOps::Weight, Count> result = weights_;
   for (auto const& map_pair : rhs.GetWeights()) {
-    result[map_pair.first] += map_pair.second;
+    result.at(map_pair.first) += map_pair.second;
   }
   return WeightCounter<WeightOps>(std::move(result), weight_ops_);
 }
@@ -104,7 +104,7 @@ WeightCounter<WeightOps> WeightCounter<WeightOps>::operator*(
   for (auto const& lpair : weights_) {
     for (auto const& rpair : rhs.GetWeights()) {
       auto value = weight_ops_.BetweenClades({lpair.first, rpair.first});
-      result[value] += lpair.second * rpair.second;
+      result.at(value) += lpair.second * rpair.second;
     }
   }
   return WeightCounter<WeightOps>(std::move(result), weight_ops_);
