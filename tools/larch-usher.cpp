@@ -338,10 +338,10 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
     spr.GetRoot().Validate(true);
 
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
-      spr.GetRoot().Validate(true);
-
-      auto fragment = spr.GetFragment();
-      if (move_score_coeffs_.first != 0) {
+//      spr.GetRoot().Validate(true);
+//
+//      auto fragment = spr.GetFragment();
+//      if (move_score_coeffs_.first != 0) {
 /*
         auto src_leaf_set =
             merge_.GetResultNodeLabels()
@@ -392,13 +392,13 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
           }
         }
 */
-      }
-      move.score_change = move_score_coeffs_.second * move.score_change -
-                          move_score_coeffs_.first * node_id_map_count;
-      if (move.score_change <= 0) {
-        std::scoped_lock<std::mutex> lock{merge_mtx_};
-        merge_.AddFragment(spr, fragment.first, fragment.second);
-      }
+//      }
+//      move.score_change = move_score_coeffs_.second * move.score_change -
+//                          move_score_coeffs_.first * node_id_map_count;
+//      if (move.score_change <= 0) {
+//        std::scoped_lock<std::mutex> lock{merge_mtx_};
+//        merge_.AddFragment(spr, fragment.first, fragment.second);
+//      }
     } else {
       return false;
     }
@@ -425,6 +425,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
   }

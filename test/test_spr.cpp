@@ -34,11 +34,19 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 
     auto spr = storage.View();
     spr.GetRoot().Validate(true);
+std::cout << "dag before merge:\n" << std::flush;
+MADAGToDOT(spr, std::cout);
+std::cout << std::flush;
 
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
+std::cout << "applying move " << spr.GetMoveSource().GetId().value << " -> " << spr.GetMoveTarget().GetId().value << "\n" << std::flush;
       spr.GetRoot().Validate(true);
 
       auto fragment = spr.GetFragment();
+
+std::cout << "fragment:\n" << std::flush;
+FragmentToDOT(spr, fragment.second, std::cout);
+std::cout << std::flush;
 
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddFragment(spr, fragment.first, fragment.second);
@@ -91,7 +99,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 }
 
 static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
-  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+   tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge<MADAG> merge{input_dag.GetReferenceSequence()};
   merge.AddDAG(input_dag);
@@ -263,16 +271,16 @@ static auto MakeSampleDAG() {
   auto spr = spr_storage.View();
 
   spr.GetRoot().Validate(true);
-  spr.ApplyMove({1}, {10});
-  spr.GetRoot().Validate(true);
+  //spr.ApplyMove({1}, {10});
+  //spr.GetRoot().Validate(true);
 
-  for (auto node : spr.GetNodes()) {
-    if (not node.IsOverlaid<CompactGenome>()) {
-      node.SetOverlay<CompactGenome>();
-    }
-  }
+  //for (auto node : spr.GetNodes()) {
+  //  if (not node.IsOverlaid<CompactGenome>()) {
+  //    node.SetOverlay<CompactGenome>();
+  //  }
+  //}
 
-  spr.RecomputeCompactGenomes();
+  //spr.RecomputeCompactGenomes();
 }
 
 // [[maybe_unused]] static const auto test_added0 = add_test(
