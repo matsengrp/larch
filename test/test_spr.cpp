@@ -69,6 +69,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
   }
