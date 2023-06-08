@@ -100,6 +100,12 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   return input_dag_storage;
 }
 
+[[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path) {
+  MADAGStorage input_dag_storage = LoadDAGFromProtobuf(input_dag_path);
+  input_dag_storage.View().RecomputeCompactGenomes();
+  return input_dag_storage;
+}
+
 static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
@@ -240,12 +246,8 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   spr.RecomputeCompactGenomes();
 }
 
-// [[maybe_unused]] static const auto test_added0 = add_test(
-//     {[] {
-//        test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"),
-//        3);
-//      },
-//      "SPR: seedtree"});
+[[maybe_unused]] static const auto test_added0 = add_test(
+    {[] { test_spr(Load("data/test_5_trees/tree_0.pb.gz"), 3); }, "SPR: test_5_trees"});
 
 [[maybe_unused]] static const auto test_added1 =
     add_test({[] {
