@@ -69,6 +69,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(reassigned_states_storage_.View());
+      sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
   }
@@ -112,7 +113,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
     optimized_dags.back().first.View().RecomputeCompactGenomes();
-    merge.AddDAG(optimized_dags.back().first.View(), chosen_node);
+    merge.AddDAG(optimized_dags.back().first.View(), optimized_dags.back().first.View().GetRoot());
   }
 }
 
