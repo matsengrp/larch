@@ -10,6 +10,15 @@
 
 #include <tbb/global_control.h>
 
+struct Empty_Callback : public Move_Found_Callback {
+  bool operator()(Profitable_Moves& move, int best_score_change,
+                  std::vector<Node_With_Major_Allele_Set_Change>&) override {
+    return move.score_change < best_score_change;
+  }
+  void operator()(MAT::Tree&) {}
+  void OnReassignedStates(MAT::Tree&) {}
+};
+
 template <typename DAG, typename MergeT>
 struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag, MergeT& merge)
@@ -125,10 +134,12 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View().Const());
     Test_Move_Found_Callback callback{sample.View(), merge};
+    // Empty_Callback callback;
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
     optimized_dags.back().first.View().RecomputeCompactGenomes();
-    merge.AddDAGs(std::vector{optimized_dags.back().first.View()}, optimized_dags.back().first.View().GetRoot());
+    merge.AddDAGs(std::vector{optimized_dags.back().first.View()},
+                  optimized_dags.back().first.View().GetRoot());
   }
 }
 
@@ -246,8 +257,9 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   spr.RecomputeCompactGenomes();
 }
 
-[[maybe_unused]] static const auto test_added0 = add_test(
-    {[] { test_spr(Load("data/test_5_trees/tree_0.pb.gz"), 3); }, "SPR: test_5_trees"});
+[[maybe_unused]] static const auto test_added0 =
+    add_test({[] { test_spr(Load("data/test_5_trees/tree_0.pb.gz"), 3000); },
+              "SPR: test_5_trees"});
 
 [[maybe_unused]] static const auto test_added1 =
     add_test({[] {
@@ -262,6 +274,12 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});
+
+[[maybe_unused]] static const auto test_added4 = add_test(
+    {[] {
+       test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"), 3);
+     },
+     "SPR: seedtree"});
 
 // [[maybe_unused]] static const auto test_added4 =
 //     add_test({[] {
