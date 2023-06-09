@@ -11,6 +11,11 @@
  */
 struct MutationPosition {
   size_t value = NoId;
+
+  friend std::ostream& operator<<(std::ostream& os, MutationPosition pos) {
+    os << pos.value;
+    return os;
+  }
 };
 
 inline bool operator==(MutationPosition lhs, MutationPosition rhs);
@@ -34,20 +39,13 @@ class EdgeMutations {
   inline auto operator[](MutationPosition pos) -> decltype(mutations_[pos]);
   inline auto insert(
       std::pair<MutationPosition, std::pair<MutationBase, MutationBase>> mut);
+  inline bool HasMutationAtPosition(MutationPosition pos) const;
+  inline std::pair<MutationBase, MutationBase> GetMutation(MutationPosition pos) const;
+
   inline bool operator==(const EdgeMutations& rhs) const;
   inline bool operator!=(const EdgeMutations& rhs) const;
 
-  std::string ToString() const {
-    std::string result = "<";
-    for (auto [pos, muts] : mutations_) {
-      result += muts.first;
-      result += std::to_string(pos.value);
-      result += muts.second;
-      result += ",";
-    }
-    result += ">";
-    return result;
-  }
+  inline std::string ToString() const;
 
  private:
   inline explicit EdgeMutations(

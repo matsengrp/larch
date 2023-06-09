@@ -15,7 +15,7 @@
     loaded_edge_mutatons.emplace_back(edge.GetEdgeMutations().Copy());
   }
 
-  dag.RecomputeCompactGenomes();
+  dag.RecomputeCompactGenomes(true);
   std::vector<CompactGenome> computed_cgs;
   for (Node node : dag.GetNodes()) {
     computed_cgs.emplace_back(node.GetCompactGenome().Copy());
@@ -34,7 +34,7 @@
   for (Node node : dag.GetNodes()) {
     node = CompactGenome{};
   }
-  dag.RecomputeCompactGenomes();
+  dag.RecomputeCompactGenomes(true);
   index = 0;
   for (Node node : dag.GetNodes()) {
     assert_equal(node.GetCompactGenome(), computed_cgs.at(index++), "Compact genomes");

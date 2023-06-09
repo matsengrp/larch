@@ -17,7 +17,7 @@ static void test_protobuf(const std::string& correct_path,
   for (auto& path : paths) {
     trees.emplace_back(LoadDAGFromProtobuf(path));
     MutableMADAG view = trees.back().View();
-    view.RecomputeCompactGenomes();
+    view.RecomputeCompactGenomes(true);
     tree_views.push_back(view);
   }
 
@@ -89,7 +89,7 @@ static void test_case_20d() {
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
     trees.at(path_idx.first) = LoadTreeFromProtobuf(
         path_idx.second, correct_result.View().GetReferenceSequence());
-    trees.at(path_idx.first).View().RecomputeCompactGenomes();
+    trees.at(path_idx.first).View().RecomputeCompactGenomes(true);
   });
 
   std::vector<MADAG> tree_views;
@@ -122,11 +122,11 @@ static void test_add_trees() {
   std::vector<MADAGStorage> trees1, trees2;
   for (auto& path : paths1) {
     trees1.push_back(LoadDAGFromProtobuf(path));
-    trees1.back().View().RecomputeCompactGenomes();
+    trees1.back().View().RecomputeCompactGenomes(true);
   }
   for (auto& path : paths2) {
     trees2.push_back(LoadDAGFromProtobuf(path));
-    trees2.back().View().RecomputeCompactGenomes();
+    trees2.back().View().RecomputeCompactGenomes(true);
   }
 
   MADAGStorage correct_result = LoadDAGFromJson(correct_path);
@@ -165,7 +165,7 @@ static void test_subtree() {
   std::vector<MADAGStorage> trees;
   for (auto& path : paths) {
     trees.push_back(LoadDAGFromProtobuf(path));
-    trees.back().View().RecomputeCompactGenomes();
+    trees.back().View().RecomputeCompactGenomes(true);
   }
 
   for (auto& tree : trees) {
