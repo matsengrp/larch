@@ -61,11 +61,11 @@ template <typename Feature, typename CRTP>
 std::pair<const Feature*, bool>
 // TODO: take const reference and copy only if needed
 ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>::AddDeduplicated(
-    Feature&& feature) {
+    Feature&& feature) const {
   using Id = std::conditional_t<
       CRTP::template contains_element_feature<NodeId, Deduplicate<Feature>>, NodeId,
       EdgeId>;
-  auto& deduplicated = static_cast<CRTP&>(*this)
+  auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<Id, Deduplicate<Feature>>()
                            .deduplicated_;
   auto [iter, success] = deduplicated.insert(std::forward<Feature>(feature));

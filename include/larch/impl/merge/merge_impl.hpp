@@ -1,5 +1,3 @@
-#include <mutex>
-
 Merge::Merge(std::string_view reference_sequence) {
   ResultDAG().SetReferenceSequence(reference_sequence);
 }
@@ -11,6 +9,10 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   }
   if (below.value != NoId and dags.at(0).Get(below).IsUA()) {
     below.value = NoId;
+  }
+
+  if (dags.size() == 0) {
+    return;
   }
 
   std::vector<size_t> idxs;
@@ -50,8 +52,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     }
   });
 
-  NodeId node_id{ResultDAG().GetNodesCount()};
-  std::mutex mtx;
+  std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
   tbb::parallel_for_each(idxs, [&](size_t idx) {
     NodeId id{0};
     auto& dag = dags.at(idx);
@@ -63,15 +64,16 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
       }
       Assert(not label.Empty());
       auto [insert_pair, orig_id] = [&] {
-        std::unique_lock<std::mutex> lock{mtx};
-        auto ins_pair = result_nodes_.insert({label, node_id});
+        NodeId new_id;
+        auto ins_pair = result_nodes_.insert({label, new_id});
         if (ins_pair.second) {
-          GetOrInsert(result_node_labels_, node_id) = label;
+          new_id.value = node_id.fetch_add(1);
+          ins_pair.first->second = new_id;
+          result_node_labels_[new_id] = label;
+        } else {
+          new_id.value = ins_pair.first->second.value;
         }
-        auto result = std::make_pair(ins_pair, node_id);
-        if (ins_pair.second) {
-          ++node_id.value;
-        }
+        auto result = std::make_pair(ins_pair, new_id);
         return result;
       }();
       if (insert_pair.second) {
@@ -165,11 +167,13 @@ MergeDAG Merge::GetResult() const { return result_dag_storage_.View(); }
 
 MutableMergeDAG Merge::ResultDAG() { return result_dag_storage_.View(); }
 
-const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
+const ConcurrentUnorderedMap<NodeLabel, NodeId>& Merge::GetResultNodes() const {
+  // const std::unordered_map<NodeLabel, NodeId>& Merge::GetResultNodes() const {
   return result_nodes_;
 }
 
-const std::vector<NodeLabel>& Merge::GetResultNodeLabels() const {
+const ConcurrentUnorderedMap<NodeId, NodeLabel>& Merge::GetResultNodeLabels() const {
+  // const std::vector<NodeLabel>& Merge::GetResultNodeLabels() const {
   return result_node_labels_;
 }
 

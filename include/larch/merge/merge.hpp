@@ -72,9 +72,11 @@ class Merge {
   /**
    * Access the labels of the resulting DAG's nodes.
    */
-  inline const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
+  inline const ConcurrentUnorderedMap<NodeLabel, NodeId>& GetResultNodes() const;
+  // inline const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
 
-  inline const std::vector<NodeLabel>& GetResultNodeLabels() const;
+  inline const ConcurrentUnorderedMap<NodeId, NodeLabel>& GetResultNodeLabels() const;
+  // inline const std::vector<NodeLabel>& GetResultNodeLabels() const;
 
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
@@ -90,8 +92,8 @@ class Merge {
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
 
   // Node ids of the resulting DAG's nodes.
-  std::unordered_map<NodeLabel, NodeId> result_nodes_;
-  std::vector<NodeLabel> result_node_labels_;
+  ConcurrentUnorderedMap<NodeLabel, NodeId> result_nodes_;
+  ConcurrentUnorderedMap<NodeId, NodeLabel> result_node_labels_;
 
   // Edge ids of the resulting DAG's edges.
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;

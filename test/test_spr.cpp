@@ -52,6 +52,15 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       storage.View().GetRoot().Validate(true);
       auto fragment = storage.View().GetFragment();
       batch_.push_back(std::move(fragment));
+
+      if (batch_.size() > 2048) {
+        std::unique_lock lock{merge_mtx_};
+        if (batch_.size() > 2048) {
+          merge_.AddDAGs(batch_);
+          batch_.clear();
+          batch_storage_.clear();
+        }
+      }
     } else {
       return false;
     }
