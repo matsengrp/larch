@@ -42,24 +42,11 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   });
 
   ResultDAG().InitializeNodes(result_nodes_.size());
-  EdgeId edge_id{ResultDAG().GetEdgesCount()};
-  for (auto& edge : added_edges) {
-    auto parent = result_nodes_.find(edge.GetParent());
-    auto child = result_nodes_.find(edge.GetChild());
-    Assert(parent != result_nodes_.end());
-    Assert(child != result_nodes_.end());
-    Assert(parent->second.value < ResultDAG().GetNodesCount());
-    Assert(child->second.value < ResultDAG().GetNodesCount());
-    CladeIdx clade = edge.ComputeCladeIdx();
-    Assert(clade.value != NoId);
-    ResultDAG().AddEdge(edge_id, parent->second, child->second, clade);
-    ResultDAG().Get(parent->second) = parent->first.GetCompactGenome();
-    ResultDAG().Get(child->second) = child->first.GetCompactGenome();
-    auto result_edge_it = result_edges_.find(edge);
-    Assert(result_edge_it != result_edges_.end());
-    result_edge_it->second = edge_id;
-    edge_id.value++;
-  }
+  std::atomic<size_t> edge_id{ResultDAG().GetEdgesCount()};
+  ResultDAG().InitializeEdges(result_edges_.size());
+  tbb::parallel_for_each(added_edges, [&](const EdgeLabel& edge) {
+    BuildResult(edge, edge_id, result_nodes_, result_edges_, ResultDAG());
+  });
 
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   Assert(result_node_labels_.size() == ResultDAG().GetNodesCount());
@@ -220,4 +207,25 @@ void Merge::MergeEdges(size_t i, const DAGSRange& dags, NodeId below,
       added_edges.push_back({parent_label, child_label});
     }
   }
+}
+
+void Merge::BuildResult(const EdgeLabel& edge, std::atomic<size_t>& edge_id,
+                        const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
+                        const ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+                        MutableMergeDAG result_dag) {
+  EdgeId id{edge_id.fetch_add(1)};
+  auto parent = result_nodes.find(edge.GetParent());
+  auto child = result_nodes.find(edge.GetChild());
+  Assert(parent != result_nodes.end());
+  Assert(child != result_nodes.end());
+  Assert(parent->second.value < result_dag.GetNodesCount());
+  Assert(child->second.value < result_dag.GetNodesCount());
+  CladeIdx clade = edge.ComputeCladeIdx();
+  Assert(clade.value != NoId);
+  result_dag.Get(id).Set(parent->second, child->second, clade);
+  result_dag.Get(parent->second) = parent->first.GetCompactGenome();
+  result_dag.Get(child->second) = child->first.GetCompactGenome();
+  auto result_edge_it = result_edges.find(edge);
+  Assert(result_edge_it != result_edges.end());
+  result_edge_it->second = id;
 }

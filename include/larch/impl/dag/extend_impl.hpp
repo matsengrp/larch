@@ -95,6 +95,12 @@ void ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::InitializeNodes(size_t size) {
 }
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
+void ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::InitializeEdges(size_t size) {
+  GetTarget().InitializeEdges(size);
+  additional_edge_features_storage_.resize(size);
+}
+
+template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 template <typename F>
 auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureStorage() {
   if constexpr (tuple_contains_v<decltype(additional_dag_features_storage_), F>) {

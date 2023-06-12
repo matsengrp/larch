@@ -58,6 +58,7 @@ struct DAGStorage {
   size_t GetEdgesCount() const;
 
   void InitializeNodes(size_t size);
+  void InitializeEdges(size_t size);
 
   template <typename Feature>
   auto& GetFeatureStorage(NodeId id);

@@ -63,6 +63,12 @@ void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::InitializeNodes(
 }
 
 template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::InitializeEdges(
+    size_t size) {
+  edges_container_.Initialize(size);
+}
+
+template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
 template <typename Feature>
 auto& DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetFeatureStorage(
     NodeId id) {

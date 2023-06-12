@@ -171,6 +171,14 @@ void OverlayDAGStorage<Target>::InitializeNodes(size_t size) {
 }
 
 template <typename Target>
+void OverlayDAGStorage<Target>::InitializeEdges(size_t size) {
+  if (size < GetTarget().GetEdgesCount()) {
+    Fail("Overlayed DAG can only be grown");
+  }
+  added_edge_storage_.resize(size - GetTarget().GetEdgesCount());
+}
+
+template <typename Target>
 template <typename F>
 auto& OverlayDAGStorage<Target>::GetFeatureStorage() {
   return GetTarget().template GetFeatureStorage<F>();

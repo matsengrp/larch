@@ -115,6 +115,11 @@ void DAGView<Storage, Base>::InitializeNodes(size_t size) const {
 }
 
 template <typename Storage, template <typename, typename> typename Base>
+void DAGView<Storage, Base>::InitializeEdges(size_t size) const {
+  dag_storage_.InitializeEdges(size);
+}
+
+template <typename Storage, template <typename, typename> typename Base>
 template <typename Feature>
 auto& DAGView<Storage, Base>::GetFeatureStorage() const {
   return dag_storage_.template GetFeatureStorage<Feature>();

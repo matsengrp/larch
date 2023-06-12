@@ -75,6 +75,7 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   auto GetEdges() const;
 
   void InitializeNodes(size_t size) const;
+  void InitializeEdges(size_t size) const;
 
   template <typename Feature>
   auto& GetFeatureStorage() const;

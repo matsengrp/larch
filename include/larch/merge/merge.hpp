@@ -109,6 +109,12 @@ class Merge {
                          ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
                          tbb::concurrent_vector<EdgeLabel>& added_edges);
 
+  static inline void BuildResult(
+      const EdgeLabel& edge, std::atomic<size_t>& edge_id,
+      const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
+      const ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+      MutableMergeDAG result_dag);
+
   // Every unique node leaf set, found among all input DAGs.
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
 

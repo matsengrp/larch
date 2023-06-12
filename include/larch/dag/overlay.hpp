@@ -94,6 +94,7 @@ struct OverlayDAGStorage {
   auto GetEdges() const;
 
   void InitializeNodes(size_t size);
+  void InitializeEdges(size_t size);
 
   template <typename F>
   auto& GetFeatureStorage();
