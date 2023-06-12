@@ -61,5 +61,5 @@ struct ExtraFeatureConstView<Deduplicate<Feature>, CRTP> {
 
 template <typename Feature, typename CRTP>
 struct ExtraFeatureMutableView<Deduplicate<Feature>, CRTP> {
-  std::pair<const Feature*, bool> AddDeduplicated(Feature&& feature) const;
+  std::pair<const Feature*, bool> AddDeduplicated(const Feature& feature) const;
 };

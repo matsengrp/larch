@@ -73,9 +73,11 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     storage.View().RecomputeCompactGenomes();
     {
       std::unique_lock lock{merge_mtx_};
-      merge_.AddDAGs(batch_);
-      batch_.clear();
-      batch_storage_.clear();
+      if (not batch_.empty()) {
+        merge_.AddDAGs(batch_);
+        batch_.clear();
+        batch_storage_.clear();
+      }
       merge_.AddDAGs(std::vector{storage.View()});
       merge_.ComputeResultEdgeMutations();
     }

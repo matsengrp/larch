@@ -31,13 +31,10 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   });
 
   std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
+  tbb::concurrent_vector<EdgeLabel> added_edges;
   tbb::parallel_for_each(idxs, [&](size_t i) {
     MergeNodes(i, dags, below, dags_labels, result_nodes_, result_node_labels_,
                node_id);
-  });
-
-  tbb::concurrent_vector<EdgeLabel> added_edges;
-  tbb::parallel_for_each(idxs, [&](size_t i) {
     MergeEdges(i, dags, below, dags_labels, result_edges_, added_edges);
   });
 
@@ -52,7 +49,6 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   Assert(result_node_labels_.size() == ResultDAG().GetNodesCount());
   Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
   ResultDAG().BuildConnections();
-  ComputeResultEdgeMutations();
 }
 
 template <typename DAG>
@@ -118,7 +114,7 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
-    auto cg_iter = result_dag.AddDeduplicated(node.GetCompactGenome().Copy());
+    auto cg_iter = result_dag.AddDeduplicated(node.GetCompactGenome());
     labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
   }
 }
