@@ -104,13 +104,18 @@ class Merge {
                          std::atomic<size_t>& node_id);
 
   template <typename DAGSRange>
-  static void MergeEdges(size_t i, const DAGSRange& dags, NodeId below,
-                         std::vector<std::vector<NodeLabel>>& dags_labels,
-                         ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
-                         tbb::concurrent_vector<EdgeLabel>& added_edges);
+  static void MergeEdges(
+      size_t i, const DAGSRange& dags, NodeId below,
+      std::vector<std::vector<NodeLabel>>& dags_labels,
+      ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+      tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
+          added_edges);
 
   static inline void BuildResult(
-      const EdgeLabel& edge, std::atomic<size_t>& edge_id,
+      size_t i,
+      tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
+          added_edges,
+      std::atomic<size_t>& edge_id,
       const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
       const ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
       MutableMergeDAG result_dag);
