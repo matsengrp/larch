@@ -73,10 +73,8 @@ class Merge {
    * Access the labels of the resulting DAG's nodes.
    */
   inline const ConcurrentUnorderedMap<NodeLabel, NodeId>& GetResultNodes() const;
-  // inline const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
 
   inline const ConcurrentUnorderedMap<NodeId, NodeLabel>& GetResultNodeLabels() const;
-  // inline const std::vector<NodeLabel>& GetResultNodeLabels() const;
 
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
@@ -87,6 +85,29 @@ class Merge {
 
  private:
   inline MutableMergeDAG ResultDAG();
+
+  template <typename DAGSRange>
+  static void MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
+                                  std::vector<std::vector<NodeLabel>>& dags_labels,
+                                  MutableMergeDAG result_dag);
+
+  template <typename DAGSRange>
+  static void ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
+                              std::vector<std::vector<NodeLabel>>& dags_labels,
+                              ConcurrentUnorderedSet<LeafSet>& all_leaf_sets);
+
+  template <typename DAGSRange>
+  static void MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
+                         std::vector<std::vector<NodeLabel>>& dags_labels,
+                         ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
+                         ConcurrentUnorderedMap<NodeId, NodeLabel>& result_node_labels,
+                         std::atomic<size_t>& node_id);
+
+  template <typename DAGSRange>
+  static void MergeEdges(size_t i, const DAGSRange& dags, NodeId below,
+                         std::vector<std::vector<NodeLabel>>& dags_labels,
+                         ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+                         tbb::concurrent_vector<EdgeLabel>& added_edges);
 
   // Every unique node leaf set, found among all input DAGs.
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
