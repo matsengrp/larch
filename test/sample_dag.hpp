@@ -2,7 +2,7 @@
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 
-static auto MakeSampleDAG() {
+[[maybe_unused]] static auto MakeSampleDAG() {
   MADAGStorage input_storage;
   auto dag = input_storage.View();
 

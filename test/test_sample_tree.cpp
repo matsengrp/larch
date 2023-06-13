@@ -34,7 +34,7 @@ static void test_sample_tree(std::string_view path) {
 [[maybe_unused]] static void bench_sampling(std::string_view path,
                                             std::string_view refseq_path) {
   MADAGStorage dag = LoadTreeFromProtobuf(path, LoadReferenceSequence(refseq_path));
-  dag.View().RecomputeCompactGenomes();
+  dag.View().RecomputeCompactGenomes(true);
 #if defined(CALLGRIND_START_INSTRUMENTATION)
   CALLGRIND_START_INSTRUMENTATION;
 #endif

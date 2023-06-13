@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+inline const MutationBase MutationBase::DNA::A{{0, 0}};  // NOLINT
+inline const MutationBase MutationBase::DNA::C{{0, 1}};  // NOLINT
+inline const MutationBase MutationBase::DNA::G{{1, 0}};  // NOLINT
+inline const MutationBase MutationBase::DNA::T{{1, 1}};  // NOLINT
+=======
 
 inline const char MutationBase::DNA::ambiguous_char = 'N';
 inline const MutationBase MutationBase::DNA::A{{1, 0, 0, 0}};
@@ -5,6 +11,7 @@ inline const MutationBase MutationBase::DNA::C{{0, 1, 0, 0}};
 inline const MutationBase MutationBase::DNA::G{{0, 0, 1, 0}};
 inline const MutationBase MutationBase::DNA::T{{0, 0, 0, 1}};
 inline const MutationBase MutationBase::DNA::N{{1, 1, 1, 1}};
+>>>>>>> origin/main
 inline const std::map<MutationBase, char> MutationBase::DNA::mut_to_char_map = {
     {MutationBase::DNA::A, 'A'},
     {MutationBase::DNA::C, 'C'},
@@ -18,9 +25,13 @@ inline const std::map<MutationBase, MutationBase> MutationBase::DNA::complement_
     {MutationBase::DNA::T, MutationBase::DNA::A},
     {MutationBase::DNA::N, MutationBase::DNA::N}};
 
-MutationBase::MutationBase(const MutationBase::BitArray &m_value_in) {
+<<<<<<< HEAD
+MutationBase::MutationBase(const MutationBase::BitArray &m_value) : value{m_value} {}
+=======
+MutationBase::MutationBase(const MutationBase::BitArray m_value_in) {
   value = m_value_in;
 };
+>>>>>>> origin/main
 
 MutationBase::MutationBase(char m_char_in) {
   for (const auto &[m_base, m_char] : DNA::mut_to_char_map) {
@@ -97,10 +108,17 @@ char MutationBase::ToChar() const {
   return DNA::mut_to_char_map.find(value)->second;
 }
 
+<<<<<<< HEAD
 std::string MutationBase::ToString(const std::vector<MutationBase> &m_in) {
   std::string str_out;
   for (const auto &i : m_in) {
     str_out += i.ToChar();
+=======
+std::string MutationBase::ToString(std::vector<MutationBase> m_in) {
+  std::string str_out = "";
+  for (size_t i = 0; i < BitCount; i++) {
+    str_out[i] += m_in[i].ToChar();
+>>>>>>> origin/main
   }
   return str_out;
 }

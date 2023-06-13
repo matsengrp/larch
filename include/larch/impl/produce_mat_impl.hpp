@@ -87,6 +87,6 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   auto result = std::make_pair(AddMATConversion(MADAGStorage{}), std::move(tree));
   result.first.View().BuildFromMAT(result.second, dag.GetReferenceSequence());
   // TODO tree.delete_nodes();
-  result.first.View().RecomputeCompactGenomes();
+  result.first.View().RecomputeCompactGenomes(true);
   return result;
 }
