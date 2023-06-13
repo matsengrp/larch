@@ -56,7 +56,7 @@ struct MutationBase {
     static const std::map<MutationBase, MutationBase> complement_map;
   };
 
-  BitArray value = {0, 0, 0, 0};
+  BitArray value = {false, false, false, false};
 };
 
 namespace std {

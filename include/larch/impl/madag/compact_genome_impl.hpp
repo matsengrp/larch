@@ -112,15 +112,17 @@ bool CompactGenome::operator<(const CompactGenome& rhs) const noexcept {
 
 bool CompactGenome::IsCompatible(const CompactGenome& rhs,
                                  std::string_view reference_sequence) const {
-  auto& lhs = *this;
+  const auto& lhs = *this;
   for (auto [pos, mut] : lhs) {
     if (!rhs.GetBase(pos, reference_sequence)
              .IsCompatible(lhs.GetBase(pos, reference_sequence))) {
       return false;
     }
   }
-  for (auto [pos, mut] : rhs) {
-    if (lhs.HasMutationAtPosition(pos)) continue;
+  for (auto [pos, mut] : rhs) {  // NOLINT(readability-use-anyofallof)
+    if (lhs.HasMutationAtPosition(pos)) {
+      continue;
+    }
     if (!lhs.GetBase(pos, reference_sequence)
              .IsCompatible(rhs.GetBase(pos, reference_sequence))) {
       return false;
@@ -130,7 +132,7 @@ bool CompactGenome::IsCompatible(const CompactGenome& rhs,
 }
 
 bool CompactGenome::ContainsAmbiguity() const {
-  for (auto [pos, base] : mutations_) {
+  for (auto [pos, base] : mutations_) {  // NOLINT(readability-use-anyofallof)
     if (base.IsAmbiguous()) {
       return true;
     }
