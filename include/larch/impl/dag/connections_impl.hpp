@@ -53,7 +53,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
         std::cout << "Duplicate root: " << previous << " and " << node.GetId().value
                   << "\n";
       }
-      Assert(previous == NoId && "Duplicate root");
+      Assert(previous == NoId);
     }
     if (node.IsLeaf()) {
       leafs.push_back(node);

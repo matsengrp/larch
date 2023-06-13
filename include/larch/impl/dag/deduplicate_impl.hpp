@@ -19,6 +19,7 @@ auto& GetFeatureStorage(
 }
 
 template <typename Feature, typename CRTP>
+// NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
 auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
     Feature&& feature) const {
   auto& deduplicated = static_cast<const CRTP&>(*this)
@@ -33,6 +34,7 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
 }
 
 template <typename Feature, typename CRTP>
+// NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
 auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
     const Feature* feature) const {
   static_cast<const CRTP&>(*this)

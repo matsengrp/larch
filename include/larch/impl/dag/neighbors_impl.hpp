@@ -90,13 +90,16 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetLeafsBelow() const {
 }
 
 template <typename CRTP, typename Tag>
-void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive) const {
+void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
+                                                      bool allow_dag) const {
   auto node = static_cast<const CRTP&>(*this);
   auto dag = node.GetDAG();
   auto& storage = GetFeatureStorage(this);
-  if (storage.parents_.size() > 1) {
-    throw std::runtime_error{std::string{"Mulptiple parents at node "} +
-                             std::to_string(node.GetId().value)};
+  if (not allow_dag) {
+    if (storage.parents_.size() > 1) {
+      throw std::runtime_error{std::string{"Mulptiple parents at node "} +
+                               std::to_string(node.GetId().value)};
+    }
   }
   if (not storage.parents_.empty()) {
     auto edge = dag.Get(storage.parents_.at(0));
@@ -109,14 +112,16 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive) const {
   }
   for (CladeIdx i{0}; i.value < storage.clades_.size(); ++i.value) {
     auto& clade = storage.clades_.at(i.value);
-    if (clade.size() != 1) {
-      std::string children;
-      for (auto j : clade) {
-        children += std::to_string(dag.Get(j).GetChild().GetId().value) + ", ";
+    if (not allow_dag) {
+      if (clade.size() != 1) {
+        std::string children;
+        for (auto j : clade) {
+          children += std::to_string(dag.Get(j).GetChild().GetId().value) + ", ";
+        }
+        throw std::runtime_error{std::string{"Mulptiple children at node "} +
+                                 std::to_string(node.GetId().value) + ", clade " +
+                                 std::to_string(i.value) + " : " + children};
       }
-      throw std::runtime_error{std::string{"Mulptiple children at node "} +
-                               std::to_string(node.GetId().value) + ", clade " +
-                               std::to_string(i.value) + " : " + children};
     }
     auto edge = dag.Get(clade.at(0));
     if (edge.GetParent().GetId() != node.GetId()) {
@@ -132,7 +137,7 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive) const {
                                std::to_string(i.value)};
     }
     if (recursive) {
-      edge.GetChild().Validate();
+      edge.GetChild().Validate(true, allow_dag);
     }
   }
 }

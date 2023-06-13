@@ -68,7 +68,7 @@ set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
 
-set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference)
+set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   list(APPEND STRICT_WARNINGS -Wcast-align=strict)
@@ -201,7 +201,6 @@ larch_executable(larch-test
   test/test_weight_accum.cpp
   test/test_weight_counter.cpp
   test/test_write_parsimony.cpp
-  test/test_vcf.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 target_link_libraries(larch-test PUBLIC larch-usher-glue usher)

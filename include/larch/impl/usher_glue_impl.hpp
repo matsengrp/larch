@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
+// NOLINTNEXTLINE (cppcoreguidelines-pro-type-member-init)
 struct ParNuc_Info {
   NodeId par_node_id;
   NodeId child_node_id;

@@ -1,7 +1,7 @@
-inline const MutationBase MutationBase::DNA::A{{0, 0}};
-inline const MutationBase MutationBase::DNA::C{{0, 1}};
-inline const MutationBase MutationBase::DNA::G{{1, 0}};
-inline const MutationBase MutationBase::DNA::T{{1, 1}};
+inline const MutationBase MutationBase::DNA::A{{0, 0}};  // NOLINT
+inline const MutationBase MutationBase::DNA::C{{0, 1}};  // NOLINT
+inline const MutationBase MutationBase::DNA::G{{1, 0}};  // NOLINT
+inline const MutationBase MutationBase::DNA::T{{1, 1}};  // NOLINT
 inline const std::map<MutationBase, char> MutationBase::DNA::mut_to_char_map = {
     {MutationBase::DNA::A, 'A'},
     {MutationBase::DNA::C, 'C'},
@@ -13,7 +13,7 @@ inline const std::map<MutationBase, MutationBase> MutationBase::DNA::complement_
     {MutationBase::DNA::G, MutationBase::DNA::C},
     {MutationBase::DNA::T, MutationBase::DNA::A}};
 
-MutationBase::MutationBase(const MutationBase::BitArray &m_value) { value = m_value; }
+MutationBase::MutationBase(const MutationBase::BitArray &m_value) : value{m_value} {}
 
 MutationBase::MutationBase(char m_char_in) {
   for (const auto &[m_base, m_char] : DNA::mut_to_char_map) {
@@ -33,9 +33,9 @@ MutationBase MutationBase::GetComplementaryBase() const {
 char MutationBase::ToChar() const { return DNA::mut_to_char_map.find(value)->second; }
 
 std::string MutationBase::ToString(const std::vector<MutationBase> &m_in) {
-  std::string str_out = "";
-  for (size_t i = 0; i < m_in.size(); i++) {
-    str_out += m_in[i].ToChar();
+  std::string str_out;
+  for (const auto &i : m_in) {
+    str_out += i.ToChar();
   }
   return str_out;
 }

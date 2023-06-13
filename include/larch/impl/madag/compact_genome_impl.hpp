@@ -186,6 +186,7 @@ const CompactGenome& FeatureConstView<CompactGenome, CRTP, Tag>::GetCompactGenom
 }
 
 template <typename CRTP, typename Tag>
+// NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
 auto& FeatureMutableView<CompactGenome, CRTP, Tag>::operator=(
     CompactGenome&& compact_genome) const {
   GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);

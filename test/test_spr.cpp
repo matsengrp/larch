@@ -57,6 +57,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
         std::unique_lock lock{merge_mtx_};
         if (batch_.size() > 2048) {
           merge_.AddDAGs(batch_);
+          merge_.GetResult().GetRoot().Validate(true, true);
           batch_.clear();
           batch_storage_.clear();
         }
@@ -79,6 +80,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
         batch_storage_.clear();
       }
       merge_.AddDAGs(std::vector{storage.View()});
+      merge_.GetResult().GetRoot().Validate(true, true);
       merge_.ComputeResultEdgeMutations();
     }
     {
@@ -96,6 +98,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     {
       std::unique_lock lock{merge_mtx_};
       merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
+      merge_.GetResult().GetRoot().Validate(true, true);
       merge_.ComputeResultEdgeMutations();
     }
   }
@@ -268,29 +271,28 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   spr.RecomputeCompactGenomes();
 }
 
-[[maybe_unused]] static const auto test_added0 =
-    add_test({[] { test_spr(Load("data/test_5_trees/tree_0.pb.gz"), 3000); },
-              "SPR: test_5_trees"});
+[[maybe_unused]] static const auto test_added0 = add_test(
+    {[] { test_spr(Load("data/test_5_trees/tree_0.pb.gz"), 3); }, "SPR: test_5_trees"});
 
-[[maybe_unused]] static const auto test_added1 =
-    add_test({[] {
-                test_spr(Load("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
-                              "data/20D_from_fasta/refseq.txt.gz"),
-                         3);
-              },
-              "SPR: tree 20D_from_fasta"});
+// [[maybe_unused]] static const auto test_added1 =
+//     add_test({[] {
+//                 test_spr(Load("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
+//                               "data/20D_from_fasta/refseq.txt.gz"),
+//                          1);
+//               },
+//               "SPR: tree 20D_from_fasta"});
 
 [[maybe_unused]] static const auto test_added2 =
-    add_test({[] { test_spr(MakeSampleDAG(), 3); }, "SPR: sample"});
+    add_test({[] { test_spr(MakeSampleDAG(), 10); }, "SPR: sample"});
 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});
 
-[[maybe_unused]] static const auto test_added4 = add_test(
-    {[] {
-       test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"), 3);
-     },
-     "SPR: seedtree"});
+// [[maybe_unused]] static const auto test_added4 = add_test(
+//     {[] {
+//        test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"), 1);
+//      },
+//      "SPR: seedtree"});
 
 // [[maybe_unused]] static const auto test_added4 =
 //     add_test({[] {

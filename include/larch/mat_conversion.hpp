@@ -43,7 +43,7 @@ struct FeatureMutableView<MATConversion, CRTP, Tag> {
  private:
   template <typename, typename>
   friend struct ExtraFeatureMutableView;
-  void SetMATNode(MATNodePtr id) const;
+  void SetMATNode(MATNodePtr ptr) const;
 };
 
 template <>
@@ -57,13 +57,13 @@ struct ExtraFeatureStorage<MATConversion> {
 template <typename CRTP>
 struct ExtraFeatureConstView<MATConversion, CRTP> {
   const MAT::Tree& GetMAT() const;
-  auto GetNodeFromMAT(const MATNodePtr mat_node_id) const;
+  auto GetNodeFromMAT(MATNodePtr ptr) const;
 };
 
 template <typename CRTP>
 struct ExtraFeatureMutableView<MATConversion, CRTP> {
   MAT::Tree& GetMutableMAT() const;
-  auto GetMutableNodeFromMAT(MATNodePtr mat_node_id) const;
+  auto GetMutableNodeFromMAT(MATNodePtr ptr) const;
   void BuildMAT(MAT::Tree& tree) const;
   void BuildFromMAT(MAT::Tree& mat, std::string_view reference_sequence) const;
 

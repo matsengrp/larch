@@ -1,7 +1,7 @@
 #include <fstream>
 #include <vector>
 #include <unordered_map>
-#include <ostream>
+#include <iostream>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -80,6 +80,7 @@ MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
   return result;
 }
 
+// NOLINTNEXTLINE (cppcoreguidelines-interfaces-global-init)
 static const auto DecodeMutation =
     [](auto& mut) -> std::pair<MutationPosition, std::pair<char, char>> {
   static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};

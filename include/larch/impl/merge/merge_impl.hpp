@@ -70,7 +70,7 @@ void Merge::AddDAG(DAG& dag, NodeId below) {
     below.value = NoId;
   }
   struct {
-    DAG& dag_;
+    DAG& dag_;  // NOLINT
     size_t size() const { return 1; }
     const auto* begin() const { return &dag_; }
     const auto* end() const { return &dag_ + 1; }

@@ -99,6 +99,13 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x& operator=(const x&) = delete;      \
   ~x() = default
 
+#define MOVE_ONLY_VIRT_DTOR(x)          \
+  x(x&&) noexcept = default;            \
+  x(const x&) = delete;                 \
+  x& operator=(x&&) noexcept = default; \
+  x& operator=(const x&) = delete;      \
+  virtual ~x() = default
+
 //////////////////////////////////////////////////////////////////////////////////////
 
 template <typename, template <typename...> typename>
@@ -129,7 +136,8 @@ inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wc++20-extensions"
 template <typename T>
-inline auto tuple_to_string_impl = []<std::size_t... I>(std::index_sequence<I...>) {
+inline const auto tuple_to_string_impl =
+    []<std::size_t... I>(std::index_sequence<I...>) {
   std::string result = "std::tuple<";
   result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
                     std::string{", "}));

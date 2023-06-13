@@ -34,11 +34,11 @@ const MAT::Tree& ExtraFeatureConstView<MATConversion, CRTP>::GetMAT() const {
 }
 
 template <typename CRTP>
-auto ExtraFeatureConstView<MATConversion, CRTP>::GetNodeFromMAT(MATNodePtr node) const {
+auto ExtraFeatureConstView<MATConversion, CRTP>::GetNodeFromMAT(MATNodePtr ptr) const {
   auto& dag = static_cast<const CRTP&>(*this);
   NodeId id =
       dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(
-          node);
+          ptr);
   return dag.Get(id);
 }
 
@@ -52,17 +52,17 @@ MAT::Tree& ExtraFeatureMutableView<MATConversion, CRTP>::GetMutableMAT() const {
 
 template <typename CRTP>
 auto ExtraFeatureMutableView<MATConversion, CRTP>::GetMutableNodeFromMAT(
-    MATNodePtr node) const {
+    MATNodePtr ptr) const {
   auto& dag = static_cast<const CRTP&>(*this);
   NodeId id =
       dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(
-          node);
+          ptr);
   return dag.Get(id);
 }
 
 namespace {
 
-static inline uint8_t EncodeBaseMAT(char base) {
+inline uint8_t EncodeBaseMAT(char base) {
   switch (base) {
     case 'A':
       return 1;
@@ -89,7 +89,7 @@ inline auto mutations_view(MATNodePtr node) {
              });
 }
 
-static inline void fill_static_reference_sequence(std::string_view dag_ref) {
+inline void fill_static_reference_sequence(std::string_view dag_ref) {
   static std::mutex static_ref_seq_mutex;
   std::lock_guard lock{static_ref_seq_mutex};
   MAT::Mutation::refs.resize(dag_ref.size() + 1);
@@ -109,7 +109,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT(MAT::Tree& tree) con
       std::addressof(tree);
 
   auto root_node = dag.GetRoot().GetFirstChild().GetChild();
-  // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+  // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,modernize-use-auto)
   MATNodePtr mat_root_node = new MAT::Node(root_node.GetId().value);
   root_node.SetMATNode(mat_root_node);
 

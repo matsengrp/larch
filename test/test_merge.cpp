@@ -26,6 +26,7 @@ static void test_protobuf(const std::string& correct_path,
 
   Merge merge(correct_result.View().GetReferenceSequence());
   merge.AddDAGs(tree_views);
+  merge.GetResult().GetRoot().Validate(true, true);
 
   assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
                "Nodes count");
@@ -102,6 +103,7 @@ static void test_case_20d() {
   merge_time.start();
   merge.AddDAGs(tree_views);
   merge_time.stop();
+  merge.GetResult().GetRoot().Validate(true, true);
   std::cout << " DAGs merged in " << merge_time.durationMs() << " ms. ";
 
   assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
@@ -138,11 +140,13 @@ static void test_add_trees() {
     tree_views1.emplace_back(i);
   }
   merge.AddDAGs(tree_views1);
+  merge.GetResult().GetRoot().Validate(true, true);
   std::vector<MADAG> tree_views2;
   for (auto& i : trees2) {
     tree_views2.emplace_back(i);
   }
   merge.AddDAGs(tree_views2);
+  merge.GetResult().GetRoot().Validate(true, true);
 
   assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
                "Nodes count");
@@ -173,6 +177,7 @@ static void test_subtree() {
                   tree.View().GetNodes() | Transform::GetId() | ranges::to_vector,
                   tree.View().GetEdges() | Transform::GetId() | ranges::to_vector};
     merge.AddDAG(frag);
+    merge.GetResult().GetRoot().Validate(true, true);
   }
 
   assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
