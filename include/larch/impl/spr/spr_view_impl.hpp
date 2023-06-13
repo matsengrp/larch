@@ -203,18 +203,13 @@ FeatureConstView<HypotheticalNode, CRTP, Tag>::GetParentChangedBaseSites() const
 template <typename CRTP, typename Tag>
 CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGenome()
     const {
-std::cout << "\t..0\n" << std::flush;
   auto node = static_cast<const CRTP&>(*this).Const();
-std::cout << "\t..1\n" << std::flush;
   Assert(node.HaveMATNode());
   ContiguousSet<MutationPosition> changed_base_sites =
       node.GetSitesWithChangedFitchSets();
-std::cout << "\t..2\n" << std::flush;
   const CompactGenome& old_cg = node.GetOld().GetCompactGenome();
   ContiguousMap<MutationPosition, MutationBase> cg_changes;
-std::cout << "\t..3\n" << std::flush;
   if (node.IsMATRoot()) {
-std::cout << "\t..4\n" << std::flush;
     // If this node is the root node of the tree, we don't have to worry
     // about parent bases, we just
     // choose a base from each changed fitch set, preferring the base that was
@@ -229,7 +224,6 @@ std::cout << "\t..4\n" << std::flush;
       }
     }
   } else {
-std::cout << "\t..5\n" << std::flush;
     // If this node is not the root node, we do need to prefer the base
     // from the new compact genome of the parent node. If it's not in the
     // fitch set, then we're free to choose any base in the fitch set, so we
@@ -253,11 +247,8 @@ std::cout << "\t..5\n" << std::flush;
       }
     }
   }
-std::cout << "\t..6\n" << std::flush;
   CompactGenome result = old_cg.Copy();
-std::cout << "\t..7\n" << std::flush;
   result.ApplyChanges(cg_changes);
-std::cout << "\t..8\n" << std::flush;
   return result;
 }
 
@@ -283,28 +274,19 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGenome(
     std::vector<NodeId>& result_nodes, std::vector<EdgeId>& result_edges) const {
   auto& node = static_cast<const CRTP&>(*this);
-std::cout << "\t1\n" << std::flush;
   if (not node.IsUA() and not node.IsMoveNew()) {
-std::cout << "\t1.3\n" << std::flush;
     node.template SetOverlay<Deduplicate<CompactGenome>>();
-std::cout << "\t1.1.1??\n" << std::flush;
     node = node.ComputeNewCompactGenome();
-std::cout << "\t1.6\n" << std::flush;
   }
-std::cout << "\t2\n" << std::flush;
   result_nodes.push_back(node);
-std::cout << "\t3\n" << std::flush;
   // If we've reached an anchor node, there's no need to continue down this
   // branch.
   if (node.IsUA() or (not(node.IsNonrootAnchorNode() or result_nodes.size() < 2))) {
-std::cout << "\t4\n" << std::flush;
     for (auto child : node.GetChildren()) {
       result_edges.push_back(child);
       child.GetChild().PreorderComputeCompactGenome(result_nodes, result_edges);
     }
-std::cout << "\t5\n" << std::flush;
   }
-std::cout << "\t6\n" << std::flush;
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -327,12 +309,7 @@ template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSources() const {
   auto& self = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
-  if (dag.GetMoveSource().IsCondensedInMAT()) {
-    return dag.GetUncondensedNodeFromMAT(self.data_->move_.src);
-  }
-  std::vector<NodeId> to_ret;
-  to_ret.push_back(dag.GetMoveSource().GetId());
-  return to_ret;
+  return dag.GetUncondensedNodeFromMAT(self.data_->move_.src);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -396,7 +373,8 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
       return lca;
     }
     for (auto node : lca.GetChildren() | Transform::GetChild()) {
-      if (std::find(dag.GetMoveSources().begin(), dag.GetMoveSources().end(), node.GetId()) != dag.GetMoveSources().end()) { //node.GetId() != dag.GetMoveSource().GetId()) {
+      auto srcs = dag.GetMoveSources();
+      if (std::find(srcs.begin(), srcs.end(), node.GetId()) != srcs.end()) {
       //if (node.GetId() != dag.GetMoveSource().GetId()) {
         return node;
       }
@@ -416,26 +394,19 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
   auto& dag = static_cast<const CRTP&>(*this);
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
-std::cout << "1...\n" << std::flush;
   auto oldest_changed = dag.GetOldestChangedNode().GetSingleParent().GetParent();
-std::cout << "2...\n" << std::flush;
   if (oldest_changed.IsUA()) {
-std::cout << "3...\n" << std::flush;
     // we need to add the UA node as the root anchor node of the fragment,
     // somehow
     // TODO how is this being done, then? (Things seem to be working...)
   } else {
-std::cout << "4...\n" << std::flush;
     result_nodes.push_back(oldest_changed.GetSingleParent().GetParent());
     result_edges.push_back(oldest_changed.GetSingleParent());
   }
-std::cout << "5...\n" << std::flush;
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
-std::cout << "6...\n" << std::flush;
 
-  //auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
-  //return {collapsed.first, collapsed.second};
-   return {result_nodes, result_edges};
+  auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
+  return {collapsed.first, collapsed.second};
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -635,6 +606,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, std::vector<NodeId>& src, std::ve
       auto child_node = gp_below_edge.GetChild();
       if (gp_below_edge.GetChild().GetId() != src_parent_node.GetId()) {
         gp_below_edge.template SetOverlay<Endpoints>();
+        gp_below_edge.template SetOverlay<EdgeMutations>();
         src_grandparent.AddEdge({clade_ctr}, gp_below_edge, true);
         gp_below_edge.Set(src_grandparent, child_node, {clade_ctr++});
       }

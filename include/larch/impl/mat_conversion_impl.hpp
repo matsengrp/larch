@@ -192,7 +192,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
         // now points to the first node in the vector of condensed nodes.
         for (auto node: dag_parent_node.GetChildren() | Transform::GetChild()) {
           if (node.GetMATNode() == node_to_uncondense) {
-            //node.SetMATNode(mat.get_node(cn->second[0]));
+            node.SetMATNode(mat.get_node(cn->second[0]));
             node.SetUncondensedMATNode(mat.get_node(cn->second[0]));
             break;
           }
@@ -213,19 +213,6 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
     }
     dag.BuildConnections();
   }
-  //for (auto node: dag.GetNodes()) {
-  //  if (node.HaveMATNode()) {
-  //    std::cout << "Node "
-  //              << node.GetId().value
-  //              << " has: "
-  //              << node.GetMATNode()->node_id
-  //              << " and "
-  //              << dag.GetUncondensedNodeFromMAT(node.GetMATNode()).size()
-  //              << " uncondensed nodes... "
-  //              << node.IsCondensedInMAT()
-  //              << "\n" << std::flush;
-  //  }
-  //}
   dag.AddUA(EdgeMutations{mutations_view(mat.root)});
 }
 
