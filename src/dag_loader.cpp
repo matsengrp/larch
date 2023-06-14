@@ -22,7 +22,9 @@
 #include "parsimony.pb.h"
 #include "larch/newick.hpp"
 
-static bool IsGzipped(std::string_view path) {
+namespace {
+
+bool IsGzipped(std::string_view path) {
   std::ifstream in{std::string{path}};
   Assert(in);
   std::array<unsigned char, 2> header{};
@@ -33,7 +35,7 @@ static bool IsGzipped(std::string_view path) {
 }
 
 template <typename T>
-static void Parse(T& data, std::string_view path) {
+void Parse(T& data, std::string_view path) {
   if (IsGzipped(path)) {
     google::protobuf::io::FileInputStream in_compressed{
         open(std::string{path}.c_str(), O_RDONLY)};
@@ -47,6 +49,8 @@ static void Parse(T& data, std::string_view path) {
     Assert(parsed);
   }
 }
+
+}  // namespace
 
 MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
   ProtoDAG::data data;
@@ -164,8 +168,10 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
   return result;
 }
 
-static CompactGenome GetCompactGenome(const nlohmann::json& json,
-                                      size_t compact_genome_index) {
+namespace {
+
+CompactGenome GetCompactGenome(const nlohmann::json& json,
+                               size_t compact_genome_index) {
   ContiguousMap<MutationPosition, MutationBase> result;
   result.reserve(json["compact_genomes"][compact_genome_index].size());
   for (const auto& mutation : json["compact_genomes"][compact_genome_index]) {
@@ -176,6 +182,8 @@ static CompactGenome GetCompactGenome(const nlohmann::json& json,
   }
   return result;
 }
+
+}  // namespace
 
 /*
 
@@ -231,6 +239,8 @@ std::string LoadReferenceSequence(std::string_view path) {
   return result;
 }
 
+namespace {
+
 template <typename Mutation>
 void InitMutation(Mutation* proto_mut, size_t pos, char ref, char par, char mut) {
   proto_mut->set_position(static_cast<int32_t>(pos));
@@ -251,8 +261,8 @@ std::string ToEdgeMutationsString(const MAT::Node* node) {
   return result + ">";
 }
 
-static void MATToDOT(const MAT::Node* node, std::ostream& out,
-                     std::set<const MAT::Node*> visited) {
+void MATToDOT(const MAT::Node* node, std::ostream& out,
+              std::set<const MAT::Node*> visited) {
   Assert(visited.insert(node).second);
 
   for (auto* i : node->children) {
@@ -265,6 +275,8 @@ static void MATToDOT(const MAT::Node* node, std::ostream& out,
     out << "\n";
   }
 }
+
+}  // namespace
 
 void MATToDOT(const MAT::Tree& mat, std::ostream& out) {
   out << "digraph {\n";

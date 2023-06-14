@@ -62,7 +62,9 @@ struct MutationBase {
 namespace std {
 template <>
 struct hash<MutationBase> {
-  std::size_t operator()(const MutationBase &obj) const { return obj.ToChar(); }
+  std::size_t operator()(const MutationBase &obj) const {
+    return static_cast<std::size_t>(obj.ToChar());
+  }
 };
 }  // namespace std
 
