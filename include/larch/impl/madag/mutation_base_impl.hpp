@@ -19,7 +19,7 @@ inline const std::map<MutationBase, MutationBase> MutationBase::DNA::complement_
     {MutationBase::DNA::N, MutationBase::DNA::N}};
 
 MutationBase::MutationBase(const MutationBase::BitArray &m_value_in)
-    : value{m_value_in} {};
+    : value{m_value_in} {}
 
 MutationBase::MutationBase(char m_char_in) {
   for (const auto &[m_base, m_char] : DNA::mut_to_char_map) {
