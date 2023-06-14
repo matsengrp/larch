@@ -43,6 +43,6 @@
   dag.Get(EdgeId{8}).GetMutableEdgeMutations()[{3}] = {'A', 'C'};
   dag.Get(EdgeId{9}).GetMutableEdgeMutations()[{3}] = {'A', 'T'};
 
-  dag.RecomputeCompactGenomes();
+  dag.RecomputeCompactGenomes(true);
   return input_storage;
 }

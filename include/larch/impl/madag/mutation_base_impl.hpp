@@ -32,7 +32,13 @@ MutationBase::MutationBase(char m_char_in) {
 }
 
 bool MutationBase::IsAmbiguous() const {
-  return ranges::any_of(value, [](bool i) { return i; });
+  size_t count = 0;
+  for (auto i : value) {
+    if (i and ++count > 1) {
+      return true;
+    }
+  }
+  return false;
 }
 
 MutationBase MutationBase::GetComplementaryBase() const {

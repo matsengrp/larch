@@ -42,7 +42,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       auto mat_conv = AddMATConversion(Storage{});
       mat_conv.View().BuildFromMAT(*mat, ref_seq);
       check_edge_mutations(mat_conv.View().Const());
-      mat_conv.View().RecomputeCompactGenomes();
+      mat_conv.View().RecomputeCompactGenomes(true);
       return *batch_storage_.emplace_back(SPRStorage(std::move(mat_conv)));
     }(sample_dag_.GetReferenceSequence());
 
@@ -71,7 +71,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   void operator()(MAT::Tree& tree) {
     decltype(AddMATConversion(Storage{})) storage;
     storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
-    storage.View().RecomputeCompactGenomes();
+    storage.View().RecomputeCompactGenomes(true);
     {
       std::unique_lock lock{merge_mtx_};
       if (not batch_.empty()) {
@@ -94,7 +94,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     reassigned_states_storage_.View().BuildFromMAT(tree,
                                                    sample_dag_.GetReferenceSequence());
     check_edge_mutations(reassigned_states_storage_.View().Const());
-    reassigned_states_storage_.View().RecomputeCompactGenomes();
+    reassigned_states_storage_.View().RecomputeCompactGenomes(true);
     {
       std::unique_lock lock{merge_mtx_};
       merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
@@ -119,13 +119,13 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
   MADAGStorage input_dag_storage =
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
-  input_dag_storage.View().RecomputeCompactGenomes();
+  input_dag_storage.View().RecomputeCompactGenomes(true);
   return input_dag_storage;
 }
 
 [[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path) {
   MADAGStorage input_dag_storage = LoadDAGFromProtobuf(input_dag_path);
-  input_dag_storage.View().RecomputeCompactGenomes();
+  input_dag_storage.View().RecomputeCompactGenomes(true);
   return input_dag_storage;
 }
 
@@ -151,7 +151,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     // Empty_Callback callback;
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
-    optimized_dags.back().first.View().RecomputeCompactGenomes();
+    optimized_dags.back().first.View().RecomputeCompactGenomes(true);
     merge.AddDAGs(std::vector{optimized_dags.back().first.View()},
                   optimized_dags.back().first.View().GetRoot());
   }
@@ -177,7 +177,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
         auto mat_conv = AddMATConversion(Storage{});
         mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
         check_edge_mutations(mat_conv.View());
-        mat_conv.View().RecomputeCompactGenomes();
+        mat_conv.View().RecomputeCompactGenomes(true);
         return SPRStorage(std::move(mat_conv));
       }(sample_.GetReferenceSequence());
       auto spr = storage.View();
@@ -240,7 +240,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   auto [optimized_dag, optimized_mat] = optimize_dag_direct(
       sample.View(), single_move_callback, single_move_callback, single_move_callback);
 
-  optimized_dag.View().RecomputeCompactGenomes();
+  optimized_dag.View().RecomputeCompactGenomes(true);
   Merge two_tree_dag{tree_shaped_dag.View().GetReferenceSequence()};
   two_tree_dag.AddDAGs(std::vector{sample.View()});
   two_tree_dag.AddDAGs(std::vector{optimized_dag.View()});
@@ -268,7 +268,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
     }
   }
 
-  spr.RecomputeCompactGenomes();
+  spr.RecomputeCompactGenomes(true);
 }
 
 [[maybe_unused]] static const auto test_added0 = add_test(
@@ -290,7 +290,8 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
 // [[maybe_unused]] static const auto test_added4 = add_test(
 //     {[] {
-//        test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"), 1);
+//        test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"),
+//        1);
 //      },
 //      "SPR: seedtree"});
 

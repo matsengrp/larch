@@ -37,8 +37,7 @@ template <typename CRTP>
 auto ExtraFeatureConstView<MATConversion, CRTP>::GetNodeFromMAT(MATNodePtr ptr) const {
   auto& dag = static_cast<const CRTP&>(*this);
   NodeId id =
-      dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(
-          ptr);
+      dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(ptr);
   return dag.Get(id);
 }
 
@@ -55,8 +54,7 @@ auto ExtraFeatureMutableView<MATConversion, CRTP>::GetMutableNodeFromMAT(
     MATNodePtr ptr) const {
   auto& dag = static_cast<const CRTP&>(*this);
   NodeId id =
-      dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(
-          ptr);
+      dag.template GetFeatureExtraStorage<NodeId, MATConversion>().reverse_map_.at(ptr);
   return dag.Get(id);
 }
 

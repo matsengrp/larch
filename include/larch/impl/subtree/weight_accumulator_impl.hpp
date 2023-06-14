@@ -50,7 +50,8 @@ typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::Abov
   auto edgepair = edgeweight.GetWeights().begin();
   std::map<typename WeightOps::Weight, Count> result;
   for (auto const& childitem : childnodeweight.GetWeights()) {
-    result.at(weight_ops_.AboveNode(edgepair->first, childitem.first)) += childitem.second;
+    result.at(weight_ops_.AboveNode(edgepair->first, childitem.first)) +=
+        childitem.second;
   }
   return WeightCounter<WeightOps>(std::move(result),
                                   std::forward<WeightOps>(weight_ops_));

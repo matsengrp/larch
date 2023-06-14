@@ -40,4 +40,3 @@ inline bool test_false(bool expr, const std::string& what) {
   }
   return !expr;
 }
-

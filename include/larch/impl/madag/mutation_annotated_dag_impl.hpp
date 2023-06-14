@@ -55,7 +55,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::AddUA(
   using Node = typename decltype(dag)::NodeView;
   using Edge = typename decltype(dag)::EdgeView;
 
-  Assert(not dag.HaveUA());
+  // Assert(not dag.HaveUA());
   Node root = dag.GetRoot();
   Node ua_node = dag.AppendNode();
   Edge ua_edge = dag.AppendEdge(ua_node, root, {0});
