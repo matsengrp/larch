@@ -25,27 +25,20 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag, MergeT& merge)
       : sample_dag_{sample_dag}, merge_{merge} {};
 
-  using Storage =
-      ExtendDAGStorage<DefaultDAGStorage,
-                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
-                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
-  using SPRType = decltype(SPRStorage(AddMATConversion(Storage{{}})));
+  using Storage = MergeDAGStorage;
+  using MATStorage = decltype(AddMATConversion(Storage{{}}));
+  using SPRType = decltype(SPRStorage(AddMATConversion(Storage{{}}).View()));
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
                       nodes_with_major_allele_set_change) override {
     Assert(move.src != nullptr);
     Assert(move.dst != nullptr);
-    auto& storage = [this](const std::string& ref_seq) -> SPRType& {
+    auto& storage = [this]() -> SPRType& {
       std::shared_lock lock{mat_mtx_};
-      MAT::Tree* mat = sample_mat_;
-      Assert(mat != nullptr);
-      auto mat_conv = AddMATConversion(Storage{{}});
-      mat_conv.View().BuildFromMAT(*mat, ref_seq);
-      check_edge_mutations(mat_conv.View().Const());
-      mat_conv.View().RecomputeCompactGenomes(true);
-      return *batch_storage_.emplace_back(SPRStorage(std::move(mat_conv)));
-    }(sample_dag_.GetReferenceSequence());
+      Assert(sample_mat_storage_ != nullptr);
+      return *batch_storage_.push_back(SPRStorage(sample_mat_storage_->View()));
+    }();
 
     storage.View().GetRoot().Validate(true);
 
@@ -69,6 +62,14 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     return move.score_change < best_score_change;
   }
 
+  void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq) {
+    sample_mat_storage_ = std::make_unique<MATStorage>(AddMATConversion(Storage{{}}));
+    auto view = sample_mat_storage_->View();
+    view.BuildFromMAT(tree, ref_seq);
+    check_edge_mutations(view.Const());
+    view.RecomputeCompactGenomes(true);
+  }
+
   void operator()(MAT::Tree& tree) {
     auto storage = AddMATConversion(Storage{{}});
     storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
@@ -86,7 +87,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     }
     {
       std::unique_lock lock{mat_mtx_};
-      sample_mat_ = std::addressof(tree);
+      CreateMATStorage(tree, sample_dag_.GetReferenceSequence());
     }
     // StoreDAGToProtobuf(merge_.GetResult(), "radius_iter.pb");
   }
@@ -109,7 +110,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   decltype(AddMATConversion(Storage{{}})) reassigned_states_storage_ =
       AddMATConversion(Storage{{}});
   std::shared_mutex mat_mtx_;
-  MAT::Tree* sample_mat_ = nullptr;
+  std::unique_ptr<MATStorage> sample_mat_storage_;
   std::mutex merge_mtx_;
   tbb::concurrent_vector<SPRType> batch_storage_;
   tbb::concurrent_vector<Fragment<decltype(std::declval<SPRType>().View())>> batch_;
