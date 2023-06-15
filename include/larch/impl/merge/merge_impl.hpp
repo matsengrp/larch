@@ -181,13 +181,13 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
     }();
     if (insert_pair.second) {
       if constexpr (std::decay_t<decltype(dag)>::template contains_element_feature<
-                        NodeId, MappedNodes>) {
+                        Component::Node, MappedNodes>) {
         dag.Get(id).SetOriginalId(orig_id);
       }
     } else {
       if (id.value != dag.GetNodesCount() - 1) {
         if constexpr (std::decay_t<decltype(dag)>::template contains_element_feature<
-                          NodeId, MappedNodes>) {
+                          Component::Node, MappedNodes>) {
           dag.Get(id).SetOriginalId(insert_pair.first->second);
         }
       }

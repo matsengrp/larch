@@ -6,9 +6,9 @@ template <typename DAG>
 class Fragment {
  public:
   MOVE_ONLY(Fragment);
-  template <typename Id, typename Feature>
+  template <Component C, typename Feature>
   static const bool contains_element_feature =
-      DAG::template contains_element_feature<Id, Feature>;
+      DAG::template contains_element_feature<C, Feature>;
 
   Fragment(DAG dag, std::vector<NodeId>&& nodes, std::vector<EdgeId>&& edges);
 

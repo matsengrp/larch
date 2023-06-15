@@ -16,6 +16,44 @@
 +--------------------------------------------------+
 */
 
+enum class Component { Node, Edge, DAG };
+enum class Role { Storage, View };
+
+struct NodeId;
+struct EdgeId;
+
+template <Component C>
+struct IdType;
+
+template <>
+struct IdType<Component::Node> {
+  using type = NodeId;
+};
+
+template <>
+struct IdType<Component::Edge> {
+  using type = EdgeId;
+};
+
+template <Component C>
+using Id = typename IdType<C>::type;
+
+template <typename Id>
+struct ComponentType;
+
+template <>
+struct ComponentType<NodeId> {
+  constexpr static const auto value = Component::Node;
+};
+
+template <>
+struct ComponentType<EdgeId> {
+  constexpr static const auto value = Component::Edge;
+};
+
+template <typename Id>
+inline constexpr const auto ComponentOf = ComponentType<Id>::value;
+
 /**
  * Used by specialization on the Feature parameter to add functions to
  * an attachable feature. Functions declared in FeatureConstView are
@@ -51,7 +89,7 @@ struct ExtraFeatureMutableView {};
 template <typename Feature>
 struct ExtraFeatureStorage {};
 
-template <typename Id, typename DAGViewType>
+template <Component C, typename DAGViewType>
 struct ElementView;
 
 template <typename DAGStorageType, typename DAGViewType>
@@ -61,13 +99,13 @@ struct DefaultViewBase {
       typename DAGStorageType::template ConstDAGViewBase<DAGViewType>,
       typename DAGStorageType::template MutableDAGViewBase<DAGViewType>>;
 
-  template <typename Id>
+  template <Component C>
   using ElementViewBase =
       std::conditional_t<std::is_const_v<DAGStorageType>,
                          typename DAGStorageType::template ConstElementViewBase<
-                             Id, ElementView<Id, DAGViewType>>,
+                             C, ElementView<C, DAGViewType>>,
                          typename DAGStorageType::template MutableElementViewBase<
-                             Id, ElementView<Id, DAGViewType>>>;
+                             C, ElementView<C, DAGViewType>>>;
 };
 
 /**
@@ -158,7 +196,7 @@ auto ViewOf(DAGView<Storage, Base> view) -> DAGView<Storage, Base>;
 template <typename, typename, typename...>
 struct DAGStorage;
 
-template <typename, typename, typename...>
+template <Component, typename, typename...>
 struct ElementsContainer;
 
 template <typename...>
@@ -171,5 +209,6 @@ struct Endpoints;
 struct Connections;
 
 using DefaultDAGStorage =
-    DAGStorage<ElementsContainer<NodeId, ElementStorage<Neighbors>>,
-               ElementsContainer<EdgeId, ElementStorage<Endpoints>>, Connections>;
+    DAGStorage<ElementsContainer<Component::Node, ElementStorage<Neighbors>>,
+               ElementsContainer<Component::Edge, ElementStorage<Endpoints>>,
+               Connections>;

@@ -44,7 +44,7 @@ template <typename DAG, typename RadiusCallback, typename ReassignCallback>
 auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                          RadiusCallback&& radius_callback,
                          ReassignCallback&& reassign_callback) {
-  static_assert(DAG::template contains_element_feature<NodeId, MATConversion>);
+  static_assert(DAG::template contains_element_feature<Component::Node, MATConversion>);
   auto& tree = dag.GetMutableMAT();
 
   // TODO only in debug mode

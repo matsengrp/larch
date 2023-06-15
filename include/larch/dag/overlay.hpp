@@ -49,20 +49,20 @@ struct OverlayDAGStorage {
   using AllNodeFeatures = typename TargetView::StorageType::AllNodeFeatures;
   using AllEdgeFeatures = typename TargetView::StorageType::AllEdgeFeatures;
 
-  template <typename Id, typename CRTP>
+  template <Component C, typename CRTP>
   struct ConstElementViewBase
       : FeatureConstView<Overlay, CRTP>,
-        TargetView::StorageType::template ConstElementViewBase<Id, CRTP> {};
+        TargetView::StorageType::template ConstElementViewBase<C, CRTP> {};
 
-  template <typename Id, typename CRTP>
+  template <Component C, typename CRTP>
   struct MutableElementViewBase
       : FeatureConstView<Overlay, CRTP>,
         FeatureMutableView<Overlay, CRTP>,
-        TargetView::StorageType::template MutableElementViewBase<Id, CRTP> {
-    using TargetView::StorageType::template MutableElementViewBase<Id, CRTP>::operator=;
+        TargetView::StorageType::template MutableElementViewBase<C, CRTP> {
+    using TargetView::StorageType::template MutableElementViewBase<C, CRTP>::operator=;
   };
 
-  template <typename Id, typename Feature>
+  template <Component C, typename Feature>
   static const bool contains_element_feature;
 
   template <typename CRTP>
@@ -114,10 +114,10 @@ struct OverlayDAGStorage {
   template <typename F>
   const auto& GetFeatureStorage(EdgeId id) const;
 
-  template <typename Id, typename F>
+  template <Component C, typename F>
   auto& GetFeatureExtraStorage();
 
-  template <typename Id, typename F>
+  template <Component C, typename F>
   const auto& GetFeatureExtraStorage() const;
 
  private:

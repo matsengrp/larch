@@ -14,18 +14,18 @@ struct DAGStorage {
   using AllNodeFeatures = typename NodesContainerT::AllFeatureTypes;
   using AllEdgeFeatures = typename EdgesContainerT::AllFeatureTypes;
 
-  template <typename Id, typename CRTP>
+  template <Component C, typename CRTP>
   using ConstElementViewBase =
-      std::conditional_t<std::is_same_v<Id, NodeId>,
+      std::conditional_t<C == Component::Node,
                          typename NodesContainerT::template ConstElementViewBase<CRTP>,
                          typename EdgesContainerT::template ConstElementViewBase<CRTP>>;
-  template <typename Id, typename CRTP>
+  template <Component C, typename CRTP>
   using MutableElementViewBase = std::conditional_t<
-      std::is_same_v<Id, NodeId>,
+      C == Component::Node,
       typename NodesContainerT::template MutableElementViewBase<CRTP>,
       typename EdgesContainerT::template MutableElementViewBase<CRTP>>;
 
-  template <typename Id, typename Feature>
+  template <Component C, typename Feature>
   static const bool contains_element_feature;
 
   template <typename CRTP>
@@ -72,10 +72,10 @@ struct DAGStorage {
   template <typename Feature>
   const auto& GetFeatureStorage(EdgeId id) const;
 
-  template <typename Id, typename Feature>
+  template <Component C, typename Feature>
   auto& GetFeatureExtraStorage();
 
-  template <typename Id, typename Feature>
+  template <Component C, typename Feature>
   const auto& GetFeatureExtraStorage() const;
 
   template <typename Feature>
