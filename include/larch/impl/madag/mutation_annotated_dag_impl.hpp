@@ -34,8 +34,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
   using Node = typename decltype(dag)::NodeView;
 
   auto ref_seq = dag.GetReferenceSequence();
-  auto ComputeCGFromSequence = [&dag, &ref_seq](const std::string& leaf_seq,
-                                                Node for_node) {
+  auto ComputeCGFromSequence = [&ref_seq](const std::string& leaf_seq, Node for_node) {
     CompactGenome new_cg(leaf_seq, ref_seq);
     for_node = std::move(new_cg);
   };

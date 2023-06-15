@@ -7,6 +7,7 @@
 #include "larch/subtree/parsimony_score.hpp"
 #include "larch/spr/spr_view.hpp"
 #include "sample_dag.hpp"
+#include "benchmark.hpp"
 
 #include <tbb/global_control.h>
 
@@ -271,8 +272,16 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   spr.RecomputeCompactGenomes(true);
 }
 
-[[maybe_unused]] static const auto test_added0 = add_test(
-    {[] { test_spr(Load("data/test_5_trees/tree_0.pb.gz"), 3); }, "SPR: test_5_trees"});
+[[maybe_unused]] static const auto test_added0 =
+    add_test({[] {
+                auto input = Load("data/test_5_trees/tree_0.pb.gz");
+                Benchmark bench;
+                bench.start();
+                test_spr(input, 3);
+                bench.stop();
+                std::cout << "Time: " << bench.durationMs() << " ms ";
+              },
+              "SPR: test_5_trees"});
 
 // [[maybe_unused]] static const auto test_added1 =
 //     add_test({[] {
