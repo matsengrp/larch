@@ -82,9 +82,10 @@ static void test_case_20d() {
   MADAGStorage correct_result = LoadDAGFromJson("data/20D_from_fasta/full_dag.json.gz");
   correct_result.View().RecomputeEdgeMutations();
 
-  trees.resize(paths.size());
+  trees.reserve(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;
   for (size_t i = 0; i < paths.size(); ++i) {
+    trees.push_back(MADAGStorage{{}});
     paths_idx.push_back({i, paths.at(i)});
   }
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {

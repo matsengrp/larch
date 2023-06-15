@@ -73,7 +73,7 @@ ArbitraryInt SubtreeWeight<WeightOps, DAG>::MinWeightCount(Node node,
 template <typename WeightOps, typename DAG>
 typename SubtreeWeight<WeightOps, DAG>::Storage
 SubtreeWeight<WeightOps, DAG>::TrimToMinWeight(WeightOps&& weight_ops) {
-  Storage result;
+  Storage result{{}};
   result.View().SetReferenceSequence(dag_.GetReferenceSequence());
   ExtractTree(
       dag_.GetRoot(), result.View().AppendNode(), std::forward<WeightOps>(weight_ops),
@@ -192,7 +192,7 @@ SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
                                               Node below) {
   Assert(not below.IsLeaf());
   dag_.AssertUA();
-  SampledDAGStorage result;
+  SampledDAGStorage result{Storage{{}}};
   result.View().SetReferenceSequence(dag_.GetReferenceSequence());
   ExtractTree(
       below, result.View().AppendNode(), std::forward<WeightOps>(weight_ops),

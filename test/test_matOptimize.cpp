@@ -161,7 +161,7 @@ static void test_matOptimize(std::string_view input_dag_path,
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{input_dag});
-  std::vector<decltype(AddMappedNodes(AddMATConversion(MADAGStorage{})))>
+  std::vector<decltype(AddMappedNodes(AddMATConversion(MADAGStorage{{}})))>
       optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
@@ -181,7 +181,7 @@ static void test_matOptimize(std::string_view input_dag_path,
         merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}};
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
     auto radius_callback = [&](MAT::Tree& tree) -> void {
-      auto temp_result = AddMappedNodes(AddMATConversion(MADAGStorage{}));
+      auto temp_result = AddMappedNodes(AddMATConversion(MADAGStorage{{}}));
       temp_result.View().BuildFromMAT(tree, merge.GetResult().GetReferenceSequence());
       temp_result.View().RecomputeCompactGenomes(true);
       optimized_dags.push_back(std::move(temp_result));

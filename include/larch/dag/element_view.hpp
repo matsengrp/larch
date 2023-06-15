@@ -8,6 +8,9 @@
 template <Component C, typename DAGViewType>
 struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
  public:
+  constexpr static const Component component = C;
+  constexpr static const Role role = Role::View;
+
   /**
    * This operator= is used for setting specailly handled per-element
    * features, like Deduplicate.

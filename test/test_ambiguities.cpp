@@ -45,7 +45,7 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 }
 
 [[maybe_unused]] static auto MakeSampleDAGTopology() {
-  MADAGStorage dag_storage;
+  MADAGStorage dag_storage{{}};
   auto dag = dag_storage.View();
 
   dag.SetReferenceSequence("GAA");

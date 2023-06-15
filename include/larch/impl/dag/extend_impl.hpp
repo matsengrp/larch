@@ -21,9 +21,6 @@ inline constexpr bool ExtendDAGStorage<Target, Arg0, Arg1,
 }();
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
-ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::ExtendDAGStorage() = default;
-
-template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::ExtendDAGStorage(Target&& target)
     : target_{std::forward<Target>(target)} {
   additional_node_features_storage_.resize(GetTarget().GetNodesCount());

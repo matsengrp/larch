@@ -24,6 +24,9 @@ template <typename Storage,
           template <typename, typename> typename Base = DefaultViewBase>
 struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
  public:
+  constexpr static const Component component = Component::DAG;
+  constexpr static const Role role = Role::View;
+
   using NodeView = ElementView<Component::Node, DAGView<Storage, Base>>;
   using EdgeView = ElementView<Component::Edge, DAGView<Storage, Base>>;
   using BaseType = Base<Storage, DAGView<Storage, Base>>;

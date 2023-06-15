@@ -43,6 +43,9 @@ struct ToOverlayStorage<std::tuple<Features...>> {
 template <typename Target>
 struct OverlayDAGStorage {
  public:
+  constexpr static const Component component = Component::DAG;
+  constexpr static const Role role = Role::Storage;
+
   using TargetView = decltype(ViewOf(std::declval<Target>()));
 
   using FeatureTypes = typename TargetView::StorageType::FeatureTypes;

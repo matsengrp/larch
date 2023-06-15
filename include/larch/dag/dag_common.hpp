@@ -185,13 +185,10 @@ struct CombineBases<std::tuple<Ts...>> : Ts... {
 };
 
 template <typename T>
-auto ViewOf(T&& storage);
+auto ViewOf(T&& dag);
 
 template <typename, template <typename, typename> typename>
 struct DAGView;
-
-template <typename Storage, template <typename, typename> typename Base>
-auto ViewOf(DAGView<Storage, Base> view) -> DAGView<Storage, Base>;
 
 template <typename, typename, typename...>
 struct DAGStorage;

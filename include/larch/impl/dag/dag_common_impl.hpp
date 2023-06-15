@@ -83,11 +83,10 @@ static constexpr auto select_argument() {
 }
 
 template <typename T>
-auto ViewOf(T&& storage) {
-  return storage.View();
-}
-
-template <typename Storage, template <typename, typename> typename Base>
-auto ViewOf(DAGView<Storage, Base> view) -> DAGView<Storage, Base> {
-  return view;
+auto ViewOf(T&& dag) {
+  if constexpr (std::decay_t<T>::role == Role::View) {
+    return dag;
+  } else {
+    return dag.View();
+  }
 }

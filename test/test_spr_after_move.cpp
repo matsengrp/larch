@@ -50,7 +50,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   }
 
   void operator()(MAT::Tree& tree) {
-    decltype(AddMATConversion(Storage{})) storage;
+    decltype(AddMATConversion(Storage{{}})) storage;
     storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
     storage.View().RecomputeCompactGenomes(true);
     {
@@ -76,7 +76,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 
   DAG sample_dag_;
   MergeT& merge_;
-  decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
+  decltype(AddMATConversion(Storage{{}})) reassigned_states_storage_ =
       AddMATConversion(Storage{});
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;

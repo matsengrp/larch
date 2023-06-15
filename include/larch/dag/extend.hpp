@@ -94,6 +94,9 @@ template <typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
 struct ExtendDAGStorage {
  public:
+  constexpr static const Component component = Component::DAG;
+  constexpr static const Role role = Role::Storage;
+
   using Self = ExtendDAGStorage<Target, Arg0, Arg1, Arg2>;
   using TargetView = decltype(ViewOf(std::declval<Target>()));
   using OnNodes = select_argument_t<Extend::Nodes, Arg0, Arg1, Arg2>;
@@ -159,7 +162,6 @@ struct ExtendDAGStorage {
 
   MOVE_ONLY(ExtendDAGStorage);
 
-  ExtendDAGStorage();
   explicit ExtendDAGStorage(Target&& target);
 
   auto View();

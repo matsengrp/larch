@@ -29,7 +29,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       ExtendDAGStorage<DefaultDAGStorage,
                        Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
                        Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
-  using SPRType = decltype(SPRStorage(AddMATConversion(Storage{})));
+  using SPRType = decltype(SPRStorage(AddMATConversion(Storage{{}})));
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
@@ -40,7 +40,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       std::shared_lock lock{mat_mtx_};
       MAT::Tree* mat = sample_mat_;
       Assert(mat != nullptr);
-      auto mat_conv = AddMATConversion(Storage{});
+      auto mat_conv = AddMATConversion(Storage{{}});
       mat_conv.View().BuildFromMAT(*mat, ref_seq);
       check_edge_mutations(mat_conv.View().Const());
       mat_conv.View().RecomputeCompactGenomes(true);
@@ -70,7 +70,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   }
 
   void operator()(MAT::Tree& tree) {
-    decltype(AddMATConversion(Storage{})) storage;
+    auto storage = AddMATConversion(Storage{{}});
     storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
     storage.View().RecomputeCompactGenomes(true);
     {
@@ -106,8 +106,8 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 
   DAG sample_dag_;
   MergeT& merge_;
-  decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
-      AddMATConversion(Storage{});
+  decltype(AddMATConversion(Storage{{}})) reassigned_states_storage_ =
+      AddMATConversion(Storage{{}});
   std::shared_mutex mat_mtx_;
   MAT::Tree* sample_mat_ = nullptr;
   std::mutex merge_mtx_;
@@ -135,7 +135,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{input_dag});
-  std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{})), MAT::Tree>>
+  std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{{}})), MAT::Tree>>
       optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
@@ -175,7 +175,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
         using Storage = ExtendDAGStorage<
             DefaultDAGStorage, Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
             Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
-        auto mat_conv = AddMATConversion(Storage{});
+        auto mat_conv = AddMATConversion(Storage{{}});
         mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
         check_edge_mutations(mat_conv.View());
         mat_conv.View().RecomputeCompactGenomes(true);
