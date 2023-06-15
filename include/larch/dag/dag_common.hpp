@@ -86,7 +86,7 @@ struct NodeId {
   size_t value = NoId;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const NodeId node_id);
+inline std::ostream& operator<<(std::ostream& os, NodeId node_id);
 inline bool operator==(NodeId lhs, NodeId rhs);
 inline bool operator!=(NodeId lhs, NodeId rhs);
 inline bool operator<(NodeId lhs, NodeId rhs);
@@ -100,7 +100,7 @@ struct EdgeId {
   size_t value = NoId;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const EdgeId edge_id);
+inline std::ostream& operator<<(std::ostream& os, EdgeId edge_id);
 inline bool operator==(EdgeId lhs, EdgeId rhs);
 inline bool operator!=(EdgeId lhs, EdgeId rhs);
 inline bool operator<(EdgeId lhs, EdgeId rhs);
@@ -113,7 +113,7 @@ struct CladeIdx {
   size_t value = NoId;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const CladeIdx clade_id);
+inline std::ostream& operator<<(std::ostream& os, CladeIdx clade_id);
 inline bool operator==(CladeIdx lhs, CladeIdx rhs);
 inline bool operator!=(CladeIdx lhs, CladeIdx rhs);
 inline bool operator<(CladeIdx lhs, CladeIdx rhs);

@@ -19,6 +19,7 @@ auto& GetFeatureStorage(
 }
 
 template <typename Feature, typename CRTP>
+// NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
 auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
     Feature&& feature) const {
   auto& deduplicated = static_cast<const CRTP&>(*this)
@@ -33,6 +34,7 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
 }
 
 template <typename Feature, typename CRTP>
+// NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
 auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
     const Feature* feature) const {
   static_cast<const CRTP&>(*this)
@@ -59,15 +61,18 @@ const Feature* ExtraFeatureConstView<Deduplicate<Feature>, CRTP>::FindDeduplicat
 
 template <typename Feature, typename CRTP>
 std::pair<const Feature*, bool>
-// TODO: take const reference and copy only if needed
 ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>::AddDeduplicated(
-    Feature&& feature) {
+    const Feature& feature) const {
   using Id = std::conditional_t<
       CRTP::template contains_element_feature<NodeId, Deduplicate<Feature>>, NodeId,
       EdgeId>;
-  auto& deduplicated = static_cast<CRTP&>(*this)
+  auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<Id, Deduplicate<Feature>>()
                            .deduplicated_;
-  auto [iter, success] = deduplicated.insert(std::forward<Feature>(feature));
+  auto existing = deduplicated.find(feature);
+  if (existing != deduplicated.end()) {
+    return {std::addressof(*existing), false};
+  }
+  auto [iter, success] = deduplicated.insert(feature.Copy());
   return {std::addressof(*iter), success};
 }

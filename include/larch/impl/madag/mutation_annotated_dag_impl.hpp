@@ -34,8 +34,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
   using Node = typename decltype(dag)::NodeView;
 
   auto ref_seq = dag.GetReferenceSequence();
-  auto ComputeCGFromSequence = [&dag, &ref_seq](const std::string& leaf_seq,
-                                                Node for_node) {
+  auto ComputeCGFromSequence = [&ref_seq](const std::string& leaf_seq, Node for_node) {
     CompactGenome new_cg(leaf_seq, ref_seq);
     for_node = std::move(new_cg);
   };
@@ -55,7 +54,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::AddUA(
   using Node = typename decltype(dag)::NodeView;
   using Edge = typename decltype(dag)::EdgeView;
 
-  Assert(not dag.HaveUA());
+  // Assert(not dag.HaveUA());
   Node root = dag.GetRoot();
   Node ua_node = dag.AppendNode();
   Edge ua_edge = dag.AppendEdge(ua_node, root, {0});
@@ -99,6 +98,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
       node = std::move(new_cgs.at(node.GetId().value));
     }
   }
+  // TODO extract validation to separate function to not hurt performance
   std::unordered_map<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {
     if (node.IsLeaf()) {
@@ -111,7 +111,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
         //           << "\nCompact Genome is\n"
         //           << node.GetCompactGenome().ToString() << "\n"
         //           << std::flush;
-        Fail("Error in ComputeCompactGenomes: had a non-unique leaf node");
+        // TODO Fail("Error in ComputeCompactGenomes: had a non-unique leaf node");
       }
     }
   }

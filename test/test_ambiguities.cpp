@@ -70,24 +70,24 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 
 [[maybe_unused]] static auto MakeSampleUnambiguousCompleteSequenceMap() {
   NodeSeqMap node_seq_map;
-  node_seq_map[{1}] = {"ACC"};
-  node_seq_map[{2}] = {"TAG"};
-  node_seq_map[{3}] = {"AGG"};
-  node_seq_map[{4}] = {"ACG"};
-  node_seq_map[{5}] = {"CTT"};
-  node_seq_map[{6}] = {"TCC"};
+  node_seq_map[{1}] = "ACC";
+  node_seq_map[{2}] = "TAG";
+  node_seq_map[{3}] = "AGG";
+  node_seq_map[{4}] = "ACG";
+  node_seq_map[{5}] = "CTT";
+  node_seq_map[{6}] = "TCC";
 
-  node_seq_map[{7}] = {"TGG"};
-  node_seq_map[{8}] = {"CTC"};
-  node_seq_map[{9}] = {"AGT"};
-  node_seq_map[{10}] = {"GAA"};
+  node_seq_map[{7}] = "TGG";
+  node_seq_map[{8}] = "CTC";
+  node_seq_map[{9}] = "AGT";
+  node_seq_map[{10}] = "GAA";
   return node_seq_map;
 }
 
 [[maybe_unused]] static auto MakeSampleAmbiguousCompleteSequenceMap() {
   NodeSeqMap node_seq_map = MakeSampleUnambiguousCompleteSequenceMap();
-  node_seq_map[{2}] = {"TNN"};
-  node_seq_map[{4}] = {"ANG"};
+  node_seq_map[{2}] = "TNN";
+  node_seq_map[{4}] = "ANG";
   return node_seq_map;
 }
 

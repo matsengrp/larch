@@ -15,8 +15,8 @@ struct MutationBase {
   using BitArray = std::array<bool, BitCount>;
 
   MutationBase() = default;
-  inline MutationBase(const BitArray m_value_in);
-  inline MutationBase(const char m_char_in);
+  inline MutationBase(const BitArray &m_value_in);
+  inline MutationBase(char m_char_in);
 
   inline bool IsCompatible(const MutationBase &rhs) const;
   inline bool IsAmbiguous() const;
@@ -27,11 +27,10 @@ struct MutationBase {
   inline MutationBase GetFirstCommonBase(const MutationBase &rhs) const;
 
   inline char ToChar() const;
-  static inline std::string ToString(std::vector<MutationBase> m_in);
-  friend std::ostream &operator<<(std::ostream &os, const MutationBase m_in);
+  static inline std::string ToString(const std::vector<MutationBase> &m_in);
+  friend std::ostream &operator<<(std::ostream &os, const MutationBase &m_in);
   friend std::ostream &operator<<(std::ostream &os,
-                                  const std::vector<MutationBase> m_in);
-  friend std::string &operator+=(std::string &str, const MutationBase m_in);
+                                  const std::vector<MutationBase> &m_in);
 
   inline bool operator==(const MutationBase &rhs) const;
   inline bool operator!=(const MutationBase &rhs) const;
@@ -57,13 +56,15 @@ struct MutationBase {
     static const std::map<MutationBase, MutationBase> complement_map;
   };
 
-  BitArray value = {0, 0, 0, 0};
+  BitArray value = {false, false, false, false};
 };
 
 namespace std {
 template <>
 struct hash<MutationBase> {
-  std::size_t operator()(const MutationBase &obj) const { return obj.ToChar(); }
+  std::size_t operator()(const MutationBase &obj) const {
+    return static_cast<std::size_t>(obj.ToChar());
+  }
 };
 }  // namespace std
 

@@ -1,10 +1,10 @@
 
 inline const char MutationBase::DNA::ambiguous_char = 'N';
-inline const MutationBase MutationBase::DNA::A{{1, 0, 0, 0}};
-inline const MutationBase MutationBase::DNA::C{{0, 1, 0, 0}};
-inline const MutationBase MutationBase::DNA::G{{0, 0, 1, 0}};
-inline const MutationBase MutationBase::DNA::T{{0, 0, 0, 1}};
-inline const MutationBase MutationBase::DNA::N{{1, 1, 1, 1}};
+inline const MutationBase MutationBase::DNA::A{{1, 0, 0, 0}};  // NOLINT
+inline const MutationBase MutationBase::DNA::C{{0, 1, 0, 0}};  // NOLINT
+inline const MutationBase MutationBase::DNA::G{{0, 0, 1, 0}};  // NOLINT
+inline const MutationBase MutationBase::DNA::T{{0, 0, 0, 1}};  // NOLINT
+inline const MutationBase MutationBase::DNA::N{{1, 1, 1, 1}};  // NOLINT
 inline const std::map<MutationBase, char> MutationBase::DNA::mut_to_char_map = {
     {MutationBase::DNA::A, 'A'},
     {MutationBase::DNA::C, 'C'},
@@ -18,11 +18,10 @@ inline const std::map<MutationBase, MutationBase> MutationBase::DNA::complement_
     {MutationBase::DNA::T, MutationBase::DNA::A},
     {MutationBase::DNA::N, MutationBase::DNA::N}};
 
-MutationBase::MutationBase(const MutationBase::BitArray m_value_in) {
-  value = m_value_in;
-};
+MutationBase::MutationBase(const MutationBase::BitArray &m_value_in)
+    : value{m_value_in} {}
 
-MutationBase::MutationBase(const char m_char_in) {
+MutationBase::MutationBase(char m_char_in) {
   for (const auto &[m_base, m_char] : DNA::mut_to_char_map) {
     if (m_char_in == m_char) {
       value = m_base.value;
@@ -35,9 +34,11 @@ MutationBase::MutationBase(const char m_char_in) {
 bool MutationBase::IsAmbiguous() const {
   size_t count = 0;
   for (auto i : value) {
-    count += i;
+    if (i and ++count > 1) {
+      return true;
+    }
   }
-  return count > 1;
+  return false;
 }
 
 MutationBase MutationBase::GetComplementaryBase() const {
@@ -62,7 +63,7 @@ MutationBase MutationBase::GetFirstBase() const {
 MutationBase MutationBase::GetCommonBases(const MutationBase &rhs) const {
   MutationBase m_out;
   for (size_t i = 0; i < BitCount; i++) {
-    if (value[i] & rhs.value[i]) {
+    if (value[i] and rhs.value[i]) {
       m_out.value[i] = true;
     }
   }
@@ -72,7 +73,7 @@ MutationBase MutationBase::GetCommonBases(const MutationBase &rhs) const {
 MutationBase MutationBase::GetFirstCommonBase(const MutationBase &rhs) const {
   MutationBase m_out;
   for (size_t i = 0; i < BitCount; i++) {
-    if (value[i] & rhs.value[i]) {
+    if (value[i] and rhs.value[i]) {
       m_out.value[i] = true;
       return m_out;
     }
@@ -82,7 +83,7 @@ MutationBase MutationBase::GetFirstCommonBase(const MutationBase &rhs) const {
 
 bool MutationBase::IsCompatible(const MutationBase &rhs) const {
   for (size_t i = 0; i < BitCount; i++) {
-    if (value[i] & rhs.value[i]) {
+    if (value[i] and rhs.value[i]) {
       return true;
     }
   }
@@ -97,26 +98,26 @@ char MutationBase::ToChar() const {
   return DNA::mut_to_char_map.find(value)->second;
 }
 
-std::string MutationBase::ToString(std::vector<MutationBase> m_in) {
-  std::string str_out = "";
-  for (size_t i = 0; i < BitCount; i++) {
-    str_out[i] += m_in[i].ToChar();
+std::string MutationBase::ToString(const std::vector<MutationBase> &m_in) {
+  std::string str_out;
+  for (const auto &i : m_in) {
+    str_out += i.ToChar();
   }
   return str_out;
 }
 
-inline std::ostream &operator<<(std::ostream &os, const MutationBase m_in) {
+inline std::ostream &operator<<(std::ostream &os, const MutationBase &m_in) {
   os << m_in.ToChar();
   return os;
 }
 
 inline std::ostream &operator<<(std::ostream &os,
-                                const std::vector<MutationBase> m_in) {
+                                const std::vector<MutationBase> &m_in) {
   os << MutationBase::ToString(m_in);
   return os;
 }
 
-inline std::string &operator+=(std::string &str, const MutationBase m_in) {
+inline std::string &operator+=(std::string &str, const MutationBase &m_in) {
   str += m_in.ToChar();
   return str;
 }
@@ -168,7 +169,7 @@ inline MutationBase::BitArray operator&(const MutationBase::BitArray &lhs,
   MutationBase::BitArray res;
   size_t i = 0;
   for (auto &res_i : res) {
-    res_i = (lhs[i] & rhs[i]);
+    res_i = (lhs[i] and rhs[i]);
     i++;
   }
   return res;

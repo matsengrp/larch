@@ -6,6 +6,7 @@ template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 template <typename Id, typename Feature>
 inline constexpr bool ExtendDAGStorage<Target, Arg0, Arg1,
                                        Arg2>::contains_element_feature = [] {
+  // NOLINTBEGIN
   if constexpr (TargetView::StorageType::template contains_element_feature<Id,
                                                                            Feature>) {
     return true;
@@ -16,6 +17,7 @@ inline constexpr bool ExtendDAGStorage<Target, Arg0, Arg1,
       return OnEdges::template contains_element_feature<Feature>;
     }
   }
+  // NOLINTEND
 }();
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
@@ -92,6 +94,12 @@ template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 void ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::InitializeNodes(size_t size) {
   GetTarget().InitializeNodes(size);
   additional_node_features_storage_.resize(size);
+}
+
+template <typename Target, typename Arg0, typename Arg1, typename Arg2>
+void ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::InitializeEdges(size_t size) {
+  GetTarget().InitializeEdges(size);
+  additional_edge_features_storage_.resize(size);
 }
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>

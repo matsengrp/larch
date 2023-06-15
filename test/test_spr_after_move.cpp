@@ -4,6 +4,7 @@
 #include "larch/subtree/subtree_weight.hpp"
 #include "larch/subtree/parsimony_score.hpp"
 #include "larch/spr/spr_view.hpp"
+#include "sample_dag.hpp"
 
 #include <tbb/global_control.h>
 

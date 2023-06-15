@@ -112,15 +112,17 @@ bool CompactGenome::operator<(const CompactGenome& rhs) const noexcept {
 
 bool CompactGenome::IsCompatible(const CompactGenome& rhs,
                                  std::string_view reference_sequence) const {
-  auto& lhs = *this;
+  const auto& lhs = *this;
   for (auto [pos, mut] : lhs) {
     if (!rhs.GetBase(pos, reference_sequence)
              .IsCompatible(lhs.GetBase(pos, reference_sequence))) {
       return false;
     }
   }
-  for (auto [pos, mut] : rhs) {
-    if (lhs.HasMutationAtPosition(pos)) continue;
+  for (auto [pos, mut] : rhs) {  // NOLINT(readability-use-anyofallof)
+    if (lhs.HasMutationAtPosition(pos)) {
+      continue;
+    }
     if (!lhs.GetBase(pos, reference_sequence)
              .IsCompatible(rhs.GetBase(pos, reference_sequence))) {
       return false;
@@ -130,7 +132,7 @@ bool CompactGenome::IsCompatible(const CompactGenome& rhs,
 }
 
 bool CompactGenome::ContainsAmbiguity() const {
-  for (auto [pos, base] : mutations_) {
+  for (auto [pos, base] : mutations_) {  // NOLINT(readability-use-anyofallof)
     if (base.IsAmbiguous()) {
       return true;
     }
@@ -216,7 +218,7 @@ size_t CompactGenome::ComputeHash(
   size_t result = 0;
   for (auto [pos, base] : mutations) {
     result = HashCombine(result, pos.value);
-    result = HashCombine(result, base.ToChar());
+    result = HashCombine(result, static_cast<size_t>(base.ToChar()));
   }
   return result;
 }
@@ -238,6 +240,7 @@ const CompactGenome& FeatureConstView<CompactGenome, CRTP, Tag>::GetCompactGenom
 }
 
 template <typename CRTP, typename Tag>
+// NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
 auto& FeatureMutableView<CompactGenome, CRTP, Tag>::operator=(
     CompactGenome&& compact_genome) const {
   GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);

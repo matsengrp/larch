@@ -6,11 +6,13 @@ template <typename NodesContainerT, typename EdgesContainerT, typename... Featur
 template <typename Id, typename Feature>
 inline constexpr bool DAGStorage<NodesContainerT, EdgesContainerT,
                                  Features...>::contains_element_feature = [] {
+  // NOLINTBEGIN
   if constexpr (std::is_same_v<Id, NodeId>) {
     return NodesContainerT::template contains_element_feature<Feature>;
   } else {
     return EdgesContainerT::template contains_element_feature<Feature>;
   }
+  // NOLINTEND
 }();
 
 template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
@@ -60,6 +62,12 @@ template <typename NodesContainerT, typename EdgesContainerT, typename... Featur
 void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::InitializeNodes(
     size_t size) {
   nodes_container_.Initialize(size);
+}
+
+template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::InitializeEdges(
+    size_t size) {
+  edges_container_.Initialize(size);
 }
 
 template <typename NodesContainerT, typename EdgesContainerT, typename... Features>

@@ -12,9 +12,10 @@ class ContiguousMap {
   using const_iterator = typename storage_type::const_iterator;
 
   ContiguousMap() = default;
-  ContiguousMap(ContiguousMap&&) = default;
-  ContiguousMap& operator=(ContiguousMap&&) = default;
+  ContiguousMap(ContiguousMap&&) noexcept = default;
+  ContiguousMap& operator=(ContiguousMap&&) noexcept = default;
   ContiguousMap& operator=(const ContiguousMap&) = delete;
+  ~ContiguousMap() = default;
 
   ContiguousMap Copy() const { return ContiguousMap{*this}; }
 

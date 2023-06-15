@@ -5,14 +5,10 @@ Requirements
 
 * GCC 7.5
 * cmake 3.16
-* clang-tidy
-* protobuf libraries and compiler
-* zlib
-* TBB
 
 For Ubuntu 18.04 LTS the following commands installs the requirements:
 
-`sudo apt get install make g++ protobuf-compiler libprotobuf-dev zlib1g-dev libtbb-dev clang-tidy`
+`apt install --no-install-recommends git cmake make g++ mpi-default-dev libprotobuf-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-date-time-dev libboost-iostreams-dev protobuf-compiler automake autoconf libtool libbz2-dev liblzma-dev`
 
 To get a recent cmake, download from `https://cmake.org/download/`, for example:
 
@@ -25,11 +21,7 @@ Building
 
 `cd build`
 
-`wget https://github.com/oneapi-src/oneTBB/archive/2019_U9.tar.gz`
-
-`tar -xvzf 2019_U9.tar.gz`
-
-`cmake -DTBB_DIR=${PWD}/oneTBB-2019_U9 -DCMAKE_PREFIX_PATH=${PWD}/oneTBB-2019_U9/cmake ..`
+`cmake -DCMAKE_BUILD_TYPE=Debug ..`
 
 `make -j16`
 
