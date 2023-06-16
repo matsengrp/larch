@@ -30,7 +30,11 @@ static void test_sample_tree(MADAG dag) {
   auto result3 = binary_weight.SampleTree({});
   assert_true(result3.View().IsTree(), "Tree");
 
-  //dag.RecomputeCompactGenomes();
+  for (auto edge: dag.GetEdges()) {
+    if (edge.GetChild().GetId().value == edge.GetParent().GetId().value) {
+      std::cout << "Error\n" << std::flush;
+    }
+  }
   Merge merge{dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{dag});
   merge.GetResult().GetRoot().Validate(true, true);
@@ -42,6 +46,7 @@ static void test_sample_tree(MADAG dag) {
 
 static void test_sample_tree(std::string_view path) {
   MADAGStorage dag = LoadDAGFromProtobuf(path);
+  dag.View().RecomputeCompactGenomes();
   test_sample_tree(dag.View());
 }
 
