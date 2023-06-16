@@ -72,6 +72,11 @@ void BatchingCallback<CRTP>::OnReassignedStates(MAT::Tree& tree) {
 }
 
 template <typename CRTP>
+Merge& BatchingCallback<CRTP>::GetMerge() {
+  return merge_;
+}
+
+template <typename CRTP>
 void BatchingCallback<CRTP>::CreateMATStorage(MAT::Tree& tree,
                                               std::string_view ref_seq) {
   sample_mat_storage_ = std::make_unique<MATStorage>(AddMATConversion(Storage{{}}));

@@ -25,6 +25,9 @@ class BatchingCallback : public Move_Found_Callback {
 
   void OnReassignedStates(MAT::Tree& tree);
 
+ protected:
+  Merge& GetMerge();
+
  private:
   void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq);
 
