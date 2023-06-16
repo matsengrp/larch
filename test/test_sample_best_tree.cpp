@@ -26,16 +26,18 @@ static void test_sample_tree(MADAG dag) {
   auto result2 = tree_count.UniformSampleTree({});
   assert_true(result2.View().IsTree(), "Tree");
 
-  SubtreeWeight<BinaryParsimonyScore, MergeDAG> binary_weight{dag};
+  SubtreeWeight<BinaryParsimonyScore, MADAG> binary_weight{dag};
   auto result3 = binary_weight.SampleTree({});
   assert_true(result3.View().IsTree(), "Tree");
 
+  //dag.RecomputeCompactGenomes();
   Merge merge{dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{dag});
+  merge.GetResult().GetRoot().Validate(true, true);
   merge.ComputeResultEdgeMutations();
-  SubtreeWeight<BinaryParsimonyScore, MergeDAG> binary_weight{merge.GetResult()};
-  auto result4 = binary_weight.SampleTree({});
-  assert_true(result3.View().IsTree(), "Tree");
+  SubtreeWeight<BinaryParsimonyScore, MergeDAG> binary_merge_weight{merge.GetResult()};
+  auto result4 = binary_merge_weight.SampleTree({});
+  assert_true(result4.View().IsTree(), "Tree");
 }
 
 static void test_sample_tree(std::string_view path) {
