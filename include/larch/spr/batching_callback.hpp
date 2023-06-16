@@ -27,15 +27,15 @@ class BatchingCallback : public Move_Found_Callback {
 
  protected:
   Merge& GetMerge();
-  auto GetSampleDAG();
+  auto GetMappedStorage();
 
  private:
   void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq);
 
   Merge& merge_;
   std::decay_t<SampleDAG> sample_dag_;
-  decltype(AddMATConversion(Storage{{}})) reassigned_states_storage_ =
-      AddMATConversion(Storage{{}});
+  decltype(AddMappedNodes(AddMATConversion(Storage{{}}))) reassigned_states_storage_ =
+      AddMappedNodes(AddMATConversion(Storage{{}}));
   std::shared_mutex mat_mtx_;
   std::unique_ptr<MATStorage> sample_mat_storage_;
   std::mutex merge_mtx_;
