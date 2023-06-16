@@ -1,5 +1,5 @@
 doc-build
-build
+build*
 .vscode
 compile_commands.json
 .cache

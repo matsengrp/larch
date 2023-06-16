@@ -6,9 +6,9 @@ template <typename Storage, template <typename, typename> typename Base>
 inline constexpr bool DAGView<Storage, Base>::is_mutable = not std::is_const_v<Storage>;
 
 template <typename Storage, template <typename, typename> typename Base>
-template <typename Id, typename Feature>
+template <Component C, typename Feature>
 inline constexpr bool DAGView<Storage, Base>::contains_element_feature =
-    Storage::template contains_element_feature<Id, Feature>;
+    Storage::template contains_element_feature<C, Feature>;
 
 template <typename Storage, template <typename, typename> typename Base>
 DAGView<Storage, Base>::DAGView(Storage& dag_storage) : dag_storage_{dag_storage} {}
@@ -24,43 +24,47 @@ DAGView<const Storage, Base> DAGView<Storage, Base>::Const() const {
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-ElementView<NodeId, DAGView<Storage, Base>> DAGView<Storage, Base>::Get(
+ElementView<Component::Node, DAGView<Storage, Base>> DAGView<Storage, Base>::Get(
     NodeId id) const {
   return {*this, id};
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-ElementView<EdgeId, DAGView<Storage, Base>> DAGView<Storage, Base>::Get(
+ElementView<Component::Edge, DAGView<Storage, Base>> DAGView<Storage, Base>::Get(
     EdgeId id) const {
   return {*this, id};
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-ElementView<NodeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AppendNode() const {
+ElementView<Component::Node, DAGView<Storage, Base>>
+DAGView<Storage, Base>::AppendNode() const {
   NodeId result = dag_storage_.AppendNode();
   return {*this, result};
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-ElementView<EdgeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AppendEdge() const {
+ElementView<Component::Edge, DAGView<Storage, Base>>
+DAGView<Storage, Base>::AppendEdge() const {
   EdgeId result = dag_storage_.AppendEdge();
   return {*this, result};
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-ElementView<NodeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AddNode(NodeId id) {
+ElementView<Component::Node, DAGView<Storage, Base>> DAGView<Storage, Base>::AddNode(
+    NodeId id) {
   dag_storage_.AddNode(id);
   return {*this, id};
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-ElementView<EdgeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AddEdge(EdgeId id) {
+ElementView<Component::Edge, DAGView<Storage, Base>> DAGView<Storage, Base>::AddEdge(
+    EdgeId id) {
   dag_storage_.AddEdge(id);
   return {*this, id};
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-ElementView<EdgeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AddEdge(
+ElementView<Component::Edge, DAGView<Storage, Base>> DAGView<Storage, Base>::AddEdge(
     EdgeId id, NodeId parent, NodeId child,
     CladeIdx clade) {  // TODO
   dag_storage_.AddEdge(id);
@@ -70,7 +74,7 @@ ElementView<EdgeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AddEdge(
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-ElementView<EdgeId, DAGView<Storage, Base>> DAGView<Storage, Base>::AppendEdge(
+ElementView<Component::Edge, DAGView<Storage, Base>> DAGView<Storage, Base>::AppendEdge(
     NodeId parent, NodeId child,
     CladeIdx clade) const {  // TODO
   auto result = AppendEdge();
@@ -138,9 +142,9 @@ auto& DAGView<Storage, Base>::GetFeatureStorage(EdgeId id) const {
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-template <typename Id, typename Feature>
+template <Component C, typename Feature>
 auto& DAGView<Storage, Base>::GetFeatureExtraStorage() const {
-  return dag_storage_.template GetFeatureExtraStorage<Id, Feature>();
+  return dag_storage_.template GetFeatureExtraStorage<C, Feature>();
 }
 
 template <typename Storage, template <typename, typename> typename Base>

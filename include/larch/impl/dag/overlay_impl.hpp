@@ -96,9 +96,9 @@ bool FeatureConstView<OverlayDAG, CRTP, Tag>::HaveOverlays() const {
 }
 
 template <typename Target>
-template <typename Id, typename Feature>
+template <Component C, typename Feature>
 inline constexpr bool OverlayDAGStorage<Target>::contains_element_feature =
-    TargetView::StorageType::template contains_element_feature<Id, Feature>;
+    TargetView::StorageType::template contains_element_feature<C, Feature>;
 
 template <typename Target>
 OverlayDAGStorage<Target>::OverlayDAGStorage(Target&& target)
@@ -215,15 +215,15 @@ const auto& OverlayDAGStorage<Target>::GetFeatureStorage(EdgeId id) const {
 }
 
 template <typename Target>
-template <typename Id, typename F>
+template <Component C, typename F>
 auto& OverlayDAGStorage<Target>::GetFeatureExtraStorage() {
-  return GetTarget().template GetFeatureExtraStorage<Id, F>();
+  return GetTarget().template GetFeatureExtraStorage<C, F>();
 }
 
 template <typename Target>
-template <typename Id, typename F>
+template <Component C, typename F>
 const auto& OverlayDAGStorage<Target>::GetFeatureExtraStorage() const {
-  return GetTarget().template GetFeatureExtraStorage<Id, F>();
+  return GetTarget().template GetFeatureExtraStorage<C, F>();
 }
 
 template <typename Target>

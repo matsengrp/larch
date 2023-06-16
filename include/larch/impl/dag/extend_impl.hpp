@@ -3,15 +3,15 @@
 #endif
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
-template <typename Id, typename Feature>
+template <Component C, typename Feature>
 inline constexpr bool ExtendDAGStorage<Target, Arg0, Arg1,
                                        Arg2>::contains_element_feature = [] {
   // NOLINTBEGIN
-  if constexpr (TargetView::StorageType::template contains_element_feature<Id,
+  if constexpr (TargetView::StorageType::template contains_element_feature<C,
                                                                            Feature>) {
     return true;
   } else {
-    if constexpr (std::is_same_v<Id, NodeId>) {
+    if constexpr (C == Component::Node) {
       return OnNodes::template contains_element_feature<Feature>;
     } else {
       return OnEdges::template contains_element_feature<Feature>;
@@ -19,9 +19,6 @@ inline constexpr bool ExtendDAGStorage<Target, Arg0, Arg1,
   }
   // NOLINTEND
 }();
-
-template <typename Target, typename Arg0, typename Arg1, typename Arg2>
-ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::ExtendDAGStorage() = default;
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::ExtendDAGStorage(Target&& target)
@@ -173,12 +170,12 @@ const auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
 }
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
-template <typename Id, typename F>
+template <Component C, typename F>
 auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() {
-  if constexpr (std::decay_t<Target>::template contains_element_feature<Id, F>) {
-    return GetTarget().template GetFeatureExtraStorage<Id, F>();
+  if constexpr (std::decay_t<Target>::template contains_element_feature<C, F>) {
+    return GetTarget().template GetFeatureExtraStorage<C, F>();
   } else {
-    if constexpr (std::is_same_v<Id, NodeId>) {
+    if constexpr (C == Component::Node) {
       return std::get<ExtraFeatureStorage<F>>(additional_node_extra_features_storage_);
     } else {
       return std::get<ExtraFeatureStorage<F>>(additional_edge_extra_features_storage_);
@@ -187,12 +184,12 @@ auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() {
 }
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
-template <typename Id, typename F>
+template <Component C, typename F>
 const auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() const {
-  if constexpr (std::decay_t<Target>::template contains_element_feature<Id, F>) {
-    return GetTarget().template GetFeatureExtraStorage<Id, F>();
+  if constexpr (std::decay_t<Target>::template contains_element_feature<C, F>) {
+    return GetTarget().template GetFeatureExtraStorage<C, F>();
   } else {
-    if constexpr (std::is_same_v<Id, NodeId>) {
+    if constexpr (C == Component::Node) {
       return std::get<ExtraFeatureStorage<F>>(additional_node_extra_features_storage_);
     } else {
       return std::get<ExtraFeatureStorage<F>>(additional_edge_extra_features_storage_);

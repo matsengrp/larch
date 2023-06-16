@@ -46,11 +46,12 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
 template <typename Feature, typename CRTP>
 const Feature* ExtraFeatureConstView<Deduplicate<Feature>, CRTP>::FindDeduplicated(
     const Feature& feature) const {
-  using Id = std::conditional_t<
-      CRTP::template contains_element_feature<NodeId, Deduplicate<Feature>>, NodeId,
-      EdgeId>;
+  constexpr auto C =
+      CRTP::template contains_element_feature<Component::Node, Deduplicate<Feature>>
+          ? Component::Node
+          : Component::Edge;
   auto& deduplicated = static_cast<const CRTP&>(*this)
-                           .template GetFeatureExtraStorage<Id, Deduplicate<Feature>>()
+                           .template GetFeatureExtraStorage<C, Deduplicate<Feature>>()
                            .deduplicated_;
   auto result = deduplicated.find(feature);  // TODO Lock?
   if (result == deduplicated.end()) {
@@ -63,11 +64,12 @@ template <typename Feature, typename CRTP>
 std::pair<const Feature*, bool>
 ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>::AddDeduplicated(
     const Feature& feature) const {
-  using Id = std::conditional_t<
-      CRTP::template contains_element_feature<NodeId, Deduplicate<Feature>>, NodeId,
-      EdgeId>;
+  constexpr auto C =
+      CRTP::template contains_element_feature<Component::Node, Deduplicate<Feature>>
+          ? Component::Node
+          : Component::Edge;
   auto& deduplicated = static_cast<const CRTP&>(*this)
-                           .template GetFeatureExtraStorage<Id, Deduplicate<Feature>>()
+                           .template GetFeatureExtraStorage<C, Deduplicate<Feature>>()
                            .deduplicated_;
   auto existing = deduplicated.find(feature);
   if (existing != deduplicated.end()) {

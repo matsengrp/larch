@@ -3,7 +3,7 @@
 #include "larch/madag/mutation_annotated_dag.hpp"
 
 [[maybe_unused]] static auto MakeSampleDAG() {
-  MADAGStorage input_storage;
+  MADAGStorage input_storage{{}};
   auto dag = input_storage.View();
 
   dag.SetReferenceSequence("GAA");
