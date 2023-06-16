@@ -6,10 +6,10 @@
 #include "larch/spr/spr_view.hpp"
 #include "larch/merge/merge.hpp"
 
-template <typename CRTP>
+template <typename CRTP, typename SampleDAG>
 class BatchingCallback : public Move_Found_Callback {
  public:
-  explicit BatchingCallback(Merge& merge) : merge_{merge} {};
+  BatchingCallback(Merge& merge, SampleDAG sample_dag);
 
   virtual ~BatchingCallback() {}
 
@@ -27,11 +27,13 @@ class BatchingCallback : public Move_Found_Callback {
 
  protected:
   Merge& GetMerge();
+  auto GetSampleDAG();
 
  private:
   void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq);
 
   Merge& merge_;
+  std::decay_t<SampleDAG> sample_dag_;
   decltype(AddMATConversion(Storage{{}})) reassigned_states_storage_ =
       AddMATConversion(Storage{{}});
   std::shared_mutex mat_mtx_;
