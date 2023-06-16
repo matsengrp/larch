@@ -181,7 +181,6 @@ template <typename SampleDAG>
 struct Merge_All_Moves_Found_Callback
     : public BatchingCallback<Merge_All_Moves_Found_Callback<SampleDAG>, SampleDAG> {
   MOVE_ONLY_VIRT_DTOR(Merge_All_Moves_Found_Callback);
-
   Merge_All_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag)
       : BatchingCallback<Merge_All_Moves_Found_Callback<SampleDAG>, SampleDAG>{
             merge, sample_dag} {};
