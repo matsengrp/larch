@@ -66,6 +66,7 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
     std::unique_lock lock{mat_mtx_};
     CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
   }
+  static_cast<CRTP&>(*this).OnRadius();
 }
 
 template <typename CRTP, typename SampleDAG>

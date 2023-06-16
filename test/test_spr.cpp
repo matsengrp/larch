@@ -34,6 +34,8 @@ struct Test_Move_Found_Callback
     std::ignore = nodes_with_major_allele_set_change;
     return move.score_change < best_score_change;
   }
+
+  void OnRadius() {}
 };
 
 [[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path,
