@@ -1,9 +1,8 @@
 
-template <typename DAG, typename MergeT>
-bool BatchingCallback<DAG, MergeT>::operator()(
-    Profitable_Moves& move, int best_score_change,
-    [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
-        nodes_with_major_allele_set_change) {
+template <typename CRTP>
+bool BatchingCallback<CRTP>::operator()(Profitable_Moves& move, int best_score_change,
+                                        std::vector<Node_With_Major_Allele_Set_Change>&
+                                            nodes_with_major_allele_set_change) {
   Assert(move.src != nullptr);
   Assert(move.dst != nullptr);
   auto& storage = [this]() -> SPRType& {
@@ -16,7 +15,7 @@ bool BatchingCallback<DAG, MergeT>::operator()(
 
   if (storage.View().InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
     storage.View().GetRoot().Validate(true);
-    auto fragment = storage.View().GetFragment();
+    auto fragment = storage.View().MakeFragment();
     batch_.push_back(std::move(fragment));
 
     if (batch_.size() > 2048) {
@@ -28,26 +27,18 @@ bool BatchingCallback<DAG, MergeT>::operator()(
         batch_storage_.clear();
       }
     }
+    auto& impl = static_cast<CRTP&>(*this);
+    return impl.OnMove(storage.View(), fragment, move, best_score_change,
+                       nodes_with_major_allele_set_change);
   } else {
     return false;
   }
-  return move.score_change < best_score_change;
 }
 
-template <typename DAG, typename MergeT>
-void BatchingCallback<DAG, MergeT>::CreateMATStorage(MAT::Tree& tree,
-                                                     std::string_view ref_seq) {
-  sample_mat_storage_ = std::make_unique<MATStorage>(AddMATConversion(Storage{{}}));
-  auto view = sample_mat_storage_->View();
-  view.BuildFromMAT(tree, ref_seq);
-  check_edge_mutations(view.Const());
-  view.RecomputeCompactGenomes(true);
-}
-
-template <typename DAG, typename MergeT>
-void BatchingCallback<DAG, MergeT>::operator()(MAT::Tree& tree) {
+template <typename CRTP>
+void BatchingCallback<CRTP>::operator()(MAT::Tree& tree) {
   auto storage = AddMATConversion(Storage{{}});
-  storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
+  storage.View().BuildFromMAT(tree, merge_.GetResult().GetReferenceSequence());
   storage.View().RecomputeCompactGenomes(true);
   {
     std::unique_lock lock{merge_mtx_};
@@ -62,14 +53,14 @@ void BatchingCallback<DAG, MergeT>::operator()(MAT::Tree& tree) {
   }
   {
     std::unique_lock lock{mat_mtx_};
-    CreateMATStorage(tree, sample_dag_.GetReferenceSequence());
+    CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
   }
 }
 
-template <typename DAG, typename MergeT>
-void BatchingCallback<DAG, MergeT>::OnReassignedStates(MAT::Tree& tree) {
-  reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                 sample_dag_.GetReferenceSequence());
+template <typename CRTP>
+void BatchingCallback<CRTP>::OnReassignedStates(MAT::Tree& tree) {
+  reassigned_states_storage_.View().BuildFromMAT(
+      tree, merge_.GetResult().GetReferenceSequence());
   check_edge_mutations(reassigned_states_storage_.View().Const());
   reassigned_states_storage_.View().RecomputeCompactGenomes(true);
   {
@@ -78,4 +69,14 @@ void BatchingCallback<DAG, MergeT>::OnReassignedStates(MAT::Tree& tree) {
     merge_.GetResult().GetRoot().Validate(true, true);
     merge_.ComputeResultEdgeMutations();
   }
+}
+
+template <typename CRTP>
+void BatchingCallback<CRTP>::CreateMATStorage(MAT::Tree& tree,
+                                              std::string_view ref_seq) {
+  sample_mat_storage_ = std::make_unique<MATStorage>(AddMATConversion(Storage{{}}));
+  auto view = sample_mat_storage_->View();
+  view.BuildFromMAT(tree, ref_seq);
+  check_edge_mutations(view.Const());
+  view.RecomputeCompactGenomes(true);
 }

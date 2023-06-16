@@ -150,7 +150,7 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
 
-      auto fragment = spr.GetFragment();
+      auto fragment = spr.MakeFragment();
       if (move_score_coeffs_.first != 0) {
         auto src_leaf_set = merge_.GetResultNodeLabels()
                                 .at(spr.GetMoveSource().GetId())
@@ -263,7 +263,7 @@ struct Merge_All_Moves_Found_Callback : public Move_Found_Callback {
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
 
-      auto fragment = spr.GetFragment();
+      auto fragment = spr.MakeFragment();
 
       std::scoped_lock<std::mutex> lock{merge_mtx_};
       merge_.AddDAG(fragment);
@@ -343,7 +343,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
 
-      auto fragment = spr.GetFragment();
+      auto fragment = spr.MakeFragment();
       if (move_score_coeffs_.first != 0) {
         auto src_leaf_set =
             merge_.GetResultNodeLabels()
@@ -474,7 +474,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
 
-      auto fragment = spr.GetFragment();
+      auto fragment = spr.MakeFragment();
       if (move_score_coeffs_.first != 0) {
         auto src_leaf_set =
             merge_.GetResultNodeLabels()
@@ -602,7 +602,7 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
 
-      auto fragment = spr.GetFragment();
+      auto fragment = spr.MakeFragment();
       if (move_score_coeffs_.first != 0) {
         auto src_leaf_set =
             merge_.GetResultNodeLabels()

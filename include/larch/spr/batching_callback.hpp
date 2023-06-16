@@ -6,10 +6,10 @@
 #include "larch/spr/spr_view.hpp"
 #include "larch/merge/merge.hpp"
 
-template <typename DAG, typename MergeT>
-struct BatchingCallback : public Move_Found_Callback {
-  BatchingCallback(DAG sample_dag, MergeT& merge)
-      : sample_dag_{sample_dag}, merge_{merge} {};
+template <typename CRTP>
+class BatchingCallback : public Move_Found_Callback {
+ public:
+  explicit BatchingCallback(Merge& merge) : merge_{merge} {};
 
   virtual ~BatchingCallback() {}
 
@@ -21,14 +21,14 @@ struct BatchingCallback : public Move_Found_Callback {
                   std::vector<Node_With_Major_Allele_Set_Change>&
                       nodes_with_major_allele_set_change) override;
 
-  void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq);
-
   void operator()(MAT::Tree& tree);
 
   void OnReassignedStates(MAT::Tree& tree);
 
-  DAG sample_dag_;
-  MergeT& merge_;
+ private:
+  void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq);
+
+  Merge& merge_;
   decltype(AddMATConversion(Storage{{}})) reassigned_states_storage_ =
       AddMATConversion(Storage{{}});
   std::shared_mutex mat_mtx_;

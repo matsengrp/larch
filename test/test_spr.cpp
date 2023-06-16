@@ -17,10 +17,19 @@ struct Empty_Callback : public Move_Found_Callback {
   void OnReassignedStates(MAT::Tree&) {}
 };
 
-template <typename DAG, typename MergeT>
-struct Test_Move_Found_Callback : public BatchingCallback<DAG, MergeT> {
-  Test_Move_Found_Callback(DAG sample_dag, MergeT& merge)
-      : BatchingCallback<DAG, MergeT>{sample_dag, merge} {};
+struct Test_Move_Found_Callback : public BatchingCallback<Test_Move_Found_Callback> {
+  explicit Test_Move_Found_Callback(Merge& merge) : BatchingCallback{merge} {};
+
+  template <typename SPRView, typename FragmentType>
+  bool OnMove(SPRView spr, const FragmentType& fragment, Profitable_Moves& move,
+              int best_score_change,
+              std::vector<Node_With_Major_Allele_Set_Change>&
+                  nodes_with_major_allele_set_change) {
+    std::ignore = spr;
+    std::ignore = fragment;
+    std::ignore = nodes_with_major_allele_set_change;
+    return move.score_change < best_score_change;
+  }
 };
 
 [[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path,
@@ -56,7 +65,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     sample.View().BuildMAT(mat);
     sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View().Const());
-    Test_Move_Found_Callback callback{sample.View(), merge};
+    Test_Move_Found_Callback callback{merge};
     // Empty_Callback callback;
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
@@ -95,7 +104,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
       spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change);
 
       // ** build fragment
-      auto spr_fragment = spr.GetFragment();
+      auto spr_fragment = spr.MakeFragment();
 
       // set flag so we don't approve any more moves
       approved_a_move_ = true;
