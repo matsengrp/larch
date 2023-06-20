@@ -450,11 +450,12 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
           ? LoadDAGFromProtobuf(input_dag_path)
           : LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path));
   auto input_dag_view = input_dag.View();
-  input_dag_view.RecomputeCompactGenomes();
+  input_dag_view.RecomputeCompactGenomes(true);
   Merge merge{input_dag_view.GetReferenceSequence()};
   merge.AddDAG(input_dag_view);
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{{}})), MAT::Tree>>
       optimized_dags;
+  merge.ComputeResultEdgeMutations();
 
   auto start_time = std::chrono::high_resolution_clock::now();
   auto time_elapsed = [&start_time]() {
@@ -565,12 +566,9 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       return std::nullopt;
     }();
 
-    auto sample1 = weight.SampleTree({});
-    //auto sample = AddMATConversion(weight.SampleTree({}));
-    //auto sample = sample_best_tree
-    //                  ? AddMATConversion(weight.MinWeightSampleTree({}, subtree_node))
-    //                  : AddMATConversion(weight.SampleTree({}, subtree_node));
-/*
+    auto sample = sample_best_tree
+                      ? AddMATConversion(weight.MinWeightSampleTree({}, subtree_node))
+                      : AddMATConversion(weight.SampleTree({}, subtree_node));
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
               << sample.GetNodesCount() << "\n";
     MAT::Tree mat;
@@ -600,18 +598,15 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     }
 
     auto optimized_view = optimized_dags.back().first.View();
-    optimized_view.RecomputeCompactGenomes();
+    optimized_view.RecomputeCompactGenomes(true);
     merge.AddDAG(optimized_view);
     logger(i + 1);
-*/
   }
 
-/*
   std::cout << "new node coefficient: " << move_coeff_nodes << "\n";
   std::cout << "parsimony score coefficient: " << move_coeff_pscore << "\n";
   logfile.close();
   StoreDAGToProtobuf(merge.GetResult(), output_dag_path);
-*/
 
   return EXIT_SUCCESS;
 }
