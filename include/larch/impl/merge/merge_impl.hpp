@@ -62,6 +62,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   Assert(result_node_labels_.size() == ResultDAG().GetNodesCount());
   Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
+  GetResult().GetRoot().Validate(true, true);
 }
 
 template <typename DAG>
