@@ -32,7 +32,8 @@ struct Test_Move_Found_Callback
     std::ignore = spr;
     std::ignore = fragment;
     std::ignore = nodes_with_major_allele_set_change;
-    return move.score_change < best_score_change;
+    std::ignore = best_score_change;
+    return move.score_change <= 0;
   }
 
   void OnRadius() {}

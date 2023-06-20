@@ -48,6 +48,11 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
+  reassigned_states_storage_ = AddMappedNodes(AddMATConversion(Storage{{}}));
+  reassigned_states_storage_.View().BuildFromMAT(
+      tree, merge_.GetResult().GetReferenceSequence());
+  check_edge_mutations(reassigned_states_storage_.View().Const());
+  reassigned_states_storage_.View().RecomputeCompactGenomes(true);
   {
     std::unique_lock lock{merge_mtx_};
     if (not batch_.empty()) {
@@ -62,30 +67,25 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   {
     std::unique_lock lock{mat_mtx_};
     CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
-    reassigned_states_storage_ = AddMappedNodes(AddMATConversion(Storage{{}}));
-    reassigned_states_storage_.View().BuildFromMAT(
-        tree, merge_.GetResult().GetReferenceSequence());
-    check_edge_mutations(reassigned_states_storage_.View().Const());
-    reassigned_states_storage_.View().RecomputeCompactGenomes(true);
   }
   static_cast<CRTP&>(*this).OnRadius();
 }
 
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
-  {
-    std::unique_lock lock{mat_mtx_};
-    CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
-    reassigned_states_storage_.View().BuildFromMAT(
-        tree, merge_.GetResult().GetReferenceSequence());
-    check_edge_mutations(reassigned_states_storage_.View().Const());
-    reassigned_states_storage_.View().RecomputeCompactGenomes(true);
-  }
+  reassigned_states_storage_.View().BuildFromMAT(
+      tree, merge_.GetResult().GetReferenceSequence());
+  check_edge_mutations(reassigned_states_storage_.View().Const());
+  reassigned_states_storage_.View().RecomputeCompactGenomes(true);
   {
     std::unique_lock lock{merge_mtx_};
     merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
     merge_.GetResult().GetRoot().Validate(true, true);
     merge_.ComputeResultEdgeMutations();
+  }
+  {
+    std::unique_lock lock{mat_mtx_};
+    CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
   }
 }
 
