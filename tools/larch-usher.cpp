@@ -35,7 +35,7 @@
   std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
   std::cout << "  -l,--logpath Path for logging\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
-  std::cout << "  -s,--switch-subtree           Switch to optimizing subtrees after "
+  std::cout << "  -s,--switch-subtrees          Switch to optimizing subtrees after "
                "the specified "
                "number of iterations (default never)\n";
   std::cout << "  --min-subtree-clade-size      The minimum number of leaves in a "
@@ -44,10 +44,6 @@
   std::cout << "  --max-subtree-clade-size      The maximum number of leaves in a "
                "subtree sampled for optimization (default 1000, ignored without option "
                "`-s`)\n";
-  std::cout << "  --uniform-subtree-root        Choose subtree root node uniformly"
-               "from allowed options. Default choice is weighted by (1 + m^2) where m "
-               "is minimum "
-               "mutations on a node's parent edge\n";
   std::cout
       << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
   std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
@@ -384,7 +380,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       count = static_cast<size_t>(ParseNumber(*params.begin()));
     } else if (name == "-s" or name == "--switch-subtrees") {
       if (params.empty()) {
-        std::cerr << "Count not specified.\n";
+        std::cerr << "Subtree count not specified.\n";
         Fail();
       }
       switch_subtrees = static_cast<size_t>(ParseNumber(*params.begin()));

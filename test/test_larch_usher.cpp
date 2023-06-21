@@ -17,11 +17,7 @@ static void test_larch_usher(const std::string& args) {
     {[] { test_larch_usher("--sample-any-tree"); }, "Larch-Usher: --sample-any-tree"});
 
 [[maybe_unused]] static const auto test_added2 = add_test(
-    {[] { test_larch_usher("--switch-subtree"); }, "Larch-Usher: --switch-subtree"});
-
-[[maybe_unused]] static const auto test_added3 =
-    add_test({[] { test_larch_usher("--switch-subtree --uniform-subtree-root"); },
-              "Larch-Usher: --switch-subtree --uniform-subtree-root"});
+    {[] { test_larch_usher("--switch-subtrees 2"); }, "Larch-Usher: --switch-subtrees 2"});
 
 [[maybe_unused]] static const auto test_added4 =
     add_test({[] { test_larch_usher("--move-coeff-nodes 0"); },
