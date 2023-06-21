@@ -25,7 +25,7 @@ struct Test_Move_Found_Callback
                                                                          sample_dag} {};
 
   template <typename SPRView, typename FragmentType>
-  bool OnMove(SPRView spr, const FragmentType& fragment, Profitable_Moves& move,
+    std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment, Profitable_Moves& move,
               int best_score_change,
               std::vector<Node_With_Major_Allele_Set_Change>&
                   nodes_with_major_allele_set_change) {
@@ -33,7 +33,7 @@ struct Test_Move_Found_Callback
     std::ignore = fragment;
     std::ignore = nodes_with_major_allele_set_change;
     std::ignore = best_score_change;
-    return move.score_change <= 0;
+    return {move.score_change <= 0, move.score_change <= 0};
   }
 
   void OnRadius() {}
