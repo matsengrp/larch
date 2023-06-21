@@ -45,6 +45,7 @@ ExternalProject_Add(range-v3
   INSTALL_DIR range-v3/install
 )
 
+if(${USE_HTSLIB})
 ExternalProject_Add(htslib
   GIT_REPOSITORY https://github.com/samtools/htslib.git
   GIT_TAG 1.17
@@ -57,6 +58,8 @@ ExternalProject_Add(htslib
   BUILD_COMMAND make -j
   INSTALL_COMMAND make install
 )
+endif()
+
 find_package(ZLIB)
 
 add_library(larch-autogen OBJECT
@@ -87,8 +90,11 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
+  add_dependencies(${PRODUCT} range-v3)
+if(${USE_HTSLIB})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/include)
-  add_dependencies(${PRODUCT} range-v3 htslib)
+  add_dependencies(${PRODUCT} htslib)
+endif()
 endfunction()
 
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
@@ -114,7 +120,6 @@ file(GLOB MATOPTIMIZE_SRC
 )
 
 function(larch_link_opts PRODUCT)
-  target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/lib)
   target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
 
   if(${USE_ASAN})
@@ -128,7 +133,11 @@ function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
-  target_link_libraries(${PRODUCT} PUBLIC -lhts)
+
+  if(${USE_HTSLIB})
+    target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/lib)
+    target_link_libraries(${PRODUCT} PUBLIC -lhts)
+  endif()
 endfunction()
 
 function(larch_executable PRODUCT)
