@@ -13,9 +13,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
   auto& storage = [this]() -> SPRType& {
     std::shared_lock lock{mat_mtx_};
     Assert(sample_mat_storage_ != nullptr);
-    batch_storage_.push_back(
-        SPRStorage(sample_mat_storage_->View()));  // TODO concurrent
-    return batch_storage_.back();
+    return *batch_storage_.push_back(SPRStorage(sample_mat_storage_->View()));
   }();
 
   storage.View().GetRoot().Validate(true);
@@ -31,7 +29,6 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
     if (accepted.first) {
       batch_.push_back(std::move(fragment));
-      /*
       if (batch_.size() > 2048) {
         std::unique_lock lock{merge_mtx_};
         if (batch_.size() > 2048) {
@@ -41,7 +38,6 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
           batch_storage_.clear();
         }
       }
-      */
     }
 
     return accepted.second;

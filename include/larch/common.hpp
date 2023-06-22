@@ -5,8 +5,7 @@
 #include <vector>
 #include <tuple>
 #include <typeinfo>
-#include <unordered_set>
-#include <unordered_map>
+#include <thread>
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -23,19 +22,47 @@
 #include <parallel_hashmap/phmap.h>
 #pragma GCC diagnostic pop
 
+#include "larch/optimize/concurrent_vector.hpp"
+
 template <typename T>
 using ConcurrentUnorderedSet =
-    phmap::parallel_node_hash_set<T, std::hash<T>, std::equal_to<T>>;
+    phmap::parallel_node_hash_set<T, std::hash<T>, std::equal_to<T>, std::allocator<T>,
+                                  4, std::mutex>;
 template <typename K, typename V>
 using ConcurrentUnorderedMap =
-    phmap::parallel_node_hash_map<K, V, std::hash<K>, std::equal_to<K>>;
+    phmap::parallel_node_hash_map<K, V, std::hash<K>, std::equal_to<K>,
+                                  std::allocator<std::pair<const K, V>>, 4, std::mutex>;
 template <typename T>
-using ConcurrentVector = std::vector<T>;
+using ConcurrentVector = concurrent_vector<T>;
 
 template <typename Range, typename Lambda>
 void parallel_for_each(Range&& range, Lambda&& lambda) {
-  for (auto&& i : range) {
-    lambda(i);
+  std::vector<std::thread> workers;
+  std::mutex mtx;
+  auto iter = range.begin();
+  auto end = range.end();
+  for (size_t i = 0; i < 32; ++i) {
+    workers.push_back(std::thread([&] {
+      while (true) {
+        auto it = [&] {
+          std::unique_lock lock{mtx};
+          if (iter < end) {
+            return iter++;
+          } else {
+            return end;
+          }
+        }();
+
+        if (it >= range.end()) {
+          return;
+        }
+
+        lambda(*it);
+      }
+    }));
+  }
+  for (auto& i : workers) {
+    i.join();
   }
 }
 
