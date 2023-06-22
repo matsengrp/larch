@@ -4,8 +4,6 @@
 #include <tuple>
 #include <type_traits>
 
-#include <tbb/concurrent_unordered_set.h>
-
 #include "larch/common.hpp"
 #include "larch/contiguous_map.hpp"
 

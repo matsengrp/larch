@@ -2,10 +2,6 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
-template <typename T>
-using ConcurrentUnorderedSet =
-    tbb::concurrent_unordered_set<T, std::hash<T>, std::equal_to<T>>;
-
 /**
  * Used with any per-element feature to ensure that a single unique copy of
  * the undrlying feature is stored, and elements only store a pointer to it.

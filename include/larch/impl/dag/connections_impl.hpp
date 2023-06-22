@@ -3,8 +3,6 @@
 #endif
 
 #include <atomic>
-#include <tbb/parallel_for_each.h>
-#include <tbb/concurrent_vector.h>
 #include <iostream>
 
 template <typename CRTP, typename Tag>
@@ -42,8 +40,8 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
   storage.leafs_ = {};
   BuildConnectionsRaw();
   std::atomic<size_t> root_id{NoId};
-  tbb::concurrent_vector<NodeId> leafs;
-  tbb::parallel_for_each(dag.GetNodes(), [&](auto node) {
+  ConcurrentVector<NodeId> leafs;
+  parallel_for_each(dag.GetNodes(), [&](auto node) {
     for (auto clade : node.GetClades()) {
       Assert(not clade.empty() && "Empty clade");
     }
@@ -66,7 +64,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  tbb::parallel_for_each(dag.GetNodes(), [](auto node) { node.ClearConnections(); });
+  parallel_for_each(dag.GetNodes(), [](auto node) { node.ClearConnections(); });
   for (auto edge : dag.GetEdges()) {
     Assert(edge.GetParentId().value != NoId && "Edge has no parent");
     Assert(edge.GetChildId().value != NoId && "Edge has no child");

@@ -13,7 +13,9 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
   auto& storage = [this]() -> SPRType& {
     std::shared_lock lock{mat_mtx_};
     Assert(sample_mat_storage_ != nullptr);
-    return *batch_storage_.push_back(SPRStorage(sample_mat_storage_->View()));
+    batch_storage_.push_back(
+        SPRStorage(sample_mat_storage_->View()));  // TODO concurrent
+    return batch_storage_.back();
   }();
 
   storage.View().GetRoot().Validate(true);
@@ -23,8 +25,9 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
     auto fragment = storage.View().MakeFragment();
 
     auto& impl = static_cast<CRTP&>(*this);
-    std::pair<bool, bool> accepted = impl.OnMove(storage.View(), fragment, move, best_score_change,
-                                nodes_with_major_allele_set_change);
+    std::pair<bool, bool> accepted =
+        impl.OnMove(storage.View(), fragment, move, best_score_change,
+                    nodes_with_major_allele_set_change);
 
     if (accepted.first) {
       batch_.push_back(std::move(fragment));
@@ -110,4 +113,3 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
   check_edge_mutations(view.Const());
   view.RecomputeCompactGenomes(true);
 }
-

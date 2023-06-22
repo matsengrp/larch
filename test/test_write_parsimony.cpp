@@ -58,7 +58,6 @@ bool compare_treedags(DAG1 dag1, DAG2 dag2) {
   return true;
 }
 
-#ifdef USE_USHER
 static void test_write_protobuf() {
   std::string_view path = "data/check_parsimony_protobuf/example_tree.pb";
   std::fstream file;
@@ -92,4 +91,3 @@ static void test_write_protobuf() {
 
 [[maybe_unused]] static const auto test_added_write =
     add_test({test_write_protobuf, "Write protobuf"});
-#endif

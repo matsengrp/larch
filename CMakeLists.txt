@@ -5,13 +5,16 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
 
+include(ExternalProject)
+include(FetchContent)
+
 option(USE_USHER "Use matOptimize" yes)
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
-include(FetchContent)
+if (USE_USHER)
 FetchContent_Declare(oneTBB-src
   GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
   GIT_TAG 2019_U9
@@ -21,6 +24,18 @@ FetchContent_MakeAvailable(oneTBB-src)
 include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
 tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
 find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
+endif()
+
+ExternalProject_Add(phmap
+  GIT_REPOSITORY https://github.com/greg7mdp/parallel-hashmap.git
+  GIT_TAG v1.3.11
+  GIT_SHALLOW true
+  GIT_PROGRESS true
+  UPDATE_DISCONNECTED true
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/phmap/install -DCMAKE_BUILD_TYPE=Release -DPHMAP_BUILD_TESTS=OFF -DPHMAP_BUILD_EXAMPLES=OFF -DCMAKE_CXX_FLAGS="-w"
+  PREFIX phmap
+  INSTALL_DIR phmap/install
+)
 
 if (USE_USHER)
 find_package(MPI REQUIRED)
@@ -31,18 +46,14 @@ find_package(Protobuf REQUIRED)
 
 protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS
   proto/dag.proto)
-
-if (USE_USHER)
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
   deps/usher/parsimony.proto)
 protobuf_generate_cpp(DETAILED_MUTATIONS_PROTO_SRCS DETAILED_MUTATIONS_PROTO_HDRS
   deps/usher/mutation_detailed.proto)
-endif()
 
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
 FetchContent_MakeAvailable(json)
 
-include(ExternalProject)
 ExternalProject_Add(range-v3
   GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
   GIT_TAG 0.12.0
@@ -100,6 +111,8 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
   add_dependencies(${PRODUCT} range-v3)
+  target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/phmap/install/include)
+  add_dependencies(${PRODUCT} phmap)
 if(${USE_HTSLIB})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/include)
   add_dependencies(${PRODUCT} htslib)

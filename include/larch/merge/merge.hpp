@@ -9,22 +9,10 @@
 #include <atomic>
 #include <numeric>
 
-#include <tbb/concurrent_unordered_set.h>
-#include <tbb/concurrent_unordered_map.h>
-#include <tbb/concurrent_vector.h>
-#include <tbb/parallel_for_each.h>
-
 #include "larch/madag/mutation_annotated_dag.hpp"
 #include "larch/merge/leaf_set.hpp"
 #include "larch/merge/node_label.hpp"
 #include "larch/merge/edge_label.hpp"
-
-template <typename T>
-using ConcurrentUnorderedSet =
-    tbb::concurrent_unordered_set<T, std::hash<T>, std::equal_to<T>>;
-template <typename K, typename V>
-using ConcurrentUnorderedMap =
-    tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
 using MergeDAGStorage =
     ExtendDAGStorage<DefaultDAGStorage,
@@ -108,16 +96,16 @@ class Merge {
       size_t i, const DAGSRange& dags, NodeId below,
       std::vector<std::vector<NodeLabel>>& dags_labels,
       ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
-      tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
+      ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
           added_edges);
 
   static inline void BuildResult(
       size_t i,
-      tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
+      ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
           added_edges,
       std::atomic<size_t>& edge_id,
       const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-      const ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+      ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
       MutableMergeDAG result_dag);
 
   // Every unique node leaf set, found among all input DAGs.

@@ -8,8 +8,6 @@
 #include <chrono>
 #include <mutex>
 
-#include <tbb/concurrent_unordered_map.h>
-
 #include "larch/common.hpp"
 
 static uint8_t one_hot_to_two_bit(uint8_t arg) {
@@ -54,7 +52,7 @@ class Mutation {
 
   static inline std::vector<nuc_one_hot> refs{};
   static inline std::mutex ref_lock{};
-  static inline tbb::concurrent_unordered_map<std::string, uint8_t> chromosome_map{};
+  static inline ConcurrentUnorderedMap<std::string, uint8_t> chromosome_map{};
   static inline std::vector<std::string> chromosomes{};
 
  private:
@@ -236,7 +234,7 @@ struct Mutation_Pos_Only_Hash {
 typedef std::unordered_set<Mutation_Annotated_Tree::Mutation, Mutation_Pos_Only_Hash,
                            Mutation_Pos_Only_Comparator>
     Mutation_Set;
-typedef tbb::concurrent_unordered_map<size_t, Mutation_Set> Original_State_t;
+typedef ConcurrentUnorderedMap<size_t, Mutation_Set> Original_State_t;
 
 inline void check_samples(const Mutation_Annotated_Tree::Node* root,
                           Original_State_t& samples, const MAT::Tree* tree,

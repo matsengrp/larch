@@ -67,7 +67,6 @@ static void test_case_ref() {
                 });
 }
 
-#ifdef USE_USHER
 static void test_case_20d() {
   std::vector<std::string> paths;
   const std::experimental::filesystem::path dir{"data/20D_from_fasta"};
@@ -89,7 +88,7 @@ static void test_case_20d() {
     trees.push_back(MADAGStorage{{}});
     paths_idx.push_back({i, paths.at(i)});
   }
-  tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
+  parallel_for_each(paths_idx, [&](auto path_idx) {
     trees.at(path_idx.first) = LoadTreeFromProtobuf(
         path_idx.second, correct_result.View().GetReferenceSequence());
     trees.at(path_idx.first).View().RecomputeCompactGenomes(true);
@@ -114,7 +113,6 @@ static void test_case_20d() {
   assert_equal(correct_result.View().GetEdgesCount(), merge.GetResult().GetEdgesCount(),
                "Edges count");
 }
-#endif
 
 static void test_add_trees() {
   std::string_view correct_path = "data/test_5_trees/full_dag.json.gz";
@@ -199,10 +197,8 @@ static void test_subtree() {
 [[maybe_unused]] static const auto test2_added =
     add_test({test_case_ref, "Merge: Tree with different ref"});
 
-#ifdef USE_USHER
 [[maybe_unused]] static const auto test3_added =
     add_test({test_case_20d, "Merge: 800 trees"});
-#endif
 
 [[maybe_unused]] static const auto test4_added =
     add_test({test_add_trees, "Merge: Add trees"});

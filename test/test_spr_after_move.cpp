@@ -6,8 +6,6 @@
 #include "larch/spr/spr_view.hpp"
 #include "sample_dag.hpp"
 
-#include <tbb/global_control.h>
-
 template <typename DAG, typename MergeT>
 struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag, MergeT& merge)

@@ -5,6 +5,8 @@
 #include <vector>
 #include <tuple>
 #include <typeinfo>
+#include <unordered_set>
+#include <unordered_map>
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -14,6 +16,28 @@
 #pragma GCC diagnostic ignored "-Wstack-usage="
 #include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#include <parallel_hashmap/phmap.h>
+#pragma GCC diagnostic pop
+
+template <typename T>
+using ConcurrentUnorderedSet =
+    phmap::node_hash_set<T, std::hash<T>, std::equal_to<T>>;
+template <typename K, typename V>
+using ConcurrentUnorderedMap =
+    phmap::parallel_node_hash_map<K, V, std::hash<K>, std::equal_to<K>>;
+template <typename T>
+using ConcurrentVector = std::vector<T>;
+
+template <typename Range, typename Lambda>
+void parallel_for_each(Range&& range, Lambda&& lambda) {
+  for (auto&& i : range) {
+    lambda(i);
+  }
+}
 
 struct NodeId;
 struct EdgeId;

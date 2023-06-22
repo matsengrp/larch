@@ -24,18 +24,17 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   std::vector<std::vector<NodeLabel>> dags_labels;
   dags_labels.resize(dags.size());
 
-  tbb::parallel_for_each(idxs, [&](size_t i) {
+  parallel_for_each(idxs, [&](size_t i) {
     MergeCompactGenomes(i, dags, below, dags_labels, ResultDAG());
   });
 
-  tbb::parallel_for_each(idxs, [&](size_t i) {
+  parallel_for_each(idxs, [&](size_t i) {
     ComputeLeafSets(i, dags, below, dags_labels, all_leaf_sets_);
   });
 
   std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
-  tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>
-      added_edges;
-  tbb::parallel_for_each(idxs, [&](size_t i) {
+  ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>> added_edges;
+  parallel_for_each(idxs, [&](size_t i) {
     MergeNodes(i, dags, below, dags_labels, result_nodes_, result_node_labels_,
                node_id);
     MergeEdges(i, dags, below, dags_labels, result_edges_, added_edges);
@@ -46,7 +45,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   ResultDAG().InitializeEdges(result_edges_.size());
   idxs.resize(added_edges.size());
   std::iota(idxs.begin(), idxs.end(), 0);
-  tbb::parallel_for_each(idxs, [&](size_t i) {
+  parallel_for_each(idxs, [&](size_t i) {
     BuildResult(i, added_edges, edge_id, result_nodes_, result_edges_, ResultDAG());
   });
 
@@ -202,7 +201,7 @@ void Merge::MergeEdges(
     size_t i, const DAGSRange& dags, NodeId below,
     std::vector<std::vector<NodeLabel>>& dags_labels,
     ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
-    tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
+    ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
         added_edges) {
   auto& dag = dags.at(i);
   const std::vector<NodeLabel>& labels = dags_labels.at(i);
@@ -223,11 +222,11 @@ void Merge::MergeEdges(
 
 void Merge::BuildResult(
     size_t i,
-    tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
+    ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
         added_edges,
     std::atomic<size_t>& edge_id,
     const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-    const ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+    ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
     MutableMergeDAG result_dag) {
   auto& [edge, id, parent_id, child_id, clade] = added_edges.at(i);
   id = {edge_id.fetch_add(1)};

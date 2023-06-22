@@ -5,8 +5,6 @@
 #include "larch/subtree/parsimony_score.hpp"
 #include "larch/spr/spr_view.hpp"
 
-#include <tbb/global_control.h>
-
 using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 
 [[maybe_unused]] static auto BuildNodeSequenceMap(MADAGStorage &dag_storage,
