@@ -23,6 +23,7 @@
 
 #include "larch/usher_glue.hpp"
 
+#include <tbb/global_control.h>
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
   std::cout << "larch-usher -i,--input file -o,--output file [-m,--matopt file] "
@@ -956,6 +957,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     sample.View().BuildMAT(mat);
     sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View().Const());
+    // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
 
     if (callback_config == "all-moves") {
       Merge_All_Moves_Found_Callback callback{sample.View(), merge};

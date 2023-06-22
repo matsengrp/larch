@@ -405,8 +405,9 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
-  auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
-  return {collapsed.first, collapsed.second};
+  return {result_nodes, result_edges};
+//  auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
+//  return {collapsed.first, collapsed.second};
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -577,86 +578,83 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, std::vector<NodeId>& src, std::ve
   Assert(src.size() == src_edges.size());
   Assert(dst.size() == dst_edges.size());
 
-  auto src_grandparent = src_parent_node.GetSingleParent().GetParent();
-  auto src_grandparent_children = src_grandparent.GetChildren();
-  src_parent_node.template SetOverlay<Neighbors>();
-  new_node.template SetOverlay<Neighbors>();
   if (has_unifurcation_after_move) {
+    auto src_grandparent = src_parent_node.GetSingleParent().GetParent();
+    auto src_grandparent_children = src_grandparent.GetChildren();
+    auto src_parent_clades_size = src_parent_node.GetCladesCount();
+    auto dst_parent_clades_size = dst_parent_node.GetCladesCount();
+    auto src_grandparent_clades_size = src_grandparent.GetCladesCount();
+    auto src_sib_edge = dag.Get(src_sibling_edges.at(0));
+    auto src_sib_node = src_sib_edge.GetChild();
     src_grandparent.template SetOverlay<Neighbors>();
-    src_grandparent.ClearConnections();
-
-    // re-number the edges/clades below src grandparent to remove src_parent and add in all of src_sibling_edges
-    size_t clade_ctr = 0;
-    for (auto gp_below_edge: src_grandparent_children) {
-      auto child_node = gp_below_edge.GetChild();
-      if (gp_below_edge.GetChild().GetId() != src_parent_node.GetId()) {
-        gp_below_edge.template SetOverlay<Endpoints>();
-        gp_below_edge.template SetOverlay<EdgeMutations>();
-        gp_below_edge.Set(src_grandparent, child_node, {clade_ctr});
-        src_grandparent.AddEdge({clade_ctr++}, gp_below_edge, true);
-      }
-    }
-    // add src_sibling_edge as children of src_grandparent
-    for (auto src_sibling_edge_id: src_sibling_edges) {
-      auto src_sibling_edge = dag.Get(src_sibling_edge_id);
-      auto src_sibling_node = src_sibling_edge.GetChild();
-      src_sibling_edge.template SetOverlay<Endpoints>();
-      src_sibling_edge.template SetOverlay<EdgeMutations>();
-      src_sibling_edge.SetEdgeMutations({});
-      src_sibling_edge.Set(src_grandparent, src_sibling_node, {clade_ctr});
-      src_grandparent.AddEdge({clade_ctr}, src_sibling_edge, true);
-    }
-  } else {
     src_parent_node.template SetOverlay<Neighbors>();
-    size_t clade_ctr = 0;
+    dst_parent_node.template SetOverlay<Neighbors>();
+    new_edge.template SetOverlay<Endpoints>();
+    src_sib_edge.template SetOverlay<Endpoints>();
+    src_grandparent.RemoveChild(new_edge.GetClade(), new_edge);
+    src_parent_node.RemoveChild(src_sib_edge.GetClade(), src_sib_edge);
+    for (auto dst_edge_id: dst_edges) {
+      auto dst_edge = dag.Get(dst_edge_id);
+      auto dst_node = dst_edge.GetChild();
+      dst_edge.template SetOverlay<Endpoints>();
+      dst_edge.template SetOverlay<EdgeMutations>();
+      dst_parent_node.RemoveChild(dst_edge.GetClade(), dst_edge);
+      dst_edge.Set(src_parent_node, dst_node, {src_parent_clades_size});
+      src_parent_node.AddEdge({src_parent_clades_size++}, dst_edge, true);
+    }
+    src_sib_edge.Set(src_grandparent, src_sib_node, {src_grandparent_clades_size});
+    src_grandparent.AddEdge({src_grandparent_clades_size}, src_sib_edge, true);
+    new_edge.Set(dst_parent_node, new_node, {dst_parent_clades_size});
+    dst_parent_node.AddEdge({dst_parent_clades_size}, new_edge, true);
+    new_node.template SetOverlay<Neighbors>();
+    new_node.SetSingleParent(new_edge);
+  } else {
+    auto src_parent_clades_size = src_parent_node.GetCladesCount();
+    auto dst_parent_clades_size = dst_parent_node.GetCladesCount();
+    src_parent_node.template SetOverlay<Neighbors>();
+    dst_parent_node.template SetOverlay<Neighbors>();
+    new_node.template SetOverlay<Neighbors>();
+    src_parent_node.ClearConnections();
+    dst_parent_node.ClearConnections();
+    new_node.ClearConnections();
+    size_t src_parent_clade_ctr = 0;
+    for (auto src_sib_edge_id: src_sibling_edges) {
+      auto src_sib_edge = dag.Get(src_sib_edge_id);
+      auto src_sib_node = src_sib_edge.GetChild();
+      src_sib_edge.template SetOverlay<Endpoints>();
+      src_sib_edge.Set(src_parent_node, src_sib_node, {src_parent_clade_ctr});
+      src_parent_node.AddEdge({src_parent_clade_ctr++}, src_sib_edge, true);
+    }
+    size_t dst_parent_clade_ctr = 0;
+    for (auto dst_sib_edge_id: dst_sibling_edges) {
+      auto dst_sib_edge = dag.Get(dst_sib_edge_id);
+      auto dst_sib_node = dst_sib_edge.GetChild();
+      dst_sib_edge.template SetOverlay<Endpoints>();
+      dst_sib_edge.Set(dst_parent_node, dst_sib_node, {dst_parent_clade_ctr});
+      dst_parent_node.AddEdge({dst_parent_clade_ctr++}, dst_sib_edge, true);
+    }
+    size_t new_node_clade_ctr = 0;
     for (auto src_edge_id: src_edges) {
       auto src_edge = dag.Get(src_edge_id);
+      auto src_node = src_edge.GetChild();
       src_edge.template SetOverlay<Endpoints>();
       src_edge.template SetOverlay<EdgeMutations>();
-      auto src_sibling_node = src_edge.GetChild();
-      src_parent_node.RemoveChild(src_edge.GetClade(), src_edge);
+      src_edge.Set(new_node, src_node, {new_node_clade_ctr});
+      new_node.AddEdge({new_node_clade_ctr++}, src_edge, true);
     }
-  }
-
-  new_node.ClearConnections();
-  dst_parent_node.template SetOverlay<Neighbors>();
-  dst_parent_node.ClearConnections();
-  size_t clade_ctr = 0;
-  for (auto dst_sibling_edge_id: dst_sibling_edges) {
-    auto dst_sibling_edge = dag.Get(dst_sibling_edge_id);
-    auto dst_sibling_node = dst_sibling_edge.GetChild();
-    dst_sibling_edge.template SetOverlay<Endpoints>();
-    dst_sibling_edge.template SetOverlay<EdgeMutations>();
-    dst_sibling_node.template SetOverlay<Neighbors>();
-    dst_sibling_edge.Set(dst_parent_node, dst_sibling_node, {clade_ctr});
-    dst_sibling_node.SetSingleParent(dst_sibling_edge);
-    dst_parent_node.AddEdge({clade_ctr++}, dst_sibling_edge, true);
-  }
-  new_edge.template SetOverlay<Endpoints>();
-  new_edge.template SetOverlay<EdgeMutations>();
-  new_edge.Set(dst_parent_node, new_node, {clade_ctr});
-  dst_parent_node.AddEdge({clade_ctr}, new_edge, true);
-  new_node.SetSingleParent(new_edge);
-
-  for (size_t src_idx = 0; src_idx < src.size(); src_idx++) {
-    auto src_edge = dag.Get(src_edges.at(src_idx));
-    auto src_node = dag.Get(src.at(src_idx));
-    src_edge.template SetOverlay<Endpoints>();
-    src_edge.template SetOverlay<EdgeMutations>();
-    src_node.template SetOverlay<Neighbors>();
-    src_edge.Set(new_node, src_node, {src_idx});
-    src_node.SetSingleParent(src_edge);
-    new_node.AddEdge({src_idx}, src_edge, true);
-  }
-  for (size_t dst_idx = 0; dst_idx < dst.size(); dst_idx++) {
-    auto dst_edge = dag.Get(dst_edges.at(dst_idx));
-    auto dst_node = dag.Get(dst.at(dst_idx));
-    dst_edge.template SetOverlay<Endpoints>();
-    dst_edge.template SetOverlay<EdgeMutations>();
-    dst_node.template SetOverlay<Neighbors>();
-    dst_edge.Set(new_node, dst_node, {src.size() + dst_idx});
-    dst_node.SetSingleParent(dst_edge);
-    new_node.AddEdge({src.size() + dst_idx}, dst_edge, true);
+    for (auto dst_edge_id: dst_edges) {
+      auto dst_edge = dag.Get(dst_edge_id);
+      auto dst_node = dst_edge.GetChild();
+      dst_edge.template SetOverlay<Endpoints>();
+      dst_edge.template SetOverlay<EdgeMutations>();
+      dst_edge.Set(new_node, dst_node, {new_node_clade_ctr});
+      new_node.AddEdge({new_node_clade_ctr++}, dst_edge, true);
+    }
+    new_edge.template SetOverlay<Endpoints>();
+    new_edge.template SetOverlay<EdgeMutations>();
+    new_edge.Set(dst_parent_node, new_node, {dst_parent_clade_ctr});
+    dst_parent_node.AddEdge({dst_parent_clade_ctr}, new_edge, true);
+    new_node.SetSingleParent(new_edge);
   }
   return {new_node, has_unifurcation_after_move};
 }
@@ -718,7 +716,6 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
       current_node = dag.Get(current_node).GetSingleParent().GetParent();
     }
   };
-
   mark_changed(dag.GetOldSourceParent());
   mark_changed(dag.GetMoveNew());
 
