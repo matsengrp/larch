@@ -53,6 +53,8 @@
                "the sampled tree to maximize parsimony.\n";
   std::cout << "  --callback-option    Callback configuration choice(default merge all "
                "profitable moves)\n";
+  std::cout << "  --keep-fragment-uncollapsed   Optional argument to keep empty fragment "
+               "edges\n";
 
   std::exit(EXIT_SUCCESS);
 }
@@ -126,6 +128,19 @@ struct Treebased_Move_Found_Callback
                          SampleDAG>{merge, sample_dag},
         move_score_coeffs_{1, 1} {};
 
+  Treebased_Move_Found_Callback(Merge& merge, SampleDAG sample_dag,
+                                std::pair<int, int> move_score_coeffs,
+                                bool collapse_empty_fragment_edges)
+      : BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>,
+                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+        move_score_coeffs_{std::move(move_score_coeffs)} {};
+
+  Treebased_Move_Found_Callback(Merge& merge, SampleDAG sample_dag,
+                                bool collapse_empty_fragment_edges)
+      : BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>,
+                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+        move_score_coeffs_{1, 1} {};
+
   template <typename SPRView, typename FragmentType>
   std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment, Profitable_Moves& move,
               int /*best_score_change*/, std::vector<Node_With_Major_Allele_Set_Change>&
@@ -184,6 +199,10 @@ struct Merge_All_Moves_Found_Callback
       : BatchingCallback<Merge_All_Moves_Found_Callback<SampleDAG>, SampleDAG>{
             merge, sample_dag} {};
 
+  Merge_All_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag, bool collapse_empty_fragment_edges)
+      : BatchingCallback<Merge_All_Moves_Found_Callback<SampleDAG>, SampleDAG>{
+            merge, sample_dag, collapse_empty_fragment_edges} {};
+
   template <typename SPRView, typename FragmentType>
   std::pair<bool, bool> OnMove(SPRView /*spr*/, const FragmentType& /*fragment*/, Profitable_Moves& move,
               int best_score_change, std::vector<Node_With_Major_Allele_Set_Change>&
@@ -210,6 +229,19 @@ struct Merge_All_Profitable_Moves_Found_Callback
   Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag)
       : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
                          SampleDAG>{merge, sample_dag},
+        move_score_coeffs_{1, 1} {};
+
+  Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
+                                            std::pair<int, int> move_score_coeffs,
+                                            bool collapse_empty_fragment_edges)
+      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
+                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+        move_score_coeffs_{std::move(move_score_coeffs)} {};
+
+  Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
+                                            bool collapse_empty_fragment_edges)
+      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
+                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
         move_score_coeffs_{1, 1} {};
 
   template <typename SPRView, typename FragmentType>
@@ -269,8 +301,9 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
           Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>, SampleDAG> {
   MOVE_ONLY_VIRT_DTOR(Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback);
 
-  Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(
-      Merge& merge, SampleDAG sample_dag, std::pair<int, int> move_score_coeffs)
+  Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(Merge& merge,
+                                                       SampleDAG sample_dag,
+                                                       std::pair<int, int> move_score_coeffs)
       : BatchingCallback<
             Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
             SampleDAG>{merge, sample_dag},
@@ -281,6 +314,23 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
       : BatchingCallback<
             Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
             SampleDAG>{merge, sample_dag},
+        move_score_coeffs_{1, 1} {};
+
+  Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(Merge& merge,
+                                                       SampleDAG sample_dag,
+                                                       std::pair<int, int> move_score_coeffs,
+                                                       bool collapse_empty_fragment_edges)
+      : BatchingCallback<
+            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
+            SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+        move_score_coeffs_{std::move(move_score_coeffs)} {};
+
+  Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(Merge& merge,
+                                                       SampleDAG sample_dag,
+                                                       bool collapse_empty_fragment_edges)
+      : BatchingCallback<
+            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
+            SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
         move_score_coeffs_{1, 1} {};
 
   template <typename SPRView, typename FragmentType>
@@ -350,6 +400,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   size_t min_subtree_clade_size = 100;   // NOLINT
   size_t max_subtree_clade_size = 1000;  // NOLINT
   bool uniform_subtree_root = false;
+  bool collapse_empty_fragment_edges = true;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -428,6 +479,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         Fail();
       }
       callback_config = *params.begin();
+    } else if (name == "--keep-fragment-uncollapsed") {
+       collapse_empty_fragment_edges = false;
     } else {
       std::cerr << "Unknown argument.\n";
       Fail();
@@ -585,22 +638,22 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     check_edge_mutations(sample.View().Const());
 
     if (callback_config == "all-moves") {
-      Merge_All_Moves_Found_Callback callback{merge, sample.View()};
+      Merge_All_Moves_Found_Callback callback{merge, sample.View(), collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample.View(), callback, callback, callback));
     } else if (callback_config == "best-moves-fixed-tree") {
       Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback callback{
-          merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}};
+          merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample.View(), callback, callback, callback));
     } else if (callback_config == "best-moves-treebased") {
       Treebased_Move_Found_Callback callback{
-          merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}};
+          merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample.View(), callback, callback, callback));
     } else {
       Merge_All_Profitable_Moves_Found_Callback callback{
-          merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}};
+          merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample.View(), callback, callback, callback));
     }

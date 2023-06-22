@@ -390,6 +390,24 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
 }
 
 template <typename DAG, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeUncollapsedFragment() const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  std::vector<NodeId> result_nodes;
+  std::vector<EdgeId> result_edges;
+  auto oldest_changed = dag.GetOldestChangedNode().GetSingleParent().GetParent();
+  if (oldest_changed.IsUA()) {
+    // we need to add the UA node as the root anchor node of the fragment,
+    // somehow
+    // TODO how is this being done, then? (Things seem to be working...)
+  } else {
+    result_nodes.push_back(oldest_changed.GetSingleParent().GetParent());
+    result_edges.push_back(oldest_changed.GetSingleParent());
+  }
+  oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
+  return Fragment{dag, std::move(result_nodes), std::move(result_edges)};
+}
+
+template <typename DAG, typename CRTP, typename Tag>
 std::pair<std::vector<NodeId>, std::vector<EdgeId>>
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     const std::vector<NodeId>& fragment_nodes,

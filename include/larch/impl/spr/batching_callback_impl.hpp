@@ -1,7 +1,10 @@
 
 template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag)
-    : merge_{merge}, sample_dag_{sample_dag} {}
+    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {}
+template <typename CRTP, typename SampleDAG>
+BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag, bool collapse_empty_fragment_edges)
+    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {}
 
 template <typename CRTP, typename SampleDAG>
 bool BatchingCallback<CRTP, SampleDAG>::operator()(
@@ -20,7 +23,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
   if (storage.View().InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
     storage.View().GetRoot().Validate(true);
-    auto fragment = storage.View().MakeFragment();
+    auto fragment = collapse_empty_fragment_edges_ ? storage.View().MakeFragment(): storage.View().MakeUncollapsedFragment();
 
     auto& impl = static_cast<CRTP&>(*this);
     std::pair<bool, bool> accepted = impl.OnMove(storage.View(), fragment, move, best_score_change,
