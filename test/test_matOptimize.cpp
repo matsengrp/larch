@@ -151,12 +151,9 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
 };
 
 template <typename ChooseNode>
-static void test_matOptimize(std::string_view input_dag_path,
-                             std::string_view refseq_path, size_t count,
+static void test_matOptimize(std::string_view input_dag_path, size_t count,
                              ChooseNode& choose_node) {
-  std::string reference_sequence = LoadReferenceSequence(refseq_path);
-  MADAGStorage input_dag_storage =
-      LoadTreeFromProtobuf(input_dag_path, reference_sequence);
+  MADAGStorage input_dag_storage = LoadDAGFromProtobuf(input_dag_path);
   input_dag_storage.View().RecomputeCompactGenomes(true);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
@@ -210,8 +207,5 @@ static void test_matOptimize(std::string_view input_dag_path,
 }
 
 [[maybe_unused]] static const auto test_added0 =
-    add_test({[] {
-                test_matOptimize("data/seedtree/seedtree.pb.gz",
-                                 "data/seedtree/refseq.txt.gz", 3, choose_root);
-              },
+    add_test({[] { test_matOptimize("data/testcase1/full_dag.pb.gz", 3, choose_root); },
               "matOptimize: seedtree"});

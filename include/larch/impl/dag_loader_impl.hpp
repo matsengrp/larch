@@ -20,7 +20,9 @@
 
 #include "larch/dag_loader.hpp"
 #include "dag.pb.h"
+#ifdef USE_USHER
 #include "parsimony.pb.h"
+#endif
 #include "larch/newick.hpp"
 
 inline int32_t EncodeBasePB(char base) {
@@ -68,6 +70,7 @@ void StoreDAGToProtobuf(DAG dag, std::string_view path) {
   data.SerializeToOstream(&file);
 }
 
+#ifdef USE_USHER
 template <typename DAG>
 void StoreTreeToProtobuf(DAG dag, std::string_view path) {
   dag.AssertUA();
@@ -129,6 +132,7 @@ void StoreTreeToProtobuf(DAG dag, std::string_view path) {
   std::ofstream file{std::string{path}};
   data.SerializeToOstream(&file);
 }
+#endif
 
 template <typename Edge>
 static std::string EdgeMutationsToString(Edge edge) {

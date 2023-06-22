@@ -2,7 +2,9 @@
 #include <vector>
 #include <regex>
 
+#ifdef USE_USHER
 #include <mpi.h>
+#endif
 
 #include "test_common.hpp"
 
@@ -17,8 +19,10 @@ bool add_test(const Test& test) noexcept {
 }
 
 int main(int argc, char* argv[]) {
+#ifdef USE_USHER
   int ignored{};
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
+#endif
   bool no_catch = false;
   bool opt_list_names = false;
   bool opt_test_range = false;

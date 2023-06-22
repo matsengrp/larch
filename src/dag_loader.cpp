@@ -19,7 +19,9 @@
 
 #include "larch/dag_loader.hpp"
 #include "dag.pb.h"
+#ifdef USE_USHER
 #include "parsimony.pb.h"
+#endif
 #include "larch/newick.hpp"
 
 namespace {
@@ -95,6 +97,7 @@ static const auto DecodeMutation =
            decode.at(static_cast<size_t>(mut.mut_nuc().Get(0)))}};
 };
 
+#ifdef USE_USHER
 MADAGStorage LoadTreeFromProtobuf(std::string_view path,
                                   std::string_view reference_sequence) {
   Parsimony::data data;
@@ -146,6 +149,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
   result.View().GetRoot().Validate(true, false);
   return result;
 }
+#endif
 
 [[nodiscard]] nlohmann::json LoadJson(std::string_view path) {
   if (IsGzipped(path)) {

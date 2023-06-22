@@ -82,14 +82,6 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   std::mutex merge_mtx_;
 };
 
-[[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path,
-                                          std::string_view refseq_path) {
-  std::string reference_sequence = LoadReferenceSequence(refseq_path);
-  MADAGStorage input_dag_storage =
-      LoadTreeFromProtobuf(input_dag_path, reference_sequence);
-  input_dag_storage.View().RecomputeCompactGenomes(true);
-  return input_dag_storage;
-}
 // Use the base DAG and the src and dest nodes.
 template <typename DAG, typename SPR, typename Node>
 [[maybe_unused]] static bool test_compare_dag_vs_spr_nodes(

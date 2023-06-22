@@ -5,6 +5,8 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
 
+option(USE_USHER "Use matOptimize" yes)
+
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
@@ -19,16 +21,23 @@ FetchContent_MakeAvailable(oneTBB-src)
 include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
 tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
 find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
+
+if (USE_USHER)
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+endif()
+
 find_package(Protobuf REQUIRED)
 
 protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS
   proto/dag.proto)
+
+if (USE_USHER)
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
   deps/usher/parsimony.proto)
 protobuf_generate_cpp(DETAILED_MUTATIONS_PROTO_SRCS DETAILED_MUTATIONS_PROTO_HDRS
   deps/usher/mutation_detailed.proto)
+endif()
 
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
 FetchContent_MakeAvailable(json)
@@ -99,6 +108,7 @@ endfunction()
 
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
 
+if (USE_USHER)
 include_directories(deps/usher/)
 file(GLOB MATOPTIMIZE_SRC
   "deps/usher/src/matOptimize/apply_move/*.cpp"
@@ -118,6 +128,7 @@ file(GLOB MATOPTIMIZE_SRC
   "deps/usher/src/matOptimize/priority_conflict_resolver.cpp"
   "deps/usher/src/matOptimize/check_samples.cpp"
 )
+endif()
 
 function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
@@ -161,6 +172,7 @@ endif()
 
 larch_link_opts(larch)
 
+if (USE_USHER)
 add_library(usher
   ${MATOPTIMIZE_SRC}
   src/usher_globals.cpp)
@@ -193,6 +205,7 @@ add_dependencies(larch-usher-glue larch usher)
 set_target_properties(larch-usher-glue
   PROPERTIES CXX_CLANG_TIDY ""
 )
+endif()
 
 larch_executable(larch-test
   test/main.cpp
@@ -215,21 +228,28 @@ larch_executable(larch-test
   test/test_write_parsimony.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
+if (USE_USHER)
 target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
 add_dependencies(larch-test larch-usher-glue)
+endif()
 set_target_properties(larch-test
   PROPERTIES CXX_CLANG_TIDY ""
 )
 
+if (USE_USHER)
 larch_executable(merge
   tools/merge.cpp)
-
-larch_executable(dag2dot
-  tools/dag2dot.cpp)
 
 larch_executable(larch-usher
   tools/larch-usher.cpp
 )
+
+larch_executable(dag2dot
+  tools/dag2dot.cpp)
+endif()
+
+if (USE_USHER)
 target_compile_options(larch-usher PRIVATE ${STRICT_WARNINGS})
 target_link_libraries(larch-usher PRIVATE larch-usher-glue)
 add_dependencies(larch-usher larch-usher-glue)
+endif()

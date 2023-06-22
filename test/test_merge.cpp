@@ -67,6 +67,7 @@ static void test_case_ref() {
                 });
 }
 
+#ifdef USE_USHER
 static void test_case_20d() {
   std::vector<std::string> paths;
   const std::experimental::filesystem::path dir{"data/20D_from_fasta"};
@@ -113,6 +114,7 @@ static void test_case_20d() {
   assert_equal(correct_result.View().GetEdgesCount(), merge.GetResult().GetEdgesCount(),
                "Edges count");
 }
+#endif
 
 static void test_add_trees() {
   std::string_view correct_path = "data/test_5_trees/full_dag.json.gz";
@@ -197,8 +199,10 @@ static void test_subtree() {
 [[maybe_unused]] static const auto test2_added =
     add_test({test_case_ref, "Merge: Tree with different ref"});
 
+#ifdef USE_USHER
 [[maybe_unused]] static const auto test3_added =
     add_test({test_case_20d, "Merge: 800 trees"});
+#endif
 
 [[maybe_unused]] static const auto test4_added =
     add_test({test_add_trees, "Merge: Add trees"});

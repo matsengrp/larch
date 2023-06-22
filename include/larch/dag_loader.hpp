@@ -11,8 +11,10 @@
 
 [[nodiscard]] MADAGStorage LoadDAGFromProtobuf(std::string_view path);
 
+#ifdef USE_USHER
 [[nodiscard]] MADAGStorage LoadTreeFromProtobuf(std::string_view path,
                                                 std::string_view reference_sequence);
+#endif
 
 [[nodiscard]] MADAGStorage LoadDAGFromJson(std::string_view path);
 

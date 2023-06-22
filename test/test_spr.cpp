@@ -25,10 +25,10 @@ struct Test_Move_Found_Callback
                                                                          sample_dag} {};
 
   template <typename SPRView, typename FragmentType>
-    std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment, Profitable_Moves& move,
-              int best_score_change,
-              std::vector<Node_With_Major_Allele_Set_Change>&
-                  nodes_with_major_allele_set_change) {
+  std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment,
+                               Profitable_Moves& move, int best_score_change,
+                               std::vector<Node_With_Major_Allele_Set_Change>&
+                                   nodes_with_major_allele_set_change) {
     std::ignore = spr;
     std::ignore = fragment;
     std::ignore = nodes_with_major_allele_set_change;
@@ -39,6 +39,7 @@ struct Test_Move_Found_Callback
   void OnRadius() {}
 };
 
+#ifdef USE_USHER
 [[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path,
                                           std::string_view refseq_path) {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
@@ -47,6 +48,7 @@ struct Test_Move_Found_Callback
   input_dag_storage.View().RecomputeCompactGenomes(true);
   return input_dag_storage;
 }
+#endif
 
 [[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path) {
   MADAGStorage input_dag_storage = LoadDAGFromProtobuf(input_dag_path);
@@ -221,12 +223,13 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});
 
+#ifdef USE_USHER
 [[maybe_unused]] static const auto test_added4 = add_test(
     {[] {
-       test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"),
-       4);
+       test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"), 4);
      },
      "SPR: seedtree"});
+#endif
 
 // [[maybe_unused]] static const auto test_added4 =
 //     add_test({[] {

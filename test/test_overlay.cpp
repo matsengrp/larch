@@ -1,11 +1,8 @@
 #include "test_common.hpp"
 #include "larch/dag_loader.hpp"
 
-static void test_overlay(std::string_view input_dag_path,
-                         std::string_view refseq_path) {
-  std::string reference_sequence = LoadReferenceSequence(refseq_path);
-  MADAGStorage input_dag_storage =
-      LoadTreeFromProtobuf(input_dag_path, reference_sequence);
+static void test_overlay(std::string_view input_dag_path) {
+  MADAGStorage input_dag_storage = LoadDAGFromProtobuf(input_dag_path);
   auto input_dag = input_dag_storage.View();
   input_dag.RecomputeCompactGenomes(true);
   auto overlay_dag_storage = AddOverlay(input_dag);
@@ -36,8 +33,4 @@ static void test_overlay(std::string_view input_dag_path,
 }
 
 [[maybe_unused]] static const auto test_added0 =
-    add_test({[] {
-                test_overlay("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
-                             "data/20D_from_fasta/refseq.txt.gz");
-              },
-              "Overlay"});
+    add_test({[] { test_overlay("data/testcase1/full_dag.pb.gz"); }, "Overlay"});
