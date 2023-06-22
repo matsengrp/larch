@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <chrono>
 #include <mutex>
+#include <random>
 
 #include "larch/common.hpp"
 
@@ -261,8 +262,29 @@ inline size_t optimize_inner_loop(
     std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now(),
     bool log_moves = false, int iteration = 1, std::string intermediate_template = "",
     std::string intermediate_pb_base_name = "", std::string intermediate_nwk_out = "") {
-  // TODO
-  std::ignore = nodes_to_search;
+  std::vector<size_t> idxs;
+  idxs.resize(nodes_to_search.size());
+  std::iota(idxs.begin(), idxs.end(), 0);
+  std::random_device rnd;
+  std::uniform_int_distribution<size_t> dist(0, idxs.size());
+
+  parallel_for_each(idxs, [&](size_t) {
+    MAT::Node* src = nodes_to_search.at(dist(rnd));
+    MAT::Node* dst = [&] {
+      while (true) {
+        auto* result = nodes_to_search.at(dist(rnd));
+        if (result != src) {
+          return result;
+        }
+      }
+    }();
+    Profitable_Moves move{-1, src, dst, nullptr};
+    int best_score_change = 0;
+    std::vector<Node_With_Major_Allele_Set_Change> node_with_major_allele_set_change;
+
+    callback(move, best_score_change, node_with_major_allele_set_change);
+  });
+
   std::ignore = t;
   std::ignore = radius;
   std::ignore = callback;
