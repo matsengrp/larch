@@ -81,6 +81,7 @@ MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
   }
   result.View().BuildConnections();
   result.View().AssertUA();
+  result.View().GetRoot().Validate(true, true);
   return result;
 }
 
@@ -142,6 +143,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
   apply_mutations(apply_mutations, result.View().GetRoot().GetFirstChild(),
                   data.node_mutations(), muts_idx);
 
+  result.View().GetRoot().Validate(true, false);
   return result;
 }
 
@@ -220,6 +222,7 @@ MADAGStorage LoadDAGFromJson(std::string_view path) {
   }
   result.View().BuildConnections();
   result.View().AssertUA();
+  result.View().GetRoot().Validate(true, true);
   return result;
 }
 

@@ -25,14 +25,15 @@ struct Test_Move_Found_Callback
                                                                          sample_dag} {};
 
   template <typename SPRView, typename FragmentType>
-  bool OnMove(SPRView spr, const FragmentType& fragment, Profitable_Moves& move,
+    std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment, Profitable_Moves& move,
               int best_score_change,
               std::vector<Node_With_Major_Allele_Set_Change>&
                   nodes_with_major_allele_set_change) {
     std::ignore = spr;
     std::ignore = fragment;
     std::ignore = nodes_with_major_allele_set_change;
-    return move.score_change < best_score_change;
+    std::ignore = best_score_change;
+    return {move.score_change <= 0, move.score_change <= 0};
   }
 
   void OnRadius() {}
@@ -220,12 +221,12 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});
 
-// [[maybe_unused]] static const auto test_added4 = add_test(
-//     {[] {
-//        test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"),
-//        1);
-//      },
-//      "SPR: seedtree"});
+[[maybe_unused]] static const auto test_added4 = add_test(
+    {[] {
+       test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"),
+       4);
+     },
+     "SPR: seedtree"});
 
 // [[maybe_unused]] static const auto test_added4 =
 //     add_test({[] {

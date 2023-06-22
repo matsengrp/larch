@@ -89,6 +89,26 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetLeafsBelow() const {
          });
 }
 
+namespace {
+
+template <typename Edge>
+void CheckCycle(Edge edge, std::vector<std::pair<bool, bool>>& visited_finished) {
+  auto& [visited, finished] = visited_finished.at(edge.GetId().value);
+  if (finished) {
+    return;
+  }
+  if (visited) {
+    Assert(false && "Cycle detected");
+  }
+  visited = true;
+  for (auto child : edge.GetChild().GetChildren()) {
+    CheckCycle(child, visited_finished);
+  }
+  finished = true;
+}
+
+}  // namespace
+
 template <typename CRTP, typename Tag>
 void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
                                                       bool allow_dag) const {
@@ -138,6 +158,14 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
     }
     if (recursive) {
       edge.GetChild().Validate(true, allow_dag);
+    }
+  }
+
+  if (recursive and node.IsUA()) {
+    std::vector<std::pair<bool, bool>> visited_finished;
+    visited_finished.resize(dag.GetEdgesCount());
+    for (auto i : node.GetChildren()) {
+      CheckCycle(i, visited_finished);
     }
   }
 }
