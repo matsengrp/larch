@@ -401,6 +401,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   size_t max_subtree_clade_size = 1000;  // NOLINT
   bool uniform_subtree_root = false;
   bool collapse_empty_fragment_edges = true;
+  bool sample_uniformly = false;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -467,6 +468,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       move_coeff_nodes = ParseNumber(*params.begin());
     } else if (name == "--sample-any-tree") {
       sample_best_tree = false;
+    } else if (name == "--sample-uniformly") {
+      sample_uniformly = true;
     } else if (name == "-r" or name == "--MAT-refseq-file") {
       if (params.empty()) {
         std::cerr << "Mutation annotated tree refsequence fasta path not specified.\n";
@@ -558,8 +561,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     subtrees = (i >= switch_subtrees);
     merge.ComputeResultEdgeMutations();
 
-
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
+    SubtreeWeight<TreeCount, MergeDAG> uniform_sampling_weight{merge.GetResult()};
     // choose root node for subtree (if sampling a subtree)
     auto subtree_node = [&]() -> std::optional<NodeId> {
       if (subtrees) {
@@ -628,8 +631,12 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     }();
 
     auto sample = sample_best_tree
-                      ? AddMATConversion(weight.MinWeightSampleTree({}, subtree_node))
-                      : AddMATConversion(weight.SampleTree({}, subtree_node));
+                      ? sample_uniformly
+                            ? AddMATConversion(weight.MinWeightUniformSampleTree({}, subtree_node))
+                            : AddMATConversion(weight.MinWeightSampleTree({}, subtree_node))
+                      : sample_uniformly
+                            ? AddMATConversion(uniform_sampling_weight.UniformSampleTree({}, subtree_node))
+                            : AddMATConversion(weight.SampleTree({}, subtree_node));
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
               << sample.GetNodesCount() << "\n";
     MAT::Tree mat;
