@@ -25,7 +25,7 @@
 
 template <typename T>
 using ConcurrentUnorderedSet =
-    phmap::node_hash_set<T, std::hash<T>, std::equal_to<T>>;
+    phmap::parallel_node_hash_set<T, std::hash<T>, std::equal_to<T>>;
 template <typename K, typename V>
 using ConcurrentUnorderedMap =
     phmap::parallel_node_hash_map<K, V, std::hash<K>, std::equal_to<K>>;

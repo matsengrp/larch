@@ -35,6 +35,7 @@ ExternalProject_Add(phmap
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/phmap/install -DCMAKE_BUILD_TYPE=Release -DPHMAP_BUILD_TESTS=OFF -DPHMAP_BUILD_EXAMPLES=OFF -DCMAKE_CXX_FLAGS="-w"
   PREFIX phmap
   INSTALL_DIR phmap/install
+  PATCH_COMMAND git apply ${PROJECT_SOURCE_DIR}/patches/parallel-hashmap_v1.3.11.patch
 )
 
 if (USE_USHER)
@@ -91,7 +92,7 @@ set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
 
-set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
+set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument -ftemplate-backtrace-limit=0)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   list(APPEND STRICT_WARNINGS -Wcast-align=strict)
