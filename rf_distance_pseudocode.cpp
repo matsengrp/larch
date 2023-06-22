@@ -5,6 +5,8 @@ This routine requires 4 traversals of the nodes in DAG to calculate the rf dista
 - a loop over the nodes (in any order) accumulates the two types of counts and saves them in an accumulation based on unique leafsets
 - finally, a postorder traversal to calculate the sums of RF distances between trees in a dag and all the trees in a reference, using the methods provided by a SubtreeWeight<SumRFDistance, DAGTYPE> object.
 
+#include "larch/subtree/simple_weight_ops.hpp"
+
 template <typename subtreeWeight>
 ArbitraryInt ComputeAboveTreeCount(Node node, std::vector<ArbitraryInt>& above_tree_counts, subtreeWeight cached_below_tree_counts) {
   /* This routine takes an argument that is a cached subtreeWeight `cached_below_tree_counts'. If this subtreeWeight is the TreeCount weight (which returns the number of subtrees below each node), then this routine computes the number of trees "above" a given node. A tree is "above" the node if it contains the node, and taking the graph union with a subtree below that node yields a tree on the full leaf set that belongs in the DAG.
@@ -38,9 +40,9 @@ ArbitraryInt ComputeAboveTreeCount(Node node, std::vector<ArbitraryInt>& above_t
   return above;
 }
 
-//Create a WeightOps for computing sum RF distances to the provided reference DAG:
+//Create a BinaryOperatorWeightOps for computing sum RF distances to the provided reference DAG (using SimpleWeightOps):
 template <typename REFDAG>
-struct SumRFDistance {
+struct SumRFDistance_ {
   using Weight = ArbitraryInt;
   ArbitraryInt num_trees_in_dag;
   std::unordered_map<LeafSet, ArbitraryInt> leafset_to_full_treecount;
@@ -85,42 +87,19 @@ struct SumRFDistance {
       return num_trees_in_dag - (2 * record->second);
     }
   }
-  /*
-   * Given a vector of weights for edges below a clade, compute the minimum
-   * weight of them all, and return that minimum weight, and a vector
-   * containing the indices of all elements of the passed vector that achieve
-   * that minimum
-   * TODO the following three methods are exactly the same as the implementation in
-   * parsimony_score_impl.hpp, etc. Maybe we can avoid repeating everywhere?
-   */
-  inline static std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(
-      const std::vector<Weight>&){
-    Weight optimal_weight = std::numeric_limits<size_t>::max();
-    std::vector<size_t> optimal_indices;
-    size_t inweight_idx = 0;
-    for (auto weight : inweights) {
-      if (weight < optimal_weight) {
-        optimal_weight = weight;
-        optimal_indices.clear();
-        optimal_indices.push_back(inweight_idx);
-      } else if (weight == optimal_weight) {
-        optimal_indices.push_back(inweight_idx);
-      }
-      inweight_idx++;
-    }
-    return {optimal_weight, optimal_indices};
+
+  bool Compare(Weight lhs, Weight rhs){
+    return lhs < rhs;
   }
-  /*
-   * Given a vector of weights, one for each child clade, aggregate them
-   */
-  inline static Weight BetweenClades(const std::vector<Weight>&){
-    return std::accumulate(inweights.begin(), inweights.end(),
-                           static_cast<ParsimonyScore::Weight>(0));
+
+  bool CompareEqual(Weight lhs, Weight rhs) {
+    return lhs == rhs;
   }
-  inline static Weight AboveNode(Weight edgeweight, Weight childnodeweight){
-    return edgeweight + childnodeweight;
+
+  Weight Combine(Weight lhs, Weight rhs) {
+    return lhs + rhs;
   }
-  //Will: I think the above WeightOps methods achieve all that's written in the following TODO,
+  //Will: I think the above BinaryOperatorWeightOps methods achieve all that's written in the following TODO,
   //although the resulting values from
   //using this WeightOps with SubtreeWeight will need to be have shift_sum added to them
   //to get correct summed RF distances.
@@ -131,11 +110,40 @@ struct SumRFDistance {
   /* node_func = lambda internal_node: sum(clade_func(c) - shift_sum for c in internal_node.GetClades()) + shift_sum */
 } 
 
+
+// Not sure if you can substruct a templated struct like this...?
+struct SumRFDistance : SimpleWeightOps<SumRFDistance_> {
+  SumRFDistance(REFDAG reference_dag) {
+    binary_operator_weight_ops_ = SumRFDistance_(REFDAG reference_dag);
+  }
+}
+
 //Create a WeightOps for computing RF distances to the provided reference tree:
 template <typename REFDAG>
 struct RFDistance : SumRFDistance{
   RFDistance(REFDAG reference_dag) {
     assert reference_dag.IsTree();
     //now behave exactly like SumRFDistance
+  }
+} 
+
+struct MaxSumRFDistance_ : SumRFDistance_ {
+  bool Compare(Weight lhs, Weight rhs) {
+    return lhs > rhs;
+  }
+}
+
+struct MaxSumRFDistance : SimpleWeightOps<MaxSumRFDistance_> {
+  SumRFDistance(REFDAG reference_dag) {
+    binary_operator_weight_ops_ = SumRFDistance_(REFDAG reference_dag);
+  }
+}
+
+//Create a WeightOps for computing RF distances to the provided reference tree:
+template <typename REFDAG>
+struct MaxRFDistance : MaxSumRFDistance{
+  RFDistance(REFDAG reference_dag) {
+    assert reference_dag.IsTree();
+    //now behave exactly like MaxSumRFDistance
   }
 } 
