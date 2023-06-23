@@ -69,4 +69,4 @@ ax[1].set_xlabel('Iteration')
 
 ax[1].legend(loc="lower center", bbox_to_anchor=(0.5,-.2-.08*len(directories)))
 fig.suptitle("comparison of moves applied")
-fig.savefig(prefix+"moves_applied.pdf")
+fig.savefig(prefix+"moves_applied.pdf", bbox_inches='tight')
