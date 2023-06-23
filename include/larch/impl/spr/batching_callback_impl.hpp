@@ -30,6 +30,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
                                 nodes_with_major_allele_set_change);
 
     if (accepted.first) {
+      applied_moves_count_++;
       batch_.push_back(std::move(fragment));
       /*
       if (batch_.size() > 2048) {
@@ -53,6 +54,8 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
+  std::cout << "Larch-Usher callback Applying " << applied_moves_count_ << "\n" << std::flush;
+  applied_moves_count_ = 0;
   reassigned_states_storage_ = AddMappedNodes(AddMATConversion(Storage{{}}));
   reassigned_states_storage_.View().BuildFromMAT(
       tree, merge_.GetResult().GetReferenceSequence());
@@ -78,6 +81,7 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
 
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
+  applied_moves_count_ = 0;
   reassigned_states_storage_.View().BuildFromMAT(
       tree, merge_.GetResult().GetReferenceSequence());
   check_edge_mutations(reassigned_states_storage_.View().Const());
@@ -97,6 +101,11 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
 template <typename CRTP, typename SampleDAG>
 Merge& BatchingCallback<CRTP, SampleDAG>::GetMerge() {
   return merge_;
+}
+
+template <typename CRTP, typename SampleDAG>
+ArbitraryInt BatchingCallback<CRTP, SampleDAG>::GetAppliedMovesCount() {
+  return applied_moves_count_;
 }
 
 template <typename CRTP, typename SampleDAG>

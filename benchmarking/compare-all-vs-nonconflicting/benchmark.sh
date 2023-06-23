@@ -15,7 +15,7 @@ for option in ${optionlist[@]}; do
     mkdir -p $logfilepath
     for jobnum in $(seq $numruns); do
         larch_usher_options="-i $inmat -o opt_dag.pb -c $iterations -r $refseq -l $logfilepath/log_$jobnum --callback-option $option"
-        sbatch -c 4 -J callbackoption$jobnum -o $jobnum.log ../run-larch-usher.sh $larch_usher_options
+        sbatch -c 4 -J callbackoption$jobnum -o $logfilepath/matOp_$jobnum.log ../run-larch-usher.sh $larch_usher_options
     done
 done
 
