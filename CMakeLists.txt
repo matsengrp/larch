@@ -100,6 +100,9 @@ endif()
 
 function(larch_compile_opts PRODUCT)
   target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -fno-omit-frame-pointer -pipe)
+  if (USE_USHER)
+    target_compile_options(${PRODUCT} PUBLIC -DUSE_USHER)
+  endif()
 
   if(${USE_ASAN})
     target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
@@ -190,7 +193,7 @@ if (USE_USHER)
 add_library(usher
   ${MATOPTIMIZE_SRC}
   src/usher_globals.cpp)
-target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer)
+target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer -DUSE_USHER)
 
 if(${USE_ASAN})
   target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
@@ -202,6 +205,8 @@ target_include_directories(usher PUBLIC include)
 target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
 target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
 add_dependencies(usher range-v3)
+target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/phmap/install/include)
+add_dependencies(usher phmap)
 target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 larch_link_opts(usher)
 target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
@@ -241,6 +246,7 @@ larch_executable(larch-test
   test/test_weight_counter.cpp
   test/test_write_parsimony.cpp
 )
+larch_compile_opts(larch-test)
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 if (USE_USHER)
 target_link_libraries(larch-test PUBLIC larch-usher-glue usher)

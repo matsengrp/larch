@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef USE_USHER
+#error Dont include this header when optimizing with Usher
+#else
+  
 #include <vector>
 #include <cstdint>
 #include <cstddef>
@@ -8,6 +12,7 @@
 #include <chrono>
 #include <mutex>
 #include <random>
+#include <set>
 
 #include "larch/common.hpp"
 
@@ -268,17 +273,39 @@ inline size_t optimize_inner_loop(
   std::random_device rnd;
   std::uniform_int_distribution<size_t> dist(0, idxs.size());
 
-  parallel_for_each(idxs, [&](size_t) {
-    MAT::Node* src = nodes_to_search.at(dist(rnd));
+  parallel_for_each(idxs, [&](size_t i) {
+    MAT::Node* src = nodes_to_search.at(i);
+    if (src->parent == nullptr) {
+      return;
+    }
     MAT::Node* dst = [&] {
       while (true) {
         auto* result = nodes_to_search.at(dist(rnd));
-        if (result != src) {
+        if (result != src and result->parent != nullptr) {
           return result;
         }
       }
     }();
-    Profitable_Moves move{-1, src, dst, nullptr};
+    std::set<MAT::Node*> parents;
+    MAT::Node* lca = nullptr;
+    MAT::Node* src_parent = src->parent;
+    MAT::Node* dst_parent = dst->parent;
+    while (src_parent != nullptr and dst_parent != nullptr) {
+      if (src_parent != nullptr and not parents.insert(src_parent).second) {
+        lca = src_parent;
+        break;
+      } else {
+        src_parent = src_parent->parent;
+      }
+      if (dst_parent != nullptr and not parents.insert(dst_parent).second) {
+        lca = dst_parent;
+        break;
+      } else {
+        dst_parent = dst_parent->parent;
+      }
+    }
+    Assert(lca != nullptr);
+    Profitable_Moves move{-1, src, dst, lca};
     int best_score_change = 0;
     std::vector<Node_With_Major_Allele_Set_Change> node_with_major_allele_set_change;
 
@@ -301,3 +328,5 @@ inline size_t optimize_inner_loop(
   std::ignore = intermediate_nwk_out;
   return 0;
 }
+
+#endif
