@@ -32,6 +32,7 @@ template <typename K, typename V>
 using ConcurrentUnorderedMap =
     phmap::parallel_node_hash_map<K, V, std::hash<K>, std::equal_to<K>,
                                   std::allocator<std::pair<const K, V>>, 4, std::mutex>;
+
 template <typename T>
 using ConcurrentVector = concurrent_vector<T>;
 

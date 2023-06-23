@@ -52,10 +52,12 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   if (was_empty) {
     ResultDAG().BuildConnections();
   } else {
-    for (auto& [label, id, parent_id, child_id, clade] : added_edges) {
-      ResultDAG().Get(parent_id).AddEdge(clade, id, true);
-      ResultDAG().Get(child_id).AddEdge(clade, id, false);
-    }
+    added_edges.execute([&] {
+      for (const auto& [label, id, parent_id, child_id, clade] : added_edges) {
+        ResultDAG().Get(parent_id).AddEdge(clade, id, true);
+        ResultDAG().Get(child_id).AddEdge(clade, id, false);
+      }
+    });
   }
 
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
