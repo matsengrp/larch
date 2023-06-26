@@ -84,6 +84,7 @@ SubtreeWeight<WeightOps, DAG>::TrimToMinWeight(WeightOps&& weight_ops) {
         return cached_min_weight_edges_.at(node.GetId().value).at(clade_idx.value) | Transform::ToEdges(node.GetDAG());
       },
       result.View(), result_dag_ids);
+  result.View().BuildConnections();
 
   return result;
 }
