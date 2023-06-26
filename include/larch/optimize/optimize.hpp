@@ -297,13 +297,17 @@ inline size_t optimize_inner_loop(
         lca = src_parent;
         break;
       } else {
-        src_parent = src_parent->parent;
+        if (src_parent != nullptr) {
+          src_parent = src_parent->parent;
+        }
       }
       if (dst_parent != nullptr and not parents.insert(dst_parent).second) {
         lca = dst_parent;
         break;
       } else {
-        dst_parent = dst_parent->parent;
+        if (dst_parent != nullptr) {
+          dst_parent = dst_parent->parent;
+        }
       }
     }
     Assert(lca != nullptr);

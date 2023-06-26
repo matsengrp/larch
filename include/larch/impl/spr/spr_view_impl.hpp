@@ -577,6 +577,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId src, NodeId dst) {
   new_node.AddEdge({0}, src_edge, true);
   new_node.AddEdge({1}, new_edge, true);
   dst_node.SetSingleParent(new_edge);
+  dag.GetRoot().Validate(true, false);
   return {new_node, has_unifurcation_after_move};
 }
 
@@ -611,7 +612,8 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   }
   NodeId lca = dag.GetMoveLCA();
   do {
-    self.data_->lca_ancestors_.insert(lca);
+    auto ins = self.data_->lca_ancestors_.insert(lca);
+    Assert(ins.second);
     lca = dag.Get(lca).GetSingleParent().GetParent();
   } while (not dag.Get(lca).IsUA());
 
@@ -643,8 +645,8 @@ HypotheticalTree<DAG>::Data::Data(Profitable_Moves move, NodeId new_node,
       has_unifurcation_after_move_{has_unifurcation_after_move} {
   constexpr int end_sentinel = 2147483647;
   for (const auto& node_with_allele_set_change : nodes_with_major_allele_set_change) {
+    Assert(node_with_allele_set_change.node != nullptr);
     if (not node_with_allele_set_change.node->is_leaf()) {
-      Assert(node_with_allele_set_change.node != nullptr);
       ContiguousMap<MutationPosition, Mutation_Count_Change> node_map;
       for (const auto& mutation_count_change :
            node_with_allele_set_change.major_allele_set_change) {
