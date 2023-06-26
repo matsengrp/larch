@@ -38,10 +38,6 @@ using ConcurrentVector = tbb::concurrent_vector<T>;
 
 template <typename Range, typename Lambda>
 void parallel_for_each(Range&& range, Lambda&& lambda) {
-  for (decltype(auto) i : range) {
-    lambda(i);
-  }
-  return;
   std::vector<std::thread> workers;
   std::mutex mtx;
   auto iter = range.begin();

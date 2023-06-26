@@ -282,8 +282,16 @@ inline size_t optimize_inner_loop(
     }
     MAT::Node* dst = [&] {
       while (true) {
-        auto* result = nodes_to_search.at(dist(gen));
-        if (result != src and result->parent != nullptr) {
+      outer:
+        MAT::Node* result = nodes_to_search.at(dist(gen));
+        if (result != src and result->parent != nullptr and result != src->parent) {
+          MAT::Node* parent = result->parent;
+          while (parent != nullptr) {
+            if (parent == src) {
+              goto outer;
+            }
+            parent = parent->parent;
+          }
           return result;
         }
       }

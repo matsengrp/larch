@@ -520,6 +520,13 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId src, NodeId dst) {
   Assert(not src_node.IsUA() and not src_node.IsTreeRoot());
   auto dst_node = dag.Get(dst);
   Assert(src_node.GetId() != dst_node.GetId());
+  {  // TODO only in debug mode
+    NodeId parent = dst_node.GetSingleParent().GetParent();
+    while (not dag.Get(parent).IsTreeRoot()) {
+      Assert(parent != src_node);
+      parent = dag.Get(parent).GetSingleParent().GetParent();
+    }
+  }
   auto src_edge = src_node.GetSingleParent();
   auto dst_edge = dst_node.GetSingleParent();
   auto src_parent_node = src_edge.GetParent();
@@ -599,16 +606,10 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   Assert(not self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
 
-  std::cout << "Before move\n";
-  MADAGToDOT(dag, std::cout);
-
   auto [new_node, has_unifurcation_after_move] =
       dag.ApplyMove(dag.GetNodeFromMAT(move.src), dag.GetNodeFromMAT(move.dst));
 
   dag.GetRoot().Validate(true, false);
-
-  std::cout << "After move\n";
-  MADAGToDOT(dag, std::cout);
 
   if (new_node.value == NoId) {
     return false;
@@ -622,9 +623,6 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
     return true;
   }
   NodeId lca = dag.GetMoveLCA();
-  std::cout << "Move: " << dag.GetMoveSource().GetId().value << " -> "
-            << dag.GetMoveTarget().GetId().value << "  new node: " << new_node.value
-            << "  has uni: " << has_unifurcation_after_move << "\n";
   do {
     auto ins = self.data_->lca_ancestors_.insert(lca);
     Assert(ins.second);
