@@ -95,7 +95,6 @@ file(GLOB MATOPTIMIZE_SRC
   "deps/usher/src/matOptimize/optimize_tree.cpp"
   "deps/usher/src/matOptimize/priority_conflict_resolver.cpp"
   "deps/usher/src/matOptimize/check_samples.cpp"
-  "deps/usher/src/matOptimize/import_vcf_fast.cpp"
 )
 
 function(larch_link_opts PRODUCT)
