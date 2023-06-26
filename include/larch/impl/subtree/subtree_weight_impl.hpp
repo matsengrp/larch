@@ -273,7 +273,7 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTrim(Node input_node, std::map<NodeId
     // already in DAG.
     auto search = old_new_map.find(old_id);
     if (search != old_new_map.end()) {
-      return {search->first, false};
+      return {old_new_map.at(old_id), false};
     } else {
       NodeId new_id{result.GetNodesCount()};
       result.AppendNode();
@@ -293,9 +293,10 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTrim(Node input_node, std::map<NodeId
 
     for (Edge input_edge : edges_selector(input_node, clade_idx)){
 
-      auto [result_child_id, added_child] = get_or_create_node(input_node.GetId());
+      auto [result_child_id, added_child] = get_or_create_node(input_edge.GetChild().GetId());
+
       typename MutableDAG::EdgeView result_edge =
-          result.AppendEdge(result_node_id, result_child_id, input_edge.GetClade());
+          result.AppendEdge(result_node_id, result_child_id, clade_idx);
 
       result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
 
