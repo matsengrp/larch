@@ -14,7 +14,7 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
-if (USE_USHER)
+# if (USE_USHER)
 FetchContent_Declare(oneTBB-src
   GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
   GIT_TAG 2019_U9
@@ -24,7 +24,7 @@ FetchContent_MakeAvailable(oneTBB-src)
 include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
 tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
 find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
-endif()
+# endif()
 
 ExternalProject_Add(phmap
   GIT_REPOSITORY https://github.com/greg7mdp/parallel-hashmap.git

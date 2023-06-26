@@ -3,7 +3,7 @@
 #ifdef USE_USHER
 #error Dont include this header when optimizing with Usher
 #else
-  
+
 #include <vector>
 #include <cstdint>
 #include <cstddef>
@@ -271,16 +271,18 @@ inline size_t optimize_inner_loop(
   idxs.resize(nodes_to_search.size());
   std::iota(idxs.begin(), idxs.end(), 0);
   std::random_device rnd;
-  std::uniform_int_distribution<size_t> dist(0, idxs.size());
+  std::mt19937 gen(rnd());
+  Assert(not idxs.empty());
+  std::uniform_int_distribution<size_t> dist(0, idxs.size() - 1);
 
-  parallel_for_each(idxs, [&](size_t i) {
-    MAT::Node* src = nodes_to_search.at(i);
+  parallel_for_each(idxs, [&](size_t) {
+    MAT::Node* src = nodes_to_search.at(dist(gen));
     if (src->parent == nullptr) {
       return;
     }
     MAT::Node* dst = [&] {
       while (true) {
-        auto* result = nodes_to_search.at(dist(rnd));
+        auto* result = nodes_to_search.at(dist(gen));
         if (result != src and result->parent != nullptr) {
           return result;
         }
@@ -288,9 +290,9 @@ inline size_t optimize_inner_loop(
     }();
     std::set<MAT::Node*> parents;
     MAT::Node* lca = nullptr;
-    MAT::Node* src_parent = src->parent;
-    MAT::Node* dst_parent = dst->parent;
-    while (src_parent != nullptr and dst_parent != nullptr) {
+    MAT::Node* src_parent = src;
+    MAT::Node* dst_parent = dst;
+    while (lca == nullptr and (src_parent != nullptr or dst_parent != nullptr)) {
       if (src_parent != nullptr and not parents.insert(src_parent).second) {
         lca = src_parent;
         break;
@@ -305,6 +307,7 @@ inline size_t optimize_inner_loop(
       }
     }
     Assert(lca != nullptr);
+    Assert(src != dst);
     Profitable_Moves move{-1, src, dst, lca};
     int best_score_change = 0;
     std::vector<Node_With_Major_Allele_Set_Change> node_with_major_allele_set_change;
