@@ -577,7 +577,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId src, NodeId dst) {
   new_node.AddEdge({0}, src_edge, true);
   new_node.AddEdge({1}, new_edge, true);
   dst_node.SetSingleParent(new_edge);
-  dag.GetRoot().Validate(true, false);
   return {new_node, has_unifurcation_after_move};
 }
 
@@ -587,7 +586,9 @@ template <typename DAG, typename CRTP, typename Tag>
 std::pair<NodeId, bool> FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(
     NodeId src, NodeId dst) const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return ApplyMoveImpl(dag, src, dst);
+  auto result = ApplyMoveImpl(dag, src, dst);
+  dag.GetRoot().Validate(true, false);
+  return result;
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -597,8 +598,18 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   auto& self = GetFeatureStorage(this);
   Assert(not self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
+
+  std::cout << "Before move\n";
+  MADAGToDOT(dag, std::cout);
+
   auto [new_node, has_unifurcation_after_move] =
       dag.ApplyMove(dag.GetNodeFromMAT(move.src), dag.GetNodeFromMAT(move.dst));
+
+  dag.GetRoot().Validate(true, false);
+
+  std::cout << "After move\n";
+  MADAGToDOT(dag, std::cout);
+
   if (new_node.value == NoId) {
     return false;
   }
@@ -611,6 +622,9 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
     return true;
   }
   NodeId lca = dag.GetMoveLCA();
+  std::cout << "Move: " << dag.GetMoveSource().GetId().value << " -> "
+            << dag.GetMoveTarget().GetId().value << "  new node: " << new_node.value
+            << "  has uni: " << has_unifurcation_after_move << "\n";
   do {
     auto ins = self.data_->lca_ancestors_.insert(lca);
     Assert(ins.second);

@@ -141,6 +141,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
   BuildHelper(mat.root, root_node, dag);
   dag.BuildConnections();
   dag.AddUA(EdgeMutations{mutations_view(mat.root)});
+  dag.GetRoot().Validate(true, false);
 }
 
 template <typename CRTP>
@@ -172,20 +173,6 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(Node dag_node,
     BuildHelper(edge.GetChild(), node, new_tree);
   }
 }
-
-namespace TODO {
-static inline std::string ToEdgeMutationsString(MATNodePtr node) {  // XXX
-  static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
-  std::string result = "<";
-  for (const MAT::Mutation& mut : node->mutations) {
-    result += decode.at(one_hot_to_two_bit(mut.get_par_one_hot()));
-    result += std::to_string(mut.get_position());
-    result += decode.at(one_hot_to_two_bit(mut.get_mut_one_hot()));
-    result += ", ";
-  }
-  return result + ">";
-}
-}  // namespace TODO
 
 template <typename CRTP>
 template <typename Node, typename DAG>

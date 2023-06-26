@@ -29,15 +29,14 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
     if (accepted.first) {
       batch_.push_back(std::move(fragment));
-      if (batch_.size() > 2048) {
-        std::unique_lock lock{merge_mtx_};
-        if (batch_.size() > 2048) {
-          merge_.AddDAGs(batch_);
-          merge_.GetResult().GetRoot().Validate(true, true);
-          batch_.clear();
-          batch_storage_.clear();
-        }
-      }
+      // if (batch_.size() > 128) {
+      //   std::unique_lock lock{merge_mtx_};
+      //   if (batch_.size() > 128) {
+      //     merge_.AddDAGs(batch_);
+      //     batch_.clear();
+      //     batch_storage_.clear();
+      //   }
+      // }
     }
 
     return accepted.second;
