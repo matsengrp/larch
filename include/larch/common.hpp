@@ -22,7 +22,7 @@
 #include <parallel_hashmap/phmap.h>
 #pragma GCC diagnostic pop
 
-#include "tbb/concurrent_vector.h"
+#include "larch/optimize/concurrent_vector.hpp"
 
 template <typename T>
 using ConcurrentUnorderedSet =
@@ -34,7 +34,7 @@ using ConcurrentUnorderedMap =
                                   std::allocator<std::pair<const K, V>>, 4, std::mutex>;
 
 template <typename T>
-using ConcurrentVector = tbb::concurrent_vector<T>;
+using ConcurrentVector = concurrent_vector<T>;
 
 template <typename Range, typename Lambda>
 void parallel_for_each(Range&& range, Lambda&& lambda) {
@@ -42,7 +42,8 @@ void parallel_for_each(Range&& range, Lambda&& lambda) {
   std::mutex mtx;
   auto iter = range.begin();
   auto end = range.end();
-  for (size_t i = 0; i < 32; ++i) {
+  size_t thread_count = std::thread::hardware_concurrency();
+  for (size_t i = 0; i < thread_count; ++i) {
     workers.push_back(std::thread([&] {
       while (true) {
         auto it = [&] {

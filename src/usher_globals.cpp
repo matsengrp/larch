@@ -1,4 +1,6 @@
 #include "larch/usher_glue.hpp"
+
+#ifdef USE_USHER
 #include <tbb/task_scheduler_init.h>
 
 std::atomic_bool interrupted(false);
@@ -9,3 +11,4 @@ uint32_t num_threads =
 FILE* movalbe_src_log;
 bool changing_radius = false;
 bool use_bound = true;
+#endif
