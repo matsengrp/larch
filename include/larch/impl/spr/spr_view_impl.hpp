@@ -585,55 +585,91 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, std::vector<NodeId>& src, std::ve
 
   if (has_unifurcation_after_move) {
     auto src_grandparent = src_parent_node.GetSingleParent().GetParent();
-    auto src_grandparent_children = src_grandparent.GetChildren();
-    auto src_grandparent_clades_size = src_grandparent.GetCladesCount();
     auto src_sib_edge = dag.Get(src_sibling_edges.at(0));
     auto src_sib_node = src_sib_edge.GetChild();
+    auto dst_parent_edge = dst_parent_node.GetSingleParent();
+    size_t clade_ctr = 0;
+
     src_grandparent.template SetOverlay<Neighbors>();
-    src_parent_node.template SetOverlay<Neighbors>();
+    new_node.template SetOverlay<Neighbors>();
     dst_parent_node.template SetOverlay<Neighbors>();
     new_edge.template SetOverlay<Endpoints>();
-    src_sib_edge.template SetOverlay<Endpoints>();
-    src_grandparent.RemoveChild(new_edge.GetClade(), new_edge);
-    src_parent_node.RemoveChild(src_sib_edge.GetClade(), src_sib_edge);
 
-    auto src_parent_clades_size = src_parent_node.GetCladesCount();
-    auto dst_parent_clades_size = dst_parent_node.GetCladesCount();
-    auto dst_parent_edge = dst_parent_node.GetSingleParent();
+    if (first_dst_node.GetId() != src_grandparent.GetId()) {
+      src_sib_edge.template SetOverlay<Endpoints>();
+      src_grandparent.RemoveChild(new_edge.GetClade(), new_edge);
+      auto src_grandparent_clades_size = src_grandparent.GetCladesCount();
+      src_sib_edge.Set(src_grandparent, src_sib_node, {src_grandparent_clades_size});
+      src_grandparent.AddEdge({src_grandparent_clades_size}, src_sib_edge, true);
+    }
 
+    clade_ctr = 0;
     dst_parent_node.ClearConnections();
+    new_node.ClearConnections();
     dst_parent_node.SetSingleParent(dst_parent_edge);
-    size_t clade_ctr = 0;
+    new_node.SetSingleParent(new_edge);
+    new_edge.Set(dst_parent_node, new_node, {clade_ctr});
+    dst_parent_node.AddEdge({clade_ctr++}, new_edge, true);
     for (auto dst_sib_edge_id: dst_sibling_edges) {
       auto dst_sib_edge = dag.Get(dst_sib_edge_id);
       auto dst_sib = dst_sib_edge.GetChild();
+      dst_sib.template SetOverlay<Neighbors>();
       dst_sib_edge.template SetOverlay<Endpoints>();
       dst_sib_edge.Set(dst_parent_node, dst_sib, {clade_ctr});
       dst_parent_node.AddEdge({clade_ctr++}, dst_sib_edge, true);
+      dst_sib.SetSingleParent(dst_sib_edge);
+    }
+    clade_ctr = 0;
+    for (auto src_edge_id: src_edges) {
+      auto src_edge = dag.Get(src_edge_id);
+      auto src_node = src_edge.GetChild();
+      src_node.template SetOverlay<Neighbors>();
+      src_edge.template SetOverlay<Endpoints>();
+      src_edge.Set(new_node, src_node, {clade_ctr});
+      new_node.AddEdge({clade_ctr++}, src_edge, true);
+      src_node.SetSingleParent(src_edge);
     }
     for (auto dst_edge_id: dst_edges) {
       auto dst_edge = dag.Get(dst_edge_id);
       auto dst_node = dst_edge.GetChild();
       dst_node.template SetOverlay<Neighbors>();
       dst_edge.template SetOverlay<Endpoints>();
-      dst_edge.template SetOverlay<EdgeMutations>();
-      dst_edge.Set(src_parent_node, dst_node, {src_parent_clades_size});
-      src_parent_node.AddEdge({src_parent_clades_size++}, dst_edge, true);
+      dst_edge.Set(new_node, dst_node, {clade_ctr});
+      new_node.AddEdge({clade_ctr++}, dst_edge, true);
+      dst_node.SetSingleParent(dst_edge);
     }
-    src_sib_edge.Set(src_grandparent, src_sib_node, {src_grandparent_clades_size});
-    src_grandparent.AddEdge({src_grandparent_clades_size}, src_sib_edge, true);
-    new_edge.Set(dst_parent_node, new_node, {dst_parent_clades_size});
-    dst_parent_node.AddEdge({dst_parent_clades_size}, new_edge, true);
-    new_node.template SetOverlay<Neighbors>();
-    new_node.template SetOverlay<Deduplicate<CompactGenome>>();
-    new_node.SetSingleParent(new_edge);
+    clade_ctr = 0;
+    if (first_dst_node.GetId() == src_grandparent.GetId()) {
+      std::vector<EdgeId> dst_children;
+      for (auto child_edge_id: first_dst_node.GetChildren()) {
+        dst_children.push_back(child_edge_id);
+      }
+      auto first_dst_parent_edge = first_dst_node.GetSingleParent();
+      first_dst_node.ClearConnections();
+      src_sib_edge.template SetOverlay<Endpoints>();
+      src_sib_node.template SetOverlay<Neighbors>();
+      src_sib_edge.Set(first_dst_node, src_sib_node, {clade_ctr});
+      first_dst_node.AddEdge({clade_ctr++}, src_sib_edge, true);
+      first_dst_node.SetSingleParent(first_dst_parent_edge);
+      src_sib_node.SetSingleParent(src_sib_edge);
+      for (auto dst_child_id: dst_children) {
+        auto dst_child = dag.Get(dst_child_id);
+        if (dst_child.GetChild() != new_node) {
+          auto dst_child_node = dst_child.GetChild();
+          dst_child_node.template SetOverlay<Neighbors>();
+          dst_child.template SetOverlay<Endpoints>();
+          dst_child.Set(first_dst_node, dst_child_node, {clade_ctr});
+          first_dst_node.AddEdge({clade_ctr++}, dst_child, true);
+          dst_child_node.SetSingleParent(dst_child);
+        }
+      }
+    }
   } else {
     auto src_parent_clades_size = src_parent_node.GetCladesCount();
     auto dst_parent_clades_size = dst_parent_node.GetCladesCount();
     src_parent_node.template SetOverlay<Neighbors>();
     dst_parent_node.template SetOverlay<Neighbors>();
     new_node.template SetOverlay<Neighbors>();
-    new_node.template SetOverlay<Deduplicate<CompactGenome>>();
     auto src_grandparent_edge = src_parent_node.GetSingleParent();
     auto dst_grandparent_edge = dst_parent_node.GetSingleParent();
     src_parent_node.ClearConnections();
@@ -662,7 +698,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, std::vector<NodeId>& src, std::ve
       auto src_edge = dag.Get(src_edge_id);
       auto src_node = src_edge.GetChild();
       src_edge.template SetOverlay<Endpoints>();
-      src_edge.template SetOverlay<EdgeMutations>();
       src_edge.Set(new_node, src_node, {new_node_clade_ctr});
       new_node.AddEdge({new_node_clade_ctr++}, src_edge, true);
     }
@@ -670,12 +705,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, std::vector<NodeId>& src, std::ve
       auto dst_edge = dag.Get(dst_edge_id);
       auto dst_node = dst_edge.GetChild();
       dst_edge.template SetOverlay<Endpoints>();
-      dst_edge.template SetOverlay<EdgeMutations>();
       dst_edge.Set(new_node, dst_node, {new_node_clade_ctr});
       new_node.AddEdge({new_node_clade_ctr++}, dst_edge, true);
     }
     new_edge.template SetOverlay<Endpoints>();
-    new_edge.template SetOverlay<EdgeMutations>();
     new_edge.Set(dst_parent_node, new_node, {dst_parent_clade_ctr});
     dst_parent_node.AddEdge({dst_parent_clade_ctr}, new_edge, true);
     new_node.SetSingleParent(new_edge);
