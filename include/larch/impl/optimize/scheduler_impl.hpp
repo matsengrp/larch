@@ -1,0 +1,45 @@
+
+Scheduler::~Scheduler() {
+  destroy_.store(true);
+  {
+    std::unique_lock lock{mtx_};
+    queue_.clear();
+    queue_not_empty_.notify_all();
+  }
+  for (auto& i : workers_) {
+    i.join();
+  }
+}
+
+void Scheduler::Start() {
+  size_t thread_count = std::thread::hardware_concurrency();
+  for (size_t i = 0; i < thread_count; ++i) {
+    workers_.push_back(std::thread(Worker, std::ref(*this)));
+  }
+}
+
+void Scheduler::AddTask(TaskBase& task) {
+  std::unique_lock lock{mtx_};
+  queue_.push_back(std::ref(task));
+  queue_not_empty_.notify_one();
+}
+
+void Scheduler::Worker(Scheduler& self) {
+  while (not self.destroy_.load()) {
+    std::unique_lock lock{self.mtx_};
+    while (self.queue_.empty() and not self.destroy_.load()) {
+      self.queue_not_empty_.wait(lock);
+    }
+    if (self.destroy_.load()) {
+      return;
+    }
+    auto& task = self.queue_.front().get();
+    if (not task.CanIterate()) {
+      self.queue_.pop_front();
+      task.Finish();
+    } else {
+      lock.unlock();
+      task.Run();
+    }
+  }
+}

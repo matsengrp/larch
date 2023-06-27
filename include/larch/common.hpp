@@ -22,6 +22,7 @@
 #include <parallel_hashmap/phmap.h>
 #pragma GCC diagnostic pop
 
+#include "larch/optimize/scheduler.hpp"
 #include "larch/optimize/concurrent_vector.hpp"
 
 template <typename T>
@@ -36,36 +37,26 @@ using ConcurrentUnorderedMap =
 template <typename T>
 using ConcurrentVector = concurrent_vector<T>;
 
+static inline Scheduler& DefaultScheduler() {
+  static Scheduler scheduler;
+  static std::once_flag started;
+  std::call_once(started, [&] { scheduler.Start(); });
+  return scheduler;
+}
+
 template <typename Range, typename Lambda>
 void parallel_for_each(Range&& range, Lambda&& lambda) {
-  std::vector<std::thread> workers;
-  std::mutex mtx;
-  auto iter = range.begin();
-  auto end = range.end();
-  size_t thread_count = std::thread::hardware_concurrency();
-  for (size_t i = 0; i < thread_count; ++i) {
-    workers.push_back(std::thread([&] {
-      while (true) {
-        auto it = [&] {
-          std::unique_lock lock{mtx};
-          if (iter < end) {
-            return iter++;
-          } else {
-            return end;
-          }
-        }();
-
-        if (it >= range.end()) {
-          return;
-        }
-
-        lambda(*it);
-      }
-    }));
-  }
-  for (auto& i : workers) {
-    i.join();
-  }
+  Task task([&](size_t i) {
+    if (i >= range.size()) {
+      return false;
+    }
+    lambda(range.at(i));
+    return true;
+  });
+  DefaultScheduler().AddTask(task);
+  // Scheduler sched;
+  // sched.AddTask(task);
+  task.Join();
 }
 
 struct NodeId;
