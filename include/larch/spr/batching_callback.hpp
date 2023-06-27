@@ -10,6 +10,7 @@ template <typename CRTP, typename SampleDAG>
 class BatchingCallback : public Move_Found_Callback {
  public:
   BatchingCallback(Merge& merge, SampleDAG sample_dag);
+  BatchingCallback(Merge& merge, SampleDAG sample_dag, bool collapse_empty_fragment_edges);
 
   virtual ~BatchingCallback() {}
 
@@ -27,6 +28,7 @@ class BatchingCallback : public Move_Found_Callback {
 
  protected:
   Merge& GetMerge();
+  ArbitraryInt GetAppliedMovesCount();
   auto GetMappedStorage();
 
  private:
@@ -34,6 +36,8 @@ class BatchingCallback : public Move_Found_Callback {
 
   Merge& merge_;
   std::decay_t<SampleDAG> sample_dag_;
+  bool collapse_empty_fragment_edges_;
+  ArbitraryInt applied_moves_count_;
   decltype(AddMappedNodes(AddMATConversion(Storage{{}}))) reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage{{}}));
   std::shared_mutex mat_mtx_;

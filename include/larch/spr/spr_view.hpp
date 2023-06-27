@@ -156,6 +156,7 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   [[nodiscard]] auto GetOldestChangedNode() const;
 
   [[nodiscard]] auto MakeFragment() const;
+  [[nodiscard]] auto MakeUncollapsedFragment() const;
 
   [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>>
   CollapseEmptyFragmentEdges(const std::vector<NodeId>& fragment_nodes,

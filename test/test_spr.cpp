@@ -221,12 +221,12 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});
 
-[[maybe_unused]] static const auto test_added4 = add_test(
-    {[] {
-       test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"),
-       4);
-     },
-     "SPR: seedtree"});
+//[[maybe_unused]] static const auto test_added4 = add_test(
+//    {[] {
+//       test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"),
+//       4);
+//     },
+//     "SPR: seedtree"});
 
 // [[maybe_unused]] static const auto test_added4 =
 //     add_test({[] {

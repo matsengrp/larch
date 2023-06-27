@@ -62,6 +62,9 @@ class SubtreeWeight {
   [[nodiscard]] SampledDAGStorage MinWeightSampleTree(
       WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
 
+  [[nodiscard]] SampledDAGStorage MinWeightUniformSampleTree(
+      WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
+
  private:
   template <typename CladeRange>
   typename WeightOps::Weight CladeWeight(CladeRange&& clade, WeightOps&& weight_ops);
