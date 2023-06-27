@@ -1,0 +1,5 @@
+x2	node_6:C3G x2:A1T,C2A 
+x3	node_6:C3G x3:C2G 
+x4	node_6:C3G 
+x5	x5:A1C,C2T,C3T 
+x6	x6:A1T 

@@ -1,0 +1,7 @@
+##fileformat=VCFv4.2
+##reference=ambiguous_sample_dag.fasta:x1
+##source=faToVcf ambiguous_sample_dag.fasta ambiguous_sample_dag.vcf
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	x2	x3	x4	x5	x6
+x1	1	A1T,A1C	A	T,C	.	.	AC=2,1;AN=5	GT	1	0	0	2	1
+x1	2	C2G,C2T	C	G,T	.	.	AC=1,1;AN=3	GT	.	1	.	2	0
+x1	3	C3G,C3T	C	G,T	.	.	AC=2,1;AN=4	GT	.	1	1	2	0

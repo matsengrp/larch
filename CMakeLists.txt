@@ -44,6 +44,21 @@ ExternalProject_Add(range-v3
 )
 find_package(ZLIB)
 
+ExternalProject_Add(isa-l
+  GIT_REPOSITORY https://github.com/intel/isa-l.git
+  GIT_TAG v2.30.0
+  GIT_SHALLOW true
+  GIT_PROGRESS true
+  UPDATE_DISCONNECTED TRUE
+  PREFIX isa-l
+  SOURCE_DIR isa-l/source
+  BINARY_DIR isa-l/source
+  INSTALL_DIR isa-l/install
+  CONFIGURE_COMMAND ./autogen.sh && ./configure --prefix=${CMAKE_BINARY_DIR}/isa-l/install --libdir=${CMAKE_BINARY_DIR}/isa-l/install
+  BUILD_COMMAND make && make other
+  INSTALL_COMMAND make install
+)
+
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
   ${PROTO_SRCS} ${PROTO_HDRS}
@@ -95,6 +110,7 @@ file(GLOB MATOPTIMIZE_SRC
   "deps/usher/src/matOptimize/optimize_tree.cpp"
   "deps/usher/src/matOptimize/priority_conflict_resolver.cpp"
   "deps/usher/src/matOptimize/check_samples.cpp"
+  "deps/usher/src/matOptimize/import_vcf_fast.cpp"
 )
 
 function(larch_link_opts PRODUCT)
@@ -170,6 +186,7 @@ set_target_properties(larch-usher-glue
 larch_executable(larch-test
   test/main.cpp
   test/test_ambiguities.cpp
+  test/test_ambiguous_vcf.cpp
   test/test_compact_genome.cpp
   test/test_count_trees.cpp
   test/test_dag_trimming.cpp
@@ -188,6 +205,7 @@ larch_executable(larch-test
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
+target_link_libraries(larch-test PUBLIC ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
 add_dependencies(larch-test larch-usher-glue)
 set_target_properties(larch-test
   PROPERTIES CXX_CLANG_TIDY ""

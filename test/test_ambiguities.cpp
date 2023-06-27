@@ -1,8 +1,5 @@
 #include "test_common.hpp"
 #include "larch/dag_loader.hpp"
-#include "larch/merge/merge.hpp"
-#include "larch/subtree/subtree_weight.hpp"
-#include "larch/subtree/parsimony_score.hpp"
 #include "larch/spr/spr_view.hpp"
 
 #include <tbb/global_control.h>
@@ -125,10 +122,12 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   unamb_dag.SetLeafCompactGenomesFromSequenceMap(unamb_seq_map);
   unamb_dag.RecomputeEdgeMutations();
 
-  bool write_dot_files = true;
-  if (write_dot_files) {
+  bool write_files = true;
+  if (write_files) {
     WriteDAGToFile(amb_dag_storage, "_ignore/amb_dag.dot");
     WriteDAGToFile(unamb_dag_storage, "_ignore/unamb_dag.dot");
+    StoreDAGToProtobuf(amb_dag, "_ignore/amb_dag.pb");
+    StoreDAGToProtobuf(unamb_dag, "_ignore/unamb_dag.pb");
   }
 
   // (0) Test checks that all edges mutations are compatible with adjacent compact

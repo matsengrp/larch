@@ -24,7 +24,10 @@
 
 static bool IsGzipped(std::string_view path) {
   std::ifstream in{std::string{path}};
-  Assert(in);
+  if (!in) {
+    std::cerr << "Cannot open file: " << path << std::endl;
+    Assert(in);
+  }
   std::array<unsigned char, 2> header{};
   in >> header[0] >> header[1];
   constexpr const unsigned char HeaderMagic0 = 0x1f;
@@ -158,7 +161,10 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
   nlohmann::json result;
   std::ifstream in{std::string{path}};
-  Assert(in);
+  if (!in) {
+    std::cerr << "Cannot open file: " << path << std::endl;
+    Assert(in);
+  }
   in >> result;
   return result;
 }

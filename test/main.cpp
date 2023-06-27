@@ -63,7 +63,8 @@ int main(int argc, char* argv[]) {
   for (auto& test : tests) {
     ++ran;
     std::cout << "Running test: " << test.name << " (" << ran << "/" << num_tests
-              << ") ..." << std::flush;
+              << ") ..." << std::endl
+              << std::flush;
 
     if (no_catch) {
       test.entry();
