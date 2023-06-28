@@ -45,7 +45,32 @@ static inline Scheduler& DefaultScheduler() {
 }
 
 template <typename Lambda>
+void seq_for_each(size_t size, Lambda&& lambda) {
+  for (size_t i = 0; i < size; ++i) {
+    lambda(i);
+  }
+}
+
+template <typename Lambda>
 void parallel_for_each(size_t size, Lambda&& lambda) {
+#if 0
+  std::vector<std::thread> workers;
+  std::atomic<size_t> iteration;
+  for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
+    workers.push_back(std::thread([&] {
+      while (true) {
+        size_t iter = iteration.fetch_add(1);
+        if (iter >= size) {
+          return;
+        }
+        lambda(iter);
+      }
+    }));
+  }
+  for (auto& i : workers) {
+    i.join();
+  }
+#else
   Task task([&](size_t i) {
     if (i >= size) {
       return false;
@@ -55,6 +80,7 @@ void parallel_for_each(size_t size, Lambda&& lambda) {
   });
   DefaultScheduler().AddTask(task);
   task.Join();
+#endif
 }
 
 struct NodeId;

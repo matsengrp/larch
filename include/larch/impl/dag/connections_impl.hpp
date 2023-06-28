@@ -59,6 +59,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
     }
   });
   storage.root_.value = root_id.load();
+  Assert(storage.root_.value != NoId);
   storage.leafs_.insert(storage.leafs_.end(), leafs.begin(), leafs.end());
 }
 

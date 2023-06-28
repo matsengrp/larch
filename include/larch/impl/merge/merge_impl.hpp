@@ -28,9 +28,12 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
 
   std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
   ConcurrentVector<NodeId> added_nodes;
-  ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>> added_edges;
   parallel_for_each(dags.size(), [&](size_t i) {
     MergeNodes(i, dags, below, dags_labels, node_id, added_nodes);
+  });
+
+  ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>> added_edges;
+  parallel_for_each(dags.size(), [&](size_t i) {
     MergeEdges(i, dags, below, dags_labels, added_edges);
   });
 
