@@ -41,7 +41,8 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
   BuildConnectionsRaw();
   std::atomic<size_t> root_id{NoId};
   ConcurrentVector<NodeId> leafs;
-  parallel_for_each(dag.GetNodes(), [&](auto node) {
+  parallel_for_each(dag.GetNodesCount(), [&](size_t i) {
+    auto node = dag.Get(NodeId{i});
     for (auto clade : node.GetClades()) {
       Assert(not clade.empty() && "Empty clade");
     }
@@ -64,8 +65,8 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  auto nodes = dag.GetNodes();
-  parallel_for_each(nodes, [](auto node) { node.ClearConnections(); });
+  parallel_for_each(dag.GetNodesCount(),
+                    [&](size_t i) { dag.Get(NodeId{i}).ClearConnections(); });
   for (auto edge : dag.GetEdges()) {
     Assert(edge.GetParentId().value != NoId && "Edge has no parent");
     Assert(edge.GetChildId().value != NoId && "Edge has no child");

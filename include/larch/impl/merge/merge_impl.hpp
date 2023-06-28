@@ -17,23 +17,19 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
 
   const bool was_empty = ResultDAG().IsEmpty();
 
-  std::vector<size_t> idxs;
-  idxs.resize(dags.size());
-  std::iota(idxs.begin(), idxs.end(), 0);
-
   std::vector<std::vector<NodeLabel>> dags_labels;
   dags_labels.resize(dags.size());
 
   parallel_for_each(
-      idxs, [&](size_t i) { MergeCompactGenomes(i, dags, below, dags_labels); });
+      dags.size(), [&](size_t i) { MergeCompactGenomes(i, dags, below, dags_labels); });
 
-  parallel_for_each(idxs,
+  parallel_for_each(dags.size(),
                     [&](size_t i) { ComputeLeafSets(i, dags, below, dags_labels); });
 
   std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
   ConcurrentVector<NodeId> added_nodes;
   ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>> added_edges;
-  parallel_for_each(idxs, [&](size_t i) {
+  parallel_for_each(dags.size(), [&](size_t i) {
     MergeNodes(i, dags, below, dags_labels, node_id, added_nodes);
     MergeEdges(i, dags, below, dags_labels, added_edges);
   });
@@ -42,13 +38,10 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   std::atomic<size_t> edge_id{ResultDAG().GetEdgesCount()};
   ResultDAG().InitializeEdges(result_edges_.size());
 
-  idxs.resize(added_edges.size());
-  std::iota(idxs.begin(), idxs.end(), 0);
-  parallel_for_each(idxs, [&](size_t i) { BuildResult(i, added_edges, edge_id); });
+  parallel_for_each(added_edges.size(),
+                    [&](size_t i) { BuildResult(i, added_edges, edge_id); });
 
-  idxs.resize(added_nodes.size());
-  std::iota(idxs.begin(), idxs.end(), 0);
-  parallel_for_each(idxs, [&](size_t i) {
+  parallel_for_each(added_nodes.size(), [&](size_t i) {
     NodeId id = added_nodes.at(i);
     ResultDAG().Get(id) = result_node_labels_.at(id).GetCompactGenome();
   });

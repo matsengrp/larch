@@ -83,15 +83,13 @@ static void test_case_20d() {
   correct_result.View().RecomputeEdgeMutations();
 
   trees.reserve(paths.size());
-  std::vector<std::pair<size_t, std::string_view>> paths_idx;
   for (size_t i = 0; i < paths.size(); ++i) {
     trees.push_back(MADAGStorage{{}});
-    paths_idx.push_back({i, paths.at(i)});
   }
-  parallel_for_each(paths_idx, [&](auto path_idx) {
-    trees.at(path_idx.first) = LoadTreeFromProtobuf(
-        path_idx.second, correct_result.View().GetReferenceSequence());
-    trees.at(path_idx.first).View().RecomputeCompactGenomes(true);
+  parallel_for_each(paths.size(), [&](size_t i) {
+    trees.at(i) =
+        LoadTreeFromProtobuf(paths.at(i), correct_result.View().GetReferenceSequence());
+    trees.at(i).View().RecomputeCompactGenomes(true);
   });
 
   std::vector<MADAG> tree_views;

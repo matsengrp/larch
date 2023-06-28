@@ -267,20 +267,17 @@ inline size_t optimize_inner_loop(
     std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now(),
     bool log_moves = false, int iteration = 1, std::string intermediate_template = "",
     std::string intermediate_pb_base_name = "", std::string intermediate_nwk_out = "") {
-  std::vector<size_t> idxs;
-  idxs.resize(nodes_to_search.size());
-  std::iota(idxs.begin(), idxs.end(), 0);
+  Assert(not nodes_to_search.empty());
   std::random_device rnd;
   std::mt19937 gen(rnd());
-  Assert(not idxs.empty());
-  std::uniform_int_distribution<size_t> dist(0, idxs.size() - 1);
+  std::uniform_int_distribution<size_t> dist(0, nodes_to_search.size() - 1);
   std::mutex random_mtx;
   auto random_node = [&] {
     std::unique_lock lock{random_mtx};
     return dist(gen);
   };
 
-  parallel_for_each(idxs, [&](size_t) {
+  parallel_for_each(nodes_to_search.size(), [&](size_t) {
     MAT::Node* src = nodes_to_search.at(random_node());
     if (src->parent == nullptr) {
       return;

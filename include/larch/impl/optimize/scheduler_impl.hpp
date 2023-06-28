@@ -1,4 +1,36 @@
 
+template <typename F>
+Task<F>::Task(F&& func) : func_{std::forward<F>(func)} {}
+
+template <typename F>
+void Task<F>::Join() {
+  std::unique_lock lock{mtx_};
+  while (not is_finished_) {
+    finished_.wait(lock);
+  }
+}
+
+template <typename F>
+void Task<F>::Run() {
+  if (not func_(iteration_.fetch_add(1))) {
+    can_iterate_.store(false);
+  }
+}
+
+template <typename F>
+bool Task<F>::CanIterate() const {
+  return can_iterate_.load();
+}
+
+template <typename F>
+void Task<F>::Finish() {
+  std::unique_lock lock{mtx_};
+  if (not is_finished_) {
+    is_finished_ = true;
+    finished_.notify_all();
+  }
+}
+
 Scheduler::~Scheduler() {
   destroy_.store(true);
   {

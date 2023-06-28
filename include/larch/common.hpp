@@ -44,22 +44,16 @@ static inline Scheduler& DefaultScheduler() {
   return scheduler;
 }
 
-template <typename Range, typename Lambda>
-void parallel_for_each(Range&& range, Lambda&& lambda) {
-  struct {
-    Range range;
-    Lambda lambda;
-  } capture{std::forward<Range>(range), std::forward<Lambda>(lambda)};
-  Task task([capture = std::move(capture)](size_t i) {
-    if (i >= capture.range.size()) {
+template <typename Lambda>
+void parallel_for_each(size_t size, Lambda&& lambda) {
+  Task task([&](size_t i) {
+    if (i >= size) {
       return false;
     }
-    capture.lambda(capture.range.at(i));
+    lambda(i);
     return true;
   });
   DefaultScheduler().AddTask(task);
-  // Scheduler sched;
-  // sched.AddTask(task);
   task.Join();
 }
 

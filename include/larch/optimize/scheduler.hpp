@@ -24,31 +24,16 @@ class TaskBase {
 template <typename F>
 class Task : public TaskBase {
  public:
-  Task(F&& func) : func_{std::forward<F>(func)} {}
+  Task(F&& func);
 
-  void Join() {
-    std::unique_lock lock{mtx_};
-    while (not is_finished_) {
-      finished_.wait(lock);
-    }
-  }
+  void Join();
 
  private:
-  void Run() override {
-    if (not func_(iteration_.fetch_add(1))) {
-      can_iterate_.store(false);
-    }
-  }
+  void Run() override;
 
-  bool CanIterate() const override { return can_iterate_.load(); }
+  bool CanIterate() const override;
 
-  void Finish() override {
-    std::unique_lock lock{mtx_};
-    if (not is_finished_) {
-      is_finished_ = true;
-      finished_.notify_all();
-    }
-  }
+  void Finish() override;
 
   F func_;
   std::atomic<size_t> iteration_ = 0;
