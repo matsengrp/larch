@@ -7,8 +7,12 @@ endif()
 
 include(ExternalProject)
 include(FetchContent)
+include(CMakeDependentOption)
 
 option(USE_USHER "Use matOptimize" yes)
+option(USE_ASAN "Use address and UB sanitizer" no)
+cmake_dependent_option(USE_TSAN "Use thread sanitizer" no "NOT USE_ASAN" no)
+option(USE_HTSLIB "Use htslib" no)
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
 
@@ -24,6 +28,9 @@ FetchContent_MakeAvailable(oneTBB-src)
 include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
 tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
 find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
+
+find_package(MPI REQUIRED)
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 endif()
 
 ExternalProject_Add(phmap
@@ -37,11 +44,6 @@ ExternalProject_Add(phmap
   INSTALL_DIR phmap/install
   PATCH_COMMAND git apply ${PROJECT_SOURCE_DIR}/patches/parallel-hashmap_v1.3.11.patch
 )
-
-if (USE_USHER)
-find_package(MPI REQUIRED)
-include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-endif()
 
 find_package(Protobuf REQUIRED)
 
@@ -66,7 +68,7 @@ ExternalProject_Add(range-v3
   INSTALL_DIR range-v3/install
 )
 
-if(${USE_HTSLIB})
+if(USE_HTSLIB)
 ExternalProject_Add(htslib
   GIT_REPOSITORY https://github.com/samtools/htslib.git
   GIT_TAG 1.17
@@ -100,14 +102,14 @@ endif()
 
 function(larch_compile_opts PRODUCT)
   target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -fno-omit-frame-pointer -pipe)
-  if (USE_USHER)
+  if(USE_USHER)
     target_compile_options(${PRODUCT} PUBLIC -DUSE_USHER)
   endif()
 
-  if(${USE_ASAN})
-    target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
-  elseif(${USE_TSAN})
-    target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=thread)
+  if(USE_ASAN)
+    target_compile_options(${PRODUCT} PUBLIC -DUSE_ASAN -g3 -fsanitize=address,undefined -fno-sanitize-recover)
+  elseif(USE_TSAN)
+    target_compile_options(${PRODUCT} PUBLIC -DUSE_TSAN -g3 -fsanitize=thread)
   endif()
 
   target_include_directories(${PRODUCT} PUBLIC include tools test)
@@ -117,7 +119,7 @@ function(larch_compile_opts PRODUCT)
   add_dependencies(${PRODUCT} range-v3)
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/phmap/install/include)
   add_dependencies(${PRODUCT} phmap)
-if(${USE_HTSLIB})
+if(USE_HTSLIB)
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/include)
   add_dependencies(${PRODUCT} htslib)
 endif()
@@ -125,7 +127,7 @@ endfunction()
 
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
 
-if (USE_USHER)
+if(USE_USHER)
 include_directories(deps/usher/)
 file(GLOB MATOPTIMIZE_SRC
   "deps/usher/src/matOptimize/apply_move/*.cpp"
@@ -150,10 +152,10 @@ endif()
 function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
 
-  if(${USE_ASAN})
+  if(USE_ASAN)
     target_link_libraries(${PRODUCT} PUBLIC -lasan -lubsan)
-  elseif(${USE_TSAN})
-    target_link_libraries(${PRODUCT} PUBLIC -ltsan)
+  elseif(USE_TSAN)
+    target_link_libraries(${PRODUCT} PUBLIC -fsanitize=thread)
   endif()
 
   target_link_libraries(${PRODUCT} PUBLIC -lz)
@@ -162,7 +164,7 @@ function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
 
-  if(${USE_HTSLIB})
+  if(USE_HTSLIB)
     target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/lib)
     target_link_libraries(${PRODUCT} PUBLIC -lhts)
   endif()
@@ -182,23 +184,23 @@ add_library(larch
 larch_compile_opts(larch)
 target_compile_options(larch PRIVATE ${STRICT_WARNINGS})
 
-if(${USE_ASAN})
+if(USE_ASAN)
 else()
   target_compile_options(larch PRIVATE -Wstack-usage=2048)
 endif()
 
 larch_link_opts(larch)
 
-if (USE_USHER)
+if(USE_USHER)
 add_library(usher
   ${MATOPTIMIZE_SRC}
   src/usher_globals.cpp)
 target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer -DUSE_USHER)
 
-if(${USE_ASAN})
-  target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
-elseif(${USE_TSAN})
-  target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=thread)
+if(USE_ASAN)
+  target_compile_options(usher PUBLIC -DUSE_ASAN -g3 -fsanitize=address,undefined -fno-sanitize-recover)
+elseif(USE_TSAN)
+  target_compile_options(usher PUBLIC -DUSE_TSAN -g3 -fsanitize=thread)
 endif()
 
 target_include_directories(usher PUBLIC include)
@@ -248,7 +250,7 @@ larch_executable(larch-test
 )
 larch_compile_opts(larch-test)
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
-if (USE_USHER)
+if(USE_USHER)
 target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
 add_dependencies(larch-test larch-usher-glue)
 endif()
@@ -256,7 +258,7 @@ set_target_properties(larch-test
   PROPERTIES CXX_CLANG_TIDY ""
 )
 
-if (USE_USHER)
+if(USE_USHER)
 larch_executable(merge
   tools/merge.cpp)
 
@@ -268,7 +270,7 @@ larch_executable(dag2dot
   tools/dag2dot.cpp)
 endif()
 
-if (USE_USHER)
+if(USE_USHER)
 target_compile_options(larch-usher PRIVATE ${STRICT_WARNINGS})
 target_link_libraries(larch-usher PRIVATE larch-usher-glue)
 add_dependencies(larch-usher larch-usher-glue)

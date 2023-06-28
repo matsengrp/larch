@@ -274,16 +274,21 @@ inline size_t optimize_inner_loop(
   std::mt19937 gen(rnd());
   Assert(not idxs.empty());
   std::uniform_int_distribution<size_t> dist(0, idxs.size() - 1);
+  std::mutex random_mtx;
+  auto random_node = [&] {
+    std::unique_lock lock{random_mtx};
+    return dist(gen);
+  };
 
   parallel_for_each(idxs, [&](size_t) {
-    MAT::Node* src = nodes_to_search.at(dist(gen));
+    MAT::Node* src = nodes_to_search.at(random_node());
     if (src->parent == nullptr) {
       return;
     }
     MAT::Node* dst = [&] {
       while (true) {
       outer:
-        MAT::Node* result = nodes_to_search.at(dist(gen));
+        MAT::Node* result = nodes_to_search.at(random_node());
         if (result != src and result->parent != nullptr and result != src->parent) {
           MAT::Node* parent = result->parent;
           while (parent != nullptr) {

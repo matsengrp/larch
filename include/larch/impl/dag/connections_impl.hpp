@@ -64,7 +64,8 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  parallel_for_each(dag.GetNodes(), [](auto node) { node.ClearConnections(); });
+  auto nodes = dag.GetNodes();
+  parallel_for_each(nodes, [](auto node) { node.ClearConnections(); });
   for (auto edge : dag.GetEdges()) {
     Assert(edge.GetParentId().value != NoId && "Edge has no parent");
     Assert(edge.GetChildId().value != NoId && "Edge has no child");

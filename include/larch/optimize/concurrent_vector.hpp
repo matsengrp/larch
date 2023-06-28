@@ -10,7 +10,6 @@ class concurrent_vector {
   mutable std::recursive_mutex mtx_;
 
  public:
-   
   auto begin() const noexcept {
     std::lock_guard lock{mtx_};
     return data_.begin();
@@ -67,5 +66,4 @@ class concurrent_vector {
     std::lock_guard lock{mtx_};
     data_.clear();
   }
-
 };

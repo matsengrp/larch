@@ -24,29 +24,33 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   std::vector<std::vector<NodeLabel>> dags_labels;
   dags_labels.resize(dags.size());
 
-  parallel_for_each(idxs, [&](size_t i) {
-    MergeCompactGenomes(i, dags, below, dags_labels, ResultDAG());
-  });
+  parallel_for_each(
+      idxs, [&](size_t i) { MergeCompactGenomes(i, dags, below, dags_labels); });
 
-  parallel_for_each(idxs, [&](size_t i) {
-    ComputeLeafSets(i, dags, below, dags_labels, all_leaf_sets_);
-  });
+  parallel_for_each(idxs,
+                    [&](size_t i) { ComputeLeafSets(i, dags, below, dags_labels); });
 
   std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
+  ConcurrentVector<NodeId> added_nodes;
   ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>> added_edges;
   parallel_for_each(idxs, [&](size_t i) {
-    MergeNodes(i, dags, below, dags_labels, result_nodes_, result_node_labels_,
-               node_id);
-    MergeEdges(i, dags, below, dags_labels, result_edges_, added_edges);
+    MergeNodes(i, dags, below, dags_labels, node_id, added_nodes);
+    MergeEdges(i, dags, below, dags_labels, added_edges);
   });
 
   ResultDAG().InitializeNodes(result_nodes_.size());
   std::atomic<size_t> edge_id{ResultDAG().GetEdgesCount()};
   ResultDAG().InitializeEdges(result_edges_.size());
+
   idxs.resize(added_edges.size());
   std::iota(idxs.begin(), idxs.end(), 0);
+  parallel_for_each(idxs, [&](size_t i) { BuildResult(i, added_edges, edge_id); });
+
+  idxs.resize(added_nodes.size());
+  std::iota(idxs.begin(), idxs.end(), 0);
   parallel_for_each(idxs, [&](size_t i) {
-    BuildResult(i, added_edges, edge_id, result_nodes_, result_edges_, ResultDAG());
+    NodeId id = added_nodes.at(i);
+    ResultDAG().Get(id) = result_node_labels_.at(id).GetCompactGenome();
   });
 
   if (was_empty) {
@@ -117,8 +121,7 @@ bool Merge::ContainsLeafset(const LeafSet& leafset) const {
 
 template <typename DAGSRange>
 void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
-                                std::vector<std::vector<NodeLabel>>& dags_labels,
-                                MutableMergeDAG result_dag) {
+                                std::vector<std::vector<NodeLabel>>& dags_labels) {
   auto dag = dags.at(i).GetRoot().GetDAG();
   dag.AssertUA();
   auto& labels = dags_labels.at(i);
@@ -127,15 +130,14 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
-    auto cg_iter = result_dag.AddDeduplicated(node.GetCompactGenome());
+    auto cg_iter = ResultDAG().AddDeduplicated(node.GetCompactGenome());
     labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
   }
 }
 
 template <typename DAGSRange>
 void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
-                            std::vector<std::vector<NodeLabel>>& dags_labels,
-                            ConcurrentUnorderedSet<LeafSet>& all_leaf_sets) {
+                            std::vector<std::vector<NodeLabel>>& dags_labels) {
   auto dag = dags.at(i).GetRoot().GetDAG();
   std::vector<NodeLabel>& labels = dags_labels.at(i);
   std::vector<LeafSet> computed_ls = LeafSet::ComputeLeafSets(dag, labels);
@@ -145,7 +147,10 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
     }
     auto& ls = computed_ls.at(node.GetId().value);
     auto& label = labels.at(node.GetId().value);
-    auto ls_iter = all_leaf_sets.insert(std::move(ls));
+#ifdef USE_TSAN
+    std::unique_lock lock{mtx_all_leaf_sets_};
+#endif
+    auto ls_iter = all_leaf_sets_.insert(std::move(ls));
     label.SetLeafSet(std::addressof(*ls_iter.first));
     Assert(not label.Empty());
   }
@@ -154,9 +159,8 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
 template <typename DAGSRange>
 void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
                        std::vector<std::vector<NodeLabel>>& dags_labels,
-                       ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-                       ConcurrentUnorderedMap<NodeId, NodeLabel>& result_node_labels,
-                       std::atomic<size_t>& node_id) {
+                       std::atomic<size_t>& node_id,
+                       ConcurrentVector<NodeId>& added_nodes) {
   NodeId id{0};
   auto& dag = dags.at(i);
   auto& labels = dags_labels.at(i);
@@ -168,11 +172,15 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
     Assert(not label.Empty());
     auto [insert_pair, orig_id] = [&] {
       NodeId new_id;
-      auto ins_pair = result_nodes.insert({label, new_id});
+#ifdef USE_TSAN
+      std::unique_lock lock{mtx_result_nodes_};
+#endif
+      auto ins_pair = result_nodes_.insert({label, new_id});
       if (ins_pair.second) {
         new_id.value = node_id.fetch_add(1);
         ins_pair.first->second = new_id;
-        result_node_labels[new_id] = label;
+        result_node_labels_[new_id] = label;
+        added_nodes.push_back(new_id);
       } else {
         new_id.value = ins_pair.first->second.value;
       }
@@ -200,7 +208,6 @@ template <typename DAGSRange>
 void Merge::MergeEdges(
     size_t i, const DAGSRange& dags, NodeId below,
     std::vector<std::vector<NodeLabel>>& dags_labels,
-    ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
     ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
         added_edges) {
   auto& dag = dags.at(i);
@@ -213,7 +220,7 @@ void Merge::MergeEdges(
     const auto& child_label = labels.at(edge.GetChildId().value);
     Assert(not parent_label.Empty());
     Assert(not child_label.Empty());
-    auto ins = result_edges.insert({{parent_label, child_label}, {}});
+    auto ins = result_edges_.insert({{parent_label, child_label}, {}});
     if (ins.second) {
       added_edges.push_back({{parent_label, child_label}, {}, {}, {}, {}});
     }
@@ -224,26 +231,21 @@ void Merge::BuildResult(
     size_t i,
     ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
         added_edges,
-    std::atomic<size_t>& edge_id,
-    const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-    ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
-    MutableMergeDAG result_dag) {
+    std::atomic<size_t>& edge_id) {
   auto& [edge, id, parent_id, child_id, clade] = added_edges.at(i);
   id = {edge_id.fetch_add(1)};
-  auto parent = result_nodes.find(edge.GetParent());
-  auto child = result_nodes.find(edge.GetChild());
-  Assert(parent != result_nodes.end());
-  Assert(child != result_nodes.end());
-  Assert(parent->second.value < result_dag.GetNodesCount());
-  Assert(child->second.value < result_dag.GetNodesCount());
+  auto parent = result_nodes_.find(edge.GetParent());
+  auto child = result_nodes_.find(edge.GetChild());
+  Assert(parent != result_nodes_.end());
+  Assert(child != result_nodes_.end());
+  Assert(parent->second.value < ResultDAG().GetNodesCount());
+  Assert(child->second.value < ResultDAG().GetNodesCount());
   parent_id = parent->second;
   child_id = child->second;
   clade = edge.ComputeCladeIdx();
   Assert(clade.value != NoId);
-  result_dag.Get(id).Set(parent->second, child->second, clade);
-  result_dag.Get(parent->second) = parent->first.GetCompactGenome();
-  result_dag.Get(child->second) = child->first.GetCompactGenome();
-  auto result_edge_it = result_edges.find(edge);
-  Assert(result_edge_it != result_edges.end());
+  ResultDAG().Get(id).Set(parent->second, child->second, clade);
+  auto result_edge_it = result_edges_.find(edge);
+  Assert(result_edge_it != result_edges_.end());
   result_edge_it->second = id;
 }
