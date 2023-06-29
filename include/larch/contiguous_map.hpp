@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <initializer_list>
 
 template <typename K, typename V>
 class ContiguousMap {
@@ -16,6 +17,12 @@ class ContiguousMap {
   ContiguousMap& operator=(ContiguousMap&&) noexcept = default;
   ContiguousMap& operator=(const ContiguousMap&) = delete;
   ~ContiguousMap() = default;
+
+  ContiguousMap(std::initializer_list<value_type> list) {
+    for (auto& i : list) {
+      insert(i);
+    }
+  }
 
   ContiguousMap Copy() const { return ContiguousMap{*this}; }
 

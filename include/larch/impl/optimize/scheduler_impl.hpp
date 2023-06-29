@@ -31,6 +31,13 @@ void Task<F>::Finish() {
   }
 }
 
+Scheduler::Scheduler() {
+  size_t thread_count = std::thread::hardware_concurrency();
+  for (size_t i = 0; i < thread_count; ++i) {
+    workers_.push_back(std::thread(Worker, std::ref(*this)));
+  }
+}
+
 Scheduler::~Scheduler() {
   destroy_.store(true);
   {
@@ -40,13 +47,6 @@ Scheduler::~Scheduler() {
   }
   for (auto& i : workers_) {
     i.join();
-  }
-}
-
-void Scheduler::Start() {
-  size_t thread_count = std::thread::hardware_concurrency();
-  for (size_t i = 0; i < thread_count; ++i) {
-    workers_.push_back(std::thread(Worker, std::ref(*this)));
   }
 }
 

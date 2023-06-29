@@ -45,9 +45,13 @@ class Task : public TaskBase {
 
 class Scheduler {
  public:
+  inline Scheduler();
   inline ~Scheduler();
 
-  inline void Start();
+  Scheduler(const Scheduler&) = delete;
+  Scheduler(Scheduler&&) = delete;
+  Scheduler& operator=(const Scheduler&) = delete;
+  Scheduler& operator=(Scheduler&&) = delete;
 
   inline void AddTask(TaskBase& task);
 

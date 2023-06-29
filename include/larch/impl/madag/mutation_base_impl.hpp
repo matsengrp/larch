@@ -5,18 +5,18 @@ inline const MutationBase MutationBase::DNA::C{{0, 1, 0, 0}};  // NOLINT
 inline const MutationBase MutationBase::DNA::G{{0, 0, 1, 0}};  // NOLINT
 inline const MutationBase MutationBase::DNA::T{{0, 0, 0, 1}};  // NOLINT
 inline const MutationBase MutationBase::DNA::N{{1, 1, 1, 1}};  // NOLINT
-inline const std::map<MutationBase, char> MutationBase::DNA::mut_to_char_map = {
+inline const ContiguousMap<MutationBase, char> MutationBase::DNA::mut_to_char_map = {
     {MutationBase::DNA::A, 'A'},
     {MutationBase::DNA::C, 'C'},
     {MutationBase::DNA::G, 'G'},
     {MutationBase::DNA::T, 'T'},
     {MutationBase::DNA::N, MutationBase::DNA::ambiguous_char}};
-inline const std::map<MutationBase, MutationBase> MutationBase::DNA::complement_map = {
-    {MutationBase::DNA::A, MutationBase::DNA::T},
-    {MutationBase::DNA::C, MutationBase::DNA::G},
-    {MutationBase::DNA::G, MutationBase::DNA::C},
-    {MutationBase::DNA::T, MutationBase::DNA::A},
-    {MutationBase::DNA::N, MutationBase::DNA::N}};
+inline const ContiguousMap<MutationBase, MutationBase>
+    MutationBase::DNA::complement_map = {{MutationBase::DNA::A, MutationBase::DNA::T},
+                                         {MutationBase::DNA::C, MutationBase::DNA::G},
+                                         {MutationBase::DNA::G, MutationBase::DNA::C},
+                                         {MutationBase::DNA::T, MutationBase::DNA::A},
+                                         {MutationBase::DNA::N, MutationBase::DNA::N}};
 
 MutationBase::MutationBase(const MutationBase::BitArray &m_value_in)
     : value{m_value_in} {}
@@ -95,7 +95,7 @@ char MutationBase::ToChar() const {
   if (found_char == DNA::mut_to_char_map.end()) {
     return DNA::ambiguous_char;
   }
-  return DNA::mut_to_char_map.find(value)->second;
+  return found_char->second;
 }
 
 std::string MutationBase::ToString(const std::vector<MutationBase> &m_in) {

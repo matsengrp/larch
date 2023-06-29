@@ -37,12 +37,7 @@ using ConcurrentUnorderedMap =
 template <typename T>
 using ConcurrentVector = concurrent_vector<T>;
 
-static inline Scheduler& DefaultScheduler() {
-  static Scheduler scheduler;
-  static std::once_flag started;
-  std::call_once(started, [&] { scheduler.Start(); });
-  return scheduler;
-}
+Scheduler& DefaultScheduler();
 
 template <typename Lambda>
 void seq_for_each(size_t size, Lambda&& lambda) {

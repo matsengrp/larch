@@ -179,6 +179,7 @@ function(larch_executable PRODUCT)
 endfunction()
 
 add_library(larch
+  src/common.cpp
   src/dag_loader.cpp
 )
 larch_compile_opts(larch)
