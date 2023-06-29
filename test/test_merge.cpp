@@ -86,7 +86,7 @@ static void test_case_20d() {
   for (size_t i = 0; i < paths.size(); ++i) {
     trees.push_back(MADAGStorage{{}});
   }
-  parallel_for_each(paths.size(), [&](size_t i) {
+  parallel_for_each(paths.size(), [&](size_t i, size_t) {
     trees.at(i) =
         LoadTreeFromProtobuf(paths.at(i), correct_result.View().GetReferenceSequence());
     trees.at(i).View().RecomputeCompactGenomes(true);

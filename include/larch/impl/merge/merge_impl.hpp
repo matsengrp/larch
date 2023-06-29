@@ -20,39 +20,42 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   std::vector<std::vector<NodeLabel>> dags_labels;
   dags_labels.resize(dags.size());
 
-  parallel_for_each(
-      dags.size(), [&](size_t i) { MergeCompactGenomes(i, dags, below, dags_labels); });
-
-  parallel_for_each(dags.size(),
-                    [&](size_t i) { ComputeLeafSets(i, dags, below, dags_labels); });
-
-  std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
-  ConcurrentVector<NodeId> added_nodes;
-  parallel_for_each(dags.size(), [&](size_t i) {
-    MergeNodes(i, dags, below, dags_labels, node_id, added_nodes);
+  parallel_for_each(dags.size(), [&](size_t i, size_t) {
+    MergeCompactGenomes(i, dags, below, dags_labels);
   });
 
-  ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>> added_edges;
-  parallel_for_each(dags.size(), [&](size_t i) {
-    MergeEdges(i, dags, below, dags_labels, added_edges);
+  parallel_for_each(dags.size(), [&](size_t i, size_t) {
+    ComputeLeafSets(i, dags, below, dags_labels);
+  });
+
+  std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
+  Reduction<NodeId> added_nodes{DefaultScheduler().WorkersCount()};
+  parallel_for_each(dags.size(), [&](size_t i, size_t worker) {
+    MergeNodes(i, worker, dags, below, dags_labels, node_id, added_nodes);
+  });
+
+  Reduction<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>> added_edges{
+      DefaultScheduler().WorkersCount()};
+  parallel_for_each(dags.size(), [&](size_t i, size_t worker) {
+    MergeEdges(i, worker, dags, below, dags_labels, added_edges);
   });
 
   ResultDAG().InitializeNodes(result_nodes_.size());
   std::atomic<size_t> edge_id{ResultDAG().GetEdgesCount()};
   ResultDAG().InitializeEdges(result_edges_.size());
 
-  parallel_for_each(added_edges.size(),
-                    [&](size_t i) { BuildResult(i, added_edges, edge_id); });
+  parallel_for_each(
+      added_edges.GetAll(), added_edges.Size(),
+      [&](auto& added_edge, size_t) { BuildResult(added_edge, edge_id); });
 
-  parallel_for_each(added_nodes.size(), [&](size_t i) {
-    NodeId id = added_nodes.at(i);
+  parallel_for_each(added_nodes.GetAll(), added_nodes.Size(), [&](NodeId id, size_t) {
     ResultDAG().Get(id) = result_node_labels_.at(id).GetCompactGenome();
   });
 
   if (was_empty) {
     ResultDAG().BuildConnections();
   } else {
-    for (const auto& [label, id, parent_id, child_id, clade] : added_edges) {
+    for (const auto& [label, id, parent_id, child_id, clade] : added_edges.GetAll()) {
       ResultDAG().Get(parent_id).AddEdge(clade, id, true);
       ResultDAG().Get(child_id).AddEdge(clade, id, false);
     }
@@ -153,10 +156,9 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
 }
 
 template <typename DAGSRange>
-void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
+void Merge::MergeNodes(size_t i, size_t worker, const DAGSRange& dags, NodeId below,
                        std::vector<std::vector<NodeLabel>>& dags_labels,
-                       std::atomic<size_t>& node_id,
-                       ConcurrentVector<NodeId>& added_nodes) {
+                       std::atomic<size_t>& node_id, Reduction<NodeId>& added_nodes) {
   NodeId id{0};
   auto& dag = dags.at(i);
   auto& labels = dags_labels.at(i);
@@ -176,7 +178,7 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
         new_id.value = node_id.fetch_add(1);
         ins_pair.first->second = new_id;
         result_node_labels_[new_id] = label;
-        added_nodes.push_back(new_id);
+        added_nodes.Emplace(worker, new_id);
       } else {
         new_id.value = ins_pair.first->second.value;
       }
@@ -202,10 +204,9 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
 
 template <typename DAGSRange>
 void Merge::MergeEdges(
-    size_t i, const DAGSRange& dags, NodeId below,
+    size_t i, size_t worker, const DAGSRange& dags, NodeId below,
     std::vector<std::vector<NodeLabel>>& dags_labels,
-    ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
-        added_edges) {
+    Reduction<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>& added_edges) {
   auto& dag = dags.at(i);
   const std::vector<NodeLabel>& labels = dags_labels.at(i);
   for (auto edge : dag.GetEdges()) {
@@ -218,17 +219,16 @@ void Merge::MergeEdges(
     Assert(not child_label.Empty());
     auto ins = result_edges_.insert({{parent_label, child_label}, {}});
     if (ins.second) {
-      added_edges.push_back({{parent_label, child_label}, {}, {}, {}, {}});
+      added_edges.Emplace(worker, EdgeLabel{parent_label, child_label}, EdgeId{},
+                          NodeId{}, NodeId{}, CladeIdx{});
     }
   }
 }
 
 void Merge::BuildResult(
-    size_t i,
-    ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
-        added_edges,
+    std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>& added_edge,
     std::atomic<size_t>& edge_id) {
-  auto& [edge, id, parent_id, child_id, clade] = added_edges.at(i);
+  auto& [edge, id, parent_id, child_id, clade] = added_edge;
   id = {edge_id.fetch_add(1)};
   auto parent = result_nodes_.find(edge.GetParent());
   auto child = result_nodes_.find(edge.GetChild());

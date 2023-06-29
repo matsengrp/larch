@@ -277,7 +277,7 @@ inline size_t optimize_inner_loop(
     return dist(gen);
   };
 
-  parallel_for_each(nodes_to_search.size(), [&](size_t) {
+  parallel_for_each(nodes_to_search.size(), [&](size_t, size_t) {
     MAT::Node* src = nodes_to_search.at(random_node());
     if (src->parent == nullptr) {
       return;

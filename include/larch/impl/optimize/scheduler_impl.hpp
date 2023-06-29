@@ -12,8 +12,8 @@ void Task<F>::Join() {
 }
 
 template <typename F>
-void Task<F>::Run() {
-  if (not func_(iteration_.fetch_add(1))) {
+void Task<F>::Run(size_t worker) {
+  if (not func_(iteration_.fetch_add(1), worker)) {
     can_iterate_.store(false);
   }
 }
@@ -34,10 +34,9 @@ bool Task<F>::Finish() {
   return false;
 }
 
-Scheduler::Scheduler() {
-  size_t thread_count = std::thread::hardware_concurrency();
-  for (size_t i = 0; i < thread_count; ++i) {
-    workers_.push_back(std::thread(Worker, std::ref(*this)));
+Scheduler::Scheduler(size_t workers_count) : workers_count_{workers_count} {
+  for (size_t i = 0; i < workers_count; ++i) {
+    workers_.push_back(std::thread(Worker, std::ref(*this), size_t{i}));
   }
 }
 
@@ -59,7 +58,9 @@ void Scheduler::AddTask(TaskBase& task) {
   queue_not_empty_.notify_all();
 }
 
-void Scheduler::Worker(Scheduler& self) {
+size_t Scheduler::WorkersCount() const { return workers_count_; }
+
+void Scheduler::Worker(Scheduler& self, size_t id) {
   while (not self.destroy_.load()) {
     std::unique_lock lock{self.mtx_};
     for (auto i : self.finished_tasks_) {
@@ -79,7 +80,7 @@ void Scheduler::Worker(Scheduler& self) {
       }
     } else {
       lock.unlock();
-      task.Run();
+      task.Run(id);
     }
   }
 }

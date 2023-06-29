@@ -52,13 +52,13 @@ void parallel_for_each(size_t size, Lambda&& lambda) {
   std::vector<std::thread> workers;
   std::atomic<size_t> iteration{0};
   for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
-    workers.push_back(std::thread([&] {
+    workers.push_back(std::thread([&, i] {
       while (true) {
         size_t iter = iteration.fetch_add(1);
         if (iter >= size) {
           break;
         }
-        lambda(iter);
+        lambda(iter, i);
       }
     }));
   }
@@ -66,16 +66,28 @@ void parallel_for_each(size_t size, Lambda&& lambda) {
     i.join();
   }
 #else
-  Task task([&](size_t i) {
+  Task task([&](size_t i, size_t worker) {
     if (i >= size) {
       return false;
     }
-    lambda(i);
+    lambda(i, worker);
     return true;
   });
   DefaultScheduler().AddTask(task);
   task.Join();
 #endif
+}
+
+template <typename Range, typename Lambda>
+void parallel_for_each(Range&& range, size_t size, Lambda&& lambda) {
+  std::mutex mtx;
+  auto iter = range.begin();
+  parallel_for_each(size, [&](size_t, size_t worker) {
+    std::unique_lock lock{mtx};
+    auto i = iter++;
+    lock.unlock();
+    lambda(*i, worker);
+  });
 }
 
 struct NodeId;

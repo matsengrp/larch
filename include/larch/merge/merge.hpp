@@ -83,21 +83,18 @@ class Merge {
                        std::vector<std::vector<NodeLabel>>& dags_labels);
 
   template <typename DAGSRange>
-  void MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
+  void MergeNodes(size_t i, size_t worker, const DAGSRange& dags, NodeId below,
                   std::vector<std::vector<NodeLabel>>& dags_labels,
-                  std::atomic<size_t>& node_id, ConcurrentVector<NodeId>& added_nodes);
+                  std::atomic<size_t>& node_id, Reduction<NodeId>& added_nodes);
 
   template <typename DAGSRange>
   void MergeEdges(
-      size_t i, const DAGSRange& dags, NodeId below,
+      size_t i, size_t worker, const DAGSRange& dags, NodeId below,
       std::vector<std::vector<NodeLabel>>& dags_labels,
-      ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
-          added_edges);
+      Reduction<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>& added_edges);
 
   inline void BuildResult(
-      size_t i,
-      ConcurrentVector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
-          added_edges,
+      std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>& added_edge,
       std::atomic<size_t>& edge_id);
 
   // Every unique node leaf set, found among all input DAGs.
