@@ -1,6 +1,7 @@
 
 template <typename F>
-Task<F>::Task(F&& func) : func_{std::forward<F>(func)} {}
+Task<F>::Task(F&& func)
+    : func_{std::forward<F>(func)}, iteration_{0}, can_iterate_{false} {}
 
 template <typename F>
 void Task<F>::Join() {
@@ -23,12 +24,14 @@ bool Task<F>::CanIterate() const {
 }
 
 template <typename F>
-void Task<F>::Finish() {
+bool Task<F>::Finish() {
   std::unique_lock lock{mtx_};
   if (not is_finished_) {
     is_finished_ = true;
     finished_.notify_all();
+    return true;
   }
+  return false;
 }
 
 Scheduler::Scheduler() {
@@ -53,12 +56,16 @@ Scheduler::~Scheduler() {
 void Scheduler::AddTask(TaskBase& task) {
   std::unique_lock lock{mtx_};
   queue_.push_back(std::ref(task));
-  queue_not_empty_.notify_one();
+  queue_not_empty_.notify_all();
 }
 
 void Scheduler::Worker(Scheduler& self) {
   while (not self.destroy_.load()) {
     std::unique_lock lock{self.mtx_};
+    for (auto i : self.finished_tasks_) {
+      i.get().Finish();
+    }
+    self.finished_tasks_.clear();
     while (self.queue_.empty() and not self.destroy_.load()) {
       self.queue_not_empty_.wait(lock);
     }
@@ -67,8 +74,9 @@ void Scheduler::Worker(Scheduler& self) {
     }
     auto& task = self.queue_.front().get();
     if (not task.CanIterate()) {
-      self.queue_.pop_front();
-      task.Finish();
+      if (self.finished_tasks_.insert(std::ref(task)).second) {
+        self.queue_.pop_front();
+      }
     } else {
       lock.unlock();
       task.Run();

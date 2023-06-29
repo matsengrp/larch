@@ -29,14 +29,14 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
     if (accepted.first) {
       batch_.push_back(std::move(fragment));
-      if (batch_.size() > std::thread::hardware_concurrency()) {
-        std::unique_lock lock{merge_mtx_};
-        if (batch_.size() > std::thread::hardware_concurrency()) {
-          merge_.AddDAGs(batch_);
-          batch_.clear();
-          batch_storage_.clear();
-        }
-      }
+      // if (batch_.size() > std::thread::hardware_concurrency()) {
+      //   std::unique_lock lock{merge_mtx_};
+      //   if (batch_.size() > std::thread::hardware_concurrency()) {
+      //     merge_.AddDAGs(batch_);
+      //     batch_.clear();
+      //     batch_storage_.clear();
+      //   }
+      // }
     }
 
     return accepted.second;

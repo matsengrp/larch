@@ -48,15 +48,15 @@ void seq_for_each(size_t size, Lambda&& lambda) {
 
 template <typename Lambda>
 void parallel_for_each(size_t size, Lambda&& lambda) {
-#if 0
+#if 1
   std::vector<std::thread> workers;
-  std::atomic<size_t> iteration;
+  std::atomic<size_t> iteration{0};
   for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
     workers.push_back(std::thread([&] {
       while (true) {
         size_t iter = iteration.fetch_add(1);
         if (iter >= size) {
-          return;
+          break;
         }
         lambda(iter);
       }

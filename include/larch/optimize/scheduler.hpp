@@ -8,7 +8,7 @@
 #include <memory>
 #include <atomic>
 #include <functional>
-#include <iostream>
+#include <set>
 
 class TaskBase {
  public:
@@ -18,8 +18,13 @@ class TaskBase {
   friend class Scheduler;
   virtual void Run() = 0;
   virtual bool CanIterate() const = 0;
-  virtual void Finish() = 0;
+  virtual bool Finish() = 0;
 };
+
+inline bool operator<(const std::reference_wrapper<TaskBase>& lhs,
+                      const std::reference_wrapper<TaskBase>& rhs) {
+  return std::addressof(lhs.get()) < std::addressof(rhs.get());
+}
 
 template <typename F>
 class Task : public TaskBase {
@@ -33,11 +38,11 @@ class Task : public TaskBase {
 
   bool CanIterate() const override;
 
-  void Finish() override;
+  bool Finish() override;
 
   F func_;
-  std::atomic<size_t> iteration_ = 0;
-  std::atomic<bool> can_iterate_ = true;
+  std::atomic<size_t> iteration_;
+  std::atomic<bool> can_iterate_;
   std::mutex mtx_;
   std::condition_variable finished_;
   bool is_finished_ = false;
@@ -61,6 +66,7 @@ class Scheduler {
   std::atomic<bool> destroy_ = false;
   std::mutex mtx_;
   std::deque<std::reference_wrapper<TaskBase>> queue_;
+  std::set<std::reference_wrapper<TaskBase>> finished_tasks_;
   std::condition_variable queue_not_empty_;
 };
 
