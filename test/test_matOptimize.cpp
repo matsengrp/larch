@@ -157,7 +157,7 @@ static void test_matOptimize(std::string_view input_dag_path, size_t count,
   input_dag_storage.View().RecomputeCompactGenomes(true);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
-  merge.AddDAGs(std::vector{input_dag});
+  merge.AddDAG(input_dag);
   std::vector<decltype(AddMappedNodes(AddMATConversion(MADAGStorage{{}})))>
       optimized_dags;
 

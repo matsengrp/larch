@@ -3,48 +3,44 @@
 #endif
 
 template <typename DAG>
-Fragment<DAG>::Fragment(DAG dag, std::vector<NodeId>&& nodes,
-                        std::vector<EdgeId>&& edges)
-    : dag_{dag},
-      nodes_{std::forward<std::vector<NodeId>>(nodes)},
-      edges_{std::forward<std::vector<EdgeId>>(edges)} {}
+FragmentView<DAG>::FragmentView(FragmentStorage<DAG>& storage) : storage_{storage} {}
 
 template <typename DAG>
-void Fragment<DAG>::AssertUA() const {
-  dag_.AssertUA();
+void FragmentView<DAG>::AssertUA() const {
+  storage_.dag_.AssertUA();
 }
 
 template <typename DAG>
-size_t Fragment<DAG>::GetNodesCount() const {
-  return nodes_.size();
+size_t FragmentView<DAG>::GetNodesCount() const {
+  return storage_.nodes_.size();
 }
 
 template <typename DAG>
-size_t Fragment<DAG>::GetEdgesCount() const {
-  return edges_.size();
+size_t FragmentView<DAG>::GetEdgesCount() const {
+  return storage_.edges_.size();
 }
 
 template <typename DAG>
-auto Fragment<DAG>::Get(NodeId id) const {
-  return dag_.Get(id);
+auto FragmentView<DAG>::Get(NodeId id) const {
+  return storage_.dag_.Get(id);
 }
 
 template <typename DAG>
-auto Fragment<DAG>::Get(EdgeId id) const {
-  return dag_.Get(id);
+auto FragmentView<DAG>::Get(EdgeId id) const {
+  return storage_.dag_.Get(id);
 }
 
 template <typename DAG>
-auto Fragment<DAG>::GetNodes() const {
-  return ranges::views::all(nodes_) | Transform::ToNodes(dag_);
+auto FragmentView<DAG>::GetNodes() const {
+  return ranges::views::all(storage_.nodes_) | Transform::ToNodes(storage_.dag_);
 }
 
 template <typename DAG>
-auto Fragment<DAG>::GetEdges() const {
-  return ranges::views::all(edges_) | Transform::ToEdges(dag_);
+auto FragmentView<DAG>::GetEdges() const {
+  return ranges::views::all(storage_.edges_) | Transform::ToEdges(storage_.dag_);
 }
 
 template <typename DAG>
-auto Fragment<DAG>::GetRoot() const {
-  return dag_.GetRoot();
+auto FragmentView<DAG>::GetRoot() const {
+  return storage_.dag_.GetRoot();
 }

@@ -31,7 +31,7 @@ static void test_sample_tree(MADAG dag) {
   assert_true(result3.View().IsTree(), "Tree");
 
   Merge merge{dag.GetReferenceSequence()};
-  merge.AddDAGs(std::vector{dag});
+  merge.AddDAG(dag);
   merge.GetResult().GetRoot().Validate(true, true);
   merge.ComputeResultEdgeMutations();
 
@@ -56,7 +56,7 @@ static void test_sample_tree(std::string_view path) {
   Benchmark bench;
   bench.start();
   Merge merge{dag.View().GetReferenceSequence()};
-  merge.AddDAGs(std::vector{dag.View()});
+  merge.AddDAG(dag.View());
   merge.ComputeResultEdgeMutations();
   SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
   std::ignore = weight.MinWeightSampleTree({});

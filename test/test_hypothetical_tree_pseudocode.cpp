@@ -63,7 +63,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
       approved_a_move_ = true;
 
       // ** merge fragment into merge
-      // TODO merge_.AddDAG(spr_fragment);
+      merge_.AddDAG(spr_fragment.View());
 
       // return true so we do apply this move.
       return true;

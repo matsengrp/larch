@@ -3,14 +3,32 @@
 #endif
 
 template <typename DAG>
-class Fragment {
+class FragmentView;
+
+template <typename DAG>
+class FragmentStorage {
  public:
-  MOVE_ONLY(Fragment);
+  MOVE_ONLY(FragmentStorage);
+  FragmentStorage(DAG dag, std::vector<NodeId>&& nodes, std::vector<EdgeId>&& edges)
+      : dag_{dag}, nodes_{std::move(nodes)}, edges_{std::move(edges)} {}
+  auto View() { return FragmentView{*this}; }
+  auto View() const { return FragmentView{*this}; }
+
+ private:
+  friend class FragmentView<DAG>;
+  DAG dag_;
+  const std::vector<NodeId> nodes_;
+  const std::vector<EdgeId> edges_;
+};
+
+template <typename DAG>
+class FragmentView {
+ public:
   template <Component C, typename Feature>
   static const bool contains_element_feature =
       DAG::template contains_element_feature<C, Feature>;
 
-  Fragment(DAG dag, std::vector<NodeId>&& nodes, std::vector<EdgeId>&& edges);
+  explicit FragmentView(FragmentStorage<DAG>& storage);
 
   void AssertUA() const;
   size_t GetNodesCount() const;
@@ -22,7 +40,5 @@ class Fragment {
   auto GetRoot() const;
 
  private:
-  DAG dag_;
-  const std::vector<NodeId> nodes_;
-  const std::vector<EdgeId> edges_;
+  FragmentStorage<DAG>& storage_;
 };

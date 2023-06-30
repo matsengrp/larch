@@ -16,6 +16,7 @@ class BatchingCallback : public Move_Found_Callback {
   using Storage = MergeDAGStorage;
   using MATStorage = decltype(AddMATConversion(Storage{{}}));
   using SPRType = decltype(SPRStorage(AddMATConversion(Storage{{}}).View()));
+  using SPRViewType = decltype(std::declval<SPRType>().View());
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&
@@ -39,8 +40,8 @@ class BatchingCallback : public Move_Found_Callback {
   std::shared_mutex mat_mtx_;
   std::unique_ptr<MATStorage> sample_mat_storage_;
   std::mutex merge_mtx_;
-  ConcurrentVector<SPRType> batch_storage_;
-  ConcurrentVector<Fragment<decltype(std::declval<SPRType>().View())>> batch_;
+  Reduction<SPRType, std::thread::id> batch_storage_;
+  Reduction<FragmentStorage<SPRViewType>, std::thread::id> batch_;
 };
 
 #include "larch/impl/spr/batching_callback_impl.hpp"

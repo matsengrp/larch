@@ -78,18 +78,6 @@ void parallel_for_each(size_t size, Lambda&& lambda) {
 #endif
 }
 
-template <typename Range, typename Lambda>
-void parallel_for_each(Range&& range, size_t size, Lambda&& lambda) {
-  std::mutex mtx;
-  auto iter = range.begin();
-  parallel_for_each(size, [&](size_t, size_t worker) {
-    std::unique_lock lock{mtx};
-    auto i = iter++;
-    lock.unlock();
-    lambda(*i, worker);
-  });
-}
-
 struct NodeId;
 struct EdgeId;
 struct CladeIdx;

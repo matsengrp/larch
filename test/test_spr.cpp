@@ -56,7 +56,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
-  merge.AddDAGs(std::vector{input_dag});
+  merge.AddDAG(input_dag);
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{{}})), MAT::Tree>>
       optimized_dags;
 
@@ -75,8 +75,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
     optimized_dags.back().first.View().RecomputeCompactGenomes(true);
-    merge.AddDAGs(std::vector{optimized_dags.back().first.View()},
-                  optimized_dags.back().first.View().GetRoot());
+    merge.AddDAG(optimized_dags.back().first.View());
   }
 }
 
@@ -115,7 +114,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
       approved_a_move_ = true;
 
       // ** merge fragment into merge
-      // TODO merge_.AddDAG(spr_fragment);
+      merge_.AddDAG(spr_fragment.View());
 
       // return true so we do apply this move.
       return true;

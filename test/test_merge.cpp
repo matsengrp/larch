@@ -25,7 +25,7 @@ static void test_protobuf(const std::string& correct_path,
   correct_result.View().RecomputeEdgeMutations();
 
   Merge merge(correct_result.View().GetReferenceSequence());
-  merge.AddDAGs(tree_views);
+  merge.AddDAGs(tree_views | ranges::views::all);
   merge.GetResult().GetRoot().Validate(true, true);
 
   assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
@@ -172,10 +172,10 @@ static void test_subtree() {
   }
 
   for (auto& tree : trees) {
-    Fragment frag{tree.View(),
-                  tree.View().GetNodes() | Transform::GetId() | ranges::to_vector,
-                  tree.View().GetEdges() | Transform::GetId() | ranges::to_vector};
-    merge.AddDAG(frag);
+    FragmentStorage frag{
+        tree.View(), tree.View().GetNodes() | Transform::GetId() | ranges::to_vector,
+        tree.View().GetEdges() | Transform::GetId() | ranges::to_vector};
+    merge.AddDAG(frag.View());
     merge.GetResult().GetRoot().Validate(true, true);
   }
 

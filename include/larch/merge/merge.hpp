@@ -23,6 +23,8 @@ using MergeDAG = DAGView<const MergeDAGStorage>;
 using MutableMergeDAG = DAGView<MergeDAGStorage>;
 
 class Merge {
+  using AddedEdge = std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>;
+
  public:
   /**
    * Construct a new Merge object, with the common reference sequence for all input
@@ -45,10 +47,10 @@ class Merge {
    * into the Merge object storage to avoid duplication.
    */
   template <typename DAGSRange>
-  inline void AddDAGs(const DAGSRange& dags, NodeId below = {});
+  inline void AddDAGs(DAGSRange&& dags, NodeId below = {});
 
   template <typename DAG>
-  inline void AddDAG(DAG& dag, NodeId below = {});
+  inline void AddDAG(DAG&& dag, NodeId below = {});
 
   /**
    * Get the DAG resulting from merge
@@ -74,28 +76,23 @@ class Merge {
  private:
   inline MutableMergeDAG ResultDAG();
 
-  template <typename DAGSRange>
-  void MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
-                           std::vector<std::vector<NodeLabel>>& dags_labels);
+  template <typename DAG>
+  void MergeCompactGenomes(DAG dag, NodeId below, std::vector<NodeLabel>& labels);
 
-  template <typename DAGSRange>
-  void ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
-                       std::vector<std::vector<NodeLabel>>& dags_labels);
+  template <typename DAG>
+  void ComputeLeafSets(DAG dag, NodeId below, std::vector<NodeLabel>& labels);
 
-  template <typename DAGSRange>
-  void MergeNodes(size_t i, size_t worker, const DAGSRange& dags, NodeId below,
-                  std::vector<std::vector<NodeLabel>>& dags_labels,
-                  std::atomic<size_t>& node_id, Reduction<NodeId>& added_nodes);
+  template <typename DAG>
+  void MergeNodes(size_t worker, DAG dag, NodeId below,
+                  const std::vector<NodeLabel>& labels, std::atomic<size_t>& node_id,
+                  Reduction<NodeId>& added_nodes);
 
-  template <typename DAGSRange>
-  void MergeEdges(
-      size_t i, size_t worker, const DAGSRange& dags, NodeId below,
-      std::vector<std::vector<NodeLabel>>& dags_labels,
-      Reduction<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>& added_edges);
+  template <typename DAG>
+  void MergeEdges(size_t worker, DAG dag, NodeId below,
+                  const std::vector<NodeLabel>& labels,
+                  Reduction<AddedEdge>& added_edges);
 
-  inline void BuildResult(
-      std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>& added_edge,
-      std::atomic<size_t>& edge_id);
+  inline void BuildResult(AddedEdge& added_edge, std::atomic<size_t>& edge_id);
 
   // Every unique node leaf set, found among all input DAGs.
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
