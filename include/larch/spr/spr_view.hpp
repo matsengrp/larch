@@ -173,8 +173,8 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
 
 template <typename DAG, typename CRTP, typename Tag>
 struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
-  std::pair<NodeId, bool> ApplyMove(NodeId src, NodeId dst) const;
-  std::pair<NodeId, bool> ApplyMove(std::vector<NodeId> src, std::vector<NodeId> dst) const;
+  std::pair<NodeId, bool> ApplyMove(NodeId lca, NodeId src, NodeId dst) const;
+  std::pair<NodeId, bool> ApplyMove(NodeId lca, std::vector<NodeId> src, std::vector<NodeId> dst) const;
   bool InitHypotheticalTree(const Profitable_Moves& move,
                             const std::vector<Node_With_Major_Allele_Set_Change>&
                                 nodes_with_major_allele_set_change);
