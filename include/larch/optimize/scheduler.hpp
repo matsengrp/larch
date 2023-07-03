@@ -90,63 +90,46 @@ template <typename T, typename WorkerId = size_t>
 class Reduction {
   static constexpr bool UseVector = std::is_same_v<WorkerId, size_t>;
   using Container = std::conditional_t<UseVector, std::vector<std::deque<T>>,
-                                       std::map<WorkerId, std::deque<T>>>;
+                                       ConcurrentUnorderedMap<WorkerId, std::deque<T>>>;
 
  public:
-  explicit Reduction(size_t workers_count) : size_{0} {
-    if constexpr (UseVector) {
-      data_.resize(workers_count);
-    }
-  }
+  explicit Reduction(size_t workers_count);
 
-  Reduction() : size_{0} { static_assert(not UseVector); }
+  Reduction();
 
   template <typename... Args>
-  T& Emplace(WorkerId worker, Args&&... args) {
-    size_.fetch_add(1);
-    return data_[worker].emplace_back(std::forward<Args>(args)...);
-  }
+  T& Emplace(WorkerId worker, Args&&... args);
 
-  auto Get() {
-    if constexpr (UseVector) {
-      return data_ | ranges::views::all;
-    } else {
-      return data_ | ranges::views::values;
-    }
-  }
+  auto Get();
 
-  auto GetAll() { return SizedView{Get() | ranges::views::join, Size()}; }
+  auto GetAll();
 
-  size_t Size() const { return size_.load(); }
-  bool Empty() const { return size_.load() > 0; }
-  size_t WorkersCount() const { return data_.size(); }
+  size_t Size() const;
+  bool Empty() const;
+  size_t WorkersCount() const;
 
-  void Clear() {
-    size_.store(0);
-    data_.clear();
-  }
+  void Clear();
 
  private:
   Container data_;
   std::atomic<size_t> size_;
+#ifdef USE_TSAN
+  std::mutex mtx_;
+#endif
 };
 
 template <typename T>
 class Snapshot {
  public:
   template <typename... Args>
-  explicit Snapshot(Args&&... args) : data_{new T{std::forward<Args>(args)...}} {}
+  explicit Snapshot(Args&&... args);
 
-  ~Snapshot() { delete *data_.load(); }
+  ~Snapshot();
 
-  T& Get() { return *data_.load(); }
+  T& Get();
 
   template <typename Lambda, typename... Args>
-  void Take(Lambda&& lambda, Args&&... args) {
-    T* next = new T{std::forward<Args>(args)...};
-    std::unique_ptr<T> curr{std::atomic_exchange(data_, next)};
-    lambda(*curr);
-  }
+  void Take(Lambda&& lambda, Args&&... args);
 
  private:
   std::atomic<T*> data_;

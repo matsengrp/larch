@@ -87,7 +87,7 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
   auto result = std::make_pair(AddMATConversion(MADAGStorage{{}}), std::move(tree));
   result.first.View().BuildFromMAT(result.second, dag.GetReferenceSequence());
-  // TODO tree.delete_nodes();
+  tree.delete_nodes();
   result.first.View().RecomputeCompactGenomes(true);
   return result;
 }

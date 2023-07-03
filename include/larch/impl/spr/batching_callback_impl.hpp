@@ -29,13 +29,20 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
                     nodes_with_major_allele_set_change);
 
     if (accepted.first) {
-      batch_.Emplace(std::this_thread::get_id(), std::move(fragment));
-      // if (batch_.size() > std::thread::hardware_concurrency()) {
+      batch_.Get().Emplace(std::this_thread::get_id(), std::move(fragment));
+      // if (batch_.Get().Size() > std::thread::hardware_concurrency()) {
       //   std::unique_lock lock{merge_mtx_};
-      //   if (batch_.size() > std::thread::hardware_concurrency()) {
-      //     merge_.AddDAGs(batch_);
-      //     batch_.clear();
-      //     batch_storage_.clear();
+      //   if (batch_.Get().Size() > std::thread::hardware_concurrency()) {
+      //     batch_.Take([&](auto& batch) {
+      //       // TODO view instead of vector
+      //       std::vector<decltype(std::declval<FragmentStorage<SPRViewType>>().View())>
+      //           batch_vec;
+      //       for (auto& i : batch.GetAll()) {
+      //         batch_vec.push_back(i.View());
+      //       }
+      //       merge_.AddDAGs(batch_vec | ranges::views::all);
+      //       batch_storage_.Clear();
+      //     });
       //   }
       // }
     }
@@ -56,13 +63,15 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   reassigned_states_storage_.View().RecomputeCompactGenomes(true);
   {
     std::unique_lock lock{merge_mtx_};
-    if (not batch_.Empty()) {
-      std::vector<decltype(std::declval<FragmentStorage<SPRViewType>>().View())> batch;
-      for (auto& i : batch_.GetAll()) {
-        batch.push_back(i.View());
+    if (not batch_.Get().Empty()) {
+      // TODO view instead of vector
+      std::vector<decltype(std::declval<FragmentStorage<SPRViewType>>().View())>
+          batch_vec;
+      for (auto& i : batch_.Get().GetAll()) {
+        batch_vec.push_back(i.View());
       }
-      merge_.AddDAGs(batch | ranges::views::all);
-      batch_.Clear();
+      merge_.AddDAGs(batch_vec | ranges::views::all);
+      batch_.Get().Clear();
       batch_storage_.Clear();
     }
     merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});

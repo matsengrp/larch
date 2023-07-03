@@ -122,6 +122,12 @@ class Node {
   Mutations_Collection mutations;
   std::vector<Node*> children;
   std::vector<std::string> clade_annotations;
+  void delete_this() {
+    for (Node* n : children) {
+      n->delete_this();
+    }
+    delete this;
+  }
 };
 
 static size_t level_helper(const Node* node) {
@@ -175,6 +181,13 @@ class Tree {
     }
     depth_first_expansion_helper(node, traversal, index, 0);
     return traversal;
+  }
+  void delete_nodes() {
+    if (!root) {
+      return;
+    }
+    root->delete_this();
+    root = nullptr;
   }
 };
 

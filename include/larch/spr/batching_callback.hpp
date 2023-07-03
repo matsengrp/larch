@@ -41,7 +41,7 @@ class BatchingCallback : public Move_Found_Callback {
   std::unique_ptr<MATStorage> sample_mat_storage_;
   std::mutex merge_mtx_;
   Reduction<SPRType, std::thread::id> batch_storage_;
-  Reduction<FragmentStorage<SPRViewType>, std::thread::id> batch_;
+  Snapshot<Reduction<FragmentStorage<SPRViewType>, std::thread::id>> batch_;
 };
 
 #include "larch/impl/spr/batching_callback_impl.hpp"
