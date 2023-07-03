@@ -582,92 +582,134 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, std::vector<NodeId>& src, std::ve
   }
   Assert(src.size() == src_edges.size());
   Assert(dst.size() == dst_edges.size());
-std::cout << "applying move " << first_src_node.GetId().value << " -> " << first_dst_node.GetId().value << "\n" << std::flush;
+  std::cout << "applying move " << first_src_node.GetId().value << " -> " << first_dst_node.GetId().value << "\n" << std::flush;
 
-  if (has_unifurcation_after_move) {
+  if (is_sibling_move) {
+    std::cout << "type 3\n" << std::flush;
+    auto src_parent_single_parent = src_parent_node.GetParentsCount() > 0 ? src_parent_node.GetSingleParent() : EdgeId{NoId};
+    src_parent_node.template SetOverlay<Neighbors>();
+    new_node.template SetOverlay<Neighbors>();
+    new_edge.template SetOverlay<Endpoints>();
+    src_parent_node.ClearConnections();
+    src_parent_node.SetSingleParent(src_parent_single_parent);
+    new_node.ClearConnections();
+    size_t clade_ctr = 0;
+    for (auto e_id: src_sibling_edges) {
+      if (std::find(dst_edges.begin(), dst_edges.end(), e_id) == dst_edges.end()) {
+        auto e = dag.Get(e_id);
+        e.template SetOverlay<Endpoints>();
+        e.Set(src_parent_node, e.GetChild(), {clade_ctr});
+        src_parent_node.AddEdge({clade_ctr++}, e, true);
+      }
+    }
+    new_edge.Set(src_parent_node, new_node, {clade_ctr});
+    src_parent_node.AddEdge({clade_ctr}, new_edge, true);
+    clade_ctr = 0;
+    for (auto e_id: src_edges) {
+      auto e = dag.Get(e_id);
+      e.template SetOverlay<Endpoints>();
+      e.Set(new_node, e.GetChild(), {clade_ctr});
+      new_node.AddEdge({clade_ctr++}, e, true);
+    }
+    for (auto e_id: dst_edges) {
+      auto e = dag.Get(e_id);
+      e.template SetOverlay<Endpoints>();
+      e.Set(new_node, e.GetChild(), {clade_ctr});
+      new_node.AddEdge({clade_ctr++}, e, true);
+    }
+    for (auto c: src_parent_node.GetChildren()) {
+      std::cout << "src parent: " << src_parent_node.GetId().value << " - " << c.GetChild().GetId().value << "\n";
+    }
+    for (auto c: new_node.GetChildren()) {
+      std::cout << "new_node  : " << new_node.GetId().value << " - " << c.GetChild().GetId().value << "\n";
+    }
+  } else if (has_unifurcation_after_move) {
+    std::cout << "type 1\n" << std::flush;
     auto src_grandparent = src_parent_node.GetSingleParent().GetParent();
     auto src_sib_edge = dag.Get(src_sibling_edges.at(0));
     auto src_sib_node = src_sib_edge.GetChild();
-    auto dst_parent_edge = dst_parent_node.GetParentsCount() > 0 ? dst_parent_node.GetSingleParent() : EdgeId{NoId};
+    auto dst_parent_single_parent = dst_parent_node.GetParentsCount() > 0 ? dst_parent_node.GetSingleParent() : EdgeId{NoId};
+    auto src_grandparent_single_parent = src_grandparent.GetParentsCount() > 0 ? src_grandparent.GetSingleParent() : EdgeId{NoId};
     size_t clade_ctr = 0;
-
-    std::cout << "type 1\n" << std::flush;
 
     src_grandparent.template SetOverlay<Neighbors>();
     dst_parent_node.template SetOverlay<Neighbors>();
     new_node.template SetOverlay<Neighbors>();
     new_edge.template SetOverlay<Endpoints>();
 
-    if (first_dst_node.GetId() != src_grandparent.GetId()) {
-      //src_grandparent.RemoveChild(new_edge.GetClade(), new_edge);
-      auto src_grandparent_clades_size = src_grandparent.GetCladesCount();
-      src_sib_edge.template SetOverlay<Endpoints>();
-      src_sib_edge.Set(src_grandparent, src_sib_node, {src_grandparent_clades_size});
-      src_grandparent.AddEdge({src_grandparent_clades_size}, src_sib_edge, true);
+    auto src_grandparent_edge = src_parent_node.GetSingleParent();
+    src_parent_node.ClearConnections();
+    src_parent_node.SetSingleParent(new_edge);
+    std::vector<EdgeId> src_parent_siblings;
+    for (auto e: src_grandparent.GetChildren()) {
+      if (e.GetId() != src_grandparent_edge.GetId() and (std::find(dst_edges.begin(), dst_edges.end(), e.GetId()) == dst_edges.end())) {
+        src_parent_siblings.push_back(e.GetId());
+      }
     }
-
-    dst_parent_node.ClearConnections();
-    new_node.ClearConnections();
-    if (dst_parent_edge.value != NoId) {
-      dst_parent_node.SetSingleParent(dst_parent_edge);
+    src_grandparent.ClearConnections();
+    if (src_grandparent_single_parent.value != NoId) {
+      src_grandparent.SetSingleParent(src_grandparent_single_parent);
     }
-    new_node.SetSingleParent(new_edge);
+    for (auto e_id: src_parent_siblings) {
+      if (std::find(dst_edges.begin(), dst_edges.end(), e_id) == dst_edges.end()) {
+        auto e = dag.Get(e_id);
+        e.template SetOverlay<Endpoints>();
+        e.Set(src_grandparent, e.GetChild(), {clade_ctr});
+        src_grandparent.AddEdge({clade_ctr++}, e, true);
+std::cout << "src gp1: " << src_grandparent.GetId().value << " -> " << e.GetChild().GetId().value << "\n";
+      }
+    }
+    for (auto e_id: src_sibling_edges) {
+      auto e = dag.Get(e_id);
+      e.template SetOverlay<Endpoints>();
+      e.Set(src_grandparent, e.GetChild(), {clade_ctr});
+      src_grandparent.AddEdge({clade_ctr++}, e, true);
+std::cout << "src gp2: " << src_grandparent.GetId().value << " -> " << e.GetChild().GetId().value << "\n";
+    }
+    if (dst_parent_node != src_grandparent) {
+      dst_parent_node.ClearConnections();
+      if (dst_parent_single_parent.value != NoId) {
+        dst_parent_node.SetSingleParent(dst_parent_single_parent);
+      }
+      clade_ctr = 0;
+    }
+    for (auto e_id: dst_sibling_edges) {
+      if (e_id != new_edge.GetId()) {
+        auto e = dag.Get(e_id);
+        e.template SetOverlay<Endpoints>();
+        e.Set(dst_parent_node, e.GetChild(), {clade_ctr});
+        dst_parent_node.AddEdge({clade_ctr++}, e, true);
+std::cout << "dst  p1: " << dst_parent_node.GetId().value << " -> " << e.GetChild().GetId().value << "\n";
+      }
+    }
+    new_edge.template SetOverlay<Endpoints>();
     new_edge.Set(dst_parent_node, new_node, {clade_ctr});
     dst_parent_node.AddEdge({clade_ctr++}, new_edge, true);
-    for (auto dst_sib_edge_id: dst_sibling_edges) {
-      auto dst_sib_edge = dag.Get(dst_sib_edge_id);
-      auto dst_sib = dst_sib_edge.GetChild();
-      dst_sib.template SetOverlay<Neighbors>();
-      dst_sib_edge.template SetOverlay<Endpoints>();
-      dst_sib_edge.Set(dst_parent_node, dst_sib, {clade_ctr});
-      dst_parent_node.AddEdge({clade_ctr++}, dst_sib_edge, true);
-      dst_sib.SetSingleParent(dst_sib_edge);
-    }
     clade_ctr = 0;
-    for (auto src_edge_id: src_edges) {
-      auto src_edge = dag.Get(src_edge_id);
-      auto src_node = src_edge.GetChild();
-      src_node.template SetOverlay<Neighbors>();
-      src_edge.template SetOverlay<Endpoints>();
-      src_edge.Set(new_node, src_node, {clade_ctr});
-      new_node.AddEdge({clade_ctr++}, src_edge, true);
-      src_node.SetSingleParent(src_edge);
+    for (auto e_id: src_edges) {
+      auto e = dag.Get(e_id);
+      e.template SetOverlay<Endpoints>();
+      e.Set(new_node, e.GetChild(), {clade_ctr});
+      new_node.AddEdge({clade_ctr++}, e, true);
+std::cout << "newnode1: " << new_node.GetId().value << " -> " << e.GetChild().GetId().value << "\n";
     }
-    for (auto dst_edge_id: dst_edges) {
-      auto dst_edge = dag.Get(dst_edge_id);
-      auto dst_node = dst_edge.GetChild();
-      dst_node.template SetOverlay<Neighbors>();
-      dst_edge.template SetOverlay<Endpoints>();
-      dst_edge.Set(new_node, dst_node, {clade_ctr});
-      new_node.AddEdge({clade_ctr++}, dst_edge, true);
-      dst_node.SetSingleParent(dst_edge);
+    for (auto e_id: dst_edges) {
+      auto e = dag.Get(e_id);
+      e.template SetOverlay<Endpoints>();
+      e.Set(new_node, e.GetChild(), {clade_ctr});
+      new_node.AddEdge({clade_ctr++}, e, true);
+std::cout << "newnode2: " << new_node.GetId().value << " -> " << e.GetChild().GetId().value << "\n";
     }
-    clade_ctr = 0;
-    if (first_dst_node.GetId() == src_grandparent.GetId()) {
-      std::vector<EdgeId> dst_children;
-      for (auto child_edge_id: first_dst_node.GetChildren()) {
-        dst_children.push_back(child_edge_id);
-      }
-      auto first_dst_parent_edge = first_dst_node.GetSingleParent();
-      first_dst_node.ClearConnections();
-      src_sib_edge.template SetOverlay<Endpoints>();
-      src_sib_node.template SetOverlay<Neighbors>();
-      src_sib_edge.Set(first_dst_node, src_sib_node, {clade_ctr});
-      first_dst_node.AddEdge({clade_ctr++}, src_sib_edge, true);
-      first_dst_node.SetSingleParent(first_dst_parent_edge);
-      src_sib_node.SetSingleParent(src_sib_edge);
-      for (auto dst_child_id: dst_children) {
-        auto dst_child = dag.Get(dst_child_id);
-        if (dst_child.GetChild() != new_node) {
-          auto dst_child_node = dst_child.GetChild();
-          dst_child_node.template SetOverlay<Neighbors>();
-          dst_child.template SetOverlay<Endpoints>();
-          dst_child.Set(first_dst_node, dst_child_node, {clade_ctr});
-          first_dst_node.AddEdge({clade_ctr++}, dst_child, true);
-          dst_child_node.SetSingleParent(dst_child);
-        }
-      }
-    }
+
+for (auto c: src_grandparent.GetChildren()) {
+  std::cout << "src gp: " << src_grandparent.GetId().value << " - " << c.GetChild().GetId().value << "\n";
+}
+for (auto c: dst_parent_node.GetChildren()) {
+  std::cout << "dst p : " << dst_parent_node.GetId().value << " - " << c.GetChild().GetId().value << "\n";
+}
+for (auto c: src_parent_node.GetChildren()) {
+  std::cout << "src p : " << src_parent_node.GetId().value << " - " << c.GetChild().GetId().value << "\n";
+}
   } else {
     std::cout << "type 2\n" << std::flush;
     auto src_parent_clades_size = src_parent_node.GetCladesCount();
