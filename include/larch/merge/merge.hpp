@@ -113,6 +113,9 @@ class Merge {
 
   // Resulting DAG from merging the input DAGs.
   MergeDAGStorage result_dag_storage_;
+#ifdef USE_TSAN
+  std::mutex mtx_result_dag_;
+#endif
 };
 
 #include "larch/impl/merge/merge_impl.hpp"

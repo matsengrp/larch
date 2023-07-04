@@ -18,9 +18,8 @@ class TaskBase {
 
  protected:
   friend class Scheduler;
-  virtual void Run(size_t worker) = 0;
-  virtual bool CanIterate() const = 0;
-  virtual bool Finish() = 0;
+  virtual bool Run(size_t worker) = 0;
+  virtual void Finish() = 0;
 };
 
 inline bool operator<(const std::reference_wrapper<TaskBase>& lhs,
@@ -36,13 +35,11 @@ class Task : public TaskBase {
   void Join();
 
  private:
-  void Run(size_t worker) override;
-  bool CanIterate() const override;
-  bool Finish() override;
+  bool Run(size_t worker) override;
+  void Finish() override;
 
   F func_;
   std::atomic<size_t> iteration_;
-  std::atomic<bool> can_iterate_;
   std::mutex mtx_;
   std::condition_variable finished_;
   bool is_finished_ = false;
@@ -63,14 +60,20 @@ class Scheduler {
   inline size_t WorkersCount() const;
 
  private:
-  static inline void Worker(Scheduler& self, size_t id);
+  using QueueItem = std::pair<std::reference_wrapper<TaskBase>, size_t>;
+
+  inline void Worker(size_t id);
+  inline bool IsTaskRunning(size_t task_id) const;
+
   const size_t workers_count_;
   std::vector<std::thread> workers_;
+  std::vector<size_t> running_tasks_;
   std::atomic<bool> destroy_ = false;
+  std::atomic<size_t> ids_ = 0;
   std::mutex mtx_;
-  std::deque<std::reference_wrapper<TaskBase>> queue_;
-  std::set<std::reference_wrapper<TaskBase>> finished_tasks_;  // TODO: slow
+  std::deque<QueueItem> queue_;
   std::condition_variable queue_not_empty_;
+  std::set<size_t> done_tasks_;
 };
 
 template <typename V>

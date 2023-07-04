@@ -115,6 +115,9 @@ void Merge::MergeCompactGenomes(DAG dag, NodeId below, std::vector<NodeLabel>& l
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
+#ifdef USE_TSAN
+    std::unique_lock lock{mtx_result_dag_};
+#endif
     auto cg_iter = ResultDAG().AddDeduplicated(node.GetCompactGenome());
     labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
   }

@@ -1,7 +1,6 @@
 
 template <typename F>
-Task<F>::Task(F&& func)
-    : func_{std::forward<F>(func)}, iteration_{0}, can_iterate_{false} {}
+Task<F>::Task(F&& func) : func_{std::forward<F>(func)}, iteration_{0} {}
 
 template <typename F>
 void Task<F>::Join() {
@@ -12,31 +11,25 @@ void Task<F>::Join() {
 }
 
 template <typename F>
-void Task<F>::Run(size_t worker) {
-  if (not func_(iteration_.fetch_add(1), worker)) {
-    can_iterate_.store(false);
-  }
+bool Task<F>::Run(size_t worker) {
+  return func_(iteration_.fetch_add(1), worker);
 }
 
 template <typename F>
-bool Task<F>::CanIterate() const {
-  return can_iterate_.load();
-}
-
-template <typename F>
-bool Task<F>::Finish() {
-  std::unique_lock lock{mtx_};
+void Task<F>::Finish() {
   if (not is_finished_) {
-    is_finished_ = true;
-    finished_.notify_all();
-    return true;
+    std::unique_lock lock{mtx_};
+    if (not is_finished_) {
+      is_finished_ = true;
+      finished_.notify_all();
+    }
   }
-  return false;
 }
 
 Scheduler::Scheduler(size_t workers_count) : workers_count_{workers_count} {
   for (size_t i = 0; i < workers_count; ++i) {
-    workers_.push_back(std::thread(Worker, std::ref(*this), size_t{i}));
+    workers_.push_back(std::thread(&Scheduler::Worker, this, size_t{i}));
+    running_tasks_.push_back(NoId);
   }
 }
 
@@ -54,35 +47,54 @@ Scheduler::~Scheduler() {
 
 void Scheduler::AddTask(TaskBase& task) {
   std::unique_lock lock{mtx_};
-  queue_.push_back(std::ref(task));
+  queue_.push_back({std::ref(task), ids_.fetch_add(1)});
   queue_not_empty_.notify_all();
 }
 
 size_t Scheduler::WorkersCount() const { return workers_count_; }
 
-void Scheduler::Worker(Scheduler& self, size_t id) {
-  while (not self.destroy_.load()) {
-    std::unique_lock lock{self.mtx_};
-    for (auto i : self.finished_tasks_) {
-      i.get().Finish();
+void Scheduler::Worker(size_t id) {
+  while (not destroy_.load()) {
+    std::unique_lock lock{mtx_};
+    while (queue_.empty() and not destroy_.load()) {
+      queue_not_empty_.wait(lock);
     }
-    self.finished_tasks_.clear();
-    while (self.queue_.empty() and not self.destroy_.load()) {
-      self.queue_not_empty_.wait(lock);
-    }
-    if (self.destroy_.load()) {
+    if (destroy_.load()) {
       return;
     }
-    auto& task = self.queue_.front().get();
-    if (not task.CanIterate()) {
-      if (self.finished_tasks_.insert(std::ref(task)).second) {
-        self.queue_.pop_front();
+    running_tasks_.at(id) = NoId;
+    bool front_task_done = false;
+    while (not done_tasks_.empty() and not queue_.empty()) {
+      size_t task_id = queue_.front().second;
+      auto task = done_tasks_.find(task_id);
+      if (task != done_tasks_.end()) {
+        front_task_done = true;
+        if (not IsTaskRunning(task_id)) {
+          queue_.front().first.get().Finish();
+          queue_.pop_front();
+          done_tasks_.erase(task);
+          front_task_done = false;
+          continue;
+        }
       }
-    } else {
+      break;
+    }
+    if (not queue_.empty() and not front_task_done) {
+      QueueItem task = queue_.front();
+      running_tasks_.at(id) = task.second;
       lock.unlock();
-      task.Run(id);
+      if (not task.first.get().Run(id)) {
+        lock.lock();
+        running_tasks_.at(id) = NoId;
+        done_tasks_.insert(task.second);
+      }
     }
   }
+}
+
+bool Scheduler::IsTaskRunning(size_t task_id) const {
+  return std::find(running_tasks_.begin(), running_tasks_.end(), task_id) !=
+         running_tasks_.end();
 }
 
 template <typename T, typename WorkerId>

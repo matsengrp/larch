@@ -22,6 +22,8 @@
 #include <parallel_hashmap/phmap.h>
 #pragma GCC diagnostic pop
 
+static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
+
 template <typename T>
 using ConcurrentUnorderedSet =
     phmap::parallel_node_hash_set<T, std::hash<T>, std::equal_to<T>, std::allocator<T>,
@@ -38,13 +40,13 @@ Scheduler& DefaultScheduler();
 template <typename Lambda>
 void seq_for_each(size_t size, Lambda&& lambda) {
   for (size_t i = 0; i < size; ++i) {
-    lambda(i);
+    lambda(i, 0);
   }
 }
 
 template <typename Lambda>
 void parallel_for_each(size_t size, Lambda&& lambda) {
-#if 1
+#if 0
   std::vector<std::thread> workers;
   std::atomic<size_t> iteration{0};
   for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i) {
@@ -77,8 +79,6 @@ void parallel_for_each(size_t size, Lambda&& lambda) {
 struct NodeId;
 struct EdgeId;
 struct CladeIdx;
-
-static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
 
 template <typename T, typename Id>
 [[nodiscard]] static T& GetOrInsert(std::vector<T>& data, Id id) {
