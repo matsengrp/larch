@@ -72,7 +72,7 @@ void parallel_for_each(size_t size, Lambda&& lambda) {
     return true;
   });
   DefaultScheduler().AddTask(task);
-  task.Join();
+  task.Join(DefaultScheduler());
 #endif
 }
 

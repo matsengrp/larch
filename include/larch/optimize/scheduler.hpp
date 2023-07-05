@@ -9,8 +9,8 @@
 #include <atomic>
 #include <functional>
 #include <set>
-#include <map>
 #include <type_traits>
+#include <optional>
 
 class TaskBase {
  public:
@@ -19,7 +19,8 @@ class TaskBase {
  protected:
   friend class Scheduler;
   virtual bool Run(size_t worker) = 0;
-  virtual void Finish() = 0;
+  virtual void Finish(size_t workers_count) = 0;
+  virtual bool IsDone() const = 0;
 };
 
 inline bool operator<(const std::reference_wrapper<TaskBase>& lhs,
@@ -27,22 +28,26 @@ inline bool operator<(const std::reference_wrapper<TaskBase>& lhs,
   return std::addressof(lhs.get()) < std::addressof(rhs.get());
 }
 
+class Scheduler;
+
 template <typename F>
 class Task : public TaskBase {
  public:
   Task(F&& func);
 
-  void Join();
+  void Join(Scheduler& scheduler);
 
  private:
   bool Run(size_t worker) override;
-  void Finish() override;
+  void Finish(size_t workers_count) override;
+  bool IsDone() const override;
 
   F func_;
-  std::atomic<size_t> iteration_;
-  std::mutex mtx_;
-  std::condition_variable finished_;
-  bool is_finished_ = false;
+  std::atomic<size_t> iteration_ = 0;
+  std::atomic<size_t> finished_ = 0;
+  std::atomic<bool> done_ = false;
+  std::mutex done_mtx_;
+  std::condition_variable is_done_;
 };
 
 class Scheduler {
@@ -55,25 +60,35 @@ class Scheduler {
   Scheduler& operator=(const Scheduler&) = delete;
   Scheduler& operator=(Scheduler&&) = delete;
 
-  inline void AddTask(TaskBase& task);
+  inline size_t AddTask(TaskBase& task);
 
   inline size_t WorkersCount() const;
 
- private:
-  using QueueItem = std::pair<std::reference_wrapper<TaskBase>, size_t>;
+  inline bool WorkUntilDone(TaskBase& task);
 
-  inline void Worker(size_t id);
-  inline bool IsTaskRunning(size_t task_id) const;
+ private:
+  struct QueueItem {
+    std::reference_wrapper<TaskBase> task;
+    const size_t id;
+    bool done = false;
+  };
+
+  struct Worker {
+    std::unique_ptr<std::thread> thread = nullptr;
+    std::deque<QueueItem> queue = {};
+    std::mutex mtx = {};
+    std::condition_variable has_work = {};
+  };
+
+  inline void WorkerThread(size_t id);
+
+  template <typename Lambda>
+  void WorkUntil(size_t id, Lambda&& until);
 
   const size_t workers_count_;
-  std::vector<std::thread> workers_;
-  std::vector<size_t> running_tasks_;
+  std::vector<Worker> workers_;
   std::atomic<bool> destroy_ = false;
-  std::atomic<size_t> ids_ = 0;
-  std::mutex mtx_;
-  std::deque<QueueItem> queue_;
-  std::condition_variable queue_not_empty_;
-  std::set<size_t> done_tasks_;
+  std::atomic<size_t> task_ids_ = 0;
 };
 
 template <typename V>
@@ -117,7 +132,7 @@ class Reduction {
   Container data_;
   std::atomic<size_t> size_;
 #ifdef USE_TSAN
-  std::mutex mtx_;
+  std::mutex tsan_mtx_;
 #endif
 };
 

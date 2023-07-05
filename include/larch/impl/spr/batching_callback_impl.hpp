@@ -30,21 +30,21 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
     if (accepted.first) {
       batch_.Get().Emplace(std::this_thread::get_id(), std::move(fragment));
-      // if (batch_.Get().Size() > std::thread::hardware_concurrency()) {
-      //   std::unique_lock lock{merge_mtx_};
-      //   if (batch_.Get().Size() > std::thread::hardware_concurrency()) {
-      //     batch_.Take([&](auto& batch) {
-      //       // TODO view instead of vector
-      //       std::vector<decltype(std::declval<FragmentStorage<SPRViewType>>().View())>
-      //           batch_vec;
-      //       for (auto& i : batch.GetAll()) {
-      //         batch_vec.push_back(i.View());
-      //       }
-      //       merge_.AddDAGs(batch_vec | ranges::views::all);
-      //       batch_storage_.Clear();
-      //     });
-      //   }
-      // }
+      if (batch_.Get().Size() > std::thread::hardware_concurrency()) {
+        std::unique_lock lock{merge_mtx_};
+        if (batch_.Get().Size() > std::thread::hardware_concurrency()) {
+          batch_.Take([&](auto& batch) {
+            // TODO view instead of vector
+            std::vector<decltype(std::declval<FragmentStorage<SPRViewType>>().View())>
+                batch_vec;
+            for (auto& i : batch.GetAll()) {
+              batch_vec.push_back(i.View());
+            }
+            merge_.AddDAGs(batch_vec | ranges::views::all);
+            batch_storage_.Clear();
+          });
+        }
+      }
     }
 
     return accepted.second;

@@ -1,12 +1,14 @@
 
 template <typename F>
-Task<F>::Task(F&& func) : func_{std::forward<F>(func)}, iteration_{0} {}
+Task<F>::Task(F&& func) : func_{std::forward<F>(func)} {}
 
 template <typename F>
-void Task<F>::Join() {
-  std::unique_lock lock{mtx_};
-  while (not is_finished_) {
-    finished_.wait(lock);
+void Task<F>::Join(Scheduler& scheduler) {
+  if (not scheduler.WorkUntilDone(*this)) {
+    while (not done_.load()) {
+      std::unique_lock lock{done_mtx_};
+      is_done_.wait(lock);
+    }
   }
 }
 
@@ -16,85 +18,96 @@ bool Task<F>::Run(size_t worker) {
 }
 
 template <typename F>
-void Task<F>::Finish() {
-  if (not is_finished_) {
-    std::unique_lock lock{mtx_};
-    if (not is_finished_) {
-      is_finished_ = true;
-      finished_.notify_all();
-    }
+void Task<F>::Finish(size_t workers_count) {
+  if (finished_.fetch_add(1) + 1 == workers_count) {
+    done_.store(true);
+    std::unique_lock lock{done_mtx_};
+    is_done_.notify_all();
   }
 }
 
-Scheduler::Scheduler(size_t workers_count) : workers_count_{workers_count} {
+template <typename F>
+bool Task<F>::IsDone() const {
+  return done_.load();
+}
+
+Scheduler::Scheduler(size_t workers_count)
+    : workers_count_{workers_count}, workers_{workers_count} {
   for (size_t i = 0; i < workers_count; ++i) {
-    workers_.push_back(std::thread(&Scheduler::Worker, this, size_t{i}));
-    running_tasks_.push_back(NoId);
+    std::unique_lock lock{workers_.at(i).mtx};
+    workers_.at(i).thread =
+        std::make_unique<std::thread>(&Scheduler::WorkerThread, this, i);
   }
 }
 
 Scheduler::~Scheduler() {
   destroy_.store(true);
-  {
-    std::unique_lock lock{mtx_};
-    queue_.clear();
-    queue_not_empty_.notify_all();
-  }
   for (auto& i : workers_) {
-    i.join();
+    i.thread->join();
   }
 }
 
-void Scheduler::AddTask(TaskBase& task) {
-  std::unique_lock lock{mtx_};
-  queue_.push_back({std::ref(task), ids_.fetch_add(1)});
-  queue_not_empty_.notify_all();
+size_t Scheduler::AddTask(TaskBase& task) {
+  size_t task_id = task_ids_.fetch_add(1);
+  for (Worker& worker : workers_) {
+    std::unique_lock lock{worker.mtx};
+    worker.queue.push_back({std::ref(task), task_id});
+    worker.has_work.notify_all();
+  }
+  return task_id;
 }
 
 size_t Scheduler::WorkersCount() const { return workers_count_; }
 
-void Scheduler::Worker(size_t id) {
-  while (not destroy_.load()) {
-    std::unique_lock lock{mtx_};
-    while (queue_.empty() and not destroy_.load()) {
-      queue_not_empty_.wait(lock);
+bool Scheduler::WorkUntilDone(TaskBase& task) {
+  for (size_t id = 0; id < workers_count_; ++id) {
+    Worker& worker = workers_.at(id);
+    std::unique_lock lock{worker.mtx};
+    if (worker.thread == nullptr) {
+      throw std::runtime_error("Fail");
     }
-    if (destroy_.load()) {
-      return;
+    if (worker.thread->get_id() == std::this_thread::get_id()) {
+      lock.unlock();
+      WorkUntil(id, [&] { return task.IsDone(); });
+      return true;
     }
-    running_tasks_.at(id) = NoId;
-    bool front_task_done = false;
-    while (not done_tasks_.empty() and not queue_.empty()) {
-      size_t task_id = queue_.front().second;
-      auto task = done_tasks_.find(task_id);
-      if (task != done_tasks_.end()) {
-        front_task_done = true;
-        if (not IsTaskRunning(task_id)) {
-          queue_.front().first.get().Finish();
-          queue_.pop_front();
-          done_tasks_.erase(task);
-          front_task_done = false;
-          continue;
-        }
+  }
+  return false;
+}
+
+void Scheduler::WorkerThread(const size_t id) {
+  WorkUntil(id, [&] { return destroy_.load(); });
+}
+
+template <typename Lambda>
+void Scheduler::WorkUntil(size_t id, Lambda&& until) {
+  Worker& worker = workers_.at(id);
+  std::unique_lock lock{worker.mtx};
+  while (not until()) {
+    while (worker.queue.empty()) {
+      worker.has_work.wait(lock);
+    }
+    while (not worker.queue.empty() and worker.queue.front().done) {
+      worker.queue.pop_front();
+    }
+    if (worker.queue.empty()) {
+      continue;
+    }
+    for (QueueItem& item : worker.queue) {
+      if (item.done) {
+        continue;
+      }
+      lock.unlock();
+      if (not item.task.get().Run(id)) {
+        item.task.get().Finish(workers_count_);
+        lock.lock();
+        item.done = true;
+      } else {
+        lock.lock();
       }
       break;
     }
-    if (not queue_.empty() and not front_task_done) {
-      QueueItem task = queue_.front();
-      running_tasks_.at(id) = task.second;
-      lock.unlock();
-      if (not task.first.get().Run(id)) {
-        lock.lock();
-        running_tasks_.at(id) = NoId;
-        done_tasks_.insert(task.second);
-      }
-    }
   }
-}
-
-bool Scheduler::IsTaskRunning(size_t task_id) const {
-  return std::find(running_tasks_.begin(), running_tasks_.end(), task_id) !=
-         running_tasks_.end();
 }
 
 template <typename T, typename WorkerId>
@@ -114,7 +127,7 @@ template <typename... Args>
 T& Reduction<T, WorkerId>::Emplace(WorkerId worker, Args&&... args) {
   size_.fetch_add(1);
 #ifdef USE_TSAN
-  std::unique_lock lock{mtx_};
+  std::unique_lock lock{tsan_mtx_};
 #endif
   return data_[worker].emplace_back(std::forward<Args>(args)...);
 }
@@ -131,7 +144,7 @@ auto Reduction<T, WorkerId>::Get() {
 template <typename T, typename WorkerId>
 auto Reduction<T, WorkerId>::GetAll() {
 #ifdef USE_TSAN
-  std::unique_lock lock{mtx_};
+  std::unique_lock lock{tsan_mtx_};
 #endif
   return SizedView{Get() | ranges::views::join, Size()};
 }
@@ -155,7 +168,7 @@ template <typename T, typename WorkerId>
 void Reduction<T, WorkerId>::Clear() {
   size_.store(0);
 #ifdef USE_TSAN
-  std::unique_lock lock{mtx_};
+  std::unique_lock lock{tsan_mtx_};
 #endif
   data_.clear();
 }
