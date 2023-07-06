@@ -12,6 +12,9 @@
 #include <type_traits>
 #include <optional>
 
+#include "larch/parallel/node_hashset.hpp"
+#include "larch/parallel/node_hashmap.hpp"
+
 class Scheduler;
 
 class TaskBase {
@@ -148,9 +151,6 @@ class Reduction {
  private:
   Container data_;
   std::atomic<size_t> size_;
-#ifdef USE_TSAN
-  std::mutex tsan_mtx_;
-#endif
 };
 
 template <typename T>
@@ -170,4 +170,4 @@ class Snapshot {
   std::atomic<T*> data_;
 };
 
-#include "larch/impl/optimize/scheduler_impl.hpp"
+#include "larch/impl/parallel/scheduler_impl.hpp"

@@ -38,12 +38,12 @@ class Mutation {
       : position{pos},
         par_mut_nuc{static_cast<uint8_t>((par << 4) | (mut))},
         boundary1_all_major_allele{tie} {
-    auto ins_result = chromosome_map.emplace(chromosome, chromosome_map.size());
+    auto ins_result = chromosome_map.Emplace(chromosome, chromosome_map.Size());
     if (ins_result.second) {
       std::lock_guard<std::mutex> lk(ref_lock);
       chromosomes.push_back(chromosome);
     }
-    chrom_idx = ins_result.first->second;
+    chrom_idx = ins_result.first.get();
     if (ref) {
       std::lock_guard<std::mutex> lk(ref_lock);
       refs.resize(std::max(static_cast<int>(refs.size()), position + 1), 0);

@@ -16,24 +16,9 @@
 #include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wcast-align"
-#include <parallel_hashmap/phmap.h>
-#pragma GCC diagnostic pop
-
 static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
 
-template <typename T>
-using ConcurrentUnorderedSet =
-    phmap::parallel_node_hash_set<T, std::hash<T>, std::equal_to<T>, std::allocator<T>,
-                                  4, std::mutex>;
-template <typename K, typename V>
-using ConcurrentUnorderedMap =
-    phmap::parallel_node_hash_map<K, V, std::hash<K>, std::equal_to<K>,
-                                  std::allocator<std::pair<const K, V>>, 4, std::mutex>;
-
-#include "larch/optimize/scheduler.hpp"
+#include "larch/parallel/scheduler.hpp"
 
 Scheduler& DefaultScheduler();
 

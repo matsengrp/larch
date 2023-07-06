@@ -41,28 +41,23 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
   BuildConnectionsRaw();
   std::atomic<size_t> root_id{NoId};
   Reduction<NodeId> leafs{DefaultScheduler().WorkersCount()};
-#ifdef USE_TSAN
-  seq_for_each
-#else
-  parallel_for_each
-#endif
-      (dag.GetNodesCount(), [&](size_t i, size_t worker) {
-        auto node = dag.Get(NodeId{i});
-        for (auto clade : node.GetClades()) {
-          Assert(not clade.empty() && "Empty clade");
-        }
-        if (node.IsUA()) {
-          const size_t previous = root_id.exchange(node.GetId().value);
-          if (previous != NoId) {
-            std::cout << "Duplicate root: " << previous << " and " << node.GetId().value
-                      << "\n";
-          }
-          Assert(previous == NoId);
-        }
-        if (node.IsLeaf()) {
-          leafs.Emplace(worker, node);
-        }
-      });
+  parallel_for_each(dag.GetNodesCount(), [&](size_t i, size_t worker) {
+    auto node = dag.Get(NodeId{i});
+    for (auto clade : node.GetClades()) {
+      Assert(not clade.empty() && "Empty clade");
+    }
+    if (node.IsUA()) {
+      const size_t previous = root_id.exchange(node.GetId().value);
+      if (previous != NoId) {
+        std::cout << "Duplicate root: " << previous << " and " << node.GetId().value
+                  << "\n";
+      }
+      Assert(previous == NoId);
+    }
+    if (node.IsLeaf()) {
+      leafs.Emplace(worker, node);
+    }
+  });
   storage.root_.value = root_id.load();
   Assert(storage.root_.value != NoId);
   auto all_leafs = leafs.GetAll();
@@ -72,13 +67,8 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
   auto& dag = static_cast<const CRTP&>(*this);
-#ifdef USE_TSAN
-  seq_for_each
-#else
-  parallel_for_each
-#endif
-      (dag.GetNodesCount(),
-       [&](size_t i, size_t) { dag.Get(NodeId{i}).ClearConnections(); });
+  parallel_for_each(dag.GetNodesCount(),
+                    [&](size_t i, size_t) { dag.Get(NodeId{i}).ClearConnections(); });
   for (auto edge : dag.GetEdges()) {
     Assert(edge.GetParentId().value != NoId && "Edge has no parent");
     Assert(edge.GetChildId().value != NoId && "Edge has no child");

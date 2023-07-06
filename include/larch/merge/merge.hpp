@@ -96,15 +96,9 @@ class Merge {
 
   // Every unique node leaf set, found among all input DAGs.
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
-#ifdef USE_TSAN
-  std::mutex mtx_all_leaf_sets_;
-#endif
 
   // Node ids of the resulting DAG's nodes.
   ConcurrentUnorderedMap<NodeLabel, NodeId> result_nodes_;
-#ifdef USE_TSAN
-  std::mutex mtx_result_nodes_;
-#endif
 
   ConcurrentUnorderedMap<NodeId, NodeLabel> result_node_labels_;
 
@@ -113,9 +107,6 @@ class Merge {
 
   // Resulting DAG from merging the input DAGs.
   MergeDAGStorage result_dag_storage_;
-#ifdef USE_TSAN
-  std::mutex mtx_result_dag_;
-#endif
 };
 
 #include "larch/impl/merge/merge_impl.hpp"

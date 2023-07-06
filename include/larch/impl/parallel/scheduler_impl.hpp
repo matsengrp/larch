@@ -168,10 +168,11 @@ template <typename T, typename WorkerId>
 template <typename... Args>
 T& Reduction<T, WorkerId>::Emplace(WorkerId worker, Args&&... args) {
   size_.fetch_add(1);
-#ifdef USE_TSAN
-  std::unique_lock lock{tsan_mtx_};
-#endif
-  return data_[worker].emplace_back(std::forward<Args>(args)...);
+  if constexpr (UseVector) {
+    return data_[worker].emplace_back(std::forward<Args>(args)...);
+  } else {
+    return data_.At(worker).emplace_back(std::forward<Args>(args)...);
+  }
 }
 
 template <typename T, typename WorkerId>
@@ -179,15 +180,12 @@ auto Reduction<T, WorkerId>::Get() {
   if constexpr (UseVector) {
     return data_ | ranges::views::all;
   } else {
-    return data_ | ranges::views::values;
+    return data_.All() | ranges::views::values;
   }
 }
 
 template <typename T, typename WorkerId>
 auto Reduction<T, WorkerId>::GetAll() {
-#ifdef USE_TSAN
-  std::unique_lock lock{tsan_mtx_};
-#endif
   return SizedView{Get() | ranges::views::join, Size()};
 }
 
@@ -209,10 +207,7 @@ size_t Reduction<T, WorkerId>::WorkersCount() const {
 template <typename T, typename WorkerId>
 void Reduction<T, WorkerId>::Clear() {
   size_.store(0);
-#ifdef USE_TSAN
-  std::unique_lock lock{tsan_mtx_};
-#endif
-  data_.clear();
+  data_.Clear();
 }
 
 template <typename T>
