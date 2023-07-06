@@ -64,7 +64,7 @@ void parallel_for_each(size_t size, Lambda&& lambda) {
     i.join();
   }
 #else
-  Task task([&](size_t i, size_t worker) {
+  Task task(DefaultScheduler(), [&](size_t i, size_t worker) {
     if (i >= size) {
       return false;
     }

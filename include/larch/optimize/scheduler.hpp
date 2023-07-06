@@ -12,15 +12,26 @@
 #include <type_traits>
 #include <optional>
 
+class Scheduler;
+
 class TaskBase {
  public:
+  TaskBase(const TaskBase&) = delete;
+  TaskBase(TaskBase&&) = delete;
+  TaskBase& operator=(const TaskBase&) = delete;
+  TaskBase& operator=(TaskBase&&) = delete;
+  inline explicit TaskBase(Scheduler& scheduler);
   virtual ~TaskBase() {}
+
+  inline size_t GetId() const;
 
  protected:
   friend class Scheduler;
   virtual bool Run(size_t worker) = 0;
-  virtual void Finish(size_t workers_count) = 0;
-  virtual bool IsDone() const = 0;
+  virtual bool Finish(size_t workers_count) = 0;
+
+ private:
+  const size_t id_;
 };
 
 inline bool operator<(const std::reference_wrapper<TaskBase>& lhs,
@@ -28,24 +39,23 @@ inline bool operator<(const std::reference_wrapper<TaskBase>& lhs,
   return std::addressof(lhs.get()) < std::addressof(rhs.get());
 }
 
-class Scheduler;
-
 template <typename F>
 class Task : public TaskBase {
  public:
-  Task(F&& func);
+  Task(Scheduler& scheduler, F&& func);
+  ~Task();
 
-  void Join(Scheduler& scheduler);
+  void Join();                      // Join by waiting
+  void Join(Scheduler& scheduler);  // Join by working
 
  private:
   bool Run(size_t worker) override;
-  void Finish(size_t workers_count) override;
-  bool IsDone() const override;
+  bool Finish(size_t workers_count) override;
 
   F func_;
   std::atomic<size_t> iteration_ = 0;
   std::atomic<size_t> finished_ = 0;
-  std::atomic<bool> done_ = false;
+  bool done_ = false;
   std::mutex done_mtx_;
   std::condition_variable is_done_;
 };
@@ -60,13 +70,15 @@ class Scheduler {
   Scheduler& operator=(const Scheduler&) = delete;
   Scheduler& operator=(Scheduler&&) = delete;
 
-  inline size_t AddTask(TaskBase& task);
+  inline void AddTask(TaskBase& task);
 
   inline size_t WorkersCount() const;
 
-  inline bool WorkUntilDone(TaskBase& task);
+  inline bool JoinTask(TaskBase& task);
 
  private:
+  friend class TaskBase;
+
   struct QueueItem {
     std::reference_wrapper<TaskBase> task;
     const size_t id;
@@ -80,15 +92,20 @@ class Scheduler {
     std::condition_variable has_work = {};
   };
 
+  inline size_t NewTaskId();
+
   inline void WorkerThread(size_t id);
 
-  template <typename Lambda>
-  void WorkUntil(size_t id, Lambda&& until);
+  template <typename Until, typename Accept>
+  void WorkUntil(size_t id, Until&& until, Accept&& accept);
 
   const size_t workers_count_;
   std::vector<Worker> workers_;
   std::atomic<bool> destroy_ = false;
   std::atomic<size_t> task_ids_ = 0;
+
+  std::set<size_t> running_tasks_;
+  std::mutex running_tasks_mtx_;  // TODO concurrent flat set
 };
 
 template <typename V>

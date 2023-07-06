@@ -1,6 +1,6 @@
 #include "larch/common.hpp"
 
 Scheduler& DefaultScheduler() {
-  static Scheduler scheduler{3};
+  static Scheduler scheduler;
   return scheduler;
 }
