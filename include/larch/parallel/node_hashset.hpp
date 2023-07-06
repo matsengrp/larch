@@ -2,11 +2,10 @@
 
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <unordered_set>
 #include <optional>
 
-#include "larch/common.hpp"
+#include "larch/parallel/parallel_common.hpp"
 
 template <typename T>
 class ConcurrentUnorderedSet {
@@ -42,19 +41,19 @@ class ConcurrentUnorderedSet {
     return data_.find(value) != data_.end();
   }
 
-  std::optional<std::reference_wrapper<const T>> Find(const T& value) {
+  std::optional<Accessor<const T>> Find(const T& value) {
     std::unique_lock lock{mtx_};
     auto result = data_.find(value);
     if (result == data_.end()) {
       return std::nullopt;
     }
-    return std::ref(*result);
+    return Accessor<const T>{*result, mtx_};
   }
 
-  std::pair<std::reference_wrapper<const T>, bool> Insert(T&& value) {
+  std::pair<Accessor<const T>, bool> Insert(T&& value) {
     std::unique_lock lock{mtx_};
     auto result = data_.insert(std::forward<T>(value));
-    return {std::ref(*result.first), result.second};
+    return {Accessor<const T>{*result.first, mtx_}, result.second};
   }
 
  private:

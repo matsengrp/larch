@@ -171,7 +171,11 @@ T& Reduction<T, WorkerId>::Emplace(WorkerId worker, Args&&... args) {
   if constexpr (UseVector) {
     return data_[worker].emplace_back(std::forward<Args>(args)...);
   } else {
-    return data_.At(worker).emplace_back(std::forward<Args>(args)...);
+    return data_.At(worker).Get2(
+        [&](auto& val, auto&&... lambda_args) -> decltype(auto) {
+          return val.emplace_back(std::forward<decltype(lambda_args)>(lambda_args)...);
+        },
+        std::forward<Args>(args)...);
   }
 }
 

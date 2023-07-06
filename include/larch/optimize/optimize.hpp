@@ -43,7 +43,7 @@ class Mutation {
       std::lock_guard<std::mutex> lk(ref_lock);
       chromosomes.push_back(chromosome);
     }
-    chrom_idx = ins_result.first.get();
+    ins_result.first.Get([&](auto& val) { chrom_idx = val; });
     if (ref) {
       std::lock_guard<std::mutex> lk(ref_lock);
       refs.resize(std::max(static_cast<int>(refs.size()), position + 1), 0);

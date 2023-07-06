@@ -2,11 +2,10 @@
 
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <unordered_map>
 #include <optional>
 
-#include "larch/common.hpp"
+#include "larch/parallel/parallel_common.hpp"
 
 template <typename K, typename V>
 class ConcurrentUnorderedMap {
@@ -44,14 +43,14 @@ class ConcurrentUnorderedMap {
     return data_.size();
   }
 
-  V& At(const K& key) {
+  Accessor<V> At(const K& key) {
     std::unique_lock lock{mtx_};
-    return data_.at(key);
+    return {data_.at(key), mtx_};
   }
 
-  const V& At(const K& key) const {
+  Accessor<const V> At(const K& key) const {
     std::unique_lock lock{mtx_};
-    return data_.at(key);
+    return {data_.at(key), mtx_};
   }
 
   auto All() {
@@ -64,26 +63,26 @@ class ConcurrentUnorderedMap {
     return data_ | ranges::views::all;
   }
 
-  std::optional<std::reference_wrapper<V>> Find(const K& key) {
+  std::optional<Accessor<V>> Find(const K& key) {
     std::unique_lock lock{mtx_};
     auto result = data_.find(key);
     if (result == data_.end()) {
       return std::nullopt;
     }
-    return std::ref(result->second);
+    return Accessor<V>{result->second, mtx_};
   }
 
-  std::pair<std::reference_wrapper<V>, bool> Insert(Value&& value) {
+  std::pair<Accessor<V>, bool> Insert(Value&& value) {
     std::unique_lock lock{mtx_};
     auto result = data_.insert(std::forward<Value>(value));
-    return {std::ref(result.first->second), result.second};
+    return {{result.first->second, mtx_}, result.second};
   }
 
   template <typename... Args>
-  std::pair<std::reference_wrapper<V>, bool> Emplace(Args&&... args) {
+  std::pair<Accessor<V>, bool> Emplace(Args&&... args) {
     std::unique_lock lock{mtx_};
     auto result = data_.emplace(std::forward<Args>(args)...);
-    return {std::ref(result.first->second), result.second};
+    return {{result.first->second, mtx_}, result.second};
   }
 
   void Clear() {
