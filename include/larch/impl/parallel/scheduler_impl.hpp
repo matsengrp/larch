@@ -153,13 +153,13 @@ void Scheduler::WorkUntil(size_t id, Until&& until, Accept&& accept) {
 }
 
 template <typename T, typename WorkerId>
-Reduction<T, WorkerId>::Reduction(size_t workers_count) : data_{Reduction::MakeData()} {
+Reduction<T, WorkerId>::Reduction(size_t workers_count) : data_{new Data} {
   static_assert(UseVector);
   data_.load()->container.resize(workers_count);
 }
 
 template <typename T, typename WorkerId>
-Reduction<T, WorkerId>::Reduction() : data_{Reduction::MakeData()} {
+Reduction<T, WorkerId>::Reduction() : data_{new Data} {
   static_assert(not UseVector);
 }
 
@@ -171,7 +171,7 @@ Reduction<T, WorkerId>::~Reduction() {
 template <typename T, typename WorkerId>
 template <typename... Args>
 std::pair<T&, size_t> Reduction<T, WorkerId>::Emplace(WorkerId worker, Args&&... args) {
-  std::shared_lock lock{mtx_};
+  std::shared_lock lock{mtx_};  // Intentionally reversed role (writer = shared)
   Data* data = data_.load();
   size_t size = data->size.fetch_add(1) + 1;
   if constexpr (UseVector) {
@@ -191,7 +191,7 @@ template <typename T, typename WorkerId>
 template <typename Lambda>
 void Reduction<T, WorkerId>::Consume(Lambda&& lambda) {
   std::unique_lock lock{mtx_};
-  Data* old = data_.exchange(Reduction::MakeData());
+  Data* old = data_.exchange(new Data);
   lambda(SizedView{GetRange(old) | ranges::views::join, old->size.load()});
   delete old;
 }
@@ -200,7 +200,7 @@ template <typename T, typename WorkerId>
 template <typename Lambda>
 void Reduction<T, WorkerId>::ConsumeBatches(Lambda&& lambda) {
   std::unique_lock lock{mtx_};
-  Data* old = data_.exchange(Reduction::MakeData());
+  Data* old = data_.exchange(new Data);
   lambda(GetRange(old));
   delete old;
 }
@@ -224,9 +224,4 @@ auto Reduction<T, WorkerId>::GetRange(Data* data) {
   } else {
     return data->container.All() | ranges::views::values;
   }
-}
-
-template <typename T, typename WorkerId>
-auto* Reduction<T, WorkerId>::MakeData() {
-  return new Data;
 }

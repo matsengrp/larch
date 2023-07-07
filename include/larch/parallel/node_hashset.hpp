@@ -23,15 +23,17 @@ class ConcurrentUnorderedSet {
   }
 
   ConcurrentUnorderedSet& operator=(const ConcurrentUnorderedSet& other) {
-    SharedLock<M> other_lock{other.mtx_};
-    std::unique_lock lock{mtx_};
+    std::lock(other.mtx_, mtx_);
+    SharedLock<M> other_lock{other.mtx_, std::adopt_lock};
+    std::unique_lock lock{mtx_, std::adopt_lock};
     data_ = other.data_;
     return *this;
   }
 
   ConcurrentUnorderedSet& operator=(ConcurrentUnorderedSet&& other) {
-    SharedLock<M> other_lock{other.mtx_};
-    std::unique_lock lock{mtx_};
+    std::lock(other.mtx_, mtx_);
+    SharedLock<M> other_lock{other.mtx_, std::adopt_lock};
+    std::unique_lock lock{mtx_, std::adopt_lock};
     data_ = std::move(other.data_);
     return *this;
   }

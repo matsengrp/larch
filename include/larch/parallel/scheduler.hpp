@@ -156,7 +156,6 @@ class Reduction {
     std::atomic<size_t> size = 0;
   };
   static auto GetRange(Data* data);
-  static auto* MakeData();
   std::atomic<Data*> data_ = nullptr;
   std::shared_mutex mtx_;
 };
