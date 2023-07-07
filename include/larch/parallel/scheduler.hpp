@@ -158,8 +158,7 @@ class Reduction {
   static auto GetRange(Data* data);
   static auto* MakeData();
   std::atomic<Data*> data_ = nullptr;
-  std::atomic<bool> need_lock_ = false;
-  std::mutex mtx_;
+  std::shared_mutex mtx_;
 };
 
 #include "larch/impl/parallel/scheduler_impl.hpp"

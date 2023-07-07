@@ -55,7 +55,7 @@ void Merge::AddDAGs(DAGSRange&& dags, NodeId below) {
     for (auto& batch : rng) {
       parallel_for_each(batch.size(), [&](size_t i, size_t) {
         NodeId id = batch.at(i);
-        result_node_labels_.At(id).Get(
+        result_node_labels_.At(id).GetShared(
             [&](auto& val) { ResultDAG().Get(id) = val.GetCompactGenome(); });
       });
     }
@@ -138,7 +138,7 @@ void Merge::ComputeLeafSets(DAG dag, NodeId below, std::vector<NodeLabel>& label
     auto& ls = computed_ls.at(node.GetId().value);
     auto& label = labels.at(node.GetId().value);
     auto ls_iter = all_leaf_sets_.Insert(std::move(ls));
-    ls_iter.first.Get([&](auto& val) { label.SetLeafSet(std::addressof(val)); });
+    ls_iter.first.GetShared([&](auto& val) { label.SetLeafSet(std::addressof(val)); });
     Assert(not label.Empty());
   }
 }
@@ -159,11 +159,11 @@ void Merge::MergeNodes(size_t worker, DAG dag, NodeId below,
       auto ins_pair = result_nodes_.Insert({label, new_id});
       if (ins_pair.second) {
         new_id.value = node_id.fetch_add(1);
-        ins_pair.first.Get([&](auto& val) { val = new_id; });
+        ins_pair.first.GetExclusive([&](auto& val) { val = new_id; });
         result_node_labels_.Insert({new_id, label});
         added_nodes.Emplace(worker, new_id);
       } else {
-        ins_pair.first.Get([&](auto& val) { new_id.value = val.value; });
+        ins_pair.first.GetShared([&](auto& val) { new_id.value = val.value; });
       }
       auto result = std::make_pair(ins_pair, new_id);
       return result;
@@ -177,7 +177,8 @@ void Merge::MergeNodes(size_t worker, DAG dag, NodeId below,
       if (id.value != dag.GetNodesCount() - 1) {
         if constexpr (std::decay_t<decltype(dag)>::template contains_element_feature<
                           Component::Node, MappedNodes>) {
-          insert_pair.first.Get([&](auto& val) { dag.Get(id).SetOriginalId(val); });
+          insert_pair.first.GetShared(
+              [&](auto& val) { dag.Get(id).SetOriginalId(val); });
         }
       }
     }
@@ -212,8 +213,8 @@ void Merge::BuildResult(AddedEdge& added_edge, std::atomic<size_t>& edge_id) {
   auto child = result_nodes_.Find(edge.GetChild());
   Assert(parent.has_value());
   Assert(child.has_value());
-  parent.value().Get([&](auto& val) { parent_id = val; });
-  child.value().Get([&](auto& val) { child_id = val; });
+  parent.value().GetShared([&](auto& val) { parent_id = val; });
+  child.value().GetShared([&](auto& val) { child_id = val; });
   Assert(parent_id.value < ResultDAG().GetNodesCount());
   Assert(child_id.value < ResultDAG().GetNodesCount());
   clade = edge.ComputeCladeIdx();
@@ -221,5 +222,5 @@ void Merge::BuildResult(AddedEdge& added_edge, std::atomic<size_t>& edge_id) {
   ResultDAG().Get(id).Set(parent_id, child_id, clade);
   auto result_edge_it = result_edges_.Find(edge);
   Assert(result_edge_it.has_value());
-  result_edge_it.value().Get([&](auto& val) { val = id; });
+  result_edge_it.value().GetExclusive([&](auto& val) { val = id; });
 }

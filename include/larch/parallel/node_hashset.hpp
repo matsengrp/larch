@@ -7,58 +7,58 @@
 
 #include "larch/parallel/parallel_common.hpp"
 
-template <typename T>
+template <typename T, typename M = std::shared_mutex>
 class ConcurrentUnorderedSet {
  public:
   ConcurrentUnorderedSet() = default;
 
   ConcurrentUnorderedSet(const ConcurrentUnorderedSet& other) {
-    std::unique_lock lock{other.mtx_};
+    SharedLock<M> lock{other.mtx_};
     data_ = other.data_;
   }
 
   ConcurrentUnorderedSet(ConcurrentUnorderedSet&& other) {
-    std::unique_lock lock{other.mtx_};
+    SharedLock<M> lock{other.mtx_};
     data_ = std::move(other.data_);
   }
 
   ConcurrentUnorderedSet& operator=(const ConcurrentUnorderedSet& other) {
-    std::unique_lock other_lock{other.mtx_};
+    SharedLock<M> other_lock{other.mtx_};
     std::unique_lock lock{mtx_};
     data_ = other.data_;
     return *this;
   }
 
   ConcurrentUnorderedSet& operator=(ConcurrentUnorderedSet&& other) {
-    std::unique_lock other_lock{other.mtx_};
+    SharedLock<M> other_lock{other.mtx_};
     std::unique_lock lock{mtx_};
     data_ = std::move(other.data_);
     return *this;
   }
 
   bool Contains(const T& value) const {
-    std::unique_lock lock{mtx_};
+    SharedLock<M> lock{mtx_};
     return data_.find(value) != data_.end();
   }
 
-  std::optional<Accessor<const T>> Find(const T& value) {
-    std::unique_lock lock{mtx_};
+  std::optional<Accessor<const T, M>> Find(const T& value) {
+    SharedLock<M> lock{mtx_};
     auto result = data_.find(value);
     if (result == data_.end()) {
       return std::nullopt;
     }
-    return Accessor<const T>{*result, mtx_};
+    return Accessor<const T, M>{*result, mtx_};
   }
 
-  std::pair<Accessor<const T>, bool> Insert(T&& value) {
+  std::pair<Accessor<const T, M>, bool> Insert(T&& value) {
     std::unique_lock lock{mtx_};
     auto result = data_.insert(std::forward<T>(value));
-    return {Accessor<const T>{*result.first, mtx_}, result.second};
+    return {Accessor<const T, M>{*result.first, mtx_}, result.second};
   }
 
  private:
   std::unordered_set<T> data_;
-  mutable std::mutex mtx_;
+  mutable M mtx_;
 };
 
 #include "larch/impl/parallel/node_hashset_impl.hpp"

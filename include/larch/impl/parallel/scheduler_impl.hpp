@@ -171,13 +171,13 @@ Reduction<T, WorkerId>::~Reduction() {
 template <typename T, typename WorkerId>
 template <typename... Args>
 std::pair<T&, size_t> Reduction<T, WorkerId>::Emplace(WorkerId worker, Args&&... args) {
-  std::unique_lock lock{mtx_};
+  std::shared_lock lock{mtx_};
   Data* data = data_.load();
   size_t size = data->size.fetch_add(1) + 1;
   if constexpr (UseVector) {
     return {data->container[worker].emplace_back(std::forward<Args>(args)...), size};
   } else {
-    return {data->container.AtDefault(worker).Get2(
+    return {data->container.AtDefault(worker).GetExclusive(
                 [&](auto& val, auto&&... lambda_args) -> decltype(auto) {
                   return val.emplace_back(
                       std::forward<decltype(lambda_args)>(lambda_args)...);

@@ -90,16 +90,16 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
       NodeId dst_id = ToMergedNodeId(move.dst);
       NodeId lca_id = ToMergedNodeId(move.LCA);
 
-      const auto& src_clades = merge_.GetResultNodeLabels().At(src_id).Get2(
+      const auto& src_clades = merge_.GetResultNodeLabels().At(src_id).GetShared(
           [](auto& val) { return val.GetLeafSet()->GetClades(); });
-      const auto& dst_clades = merge_.GetResultNodeLabels().At(dst_id).Get2(
+      const auto& dst_clades = merge_.GetResultNodeLabels().At(dst_id).GetShared(
           [](auto& val) { return val.GetLeafSet()->GetClades(); });
 
       MAT::Node* curr_node = move.src;
       while (not(curr_node->node_id == lca_id.value)) {
         MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{0 /*FIXME*/});
         const auto& clades =
-            merge_.GetResultNodeLabels().At(node.GetId()).Get2([](auto& val) {
+            merge_.GetResultNodeLabels().At(node.GetId()).GetShared([](auto& val) {
               return val.GetLeafSet()->GetClades();
             });
         if (not merge_.ContainsLeafset(clades_difference(clades, src_clades))) {
@@ -115,7 +115,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
       while (not(curr_node->node_id == lca_id.value)) {
         MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{0 /*FIXME*/});
         const auto& clades =
-            merge_.GetResultNodeLabels().At(node.GetId()).Get2([](auto& val) {
+            merge_.GetResultNodeLabels().At(node.GetId()).GetShared([](auto& val) {
               return val.GetLeafSet()->GetClades();
             });
         if (not merge_.ContainsLeafset(clades_union(clades, dst_clades))) {

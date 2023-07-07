@@ -25,8 +25,8 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
   auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<Deduplicate<Feature>>()
                            .deduplicated_;
-  const Feature* result =
-      std::addressof(deduplicated.Insert(std::forward<Feature>(feature)).first.Get2([
+  const Feature* result = std::addressof(
+      deduplicated.Insert(std::forward<Feature>(feature)).first.GetShared([
       ](auto& val) -> auto& { return val; }));
   static_cast<const CRTP&>(*this)
       .template GetFeatureStorage<Deduplicate<Feature>>()
@@ -74,10 +74,11 @@ ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>::AddDeduplicated(
                            .deduplicated_;
   auto existing = deduplicated.Find(feature);
   if (existing.has_value()) {
-    return {
-        std::addressof(existing.value().Get2([](auto& val) -> auto& { return val; })),
-        false};
+    return {std::addressof(
+                existing.value().GetShared([](auto& val) -> auto& { return val; })),
+            false};
   }
   auto [iter, success] = deduplicated.Insert(feature.Copy());
-  return {std::addressof(iter.Get2([](auto& val) -> auto& { return val; })), success};
+  return {std::addressof(iter.GetShared([](auto& val) -> auto& { return val; })),
+          success};
 }
