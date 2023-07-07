@@ -151,10 +151,15 @@ class Reduction {
   size_t WorkersCount() const;
 
  private:
-  using Data = std::pair<Container, std::atomic<size_t>>;
+  struct Data {
+    Container container;
+    std::atomic<size_t> size = 0;
+  };
   static auto GetRange(Data* data);
   static auto* MakeData();
   std::atomic<Data*> data_ = nullptr;
+  std::atomic<bool> need_lock_ = false;
+  std::mutex mtx_;
 };
 
 #include "larch/impl/parallel/scheduler_impl.hpp"
