@@ -153,85 +153,80 @@ void Scheduler::WorkUntil(size_t id, Until&& until, Accept&& accept) {
 }
 
 template <typename T, typename WorkerId>
-Reduction<T, WorkerId>::Reduction(size_t workers_count) : size_{0} {
-  if constexpr (UseVector) {
-    data_.resize(workers_count);
-  }
+Reduction<T, WorkerId>::Reduction(size_t workers_count) : data_{Reduction::MakeData()} {
+  static_assert(UseVector);
+  data_.load()->first.resize(workers_count);
 }
 
 template <typename T, typename WorkerId>
-Reduction<T, WorkerId>::Reduction() : size_{0} {
+Reduction<T, WorkerId>::Reduction() : data_{Reduction::MakeData()} {
   static_assert(not UseVector);
 }
 
 template <typename T, typename WorkerId>
+Reduction<T, WorkerId>::~Reduction() {
+  delete data_.exchange(nullptr);
+}
+
+template <typename T, typename WorkerId>
 template <typename... Args>
-T& Reduction<T, WorkerId>::Emplace(WorkerId worker, Args&&... args) {
-  size_.fetch_add(1);
+std::pair<T&, size_t> Reduction<T, WorkerId>::Emplace(WorkerId worker, Args&&... args) {
+  Data* data = data_.load();
+  size_t size = data->second.fetch_add(1) + 1;
   if constexpr (UseVector) {
-    return data_[worker].emplace_back(std::forward<Args>(args)...);
+    return {data->first[worker].emplace_back(std::forward<Args>(args)...), size};
   } else {
-    return data_.At(worker).Get2(
-        [&](auto& val, auto&&... lambda_args) -> decltype(auto) {
-          return val.emplace_back(std::forward<decltype(lambda_args)>(lambda_args)...);
-        },
-        std::forward<Args>(args)...);
+    return {data->first.AtDefault(worker).Get2(
+                [&](auto& val, auto&&... lambda_args) -> decltype(auto) {
+                  return val.emplace_back(
+                      std::forward<decltype(lambda_args)>(lambda_args)...);
+                },
+                std::forward<Args>(args)...),
+            size};
   }
 }
 
 template <typename T, typename WorkerId>
-auto Reduction<T, WorkerId>::Get() {
-  if constexpr (UseVector) {
-    return data_ | ranges::views::all;
-  } else {
-    return data_.All() | ranges::views::values;
-  }
+template <typename Lambda>
+void Reduction<T, WorkerId>::Consume(Lambda&& lambda) {
+  Data* old = data_.exchange(Reduction::MakeData());
+  // Assert(old != nullptr);
+  lambda(SizedView{GetRange(old) | ranges::views::join, old->second.load()});
+  delete old;
 }
 
 template <typename T, typename WorkerId>
-auto Reduction<T, WorkerId>::GetAll() {
-  return SizedView{Get() | ranges::views::join, Size()};
+template <typename Lambda>
+void Reduction<T, WorkerId>::ConsumeBatches(Lambda&& lambda) {
+  Data* old = data_.exchange(Reduction::MakeData());
+  // Assert(old != nullptr);
+  lambda(GetRange(old));
+  delete old;
 }
 
 template <typename T, typename WorkerId>
-size_t Reduction<T, WorkerId>::Size() const {
-  return size_.load();
-}
-
-template <typename T, typename WorkerId>
-bool Reduction<T, WorkerId>::Empty() const {
-  return size_.load() > 0;
+size_t Reduction<T, WorkerId>::SizeApprox() const {
+  Data* data = data_.load();
+  return data->second.load();
 }
 
 template <typename T, typename WorkerId>
 size_t Reduction<T, WorkerId>::WorkersCount() const {
-  return data_.size();
+  Data* data = data_.load();
+  return data->first.size();
 }
 
 template <typename T, typename WorkerId>
-void Reduction<T, WorkerId>::Clear() {
-  size_.store(0);
-  data_.Clear();
+auto Reduction<T, WorkerId>::GetRange(Data* data) {
+  if constexpr (UseVector) {
+    return data->first | ranges::views::all;
+  } else {
+    return data->first.All() | ranges::views::values;
+  }
 }
 
-template <typename T>
-template <typename... Args>
-Snapshot<T>::Snapshot(Args&&... args) : data_{new T{std::forward<Args>(args)...}} {}
-
-template <typename T>
-Snapshot<T>::~Snapshot() {
-  delete data_.load();
-}
-
-template <typename T>
-T& Snapshot<T>::Get() {
-  return *data_.load();
-}
-
-template <typename T>
-template <typename Lambda, typename... Args>
-void Snapshot<T>::Take(Lambda&& lambda, Args&&... args) {
-  T* next = new T{std::forward<Args>(args)...};
-  std::unique_ptr<T> curr{std::atomic_exchange(&data_, next)};
-  lambda(*curr);
+template <typename T, typename WorkerId>
+auto* Reduction<T, WorkerId>::MakeData() {
+  return new Data{std::piecewise_construct, std::forward_as_tuple(),
+                  std::forward_as_tuple(0)};
 }

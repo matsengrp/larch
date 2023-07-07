@@ -44,26 +44,32 @@ void Merge::AddDAGs(DAGSRange&& dags, NodeId below) {
   std::atomic<size_t> edge_id{ResultDAG().GetEdgesCount()};
   ResultDAG().InitializeEdges(result_edges_.Size());
 
-  for (auto& batch : added_edges.Get()) {
-    parallel_for_each(batch.size(),
-                      [&](size_t i, size_t) { BuildResult(batch.at(i), edge_id); });
-  }
+  added_edges.ConsumeBatches([&](auto rng) {
+    for (auto& batch : rng) {
+      parallel_for_each(batch.size(),
+                        [&](size_t i, size_t) { BuildResult(batch.at(i), edge_id); });
+    }
+  });
 
-  for (auto& batch : added_nodes.Get()) {
-    parallel_for_each(batch.size(), [&](size_t i, size_t) {
-      NodeId id = batch.at(i);
-      result_node_labels_.At(id).Get(
-          [&](auto& val) { ResultDAG().Get(id) = val.GetCompactGenome(); });
-    });
-  }
+  added_nodes.ConsumeBatches([&](auto rng) {
+    for (auto& batch : rng) {
+      parallel_for_each(batch.size(), [&](size_t i, size_t) {
+        NodeId id = batch.at(i);
+        result_node_labels_.At(id).Get(
+            [&](auto& val) { ResultDAG().Get(id) = val.GetCompactGenome(); });
+      });
+    }
+  });
 
   if (was_empty) {
     ResultDAG().BuildConnections();
   } else {
-    for (const auto& [label, id, parent_id, child_id, clade] : added_edges.GetAll()) {
-      ResultDAG().Get(parent_id).AddEdge(clade, id, true);
-      ResultDAG().Get(child_id).AddEdge(clade, id, false);
-    }
+    added_edges.Consume([&](auto rng) {
+      for (const auto& [label, id, parent_id, child_id, clade] : rng) {
+        ResultDAG().Get(parent_id).AddEdge(clade, id, true);
+        ResultDAG().Get(child_id).AddEdge(clade, id, false);
+      }
+    });
   }
 
   Assert(result_nodes_.Size() == ResultDAG().GetNodesCount());

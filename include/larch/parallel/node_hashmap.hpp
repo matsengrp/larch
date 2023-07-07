@@ -43,6 +43,11 @@ class ConcurrentUnorderedMap {
     return data_.size();
   }
 
+  Accessor<V> AtDefault(const K& key) {
+    std::unique_lock lock{mtx_};
+    return {data_[key], mtx_};
+  }
+
   Accessor<V> At(const K& key) {
     std::unique_lock lock{mtx_};
     return {data_.at(key), mtx_};

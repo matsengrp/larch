@@ -13,8 +13,9 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
   auto& storage = [this]() -> SPRType& {
     std::shared_lock lock{mat_mtx_};
     Assert(sample_mat_storage_ != nullptr);
-    return batch_storage_.Emplace(std::this_thread::get_id(),
-                                  SPRStorage(sample_mat_storage_->View()));
+    return batch_storage_
+        .Emplace(std::this_thread::get_id(), SPRStorage(sample_mat_storage_->View()))
+        .first;
   }();
 
   storage.View().GetRoot().Validate(true);
@@ -29,21 +30,20 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
                     nodes_with_major_allele_set_change);
 
     if (accepted.first) {
-      batch_.Get().Emplace(std::this_thread::get_id(), std::move(fragment));
-      if (batch_.Get().Size() > std::thread::hardware_concurrency()) {
-        std::unique_lock lock{merge_mtx_};
-        if (batch_.Get().Size() > std::thread::hardware_concurrency()) {
-          batch_.Take([&](auto& batch) {
-            // TODO view instead of vector
-            std::vector<decltype(std::declval<FragmentStorage<SPRViewType>>().View())>
-                batch_vec;
-            for (auto& i : batch.GetAll()) {
-              batch_vec.push_back(i.View());
-            }
-            merge_.AddDAGs(batch_vec | ranges::views::all);
-            batch_storage_.Clear();
-          });
-        }
+      if (batch_.Emplace(std::this_thread::get_id(), std::move(fragment)).second >
+          std::thread::hardware_concurrency()) {
+        // TODO view instead of vector
+        std::vector<decltype(std::declval<FragmentStorage<SPRViewType>>().View())>
+            batch_vec;
+        batch_.Consume([&](auto rng) {
+          for (auto& i : rng) {
+            batch_vec.push_back(i.View());
+          }
+        });
+        // std::lock_guard lock{merge_mtx_};
+        // merge_.AddDAGs(batch_vec | ranges::views::all);
+        // std::unique_lock lock{mat_mtx_};
+        // batch_storage_.Clear();
       }
     }
 
@@ -62,18 +62,19 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   check_edge_mutations(reassigned_states_storage_.View().Const());
   reassigned_states_storage_.View().RecomputeCompactGenomes(true);
   {
-    std::unique_lock lock{merge_mtx_};
-    if (not batch_.Get().Empty()) {
-      // TODO view instead of vector
-      std::vector<decltype(std::declval<FragmentStorage<SPRViewType>>().View())>
-          batch_vec;
-      for (auto& i : batch_.Get().GetAll()) {
-        batch_vec.push_back(i.View());
+    std::lock_guard lock{merge_mtx_};
+    batch_.Consume([&](auto rng) {
+      if (not rng.empty()) {
+        // TODO view instead of vector
+        std::vector<decltype(std::declval<FragmentStorage<SPRViewType>>().View())>
+            batch_vec;
+        for (auto& i : rng) {
+          batch_vec.push_back(i.View());
+        }
+        merge_.AddDAGs(batch_vec | ranges::views::all);
+        // batch_storage_.Clear();
       }
-      merge_.AddDAGs(batch_vec | ranges::views::all);
-      batch_.Get().Clear();
-      batch_storage_.Clear();
-    }
+    });
     merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
     merge_.GetResult().GetRoot().Validate(true, true);
     merge_.ComputeResultEdgeMutations();
@@ -92,7 +93,7 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   check_edge_mutations(reassigned_states_storage_.View().Const());
   reassigned_states_storage_.View().RecomputeCompactGenomes(true);
   {
-    std::unique_lock lock{merge_mtx_};
+    std::lock_guard lock{merge_mtx_};
     merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
     merge_.GetResult().GetRoot().Validate(true, true);
     merge_.ComputeResultEdgeMutations();

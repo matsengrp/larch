@@ -11,6 +11,7 @@
 #include <set>
 #include <type_traits>
 #include <optional>
+#include <shared_mutex>
 
 #include "larch/parallel/node_hashset.hpp"
 #include "larch/parallel/node_hashmap.hpp"
@@ -118,6 +119,7 @@ class SizedView {
   decltype(auto) begin() { return view_.begin(); }
   decltype(auto) end() { return view_.end(); }
   size_t size() const { return size_; }
+  bool empty() const { return size_ == 0; }
 
  private:
   V view_;
@@ -134,40 +136,25 @@ class Reduction {
   explicit Reduction(size_t workers_count);
 
   Reduction();
+  ~Reduction();
 
   template <typename... Args>
-  T& Emplace(WorkerId worker, Args&&... args);
+  std::pair<T&, size_t> Emplace(WorkerId worker, Args&&... args);
 
-  auto Get();
+  template <typename Lambda>
+  void Consume(Lambda&& lambda);
 
-  auto GetAll();
+  template <typename Lambda>
+  void ConsumeBatches(Lambda&& lambda);
 
-  size_t Size() const;
-  bool Empty() const;
+  size_t SizeApprox() const;
   size_t WorkersCount() const;
 
-  void Clear();
-
  private:
-  Container data_;
-  std::atomic<size_t> size_;
-};
-
-template <typename T>
-class Snapshot {
- public:
-  template <typename... Args>
-  explicit Snapshot(Args&&... args);
-
-  ~Snapshot();
-
-  T& Get();
-
-  template <typename Lambda, typename... Args>
-  void Take(Lambda&& lambda, Args&&... args);
-
- private:
-  std::atomic<T*> data_;
+  using Data = std::pair<Container, std::atomic<size_t>>;
+  static auto GetRange(Data* data);
+  static auto* MakeData();
+  std::atomic<Data*> data_ = nullptr;
 };
 
 #include "larch/impl/parallel/scheduler_impl.hpp"
