@@ -4,8 +4,6 @@
 
 #include <tbb/global_control.h>
 
-using NodeSeqMap = std::unordered_map<NodeId, std::string>;
-
 [[maybe_unused]] static auto BuildNodeSequenceMap(MADAGStorage &dag_storage,
                                                   bool include_nonleaf_nodes = false) {
   NodeSeqMap node_seq_map;
@@ -41,53 +39,6 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   return true;
 }
 
-[[maybe_unused]] static auto MakeSampleDAGTopology() {
-  MADAGStorage dag_storage;
-  auto dag = dag_storage.View();
-
-  dag.SetReferenceSequence("GAA");
-
-  dag.InitializeNodes(11);
-
-  dag.AddEdge({0}, {0}, {10}, {0});
-  dag.AddEdge({1}, {7}, {1}, {0});
-  dag.AddEdge({2}, {7}, {2}, {1});
-  dag.AddEdge({3}, {8}, {3}, {0});
-  dag.AddEdge({4}, {8}, {4}, {1});
-  dag.AddEdge({5}, {9}, {5}, {0});
-  dag.AddEdge({6}, {9}, {6}, {1});
-  dag.AddEdge({7}, {8}, {7}, {2});
-  dag.AddEdge({8}, {10}, {8}, {0});
-  dag.AddEdge({9}, {10}, {9}, {1});
-
-  dag.BuildConnections();
-
-  return dag_storage;
-}
-
-[[maybe_unused]] static auto MakeSampleUnambiguousCompleteSequenceMap() {
-  NodeSeqMap node_seq_map;
-  node_seq_map[{1}] = {"ACC"};
-  node_seq_map[{2}] = {"TAG"};
-  node_seq_map[{3}] = {"AGG"};
-  node_seq_map[{4}] = {"ACG"};
-  node_seq_map[{5}] = {"CTT"};
-  node_seq_map[{6}] = {"TCC"};
-
-  node_seq_map[{7}] = {"TGG"};
-  node_seq_map[{8}] = {"CTC"};
-  node_seq_map[{9}] = {"AGT"};
-  node_seq_map[{10}] = {"GAA"};
-  return node_seq_map;
-}
-
-[[maybe_unused]] static auto MakeSampleAmbiguousCompleteSequenceMap() {
-  NodeSeqMap node_seq_map = MakeSampleUnambiguousCompleteSequenceMap();
-  node_seq_map[{2}] = {"TNN"};
-  node_seq_map[{4}] = {"ANG"};
-  return node_seq_map;
-}
-
 [[maybe_unused]] static auto VerifyCompactGenomesCompatibleWithLeaves(
     MADAGStorage &dag_storage, NodeSeqMap &truth_leaf_seq_map) {
   auto dag = dag_storage.View();
@@ -110,17 +61,13 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 }
 
 [[maybe_unused]] void test_compare_ambiguities() {
-  auto amb_dag_storage = MakeSampleDAGTopology();
+  auto amb_dag_storage = MakeAmbiguousSampleDAG();
   auto amb_seq_map = MakeSampleAmbiguousCompleteSequenceMap();
   auto amb_dag = amb_dag_storage.View();
-  amb_dag.SetLeafCompactGenomesFromSequenceMap(amb_seq_map);
-  amb_dag.RecomputeEdgeMutations();
 
-  auto unamb_dag_storage = MakeSampleDAGTopology();
+  auto unamb_dag_storage = MakeUnambiguousSampleDAG();
   auto unamb_seq_map = MakeSampleUnambiguousCompleteSequenceMap();
   auto unamb_dag = unamb_dag_storage.View();
-  unamb_dag.SetLeafCompactGenomesFromSequenceMap(unamb_seq_map);
-  unamb_dag.RecomputeEdgeMutations();
 
   bool write_files = true;
   if (write_files) {

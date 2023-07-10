@@ -58,6 +58,7 @@ ExternalProject_Add(isa-l
   BUILD_COMMAND make && make other
   INSTALL_COMMAND make install
 )
+set(isal_lib ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -110,7 +111,10 @@ file(GLOB MATOPTIMIZE_SRC
   "deps/usher/src/matOptimize/optimize_tree.cpp"
   "deps/usher/src/matOptimize/priority_conflict_resolver.cpp"
   "deps/usher/src/matOptimize/check_samples.cpp"
+
   "deps/usher/src/matOptimize/import_vcf_fast.cpp"
+  "deps/usher/src/matOptimize/VCF_load_tree.cpp"
+  "deps/usher/src/matOptimize/condense.cpp"
 )
 
 function(larch_link_opts PRODUCT)
@@ -168,6 +172,7 @@ add_dependencies(usher range-v3)
 target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 larch_link_opts(usher)
 target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+target_link_libraries(usher PUBLIC ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
 set_target_properties(usher
   PROPERTIES CXX_CLANG_TIDY ""
 )
@@ -205,7 +210,6 @@ larch_executable(larch-test
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
-target_link_libraries(larch-test PUBLIC ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
 add_dependencies(larch-test larch-usher-glue)
 set_target_properties(larch-test
   PROPERTIES CXX_CLANG_TIDY ""

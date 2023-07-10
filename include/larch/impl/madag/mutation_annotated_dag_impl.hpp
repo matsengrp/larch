@@ -28,22 +28,49 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SetReferenceSequence(
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
-    SetLeafCompactGenomesFromSequenceMap(
-        const std::unordered_map<NodeId, std::string>& leaf_sequence_map) const {
+    SetCompactGenomesFromNodeSequenceMap(
+        const std::unordered_map<NodeId, std::string>& node_sequence_map) const {
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
 
   auto ref_seq = dag.GetReferenceSequence();
-  auto ComputeCGFromSequence = [&dag, &ref_seq](const std::string& leaf_seq,
-                                                Node for_node) {
-    CompactGenome new_cg(leaf_seq, ref_seq);
+  auto BuildCGFromSequence = [&dag, &ref_seq](const std::string& node_seq,
+                                              Node for_node) {
+    CompactGenome new_cg(node_seq, ref_seq);
     for_node = std::move(new_cg);
   };
 
   for (auto node : dag.GetNodes()) {
-    if (leaf_sequence_map.find(node.GetId()) != leaf_sequence_map.end()) {
-      auto& leaf_seq = leaf_sequence_map.find(node.GetId())->second;
-      ComputeCGFromSequence(leaf_seq, node);
+    if (node_sequence_map.find(node.GetId()) != node_sequence_map.end()) {
+      auto& node_seq = node_sequence_map.find(node.GetId())->second;
+      BuildCGFromSequence(node_seq, node);
+    }
+  }
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
+    SetCompactGenomesFromNodeMutationMap(
+        std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>&&
+            node_mutation_map) const {
+  std::ignore = node_mutation_map;
+  auto dag = static_cast<const CRTP&>(*this);
+  using Node = typename decltype(dag)::NodeView;
+
+  auto BuildCGFromMutation =
+      [&dag](ContiguousMap<MutationPosition, MutationBase>&& new_muts, Node for_node) {
+        std::ignore = new_muts;
+        std::ignore = for_node;
+        // CompactGenome new_cg(new_muts);
+        // for_node = std::move(new_cg);
+      };
+  std::ignore = BuildCGFromMutation;
+
+  for (auto node : dag.GetNodes()) {
+    if (node_mutation_map.find(node.GetId()) != node_mutation_map.end()) {
+      const auto& muts = node_mutation_map.find(node.GetId())->second;
+      std::ignore = muts;
+      // BuildCGFromMutation(std::move(muts), node);
     }
   }
 }

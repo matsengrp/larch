@@ -71,7 +71,9 @@ static inline uint8_t EncodeBaseMAT(char base) {
     case 'G':
       return 4;
     case 'T':
-      return 8;  // NOLINT
+      return 8;
+    case 'N':
+      return 1 + 2 + 4 + 8;  // NOLINT
     default:
       Fail("Invalid base");
   };
@@ -109,6 +111,8 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT(MAT::Tree& tree) con
       std::addressof(tree);
 
   auto root_node = dag.GetRoot().GetFirstChild().GetChild();
+  auto root_node_id = root_node.GetId().value;
+  auto root_node_name = root_node.GetSampleId().value_or(std::to_string(root_node_id));
   // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
   MATNodePtr mat_root_node = new MAT::Node(root_node.GetId().value);
   root_node.SetMATNode(mat_root_node);
@@ -124,7 +128,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT(MAT::Tree& tree) con
   }
 
   tree.root = mat_root_node;
-  tree.register_node_serial(mat_root_node);
+  tree.register_node_serial(mat_root_node, root_node_name);
   BuildHelper(root_node, mat_root_node, tree);
 }
 
@@ -155,9 +159,10 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(Node dag_node,
     const auto& mutations = edge.GetEdgeMutations();
     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
     size_t node_id = edge.GetChild().GetId().value;
+    auto node_name = edge.GetChild().GetSampleId().value_or(std::to_string(node_id));
     auto* node = new MAT::Node(node_id);
     edge.GetChild().SetMATNode(node);
-    new_tree.register_node_serial(node);
+    new_tree.register_node_serial(node, node_name);
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
       Assert(pos.value != NoId);
