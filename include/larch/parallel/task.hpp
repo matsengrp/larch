@@ -50,4 +50,3 @@ class Task : public TaskBase {
   std::recursive_mutex done_mtx_;
   std::condition_variable_any is_done_;
 };
-

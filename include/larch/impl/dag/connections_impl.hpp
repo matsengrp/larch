@@ -2,6 +2,8 @@
 #error "Don't include this header"
 #endif
 
+#include <iostream>
+
 #include "larch/parallel/reduction.hpp"
 #include "larch/parallel/for_loop.hpp"
 

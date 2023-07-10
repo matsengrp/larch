@@ -48,8 +48,8 @@ class Scheduler {
 
   inline void WorkerThread(size_t id);
 
-  template <typename Until, typename Accept>
-  void WorkUntil(size_t id, Until&& until, Accept&& accept);
+  template <typename Until>
+  void WorkUntil(size_t id, Until&& until);
 
   inline std::optional<size_t> FindWorkerId() const;
 

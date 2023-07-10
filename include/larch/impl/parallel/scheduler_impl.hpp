@@ -35,18 +35,13 @@ size_t Scheduler::WorkersCount() const { return workers_count_; }
 bool Scheduler::JoinTask(TaskBase& task) {
   auto worker_id = FindWorkerId();
   if (worker_id.has_value()) {
-    WorkUntil(
-        worker_id.value(),
-        [&] {
-          if (destroy_.load()) {
-            return true;
-          }
-          std::unique_lock tasks_lock{running_tasks_mtx_};
-          return running_tasks_.find(task.GetId()) == running_tasks_.end();
-        },
-        [&](QueueItem& item) {
-          return not item.done and item.task.get().GetId() != task.GetId();
-        });
+    WorkUntil(worker_id.value(), [&] {
+      if (destroy_.load()) {
+        return true;
+      }
+      std::unique_lock tasks_lock{running_tasks_mtx_};
+      return running_tasks_.find(task.GetId()) == running_tasks_.end();
+    });
     return true;
   } else {
     return false;
@@ -56,16 +51,14 @@ bool Scheduler::JoinTask(TaskBase& task) {
 size_t Scheduler::NewTaskId() { return task_ids_.fetch_add(1); }
 
 void Scheduler::WorkerThread(const size_t id) {
-  WorkUntil(
-      id, [&] { return destroy_.load(); },
-      [&](QueueItem& item) { return not item.done; });
+  WorkUntil(id, [&] { return destroy_.load(); });
 }
 
-template <typename Until, typename Accept>
-void Scheduler::WorkUntil(size_t id, Until&& until, Accept&& accept) {
+template <typename Until>
+void Scheduler::WorkUntil(size_t id, Until&& until) {
   Worker& worker = workers_.at(id);
-  std::unique_lock lock{worker.mtx};
   while (not until()) {
+    std::unique_lock lock{worker.mtx};
     while (worker.queue.empty()) {
       worker.has_work.wait(lock);
       if (until()) {
@@ -79,22 +72,19 @@ void Scheduler::WorkUntil(size_t id, Until&& until, Accept&& accept) {
       continue;
     }
     for (QueueItem& item : worker.queue) {
-      if (not accept(item)) {
+      if (item.done) {
         continue;
       }
       const size_t task_id = item.task.get().GetId();
       lock.unlock();
       if (not item.task.get().Run(id)) {
+        item.done = true;
         {
           std::unique_lock tasks_lock{running_tasks_mtx_};
           if (item.task.get().Finish(workers_count_)) {
             running_tasks_.erase(task_id);
           }
         }
-        lock.lock();
-        item.done = true;
-      } else {
-        lock.lock();
       }
       break;
     }
