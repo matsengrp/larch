@@ -14,7 +14,8 @@
 #include <random>
 #include <set>
 
-#include "larch/common.hpp"
+#include "larch/parallel/for_loop.hpp"
+#include "larch/parallel/node_hashmap.hpp"
 
 static uint8_t one_hot_to_two_bit(uint8_t arg) {
   return static_cast<uint8_t>(31 - __builtin_clz(static_cast<unsigned int>(arg)));

@@ -2,8 +2,8 @@
 #error "Don't include this header"
 #endif
 
-#include <atomic>
-#include <iostream>
+#include "larch/parallel/reduction.hpp"
+#include "larch/parallel/for_loop.hpp"
 
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Connections, CRTP, Tag>::IsTree() const {

@@ -1,48 +1,3 @@
-
-TaskBase::TaskBase(Scheduler& scheduler) : id_{scheduler.NewTaskId()} {}
-
-size_t TaskBase::GetId() const { return id_; }
-
-template <typename F>
-Task<F>::Task(Scheduler& scheduler, F&& func)
-    : TaskBase{scheduler}, func_{std::forward<F>(func)} {}
-
-template <typename F>
-Task<F>::~Task() {
-  Join();
-}
-
-template <typename F>
-void Task<F>::Join() {
-  std::unique_lock lock{done_mtx_};
-  while (not done_) {
-    is_done_.wait(lock);
-  }
-}
-
-template <typename F>
-void Task<F>::Join(Scheduler& scheduler) {
-  if (not scheduler.JoinTask(*this)) {
-    Join();
-  }
-}
-
-template <typename F>
-bool Task<F>::Run(size_t worker) {
-  return func_(iteration_.fetch_add(1), worker);
-}
-
-template <typename F>
-bool Task<F>::Finish(size_t workers_count) {
-  if (finished_.fetch_add(1) + 1 == workers_count) {
-    std::unique_lock lock{done_mtx_};
-    done_ = true;
-    is_done_.notify_all();
-    return true;
-  }
-  return false;
-}
-
 Scheduler::Scheduler(size_t workers_count)
     : workers_count_{workers_count}, workers_{workers_count} {
   for (size_t i = 0; i < workers_count; ++i) {
@@ -78,30 +33,24 @@ void Scheduler::AddTask(TaskBase& task) {
 size_t Scheduler::WorkersCount() const { return workers_count_; }
 
 bool Scheduler::JoinTask(TaskBase& task) {
-  for (size_t id = 0; id < workers_count_; ++id) {
-    Worker& worker = workers_.at(id);
-    std::unique_lock lock{worker.mtx};
-    if (worker.thread == nullptr) {
-      throw std::runtime_error("Fail");
-    }
-    if (worker.thread->get_id() == std::this_thread::get_id()) {
-      lock.unlock();
-      WorkUntil(
-          id,
-          [&] {
-            if (destroy_.load()) {
-              return true;
-            }
-            std::unique_lock tasks_lock{running_tasks_mtx_};
-            return running_tasks_.find(task.GetId()) == running_tasks_.end();
-          },
-          [&](QueueItem& item) {
-            return not item.done and item.task.get().GetId() != task.GetId();
-          });
-      return true;
-    }
+  auto worker_id = FindWorkerId();
+  if (worker_id.has_value()) {
+    WorkUntil(
+        worker_id.value(),
+        [&] {
+          if (destroy_.load()) {
+            return true;
+          }
+          std::unique_lock tasks_lock{running_tasks_mtx_};
+          return running_tasks_.find(task.GetId()) == running_tasks_.end();
+        },
+        [&](QueueItem& item) {
+          return not item.done and item.task.get().GetId() != task.GetId();
+        });
+    return true;
+  } else {
+    return false;
   }
-  return false;
 }
 
 size_t Scheduler::NewTaskId() { return task_ids_.fetch_add(1); }
@@ -152,76 +101,16 @@ void Scheduler::WorkUntil(size_t id, Until&& until, Accept&& accept) {
   }
 }
 
-template <typename T, typename WorkerId>
-Reduction<T, WorkerId>::Reduction(size_t workers_count) : data_{new Data} {
-  static_assert(UseVector);
-  data_.load()->container.resize(workers_count);
-}
-
-template <typename T, typename WorkerId>
-Reduction<T, WorkerId>::Reduction() : data_{new Data} {
-  static_assert(not UseVector);
-}
-
-template <typename T, typename WorkerId>
-Reduction<T, WorkerId>::~Reduction() {
-  delete data_.exchange(nullptr);
-}
-
-template <typename T, typename WorkerId>
-template <typename... Args>
-std::pair<T&, size_t> Reduction<T, WorkerId>::Emplace(WorkerId worker, Args&&... args) {
-  std::shared_lock lock{mtx_};  // Intentionally reversed role (writer = shared)
-  Data* data = data_.load();
-  size_t size = data->size.fetch_add(1) + 1;
-  if constexpr (UseVector) {
-    return {data->container[worker].emplace_back(std::forward<Args>(args)...), size};
-  } else {
-    return {data->container.AtDefault(worker).GetExclusive(
-                [&](auto& val, auto&&... lambda_args) -> decltype(auto) {
-                  return val.emplace_back(
-                      std::forward<decltype(lambda_args)>(lambda_args)...);
-                },
-                std::forward<Args>(args)...),
-            size};
+std::optional<size_t> Scheduler::FindWorkerId() const {
+  for (size_t id = 0; id < workers_count_; ++id) {
+    const Worker& worker = workers_.at(id);
+    std::unique_lock lock{worker.mtx};
+    if (worker.thread == nullptr) {
+      throw std::runtime_error("Fail");
+    }
+    if (worker.thread->get_id() == std::this_thread::get_id()) {
+      return id;
+    }
   }
-}
-
-template <typename T, typename WorkerId>
-template <typename Lambda>
-void Reduction<T, WorkerId>::Consume(Lambda&& lambda) {
-  std::unique_lock lock{mtx_};
-  Data* old = data_.exchange(new Data);
-  lambda(SizedView{GetRange(old) | ranges::views::join, old->size.load()});
-  delete old;
-}
-
-template <typename T, typename WorkerId>
-template <typename Lambda>
-void Reduction<T, WorkerId>::ConsumeBatches(Lambda&& lambda) {
-  std::unique_lock lock{mtx_};
-  Data* old = data_.exchange(new Data);
-  lambda(GetRange(old));
-  delete old;
-}
-
-template <typename T, typename WorkerId>
-size_t Reduction<T, WorkerId>::SizeApprox() const {
-  Data* data = data_.load();
-  return data->size.load();
-}
-
-template <typename T, typename WorkerId>
-size_t Reduction<T, WorkerId>::WorkersCount() const {
-  Data* data = data_.load();
-  return data->container.size();
-}
-
-template <typename T, typename WorkerId>
-auto Reduction<T, WorkerId>::GetRange(Data* data) {
-  if constexpr (UseVector) {
-    return data->container | ranges::views::all;
-  } else {
-    return data->container.All() | ranges::views::values;
-  }
+  return std::nullopt;
 }
