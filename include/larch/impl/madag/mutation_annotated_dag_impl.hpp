@@ -16,6 +16,9 @@ template <typename CRTP, typename Tag>
 bool FeatureConstView<ReferenceSequence, CRTP, Tag>::HaveUA() const {
   auto& dag = static_cast<const CRTP&>(*this);
   Assert(dag.HaveRoot());
+  if (not dag.IsTree()) {
+    return true;
+  }
   auto ua = dag.GetRoot();
   return ua.GetCladesCount() == 1;
 }
@@ -54,12 +57,14 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::AddUA(
   using Node = typename decltype(dag)::NodeView;
   using Edge = typename decltype(dag)::EdgeView;
 
-  // Assert(not dag.HaveUA());
+  Assert(not dag.HaveUA());
   Node root = dag.GetRoot();
   Node ua_node = dag.AppendNode();
   Edge ua_edge = dag.AppendEdge(ua_node, root, {0});
   ua_edge.SetEdgeMutations(mutations_at_root.Copy());
-  dag.BuildConnections();
+  ua_node.AddEdge(ua_edge.GetClade(), ua_edge, true);
+  root.AddEdge(ua_edge.GetClade(), ua_edge, false);
+  dag.SetRoot(ua_node);
   dag.AssertUA();
 }
 

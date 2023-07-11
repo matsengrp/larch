@@ -103,8 +103,8 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
   MADAGStorage result{{}};
   result.View().SetReferenceSequence(reference_sequence);
 
-  std::unordered_map<size_t, size_t> num_children;
-  std::map<size_t, std::optional<std::string>> seq_ids;
+  ContiguousMap<size_t, size_t> num_children;
+  ContiguousMap<size_t, std::optional<std::string>> seq_ids;
   ParseNewick(
       data.newick(),
       [&seq_ids](size_t node_id, std::string_view label, std::optional<double>) {

@@ -24,7 +24,6 @@ void Task<F>::Join(Scheduler& scheduler) {
   if (not scheduler.JoinTask(*this)) {
     Join();
   }
-  Join();
 }
 
 template <typename F>

@@ -81,3 +81,9 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
     edge.GetChild().AddEdge(edge.GetClade(), edge, false);
   };
 }
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Connections, CRTP, Tag>::SetRoot(NodeId root) const {
+  auto& storage = GetFeatureStorage(this);
+  storage.root_ = root;
+}

@@ -34,23 +34,22 @@ size_t Scheduler::WorkersCount() const { return workers_count_; }
 
 bool Scheduler::JoinTask(TaskBase& task) {
   auto worker_id = FindWorkerId();
-  if (worker_id.has_value()) {
-    WorkUntil(worker_id.value(), [&] {
-      if (destroy_.load()) {
-        return true;
-      }
-      std::unique_lock tasks_lock{running_tasks_mtx_};
-      return running_tasks_.find(task.GetId()) == running_tasks_.end();
-    });
-    return true;
-  } else {
+  if (not worker_id.has_value()) {
     return false;
   }
+  WorkUntil(worker_id.value(), [&] {
+    if (destroy_.load()) {
+      return true;
+    }
+    std::unique_lock tasks_lock{running_tasks_mtx_};
+    return running_tasks_.find(task.GetId()) == running_tasks_.end();
+  });
+  return true;
 }
 
 size_t Scheduler::NewTaskId() { return task_ids_.fetch_add(1); }
 
-void Scheduler::WorkerThread(const size_t id) {
+void Scheduler::WorkerThread(size_t id) {
   WorkUntil(id, [&] { return destroy_.load(); });
 }
 
@@ -67,9 +66,6 @@ void Scheduler::WorkUntil(size_t id, Until&& until) {
     }
     while (not worker.queue.empty() and worker.queue.front().done) {
       worker.queue.pop_front();
-    }
-    if (worker.queue.empty()) {
-      continue;
     }
     for (QueueItem& item : worker.queue) {
       if (item.done) {

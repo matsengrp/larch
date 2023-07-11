@@ -39,6 +39,8 @@ class Task : public TaskBase {
   void Join();                      // Join by waiting
   void Join(Scheduler& scheduler);  // Join by working
 
+  bool IsDone() const { return done_; }
+
  private:
   bool Run(size_t worker) override;
   bool Finish(size_t workers_count) override;
