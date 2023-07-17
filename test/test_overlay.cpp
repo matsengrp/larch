@@ -7,7 +7,7 @@ static void test_overlay(std::string_view input_dag_path,
   MADAGStorage input_dag_storage =
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
   auto input_dag = input_dag_storage.View();
-  input_dag.RecomputeCompactGenomes();
+  input_dag.RecomputeCompactGenomes(true);
   auto overlay_dag_storage = AddOverlay(input_dag);
   auto overlay_dag = overlay_dag_storage.View();
 

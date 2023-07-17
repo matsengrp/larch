@@ -11,9 +11,10 @@ class ContiguousSet {
   using const_iterator = typename storage_type::const_iterator;
 
   ContiguousSet() = default;
-  ContiguousSet(ContiguousSet&&) = default;
-  ContiguousSet& operator=(ContiguousSet&&) = default;
+  ContiguousSet(ContiguousSet&&) noexcept = default;
+  ContiguousSet& operator=(ContiguousSet&&) noexcept = default;
   ContiguousSet& operator=(const ContiguousSet&) = delete;
+  ~ContiguousSet() = default;
 
   ContiguousSet Copy() const { return ContiguousSet{*this}; }
 

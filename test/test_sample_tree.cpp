@@ -34,14 +34,14 @@ static void test_sample_tree(std::string_view path) {
 [[maybe_unused]] static void bench_sampling(std::string_view path,
                                             std::string_view refseq_path) {
   MADAGStorage dag = LoadTreeFromProtobuf(path, LoadReferenceSequence(refseq_path));
-  dag.View().RecomputeCompactGenomes();
+  dag.View().RecomputeCompactGenomes(true);
 #if defined(CALLGRIND_START_INSTRUMENTATION)
   CALLGRIND_START_INSTRUMENTATION;
 #endif
   Benchmark bench;
   bench.start();
-  Merge<MADAG> merge{dag.View().GetReferenceSequence()};
-  merge.AddDAGs({dag.View()});
+  Merge merge{dag.View().GetReferenceSequence()};
+  merge.AddDAGs(std::vector{dag.View()});
   merge.ComputeResultEdgeMutations();
   SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
   std::ignore = weight.SampleTree({});

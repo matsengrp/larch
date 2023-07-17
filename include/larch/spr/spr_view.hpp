@@ -10,25 +10,25 @@ struct FitchSet {
   bool find(char base) const {
     switch (base) {
       case 'A':
-        return value_ & 1;
+        return (value_ & 1) != 0;
       case 'C':
-        return value_ & 2;
+        return (value_ & 2) != 0;
       case 'G':
-        return value_ & 4;
+        return (value_ & 4) != 0;
       case 'T':
-        return value_ & 8;
+        return (value_ & 8) != 0;  // NOLINT
     }
     Fail("Unreachable");
   }
   char at(size_t pos) const {
     Assert(pos == 0);
-    if (value_ & 1) {
+    if ((value_ & 1) != 0) {
       return 'A';
-    } else if (value_ & 2) {
+    } else if ((value_ & 2) != 0) {
       return 'C';
-    } else if (value_ & 4) {
+    } else if ((value_ & 4) != 0) {
       return 'G';
-    } else if (value_ & 8) {
+    } else if ((value_ & 8) != 0) {  // NOLINT
       return 'T';
     }
     Fail("Unreachable");
@@ -38,7 +38,7 @@ struct FitchSet {
   char value_ = 0;
 };
 
-nuc_one_hot base_to_singleton(MutationBase base) {
+inline nuc_one_hot base_to_singleton(MutationBase base) {
   switch (base.ToChar()) {
     case 'A':
       return 1;
@@ -47,7 +47,7 @@ nuc_one_hot base_to_singleton(MutationBase base) {
     case 'G':
       return 4;
     case 'T':
-      return 8;
+      return 8;  // NOLINT
   }
   Fail("unrecognized base");
 }
@@ -117,8 +117,7 @@ struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {
 template <typename DAG>
 struct HypotheticalTree {
   struct Data {
-    Data(const Profitable_Moves& move, NodeId new_node,
-         bool has_unifurcation_after_move,
+    Data(Profitable_Moves move, NodeId new_node, bool has_unifurcation_after_move,
          const std::vector<Node_With_Major_Allele_Set_Change>&
              nodes_with_major_allele_set_change);
     Profitable_Moves move_;
@@ -139,8 +138,8 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   // nodes (they're siblings in the hypothetical tree)
   auto GetMoveSource() const;
   auto GetMoveTarget() const;
-  auto GetMoveSources() const; // returns a vector of HypotheticalTreeNodes
-  auto GetMoveTargets() const; // returns a vector of HypotheticalTreeNodes
+  auto GetMoveSources() const;  // returns a vector of HypotheticalTreeNodes
+  auto GetMoveTargets() const;  // returns a vector of HypotheticalTreeNodes
   auto GetMoveNew() const;
   bool HasUnifurcationAfterMove() const;
 
@@ -158,11 +157,12 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   // changes, whichever is higher in the tree.
   [[nodiscard]] auto GetOldestChangedNode() const;
 
-  [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>> GetFragment() const;
+  [[nodiscard]] auto MakeFragment() const;
+  [[nodiscard]] auto MakeUncollapsedFragment() const;
 
   [[nodiscard]] std::pair<std::vector<NodeId>, std::vector<EdgeId>>
-  CollapseEmptyFragmentEdges(std::vector<NodeId> fragment_nodes,
-                             std::vector<EdgeId> fragment_edges) const;
+  CollapseEmptyFragmentEdges(const std::vector<NodeId>& fragment_nodes,
+                             const std::vector<EdgeId>& fragment_edges) const;
 
   const ContiguousMap<MATNodePtr,
                       ContiguousMap<MutationPosition, Mutation_Count_Change>>&
@@ -174,7 +174,8 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
 template <typename DAG, typename CRTP, typename Tag>
 struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
   std::pair<NodeId, bool> ApplyMove(NodeId lca, NodeId src, NodeId dst) const;
-  std::pair<NodeId, bool> ApplyMove(NodeId lca, std::vector<NodeId> src, std::vector<NodeId> dst) const;
+  std::pair<NodeId, bool> ApplyMove(NodeId lca, std::vector<NodeId> src,
+                                    std::vector<NodeId> dst) const;
   bool InitHypotheticalTree(const Profitable_Moves& move,
                             const std::vector<Node_With_Major_Allele_Set_Change>&
                                 nodes_with_major_allele_set_change);

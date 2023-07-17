@@ -45,12 +45,35 @@ auto EdgeMutations::insert(
   return mutations_.insert(mut);
 }
 
+bool EdgeMutations::HasMutationAtPosition(MutationPosition pos) const {
+  return mutations_.find(pos) != mutations_.end();
+}
+
+std::pair<MutationBase, MutationBase> EdgeMutations::GetMutation(
+    MutationPosition pos) const {
+  auto it = mutations_.find(pos);
+  Assert(it != mutations_.end() and it->first == pos);
+  return it->second;
+}
+
 bool EdgeMutations::operator==(const EdgeMutations& rhs) const {
   return mutations_ == rhs.mutations_;
 }
 
 bool EdgeMutations::operator!=(const EdgeMutations& rhs) const {
   return mutations_ != rhs.mutations_;
+}
+
+std::string EdgeMutations::ToString() const {
+  std::string result = "<";
+  for (auto [pos, muts] : mutations_) {
+    result += muts.first;
+    result += std::to_string(pos.value);
+    result += muts.second;
+    result += ",";
+  }
+  result += ">";
+  return result;
 }
 
 template <typename CRTP, typename Tag>

@@ -50,7 +50,7 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   auto id = element_view.GetId();
   auto& storage = element_view.GetDAG().GetStorage();
   static_assert(
-      element_view.template contains_feature<F>,
+      CRTP::template contains_feature<F>,
       "Attempted to SetOverlay on a Feature not supported by given DAG Element.");
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     if (id.value < storage.GetTarget().GetNodesCount()) {
@@ -96,9 +96,9 @@ bool FeatureConstView<OverlayDAG, CRTP, Tag>::HaveOverlays() const {
 }
 
 template <typename Target>
-template <typename Id, typename Feature>
+template <Component C, typename Feature>
 inline constexpr bool OverlayDAGStorage<Target>::contains_element_feature =
-    TargetView::StorageType::template contains_element_feature<Id, Feature>;
+    TargetView::StorageType::template contains_element_feature<C, Feature>;
 
 template <typename Target>
 OverlayDAGStorage<Target>::OverlayDAGStorage(Target&& target)
@@ -171,6 +171,14 @@ void OverlayDAGStorage<Target>::InitializeNodes(size_t size) {
 }
 
 template <typename Target>
+void OverlayDAGStorage<Target>::InitializeEdges(size_t size) {
+  if (size < GetTarget().GetEdgesCount()) {
+    Fail("Overlayed DAG can only be grown");
+  }
+  added_edge_storage_.resize(size - GetTarget().GetEdgesCount());
+}
+
+template <typename Target>
 template <typename F>
 auto& OverlayDAGStorage<Target>::GetFeatureStorage() {
   return GetTarget().template GetFeatureStorage<F>();
@@ -207,15 +215,15 @@ const auto& OverlayDAGStorage<Target>::GetFeatureStorage(EdgeId id) const {
 }
 
 template <typename Target>
-template <typename Id, typename F>
+template <Component C, typename F>
 auto& OverlayDAGStorage<Target>::GetFeatureExtraStorage() {
-  return GetTarget().template GetFeatureExtraStorage<Id, F>();
+  return GetTarget().template GetFeatureExtraStorage<C, F>();
 }
 
 template <typename Target>
-template <typename Id, typename F>
+template <Component C, typename F>
 const auto& OverlayDAGStorage<Target>::GetFeatureExtraStorage() const {
-  return GetTarget().template GetFeatureExtraStorage<Id, F>();
+  return GetTarget().template GetFeatureExtraStorage<C, F>();
 }
 
 template <typename Target>

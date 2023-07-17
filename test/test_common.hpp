@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <iostream>
 
+#include "larch/spr/spr_view.hpp"
+
 struct Test {
   std::function<void()> entry;
   std::string name;

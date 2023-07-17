@@ -94,6 +94,9 @@ template <typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
 struct ExtendDAGStorage {
  public:
+  constexpr static const Component component = Component::DAG;
+  constexpr static const Role role = Role::Storage;
+
   using Self = ExtendDAGStorage<Target, Arg0, Arg1, Arg2>;
   using TargetView = decltype(ViewOf(std::declval<Target>()));
   using OnNodes = select_argument_t<Extend::Nodes, Arg0, Arg1, Arg2>;
@@ -108,41 +111,41 @@ struct ExtendDAGStorage {
       decltype(std::tuple_cat(typename OnEdges::FeatureTypes{},
                               typename TargetView::StorageType::AllEdgeFeatures{}));
 
-  template <typename Id, typename CRTP>
+  template <Component C, typename CRTP>
   struct ConstElementViewBase;
 
   template <typename CRTP>
-  struct ConstElementViewBase<NodeId, CRTP>
-      : TargetView::StorageType::template ConstElementViewBase<NodeId, CRTP>,
+  struct ConstElementViewBase<Component::Node, CRTP>
+      : TargetView::StorageType::template ConstElementViewBase<Component::Node, CRTP>,
         OnNodes::template ConstView<Self, CRTP> {};
 
   template <typename CRTP>
-  struct ConstElementViewBase<EdgeId, CRTP>
-      : TargetView::StorageType::template ConstElementViewBase<EdgeId, CRTP>,
+  struct ConstElementViewBase<Component::Edge, CRTP>
+      : TargetView::StorageType::template ConstElementViewBase<Component::Edge, CRTP>,
         OnEdges::template ConstView<Self, CRTP> {};
 
-  template <typename Id, typename CRTP>
+  template <Component C, typename CRTP>
   struct MutableElementViewBase;
 
   template <typename CRTP>
-  struct MutableElementViewBase<NodeId, CRTP>
-      : TargetView::StorageType::template MutableElementViewBase<NodeId, CRTP>,
+  struct MutableElementViewBase<Component::Node, CRTP>
+      : TargetView::StorageType::template MutableElementViewBase<Component::Node, CRTP>,
         OnNodes::template MutableView<Self, CRTP> {
-    using TargetView::StorageType::template MutableElementViewBase<NodeId,
+    using TargetView::StorageType::template MutableElementViewBase<Component::Node,
                                                                    CRTP>::operator=;
     using OnNodes::template MutableView<Self, CRTP>::operator=;
   };
 
   template <typename CRTP>
-  struct MutableElementViewBase<EdgeId, CRTP>
-      : TargetView::StorageType::template MutableElementViewBase<EdgeId, CRTP>,
+  struct MutableElementViewBase<Component::Edge, CRTP>
+      : TargetView::StorageType::template MutableElementViewBase<Component::Edge, CRTP>,
         OnEdges::template MutableView<Self, CRTP> {
-    using TargetView::StorageType::template MutableElementViewBase<EdgeId,
+    using TargetView::StorageType::template MutableElementViewBase<Component::Edge,
                                                                    CRTP>::operator=;
     using OnEdges::template MutableView<Self, CRTP>::operator=;
   };
 
-  template <typename Id, typename Feature>
+  template <Component C, typename Feature>
   static const bool contains_element_feature;
 
   template <typename CRTP>
@@ -159,7 +162,6 @@ struct ExtendDAGStorage {
 
   MOVE_ONLY(ExtendDAGStorage);
 
-  ExtendDAGStorage();
   explicit ExtendDAGStorage(Target&& target);
 
   auto View();
@@ -178,6 +180,7 @@ struct ExtendDAGStorage {
   auto GetEdges() const;
 
   void InitializeNodes(size_t size);
+  void InitializeEdges(size_t size);
 
   template <typename F>
   auto& GetFeatureStorage();
@@ -197,10 +200,10 @@ struct ExtendDAGStorage {
   template <typename F>
   const auto& GetFeatureStorage(EdgeId id) const;
 
-  template <typename Id, typename F>
+  template <Component C, typename F>
   auto& GetFeatureExtraStorage();
 
-  template <typename Id, typename F>
+  template <Component C, typename F>
   const auto& GetFeatureExtraStorage() const;
 
  private:

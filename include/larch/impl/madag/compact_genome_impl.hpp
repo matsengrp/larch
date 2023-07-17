@@ -4,7 +4,7 @@ const CompactGenome* CompactGenome::Empty() {
 }
 
 static inline void AssertMut(MutationPosition, MutationBase mut) {
-  Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T');
+  Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T' or mut == 'N');
 }
 
 static void ComputeMutations(const EdgeMutations& edge_mutations,
@@ -36,6 +36,18 @@ CompactGenome::CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mut
   }
 }
 
+CompactGenome::CompactGenome(const std::string& sequence,
+                             const std::string& reference_sequence) {
+  Assert(sequence.size() == reference_sequence.size());
+  for (size_t i = 0; i < sequence.size(); i++) {
+    if (sequence[i] != reference_sequence[i]) {
+      AssertMut({i + 1}, {sequence[i]});
+      mutations_.insert({{i + 1}, {sequence[i]}});
+    }
+  }
+  ComputeHash(mutations_);
+}
+
 void CompactGenome::AddParentEdge(const EdgeMutations& mutations,
                                   const CompactGenome& parent,
                                   std::string_view reference_sequence) {
@@ -52,6 +64,10 @@ void CompactGenome::ApplyChanges(
   }
 }
 
+bool CompactGenome::HasMutationAtPosition(MutationPosition pos) const {
+  return (mutations_.find(pos) != mutations_.end());
+}
+
 MutationBase CompactGenome::GetBase(MutationPosition pos,
                                     std::string_view reference_sequence) const {
   auto it = mutations_.find(pos);
@@ -66,13 +82,13 @@ ContiguousSet<MutationPosition> CompactGenome::DifferingSites(
   ContiguousSet<MutationPosition> result;
   for (auto [pos, base] : mutations_) {
     auto it = other.mutations_.find(pos);
-    if (it == other.mutations_.end() or it->second != base) {
+    if (it == other.mutations_.end() or !it->second.IsCompatible(base)) {
       result.insert(pos);
     }
   }
   for (auto [pos, base] : other.mutations_) {
     auto it = mutations_.find(pos);
-    if (it == mutations_.end() or it->second != base) {
+    if (it == mutations_.end() or !it->second.IsCompatible(base)) {
       result.insert(pos);
     }
   }
@@ -92,6 +108,36 @@ bool CompactGenome::operator!=(const CompactGenome& rhs) const noexcept {
 
 bool CompactGenome::operator<(const CompactGenome& rhs) const noexcept {
   return mutations_ < rhs.mutations_;
+}
+
+bool CompactGenome::IsCompatible(const CompactGenome& rhs,
+                                 std::string_view reference_sequence) const {
+  const auto& lhs = *this;
+  for (auto [pos, mut] : lhs) {
+    if (!rhs.GetBase(pos, reference_sequence)
+             .IsCompatible(lhs.GetBase(pos, reference_sequence))) {
+      return false;
+    }
+  }
+  for (auto [pos, mut] : rhs) {  // NOLINT(readability-use-anyofallof)
+    if (lhs.HasMutationAtPosition(pos)) {
+      continue;
+    }
+    if (!lhs.GetBase(pos, reference_sequence)
+             .IsCompatible(rhs.GetBase(pos, reference_sequence))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool CompactGenome::ContainsAmbiguity() const {
+  for (auto [pos, base] : mutations_) {  // NOLINT(readability-use-anyofallof)
+    if (base.IsAmbiguous()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 size_t CompactGenome::Hash() const noexcept { return hash_; }
@@ -131,6 +177,14 @@ std::string CompactGenome::ToString() const {
   return result;
 }
 
+std::string CompactGenome::ToSequence(std::string_view reference_sequence) const {
+  std::string sequence(reference_sequence);
+  for (auto [pos, base] : mutations_) {
+    sequence[pos.value - 1] = base.ToChar();
+  }
+  return sequence;
+}
+
 EdgeMutations CompactGenome::ToEdgeMutations(std::string_view reference_sequence,
                                              const CompactGenome& parent,
                                              const CompactGenome& child) {
@@ -141,8 +195,8 @@ EdgeMutations CompactGenome::ToEdgeMutations(std::string_view reference_sequence
     if (opt_parent_base.has_value()) {
       parent_base = opt_parent_base.value();
     }
-    if (parent_base != child_base) {
-      result[pos] = {parent_base, child_base};
+    if (!parent_base.IsCompatible(child_base)) {
+      result[pos] = {parent_base, child_base.GetFirstBase()};
     }
   }
 
@@ -152,8 +206,8 @@ EdgeMutations CompactGenome::ToEdgeMutations(std::string_view reference_sequence
     if (opt_child_base.has_value()) {
       child_base = opt_child_base.value();
     }
-    if (child_base != parent_base) {
-      result[pos] = {parent_base, child_base};
+    if (!child_base.IsCompatible(parent_base)) {
+      result[pos] = {parent_base, child_base.GetFirstBase()};
     }
   }
   return result;
@@ -164,7 +218,7 @@ size_t CompactGenome::ComputeHash(
   size_t result = 0;
   for (auto [pos, base] : mutations) {
     result = HashCombine(result, pos.value);
-    result = HashCombine(result, base.ToChar());
+    result = HashCombine(result, static_cast<size_t>(base.ToChar()));
   }
   return result;
 }
@@ -186,6 +240,7 @@ const CompactGenome& FeatureConstView<CompactGenome, CRTP, Tag>::GetCompactGenom
 }
 
 template <typename CRTP, typename Tag>
+// NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
 auto& FeatureMutableView<CompactGenome, CRTP, Tag>::operator=(
     CompactGenome&& compact_genome) const {
   GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);

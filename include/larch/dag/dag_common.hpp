@@ -16,6 +16,44 @@
 +--------------------------------------------------+
 */
 
+enum class Component { Node, Edge, DAG };
+enum class Role { Storage, View };
+
+struct NodeId;
+struct EdgeId;
+
+template <Component C>
+struct IdType;
+
+template <>
+struct IdType<Component::Node> {
+  using type = NodeId;
+};
+
+template <>
+struct IdType<Component::Edge> {
+  using type = EdgeId;
+};
+
+template <Component C>
+using Id = typename IdType<C>::type;
+
+template <typename Id>
+struct ComponentType;
+
+template <>
+struct ComponentType<NodeId> {
+  constexpr static const auto value = Component::Node;
+};
+
+template <>
+struct ComponentType<EdgeId> {
+  constexpr static const auto value = Component::Edge;
+};
+
+template <typename Id>
+inline constexpr const auto ComponentOf = ComponentType<Id>::value;
+
 /**
  * Used by specialization on the Feature parameter to add functions to
  * an attachable feature. Functions declared in FeatureConstView are
@@ -51,7 +89,7 @@ struct ExtraFeatureMutableView {};
 template <typename Feature>
 struct ExtraFeatureStorage {};
 
-template <typename Id, typename DAGViewType>
+template <Component C, typename DAGViewType>
 struct ElementView;
 
 template <typename DAGStorageType, typename DAGViewType>
@@ -61,13 +99,13 @@ struct DefaultViewBase {
       typename DAGStorageType::template ConstDAGViewBase<DAGViewType>,
       typename DAGStorageType::template MutableDAGViewBase<DAGViewType>>;
 
-  template <typename Id>
+  template <Component C>
   using ElementViewBase =
       std::conditional_t<std::is_const_v<DAGStorageType>,
                          typename DAGStorageType::template ConstElementViewBase<
-                             Id, ElementView<Id, DAGViewType>>,
+                             C, ElementView<C, DAGViewType>>,
                          typename DAGStorageType::template MutableElementViewBase<
-                             Id, ElementView<Id, DAGViewType>>>;
+                             C, ElementView<C, DAGViewType>>>;
 };
 
 /**
@@ -86,6 +124,7 @@ struct NodeId {
   size_t value = NoId;
 };
 
+inline std::ostream& operator<<(std::ostream& os, NodeId node_id);
 inline bool operator==(NodeId lhs, NodeId rhs);
 inline bool operator!=(NodeId lhs, NodeId rhs);
 inline bool operator<(NodeId lhs, NodeId rhs);
@@ -99,19 +138,20 @@ struct EdgeId {
   size_t value = NoId;
 };
 
-template <>
-struct std::hash<EdgeId> {
-  inline size_t operator()(EdgeId id) const noexcept;
-};
-
+inline std::ostream& operator<<(std::ostream& os, EdgeId edge_id);
 inline bool operator==(EdgeId lhs, EdgeId rhs);
 inline bool operator!=(EdgeId lhs, EdgeId rhs);
 inline bool operator<(EdgeId lhs, EdgeId rhs);
 
+template <>
+struct std::hash<EdgeId> {
+  inline size_t operator()(EdgeId id) const noexcept;
+};
 struct CladeIdx {
   size_t value = NoId;
 };
 
+inline std::ostream& operator<<(std::ostream& os, CladeIdx clade_id);
 inline bool operator==(CladeIdx lhs, CladeIdx rhs);
 inline bool operator!=(CladeIdx lhs, CladeIdx rhs);
 inline bool operator<(CladeIdx lhs, CladeIdx rhs);
@@ -145,18 +185,15 @@ struct CombineBases<std::tuple<Ts...>> : Ts... {
 };
 
 template <typename T>
-auto ViewOf(T&& storage);
+auto ViewOf(T&& dag);
 
 template <typename, template <typename, typename> typename>
 struct DAGView;
 
-template <typename Storage, template <typename, typename> typename Base>
-auto ViewOf(DAGView<Storage, Base> view) -> DAGView<Storage, Base>;
-
 template <typename, typename, typename...>
 struct DAGStorage;
 
-template <typename, typename, typename...>
+template <Component, typename, typename...>
 struct ElementsContainer;
 
 template <typename...>
@@ -169,5 +206,6 @@ struct Endpoints;
 struct Connections;
 
 using DefaultDAGStorage =
-    DAGStorage<ElementsContainer<NodeId, ElementStorage<Neighbors>>,
-               ElementsContainer<EdgeId, ElementStorage<Endpoints>>, Connections>;
+    DAGStorage<ElementsContainer<Component::Node, ElementStorage<Neighbors>>,
+               ElementsContainer<Component::Edge, ElementStorage<Endpoints>>,
+               Connections>;

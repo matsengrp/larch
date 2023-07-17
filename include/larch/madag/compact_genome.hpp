@@ -27,14 +27,21 @@ class CompactGenome {
   CompactGenome() = default;
   MOVE_ONLY(CompactGenome);
   inline CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mutations);
+  inline CompactGenome(const std::string& sequence,
+                       const std::string& reference_sequence);
 
   inline bool operator==(const CompactGenome& rhs) const noexcept;
   inline bool operator!=(const CompactGenome& rhs) const noexcept;
   inline bool operator<(const CompactGenome& rhs) const noexcept;
   [[nodiscard]] inline size_t Hash() const noexcept;
 
+  inline bool IsCompatible(const CompactGenome& rhs,
+                           std::string_view reference_sequence) const;
+  inline bool ContainsAmbiguity() const;
+
   inline std::optional<MutationBase> operator[](MutationPosition pos) const;
   inline std::string ToString() const;
+  inline std::string ToSequence(std::string_view reference_sequence) const;
 
   inline auto begin() const -> decltype(mutations_.begin());
   inline auto end() const -> decltype(mutations_.end());
@@ -48,6 +55,8 @@ class CompactGenome {
 
   inline void ApplyChanges(
       const ContiguousMap<MutationPosition, MutationBase>& changes);
+
+  [[nodiscard]] inline bool HasMutationAtPosition(MutationPosition pos) const;
 
   inline MutationBase GetBase(MutationPosition pos,
                               std::string_view reference_sequence) const;

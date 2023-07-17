@@ -74,16 +74,16 @@ static void test_write_protobuf() {
   StoreTreeToProtobuf(sample_tree.View(), "test_write_protobuf.pb");
   compare_treedags(treedag.View(), sample_tree.View());
 
-  sample_tree.View().RecomputeCompactGenomes();
-  treedag.View().RecomputeCompactGenomes();
+  sample_tree.View().RecomputeCompactGenomes(true);
+  treedag.View().RecomputeCompactGenomes(true);
   compare_treedags(treedag.View(), sample_tree.View());
 
   treedag.View().RecomputeEdgeMutations();
   compare_treedags(treedag.View(), sample_tree.View());
 
-  Merge<MADAG> merge{treedag.View().GetReferenceSequence()};
-  merge.AddDAG(treedag.View());
-  merge.AddDAG(sample_tree.View());
+  Merge merge{treedag.View().GetReferenceSequence()};
+  merge.AddDAGs(std::vector{treedag.View()});
+  merge.AddDAGs(std::vector{sample_tree.View()});
   merge.ComputeResultEdgeMutations();
 
   compare_treedags(treedag.View(), merge.GetResult());

@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
+// NOLINTNEXTLINE (cppcoreguidelines-pro-type-member-init)
 struct ParNuc_Info {
   NodeId par_node_id;
   NodeId child_node_id;
@@ -23,7 +24,7 @@ void check_edge_mutations_helper(Node dag_node, const all_mutated_t& all_mutated
       auto actual_par = edge_mut.second.first;
       if (ins_result.second) {
         auto expected =
-            dag_node.GetDAG().GetReferenceSequence()[edge_mut.first.value - 1];
+            dag_node.GetDAG().GetReferenceSequence().at(edge_mut.first.value - 1);
         if (expected != actual_par) {
           std::cout << "On edge " << edge_id.value << " from " << dag_node.GetId().value
                     << " to " << child.GetChildId().value << " at position "
