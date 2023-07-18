@@ -296,15 +296,8 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
       auto spr = spr_storage.View();
       spr.GetRoot().Validate(true);
       LCA lca = FindLCA(src_node, dest_node);
-std::cout << std::flush;
-std::cout << "before move " << src_node.GetId().value << " -> " << dest_node.GetId().value << " lca: " << lca.lca.value << ":\n" << std::flush;
-MADAGToDOT(spr, std::cout);
-std::cout << std::flush;
       auto move_result = spr.ApplyMove(lca.lca, src_node.GetId(), dest_node.GetId());
       if (move_result.first.value != NoId) {
-std::cout << "after move:\n" << std::flush;
-MADAGToDOT(spr, std::cout);
-std::cout << std::flush;
         // Update Compact Genomes.
         for (auto node : spr.GetNodes()) {
           if (not node.IsOverlaid<CompactGenome>()) {
