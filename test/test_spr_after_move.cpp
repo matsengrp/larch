@@ -265,8 +265,10 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
   std::string output_folder = "_ignore/";
   std::string output_ext = ".dot";
 
-  auto dag_storage = MakeSampleDAG();
+  auto dag_storage = AddMATConversion(MakeSampleDAG());
   auto dag = dag_storage.View();
+  MAT::Tree tree;
+  dag.BuildMAT(tree);
   auto child_counts = get_child_counts(dag);
 
   if (write_dot_files) {
