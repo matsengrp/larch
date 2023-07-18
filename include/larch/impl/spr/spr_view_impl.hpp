@@ -563,8 +563,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   auto first_src_node = dag.Get(src[0]);
   auto first_dst_node = dag.Get(dst[0]);
 
-  if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId() or
-      first_dst_node.IsTreeRoot()) {
+  if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId()) {
     // no-op
     return {};
   }

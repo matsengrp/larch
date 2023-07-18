@@ -185,14 +185,12 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   auto spr = spr_storage.View();
 
   spr.GetRoot().Validate(true);
-  // spr.ApplyMove({1}, {10});
-  // spr.GetRoot().Validate(true);
 
-  // for (auto node : spr.GetNodes()) {
-  //   if (not node.IsOverlaid<CompactGenome>()) {
-  //     node.SetOverlay<CompactGenome>();
-  //   }
-  // }
+  for (auto node : spr.GetNodes()) {
+    if (not node.IsOverlaid<CompactGenome>()) {
+      node.SetOverlay<CompactGenome>();
+    }
+  }
 
   spr.RecomputeCompactGenomes(true);
 }

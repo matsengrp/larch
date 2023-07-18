@@ -254,6 +254,11 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
   if (dest_parents.find(src_node) != dest_parents.end()) {
     return false;
   }
+  const auto src_parents = get_all_parents_of_node(src_node);
+  const auto dest_parent_node = dest_node.GetSingleParent().GetParent();
+  if (src_parents.find(dest_parent_node) != src_parents.end()) {
+    return false;
+  }
   return true;
 }
 
@@ -289,34 +294,43 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
       // Apply SPR
       auto spr_storage = SPRStorage(dag);
       auto spr = spr_storage.View();
+      spr.GetRoot().Validate(true);
       LCA lca = FindLCA(src_node, dest_node);
-      spr.ApplyMove(src_node.GetId(), dest_node.GetId(), lca.lca);
-
-      // Update Compact Genomes.
-      for (auto node : spr.GetNodes()) {
-        if (not node.IsOverlaid<CompactGenome>()) {
-          node.SetOverlay<CompactGenome>();
+std::cout << std::flush;
+std::cout << "before move " << src_node.GetId().value << " -> " << dest_node.GetId().value << " lca: " << lca.lca.value << ":\n" << std::flush;
+MADAGToDOT(spr, std::cout);
+std::cout << std::flush;
+      auto move_result = spr.ApplyMove(lca.lca, src_node.GetId(), dest_node.GetId());
+      if (move_result.first.value != NoId) {
+std::cout << "after move:\n" << std::flush;
+MADAGToDOT(spr, std::cout);
+std::cout << std::flush;
+        // Update Compact Genomes.
+        for (auto node : spr.GetNodes()) {
+          if (not node.IsOverlaid<CompactGenome>()) {
+            node.SetOverlay<CompactGenome>();
+          }
         }
-      }
-      spr.RecomputeCompactGenomes(true);
+        spr.RecomputeCompactGenomes(true);
 
-      if (write_dot_files) {
-        std::cout << "SRC: NodeId::" << src_node.GetId().value
-                  << ", DEST: NodeId::" << dest_node.GetId().value << std::endl;
-        output_filename = output_folder + dag_name + "." +
-                          std::to_string(src_node.GetId().value) + "_" +
-                          std::to_string(dest_node.GetId().value) + output_ext;
-        std::cout << ">> WRITE DOTFILE [post]: " << output_filename << std::endl;
-        os.open(output_filename);
-        MADAGToDOT(spr, os);
-        os.close();
-      }
+        if (write_dot_files) {
+          std::cout << "SRC: NodeId::" << src_node.GetId().value
+                    << ", DEST: NodeId::" << dest_node.GetId().value << std::endl;
+          output_filename = output_folder + dag_name + "." +
+                            std::to_string(src_node.GetId().value) + "_" +
+                            std::to_string(dest_node.GetId().value) + output_ext;
+          std::cout << ">> WRITE DOTFILE [post]: " << output_filename << std::endl;
+          os.open(output_filename);
+          MADAGToDOT(spr, os);
+          os.close();
+        }
 
-      assert_true(
-          test_compare_dag_vs_spr_nodes(dag, spr, src_node, dest_node, child_counts),
-          "DAG '" + dag_name + "' created invalid DAG after move " +
-              std::to_string(src_node.GetId().value) + " -> " +
-              std::to_string(dest_node.GetId().value));
+        assert_true(
+            test_compare_dag_vs_spr_nodes(dag, spr, src_node, dest_node, child_counts),
+            "DAG '" + dag_name + "' created invalid DAG after move " +
+                std::to_string(src_node.GetId().value) + " -> " +
+                std::to_string(dest_node.GetId().value));
+      }
     }
   }
 }
