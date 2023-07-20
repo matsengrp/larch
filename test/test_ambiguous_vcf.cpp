@@ -7,6 +7,22 @@
 
 #include "larch/usher_glue.hpp"
 
+// #pragma GCC diagnostic push
+// #pragma GCC diagnostic ignored "-Wold-style-cast"
+// #pragma GCC diagnostic ignored "-Wunused-parameter"
+// #pragma GCC diagnostic ignored "-Wdeprecated-copy-with-user-provided-copy"
+// #pragma GCC diagnostic ignored "-Wunused-function"
+// #pragma GCC diagnostic ignored "-Wshadow"
+// #pragma GCC diagnostic ignored "-Wdeprecated-copy"
+// #pragma GCC diagnostic ignored "-Wextra"
+// #pragma GCC diagnostic ignored "-Wunused-function"
+// #pragma GCC diagnostic ignored "-Wconversion"
+// #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+// #include "src/matOptimize/import_vcf_fast.cpp"
+// #pragma GCC diagnostic pop
+
+#include "larch/import_vcf.hpp"
+
 [[maybe_unused]] static auto ConvertDAGToMAT(const MADAGStorage &dag_storage) {
   MAT::Tree mat;
   auto dag = dag_storage.View();
@@ -259,7 +275,8 @@ ReadVCFToCompactGenomeData(const std::string &path) {
   // Convert node names to ids.
   std::unordered_map<NodeId, CompactGenomeData> tmp_mut_map;
   for (auto node : dag.GetNodes()) {
-    if (mut_map.find(node.GetSampleId().value()) != mut_map.end()) {
+    if (node.GetSampleId().has_value() and
+        mut_map.find(node.GetSampleId().value()) != mut_map.end()) {
       const auto &[name, muts] = *mut_map.find(node.GetSampleId().value());
       std::ignore = name;
       tmp_mut_map[node.GetId()] = CompactGenomeData();
@@ -269,6 +286,7 @@ ReadVCFToCompactGenomeData(const std::string &path) {
     }
   }
   dag.SetCompactGenomesFromNodeMutationMap(std::move(tmp_mut_map));
+  dag.RecomputeEdgeMutations();
 }
 
 [[maybe_unused]] static void MATApplyCompactGenome(
@@ -293,6 +311,11 @@ ReadVCFToCompactGenomeData(const std::string &path) {
   }
 }
 
+[[maybe_unused]] static void MATApplyCompactGenomeMatopt(MAT::Tree &tree,
+                                                         const std::string &vcf_path) {
+  VCF_input(vcf_path.c_str(), tree);
+}
+
 [[maybe_unused]] static auto test_ambiguous_vcf() {
   // std::string dag_pb_path = "data/test_ambiguous_vcf/unamb_dag.pb";
   // std::string mat_pb_path = "data/test_ambiguous_vcf/unamb_mat.pb";
@@ -303,82 +326,40 @@ ReadVCFToCompactGenomeData(const std::string &path) {
 
   auto topo_dag_storage = MakeSampleDAGTopology();
   MADAGLabelNodes(topo_dag_storage, false);
-  // std::cout << "TOPO_DAG: " << MADAGInfo(topo_dag_storage) << std::endl;
-  // std::cout << "TOPO_FASTA: " << std::endl
-  //           << MADAGToFasta(topo_dag_storage, false, false) << std::endl;
 
   auto amb_dag_storage = MakeAmbiguousSampleDAG();
   MADAGLabelNodes(amb_dag_storage, false);
-  // MADAGToFasta(amb_dag_storage, "data/test_ambiguous_vcf/amb.fasta", false, true,
-  //              false);
+  MADAGToFasta(amb_dag_storage, "data/test_ambiguous_vcf/amb.fasta", false, true,
+               false);
 
   auto unamb_dag_storage = MakeUnambiguousSampleDAG();
   MADAGLabelNodes(unamb_dag_storage, false);
-  // MADAGToFasta(unamb_dag_storage, "data/test_ambiguous_vcf/unamb.fasta", false, true,
-  //              false);
+  MADAGToFasta(unamb_dag_storage, "data/test_ambiguous_vcf/unamb.fasta", false, true,
+               false);
 
   auto mat_wo_vcf = ConvertDAGToMAT(topo_dag_storage);
-  auto mat_w_vcf = ConvertDAGToMAT(topo_dag_storage);
+  auto mat_w_amb_vcf = ConvertDAGToMAT(topo_dag_storage);
+  auto mat_w_unamb_vcf = ConvertDAGToMAT(topo_dag_storage);
 
-  auto amb_cg_data = ReadVCFToCompactGenomeData(amb_vcf_path);
-  auto unamb_cg_data = ReadVCFToCompactGenomeData(unamb_vcf_path);
+  MATApplyCompactGenomeMatopt(mat_w_amb_vcf, amb_vcf_path);
+  MATApplyCompactGenomeMatopt(mat_w_unamb_vcf, unamb_vcf_path);
 
-  MATApplyCompactGenome(mat_w_vcf, unamb_cg_data);
-  MATTreeInfo(mat_w_vcf);
-
+  auto cg_data1 = ReadVCFToCompactGenomeData(amb_vcf_path);
+  auto cg_data2 = ReadVCFToCompactGenomeData(amb_vcf_path);
+  MATApplyCompactGenome(mat_w_amb_vcf, cg_data1);
   auto dag_w_vcf = MakeSampleDAGTopology();
-  MADAGApplyCompactGenome(dag_w_vcf, unamb_cg_data);
-  MADAGInfo(dag_w_vcf);
-
-  // std::cout << "AMB_MAT_WO_VCF: " << MATTreeInfo(mat_wo_vcf) << std::endl;
-  // MATApplyVCF(mat_w_vcf, unamb_vcf_path);
-  // std::cout << "AMB_MAT_W_VCF: " << MATTreeInfo(mat_w_vcf) << std::endl;
-
-  // Original_State_t amb_og_state;
-  // check_samples(amb_mat_w_vcf.root, amb_og_state, &amb_mat_w_vcf, true);
-  // std::cout << "OG_STATE: " << OriginalStateInfo(amb_og_state) << std::endl;
-
-  // auto unamb_dag_storage = MakeUnambiguousSampleDAG();
-  // auto unamb_dag = unamb_dag_storage.View();
-  // Assert(unamb_dag.IsTree());
-  // // std::cout << "UNAMB_DAG: " << MADAGInfo(unamb_dag_storage) << std::endl;
-  // auto unamb_mat = ConvertDAGToMAT(unamb_dag_storage);
-  // std::cout << "UNAMB_MAT: " << MATTreeInfo(unamb_mat) << std::endl;
-
-  // // - construct a DAG from protobuf (tree shaped, since it's from a MAT protobuf)
-  // auto dag_storage = LoadDAGFromProtobuf(dag_pb_path);
-  // auto dag = dag_storage.View();
-  // Assert(dag.IsTree());
-  // // MADAGLabelNodes(dag_storage);
-  // dag.RecomputeCompactGenomes(true);
-  // std::cout << "DAG_FROM_PB: " << MADAGInfo(dag_storage) << std::endl;
-  // std::cout << "FASTA" << std::endl << MADAGToFastaString(dag_storage) <<
-  // std::endl;
-  // // StoreDAGToProtobuf(dag_storage.View(), dag_pb_path2);
-  // // StoreTreeToProtobuf(dag_storage.View(), mat_pb_path2);
-
-  // // auto tree_storage =
-  // //     LoadTreeFromProtobuf(mat_pb_path,
-  // dag_storage.View().GetReferenceSequence());
-  // // auto tree = tree_storage.View();
-  // // Assert(tree.IsTree());
-  // // tree.RecomputeCompactGenomes(true);
-  // // std::cout << "TREE_FROM_PB: " << MADAGInfo(tree_storage) << std::endl;
-
-  // auto mat_from_pb = LoadMATFromProtobuf(dag_pb_path);
-  // auto mat_from_vcf = LoadMATFromProtobuf(dag_pb_path);
-
-  // // - call VCF_input() on the MAT
-  // ApplyVCFToMAT(mat_from_vcf, vcf_path);
-  // std::cout << "MAT_FROM_PB: " << MATTreeInfo(mat_from_pb) << std::endl;
-  // std::cout << "MAT_FROM_VCF: " << MATTreeInfo(mat_from_vcf) << std::endl;
+  MADAGLabelNodes(dag_w_vcf, false);
+  MADAGApplyCompactGenome(dag_w_vcf, cg_data2);
 
   // - create an Original_State_t object to hold the ambiguous leaf data
-  Original_State_t og_state;
+  Original_State_t amb_og_state, unamb_og_state;
   // - call check_samples() on the MAT and pass in the Original_State_t object to
   // populate it.
-  check_samples(mat_w_vcf.root, og_state, &mat_w_vcf, true);
-  std::cout << "og_state [after]: " << OriginalStateInfo(og_state) << std::endl;
+  check_samples(mat_w_amb_vcf.root, amb_og_state, &mat_w_amb_vcf, true);
+  std::cout << "mat_w_amb_vcf: " << OriginalStateInfo(amb_og_state) << std::endl;
+
+  check_samples(mat_w_unamb_vcf.root, unamb_og_state, &mat_w_unamb_vcf, true);
+  std::cout << "mat_w_unamb_vcf: " << OriginalStateInfo(unamb_og_state) << std::endl;
 }
 
 [[maybe_unused]] static const auto test_added0 =

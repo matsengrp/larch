@@ -53,24 +53,19 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
     SetCompactGenomesFromNodeMutationMap(
         std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>&&
             node_mutation_map) const {
-  std::ignore = node_mutation_map;
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
 
   auto BuildCGFromMutation =
       [&dag](ContiguousMap<MutationPosition, MutationBase>&& new_muts, Node for_node) {
-        std::ignore = new_muts;
-        std::ignore = for_node;
-        // CompactGenome new_cg(new_muts);
-        // for_node = std::move(new_cg);
+        CompactGenome new_cg(std::move(new_muts));
+        for_node = std::move(new_cg);
       };
-  std::ignore = BuildCGFromMutation;
 
   for (auto node : dag.GetNodes()) {
     if (node_mutation_map.find(node.GetId()) != node_mutation_map.end()) {
-      const auto& muts = node_mutation_map.find(node.GetId())->second;
-      std::ignore = muts;
-      // BuildCGFromMutation(std::move(muts), node);
+      auto&& muts = node_mutation_map.find(node.GetId())->second;
+      BuildCGFromMutation(std::move(muts), node);
     }
   }
 }
