@@ -246,7 +246,7 @@ SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
     const std::optional<std::string>& old_sample_id =
         dag_.Get(node.GetOriginalId()).GetSampleId();
     if (node.IsLeaf() and old_sample_id.has_value()) {
-      node.SetSampleId(std::optional<std::string>{old_sample_id});
+      node = SampleId{std::optional<std::string>{old_sample_id}};
     }
   }
 

@@ -128,7 +128,9 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
-    auto cg_iter = result_dag.AddDeduplicated(node.GetCompactGenome());
+    auto cg_iter =
+        result_dag.template AsFeature<Deduplicate<CompactGenome>>().AddDeduplicated(
+            node.GetCompactGenome());
     labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
   }
 }

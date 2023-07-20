@@ -28,7 +28,7 @@ using ConcurrentUnorderedMap =
 
 using MergeDAGStorage =
     ExtendDAGStorage<DefaultDAGStorage,
-                     Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
+                     Extend::Nodes<Deduplicate<CompactGenome>, Deduplicate<SampleId>>,
                      Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
 using MergeDAG = DAGView<const MergeDAGStorage>;

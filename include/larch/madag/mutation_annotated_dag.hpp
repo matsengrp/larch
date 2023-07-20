@@ -53,6 +53,23 @@ struct SampleId {
   std::optional<std::string> sample_id_;
 };
 
+template <>
+struct std::hash<SampleId> {
+  inline std::size_t operator()(const SampleId &sid) const noexcept {
+    if (not sid.sample_id_.has_value()) {
+      return 0;
+    }
+    return std::hash<std::string>{}(sid.sample_id_.value());
+  }
+};
+
+template <>
+struct std::equal_to<SampleId> {
+  inline bool operator()(const SampleId &lhs, const SampleId &rhs) const noexcept {
+    return lhs.sample_id_ == rhs.sample_id_;
+  }
+};
+
 template <typename CRTP, typename Tag>
 struct FeatureConstView<SampleId, CRTP, Tag> {
   const std::optional<std::string> &GetSampleId() const;
@@ -66,7 +83,8 @@ struct FeatureMutableView<SampleId, CRTP, Tag> {
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"
 
 using MADAGStorage =
-    ExtendDAGStorage<DefaultDAGStorage, Extend::Nodes<CompactGenome, SampleId>,
+    ExtendDAGStorage<DefaultDAGStorage,
+                     Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
                      Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
 using MADAG = DAGView<const MADAGStorage>;

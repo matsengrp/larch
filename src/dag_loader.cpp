@@ -118,7 +118,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
   for (auto node : result.View().GetNodes()) {
     if (node.IsLeaf()) {
-      node.SetSampleId(seq_ids[node.GetId().value]);
+      node = SampleId{seq_ids[node.GetId().value]};
     }
   }
 

@@ -158,7 +158,12 @@ struct ExtendDAGStorage {
       : TargetView::StorageType::template MutableDAGViewBase<CRTP>,
         OnDAG::template MutableView<Self, CRTP>,
         OnNodes::template ExtraMutableView<Self, CRTP>,
-        OnEdges::template ExtraMutableView<Self, CRTP> {};
+        OnEdges::template ExtraMutableView<Self, CRTP> {
+    template <typename F>
+    constexpr auto& AsFeature() const noexcept {
+      return static_cast<const ExtraFeatureMutableView<F, CRTP>&>(*this);
+    }
+  };
 
   MOVE_ONLY(ExtendDAGStorage);
 
