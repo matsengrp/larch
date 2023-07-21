@@ -13,7 +13,8 @@ class NodeLabel;
  * CompactGenomes.
  */
 class LeafSet {
-  std::vector<std::vector<const CompactGenome*>> clades_ = {};
+  using UniqueData = const CompactGenome*;
+  std::vector<std::vector<UniqueData>> clades_ = {};
   size_t hash_ = {};
 
  public:
@@ -25,7 +26,7 @@ class LeafSet {
   LeafSet(Node node, const std::vector<NodeLabel>& labels,
           std::vector<LeafSet>& computed_leafsets);
 
-  inline LeafSet(std::vector<std::vector<const CompactGenome*>>&& clades);
+  inline LeafSet(std::vector<std::vector<UniqueData>>&& clades);
 
   inline bool operator==(const LeafSet& rhs) const noexcept;
 
@@ -36,11 +37,11 @@ class LeafSet {
   inline bool empty() const;
   inline size_t size() const;
 
-  [[nodiscard]] inline std::vector<const CompactGenome*> ToParentClade() const;
+  [[nodiscard]] inline std::vector<UniqueData> ToParentClade() const;
 
   [[nodiscard]] inline size_t ParentCladeSize() const;
 
-  inline const std::vector<std::vector<const CompactGenome*>>& GetClades() const;
+  inline const std::vector<std::vector<UniqueData>>& GetClades() const;
 
   inline std::string ToString() const;
 
@@ -50,7 +51,7 @@ class LeafSet {
 
  private:
   inline static size_t ComputeHash(
-      const std::vector<std::vector<const CompactGenome*>>& clades) noexcept;
+      const std::vector<std::vector<UniqueData>>& clades) noexcept;
 };
 
 template <>

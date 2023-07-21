@@ -27,6 +27,7 @@
 #include "larch/madag/mutation_base.hpp"
 #include "larch/madag/compact_genome.hpp"
 #include "larch/madag/edge_mutations.hpp"
+#include "larch/madag/sample_id.hpp"
 
 struct ReferenceSequence {
   std::string reference_sequence_;
@@ -47,37 +48,6 @@ struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
   void AddUA(const EdgeMutations &mutations_at_root) const;
   void RecomputeCompactGenomes(bool recompute_leaves = true) const;
   void RecomputeEdgeMutations() const;
-};
-
-struct SampleId {
-  std::optional<std::string> sample_id_;
-};
-
-template <>
-struct std::hash<SampleId> {
-  inline std::size_t operator()(const SampleId &sid) const noexcept {
-    if (not sid.sample_id_.has_value()) {
-      return 0;
-    }
-    return std::hash<std::string>{}(sid.sample_id_.value());
-  }
-};
-
-template <>
-struct std::equal_to<SampleId> {
-  inline bool operator()(const SampleId &lhs, const SampleId &rhs) const noexcept {
-    return lhs.sample_id_ == rhs.sample_id_;
-  }
-};
-
-template <typename CRTP, typename Tag>
-struct FeatureConstView<SampleId, CRTP, Tag> {
-  const std::optional<std::string> &GetSampleId() const;
-};
-
-template <typename CRTP, typename Tag>
-struct FeatureMutableView<SampleId, CRTP, Tag> {
-  void SetSampleId(const std::optional<std::string> &sample_id) const;
 };
 
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"
