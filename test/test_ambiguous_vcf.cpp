@@ -339,6 +339,8 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
   std::string amb_vcf_path = "data/test_ambiguous_vcf/amb.vcf";
   std::string unamb_vcf_path = "data/test_ambiguous_vcf/unamb.vcf";
 
+  // Create topology and
+
   // Build empty topology with labels (same topology as protobufs).
   // auto topo_dag_storage = MakeSampleDAGTopology();
   auto topo_dag_storage = MakeUnambiguousSampleDAG();
@@ -397,8 +399,8 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
   std::cout << "unamb_mat_truth: " << OriginalStateInfo(unamb_mat_truth_og)
             << std::endl;
 
-  std::cout << "amb_mat_vcf: " << OriginalStateInfo(amb_mat_vcf_og) << std::endl;
-  std::cout << "unamb_mat_vcf: " << OriginalStateInfo(unamb_mat_vcf_og) << std::endl;
+  // std::cout << "amb_mat_vcf: " << OriginalStateInfo(amb_mat_vcf_og) << std::endl;
+  // std::cout << "unamb_mat_vcf: " << OriginalStateInfo(unamb_mat_vcf_og) << std::endl;
 
   std::cout << "amb_mat_cg: " << OriginalStateInfo(amb_mat_cg_og) << std::endl;
   std::cout << "unamb_mat_cg: " << OriginalStateInfo(unamb_mat_cg_og) << std::endl;

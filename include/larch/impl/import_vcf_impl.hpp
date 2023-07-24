@@ -1,4 +1,4 @@
-// Copied from deps/usher/matOptimize/import_vcf_fast.cpp
+// Modified from deps/usher/matOptimize/import_vcf_fast.cpp
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -78,7 +78,6 @@ struct raw_input_source {
 
       *(line_out + bytes_read) = '\0';
       out.emplace(line_out, (uint8_t *)line_out + bytes_read);
-      std::cout << "# operator()" << std::endl;
     }
     out.emplace(nullptr, nullptr);
     out.emplace(nullptr, nullptr);
@@ -267,7 +266,7 @@ struct line_parser {
         raise(SIGTRAP);
       }
       line_in++;
-      // ID don't care
+      // ID (don't care)
       while (*line_in != '\t') {
         line_in++;
       }
@@ -336,11 +335,14 @@ struct line_parser {
                 mutated_t_comparator());
       non_ref_muts_out.emplace_back(0, 0);
 
-      std::cout << "# non_refs_muts_out: [ ";
-      for (const auto &[pos, nuc_one_hot] : non_ref_muts_out) {
-        std::cout << "( " << pos << " " << std::to_string(nuc_one_hot.nuc) << " ) ";
+      {
+        // std::cout << "# non_refs_muts_out: [ ";
+        // for (const auto &[pos, nuc_one_hot] : non_ref_muts_out) {
+        //   std::cout << "( " << pos << " " << std::to_string(nuc_one_hot.nuc) << " )
+        //   ";
+        // }
+        // std::cout << "] " << std::endl;
       }
-      std::cout << "] " << std::endl;
 
       std::get<0>(out).try_put(parsed_line);
     }
