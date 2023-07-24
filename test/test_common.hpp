@@ -110,13 +110,13 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   // leaf nodes
   node_seq_map[{1}] = {"ACC"};
   node_seq_map[{2}] = {"TAG"};
-  node_seq_map[{3}] = {"AGG"};
+  node_seq_map[{3}] = {"GGG"};
   node_seq_map[{4}] = {"ACG"};
   node_seq_map[{5}] = {"CTT"};
   node_seq_map[{6}] = {"TCC"};
   // internal nodes
   node_seq_map[{7}] = {"TGG"};
-  node_seq_map[{8}] = {"CTC"};
+  node_seq_map[{8}] = {"GTC"};
   node_seq_map[{9}] = {"AGT"};
   node_seq_map[{10}] = {"GAA"};
   return node_seq_map;
@@ -127,7 +127,7 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   // leaf nodes
   node_seq_map[{1}] = {"ACC"};
   node_seq_map[{2}] = {"TAG"};
-  node_seq_map[{3}] = {"AGG"};
+  node_seq_map[{3}] = {"GGG"};
   node_seq_map[{4}] = {"ACG"};
   node_seq_map[{5}] = {"CTT"};
   node_seq_map[{6}] = {"TCC"};

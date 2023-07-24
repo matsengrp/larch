@@ -481,21 +481,23 @@ static void process(MAT::Tree &tree, infile_t &fd) {
       input_graph.wait_for_all();
     }
 
-    std::cout << "muts: [ ";
-    tbb::enumerable_thread_specific<Fitch_Sankoff_Out_Container>::const_iterator it;
-    for (it = output.begin(); it != output.end(); ++it) {
-      const auto &thread = *it;
-      std::cout << "[ ";
-      for (const auto &muts : thread.output) {
-        std::cout << "[ ";
-        for (const auto &mut : muts) {
-          std::cout << mut.get_string() << " ";
-        }
-        std::cout << "] ";
-      }
-      std::cout << "] ";
+    {
+      // std::cout << "muts: [ ";
+      // tbb::enumerable_thread_specific<Fitch_Sankoff_Out_Container>::const_iterator
+      // it; for (it = output.begin(); it != output.end(); ++it) {
+      //   const auto &thread = *it;
+      //   std::cout << "[ ";
+      //   for (const auto &muts : thread.output) {
+      //     std::cout << "[ ";
+      //     for (const auto &mut : muts) {
+      //       std::cout << mut.get_string() << " ";
+      //     }
+      //     std::cout << "] ";
+      //   }
+      //   std::cout << "] ";
+      // }
+      // std::cout << "] " << std::endl;
     }
-    std::cout << "] " << std::endl;
 
     // deallocate_FS_cache(output);
     fill_muts(output, bfs_ordered_nodes);

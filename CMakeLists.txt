@@ -49,7 +49,7 @@ ExternalProject_Add(isa-l
   GIT_TAG v2.30.0
   GIT_SHALLOW true
   GIT_PROGRESS true
-  UPDATE_DISCONNECTED TRUE
+  UPDATE_DISCONNECTED true
   PREFIX isa-l
   SOURCE_DIR isa-l/source
   BINARY_DIR isa-l/source
