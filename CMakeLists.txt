@@ -54,7 +54,7 @@ ExternalProject_Add(isa-l
   SOURCE_DIR isa-l/source
   BINARY_DIR isa-l/source
   INSTALL_DIR isa-l/install
-  CONFIGURE_COMMAND ./autogen.sh && ./configure --prefix=${CMAKE_BINARY_DIR}/isa-l/install --libdir=${CMAKE_BINARY_DIR}/isa-l/install
+  CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env SED=/bin/sed GREP=/bin/grep ./autogen.sh && ${CMAKE_COMMAND} -E env AS=yasm ./configure --prefix=${CMAKE_BINARY_DIR}/isa-l/install --libdir=${CMAKE_BINARY_DIR}/isa-l/install
   BUILD_COMMAND make && make other
   INSTALL_COMMAND make install
 )
