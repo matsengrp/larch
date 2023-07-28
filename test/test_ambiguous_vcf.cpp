@@ -408,3 +408,44 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
 
 [[maybe_unused]] static const auto test_added0 =
     add_test({[]() { test_ambiguous_vcf(); }, "Loading VCFs with Ambiguities Test"});
+/* Pseudocode for some tests:
+
+void test_vcf_compatible(MADAGStorage dag_storage, const std::string &vcf_path) {
+
+  MADAG dag = dag_storage.View();
+  auto ref_seq = dag.GetReferenceSequence();
+  auto id_to_cg_map = ReadVCFToCompactGenomeData(vcf_path, ref_seq)
+
+  // make sure that each of the leaves in dag match exactly one key of id_to_cg_map
+  for (auto leaf: dag.GetLeafs()) {
+    Assert(std::find(id_to_cg_map.begin(), id_to_cg_map.end(), leaf.GetSampleId()) != id_to_cg_map.end());
+  }
+
+  // make sure that each parent edge is "compatible" with the leaf nodes
+  MADAGApplyCompactGenomeData(dag_storage, id_to_cg_map);
+  dag.RecomputeEdgeMutations();
+  for (auto leaf: dag.GetLeafs()) {
+    for (auto parent_edge: leaf.GetParents()) {
+      auto parent_node = parent_edge.GetParent();
+      Assert(...); // checking parent node and leaf node cgs are compatible with the edge mutation set
+    }
+  }
+}
+void test_vcf_reading(MADAGStorage dag_storage, const std::string &vcf_path) {
+  MADAG dag = dag_storage.View();
+  auto ref_seq = dag.GetReferenceSequence();
+  auto id_to_cg_map = ReadVCFToCompactGenomeData(vcf_path, ref_seq)
+
+  SubtreeWeight<ParsimonyScore, MADAG> weight{dag};
+  auto sample = AddMATConversion(weight.SampleTree({}));
+  MAT::Tree mat;
+  sample.View().BuildMAT(mat);
+
+  // check these two methods apply the same set of changes
+  MADAGApplyCompactGenomeData(sample.GetStorage(), id_to_cg_map);
+  MATApplyCompactGenomeData(mat.GetStorage(), id_to_cg_map);
+
+  // this routine is from include/larch/impl/produce_mat.cpp
+  check_MAT_MADAG_Eq(tree, dag);
+}
+ */
