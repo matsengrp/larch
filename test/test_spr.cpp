@@ -97,6 +97,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
   merge.AddDAG(input_dag);
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{})), MAT::Tree>>
       optimized_dags;
+  Original_State_t origin_states;
 
   for (size_t i = 0; i < count; ++i) {
     merge.ComputeResultEdgeMutations();
@@ -110,7 +111,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     check_edge_mutations(sample.View().Const());
     Test_Move_Found_Callback callback{sample.View(), merge};
     optimized_dags.push_back(
-        optimize_dag_direct(sample.View(), callback, callback, callback));
+        optimize_dag_direct(sample.View(), origin_states, callback, callback, callback));
     optimized_dags.back().first.View().RecomputeCompactGenomes(true);
     merge.AddDAG(optimized_dags.back().first.View(), chosen_node);
   }
@@ -195,9 +196,10 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   Single_Move_Callback_With_Hypothetical_Tree single_move_callback{
       dag_altered_in_callback, sample.View()};
 
+  Original_State_t origin_states;
   // optimize tree with matOptimize using a callback that only applies a single move
   auto [optimized_dag, optimized_mat] = optimize_dag_direct(
-      sample.View(), single_move_callback, single_move_callback, single_move_callback);
+      sample.View(), origin_states, single_move_callback, single_move_callback, single_move_callback);
 
   optimized_dag.View().RecomputeCompactGenomes(true);
   Merge<MADAG> two_tree_dag{tree_shaped_dag.View().GetReferenceSequence()};

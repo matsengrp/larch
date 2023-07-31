@@ -41,7 +41,7 @@ void check_MAT_MADAG_Eq(MAT::Tree& tree, DAG init) {
 }
 
 template <typename DAG, typename RadiusCallback, typename ReassignCallback>
-auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
+auto optimize_dag_direct(DAG dag, Original_State_t leaf_data, Move_Found_Callback& callback,
                          RadiusCallback&& radius_callback,
                          ReassignCallback&& reassign_callback) {
   static_assert(DAG::template contains_element_feature<NodeId, MATConversion>);
@@ -49,9 +49,13 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
 
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "before_optimize.pb");
   check_MAT_MADAG_Eq(tree, dag);
-  Original_State_t origin_states;
-  check_samples(tree.root, origin_states, &tree);
-  reassign_states(tree, origin_states);
+  if (not leaf_data.empty()) {
+    reassign_states(tree, leaf_data);
+  } else {
+    Original_State_t origin_states;
+    check_samples(tree.root, origin_states, &tree);
+    reassign_states(tree, origin_states);
+  }
   reassign_callback.OnReassignedStates(tree);
   radius_callback(tree);
 

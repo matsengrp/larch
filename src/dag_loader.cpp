@@ -17,6 +17,8 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/copy.hpp>
 
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score.hpp"
 #include "larch/dag_loader.hpp"
 #include "dag.pb.h"
 #include "parsimony.pb.h"
@@ -280,4 +282,21 @@ void MATToDOT(const MAT::Tree& mat, std::ostream& out) {
   std::set<const MAT::Node*> visited;
   MATToDOT(mat.root, out, visited);
   out << "}\n";
+}
+
+Original_State_t load_vcf_data(MADAGStorage &dag_storage, std::string &vcf_path) {
+  Original_State_t origin_states;
+  auto dag = dag_storage.View();
+  SubtreeWeight<ParsimonyScore, MADAG> weight{dag};
+  auto sample = AddMATConversion(weight.SampleTree({}));
+  MAT::Tree mat;
+  sample.View().BuildMAT(mat);
+  if (vcf_path.empty()) {
+    // sample a tree and convert to a MAT, and create an original_state_t from it using check_samples
+    check_samples(mat.root, origin_states, &mat);
+  } else {
+    VCF_input(vcf_path.c_str(), mat);
+    check_samples(mat.root, origin_states, &mat);
+  }
+  return origin_states;
 }
