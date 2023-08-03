@@ -831,9 +831,9 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
           ? LoadDAGFromProtobuf(input_dag_path)
           : LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path));
 
+  input_dag.View().RecomputeCompactGenomes(true);
   Original_State_t ambiguous_leaf_data = load_vcf_data(input_dag, vcf_path);
 
-  input_dag.View().RecomputeCompactGenomes();
   Merge<MADAG> merge{input_dag.View().GetReferenceSequence()};
   merge.AddDAGs({input_dag.View()});
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{})), MAT::Tree>>
