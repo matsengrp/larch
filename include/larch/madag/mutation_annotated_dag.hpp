@@ -47,6 +47,9 @@ struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
   void SetCompactGenomesFromNodeMutationMap(
       std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>
           &&node_mutation_map) const;
+  void UpdateCompactGenomesFromNodeMutationMap(
+      std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>
+          &&node_mutation_map) const;
   void AddUA(const EdgeMutations &mutations_at_root) const;
   void RecomputeCompactGenomes(bool recompute_leaves = false) const;
   void RecomputeEdgeMutations() const;

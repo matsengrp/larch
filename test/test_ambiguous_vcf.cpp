@@ -299,7 +299,7 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
       }
     }
   }
-  dag.SetCompactGenomesFromNodeMutationMap(std::move(tmp_mut_map));
+  dag.UpdateCompactGenomesFromNodeMutationMap(std::move(tmp_mut_map));
   dag.RecomputeEdgeMutations();
 }
 
@@ -340,7 +340,6 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
   std::string unamb_vcf_path = "data/test_ambiguous_vcf/unamb.vcf";
 
   // Create topology and
-
   // Build empty topology with labels (same topology as protobufs).
   // auto topo_dag_storage = MakeSampleDAGTopology();
   auto topo_dag_storage = MakeUnambiguousSampleDAG();

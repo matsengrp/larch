@@ -71,6 +71,29 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
 }
 
 template <typename CRTP, typename Tag>
+void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
+    UpdateCompactGenomesFromNodeMutationMap(
+        std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>&&
+            node_mutation_map) const {
+  auto dag = static_cast<const CRTP&>(*this);
+  using Node = typename decltype(dag)::NodeView;
+
+  auto BuildCGFromMutation =
+      [&dag](ContiguousMap<MutationPosition, MutationBase>&& new_muts, Node for_node) {
+        CompactGenome new_cg = for_node.GetCompactGenome().Copy();
+        new_cg.ApplyChanges(std::move(new_muts));
+        for_node = std::move(new_cg);
+      };
+
+  for (auto node : dag.GetNodes()) {
+    if (node_mutation_map.find(node.GetId()) != node_mutation_map.end()) {
+      auto&& muts = node_mutation_map.find(node.GetId())->second;
+      BuildCGFromMutation(std::move(muts), node);
+    }
+  }
+}
+
+template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::AddUA(
     const EdgeMutations& mutations_at_root) const {
   auto dag = static_cast<const CRTP&>(*this);

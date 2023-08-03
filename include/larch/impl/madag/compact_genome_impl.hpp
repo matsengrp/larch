@@ -60,7 +60,7 @@ void CompactGenome::ApplyChanges(
     const ContiguousMap<MutationPosition, MutationBase>& changes) {
   for (auto change : changes) {
     AssertMut(change.first, change.second);
-    mutations_.insert(change);
+    mutations_[change.first] = change.second;
   }
 }
 
