@@ -18,8 +18,7 @@
 
 [[nodiscard]] std::string LoadReferenceSequence(std::string_view path);
 
-[[nodiscard]] Original_State_t load_vcf_data(MADAGStorage &dag_storage,
-                                             std::string &vcf_path);
+void LoadVCFData(MADAGStorage &dag_storage, std::string &vcf_path);
 
 template <typename DAG>
 void StoreDAGToProtobuf(DAG dag, std::string_view path);

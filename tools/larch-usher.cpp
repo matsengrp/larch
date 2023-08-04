@@ -832,12 +832,20 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
           : LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path));
 
   input_dag.View().RecomputeCompactGenomes(true);
-  Original_State_t ambiguous_leaf_data = load_vcf_data(input_dag, vcf_path);
+  LoadVCFData(input_dag, vcf_path);
+std::cout << "original loaded DAG with vcf data:\n";
+for (auto leaf: input_dag.View().GetLeafs()) {
+  std::cout << "leaf: " << leaf.GetId() << ": " << leaf.GetCompactGenome().ToString() << "\n";
+}
 
   Merge<MADAG> merge{input_dag.View().GetReferenceSequence()};
   merge.AddDAGs({input_dag.View()});
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{})), MAT::Tree>>
       optimized_dags;
+std::cout << "MERGE DAG with vcf data:\n";
+for (auto leaf: merge.GetResult().GetLeafs()) {
+  std::cout << "leaf: " << leaf.GetId() << ": " << leaf.GetCompactGenome().ToString() << "\n";
+}
 
   auto start_time = std::chrono::high_resolution_clock::now();
   auto time_elapsed = [&start_time]() {
@@ -946,11 +954,17 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       return std::nullopt;
     }();
 
+merge.ComputeResultEdgeMutations();
     auto sample = sample_best_tree
                       ? AddMATConversion(weight.MinWeightSampleTree({}, subtree_node))
                       : AddMATConversion(weight.SampleTree({}, subtree_node));
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
               << sample.GetNodesCount() << "\n";
+sample.View().RecomputeCompactGenomes();
+std::cout << "sampled DAG:\n";
+for (auto leaf: sample.View().GetLeafs()) {
+  std::cout << "leaf: " << leaf.GetId() << ": " << leaf.GetCompactGenome().ToString() << "\n";
+}
     MAT::Tree mat;
     sample.View().BuildMAT(mat);
     sample.View().GetRoot().Validate(true);
@@ -959,27 +973,27 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     if (callback_config == "all-moves") {
       Merge_All_Moves_Found_Callback callback{sample.View(), merge};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), ambiguous_leaf_data, callback, callback, callback));
+          optimize_dag_direct(sample.View(), callback, callback, callback));
     } else if (callback_config == "best-moves-so-far") {
       Merge_All_Profitable_Moves_Found_So_Far_Callback callback{
           sample.View(), merge, {move_coeff_nodes, move_coeff_pscore}};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), ambiguous_leaf_data, callback, callback, callback));
+          optimize_dag_direct(sample.View(), callback, callback, callback));
     } else if (callback_config == "best-moves-fixed-tree") {
       Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback callback{
           sample.View(), merge, {move_coeff_nodes, move_coeff_pscore}};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), ambiguous_leaf_data, callback, callback, callback));
+          optimize_dag_direct(sample.View(), callback, callback, callback));
     } else if (callback_config == "best-moves-treebased") {
       Treebased_Move_Found_Callback callback{
           sample.View(), merge, {move_coeff_nodes, move_coeff_pscore}};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), ambiguous_leaf_data, callback, callback, callback));
+          optimize_dag_direct(sample.View(), callback, callback, callback));
     } else {
       Merge_All_Profitable_Moves_Found_Callback callback{
           sample.View(), merge, {move_coeff_nodes, move_coeff_pscore}};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), ambiguous_leaf_data, callback, callback, callback));
+          optimize_dag_direct(sample.View(), callback, callback, callback));
     }
 
     optimized_dags.back().first.View().RecomputeCompactGenomes();

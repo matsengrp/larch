@@ -340,6 +340,24 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
   std::string unamb_vcf_path = "data/test_ambiguous_vcf/unamb.vcf";
 
   // Create topology and
+
+  auto marysinput_storage = MakeSampleDAG();
+  marysinput_storage.View().RecomputeCompactGenomes();
+  MADAGLabelNodes(marysinput_storage, false);
+  marysinput_storage.View().RecomputeCompactGenomes(true);
+  MADAGToFasta(marysinput_storage, "data/test_ambiguous_vcf/MarysSampleDAGUnamb.fasta", false, true, false);
+  StoreTreeToProtobuf(marysinput_storage.View(), "data/test_ambiguous_vcf/MarysSampleMATUnamb.pb");
+  std::cout << "heeere's mary's:\n"<< MADAGInfo(marysinput_storage) << std::endl << "-----\n";
+  auto marys_cg_data = ReadVCFToCompactGenomeData("data/test_ambiguous_vcf/MarysSampleDAGAmbigRefSeq.vcf", ref_seq);
+  for (auto &kv: marys_cg_data) {
+    std::cout << "node " << kv.first << " has cg data:\n";
+    for (auto kkvv: kv.second) {
+      std::cout << "\t" << kkvv.first << ": " << kkvv.second << "\n";
+    }
+  }
+  MADAGApplyCompactGenomeData(marysinput_storage, marys_cg_data);
+  std::cout << "and again, heeere's mary's:\n"<< MADAGInfo(marysinput_storage) << std::endl << "-----\n";
+
   // Build empty topology with labels (same topology as protobufs).
   // auto topo_dag_storage = MakeSampleDAGTopology();
   auto topo_dag_storage = MakeUnambiguousSampleDAG();

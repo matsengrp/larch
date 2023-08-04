@@ -175,7 +175,6 @@ static void test_matOptimize(std::string_view input_dag_path,
     auto chosen_node = choose_node(weight);
     bool subtrees = not chosen_node.IsUA();
     auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
-    Original_State_t origin_states;
     MAT::Tree mat;
     sample.View().BuildMAT(mat);
     std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
@@ -210,7 +209,7 @@ static void test_matOptimize(std::string_view input_dag_path,
       }();
       callback.MergeNodeIDs(std::move(full_map));
     };
-    optimize_dag_direct(sample.View(), origin_states, callback, radius_callback, callback);
+    optimize_dag_direct(sample.View(), callback, radius_callback, callback);
   }
 }
 
