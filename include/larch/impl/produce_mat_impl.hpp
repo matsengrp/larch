@@ -52,12 +52,6 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   Original_State_t origin_states;
   check_samples(tree.root, origin_states, &tree);
   reassign_states(tree, origin_states);
-
-std::cout << "sampleMAT built from DAG:\n";
-for (auto leaf: tree.get_leaves()) {
-  std::cout << "leaf: " << leaf->node_id << ": " << ToEdgeMutationsString(leaf) << "\n";
-}
-
   reassign_callback.OnReassignedStates(tree);
   radius_callback(tree);
 
@@ -92,7 +86,13 @@ for (auto leaf: tree.get_leaves()) {
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
   auto result = std::make_pair(AddMATConversion(MADAGStorage{}), std::move(tree));
   result.first.View().BuildFromMAT(result.second, dag.GetReferenceSequence());
+
+  // UPDATE LEAF CG's WITH AMBIUGOUS CG MAP
+  for (auto leaf: tree.get_leaves()) {
+    auto new_cg = reassign_callback.mat_node_to_cg_map_[leaf].Copy();
+    result.first.View().GetNodeFromMAT(leaf) = std::move(new_cg);
+  }
   // TODO tree.delete_nodes();
-  result.first.View().RecomputeCompactGenomes(true);
+  result.first.View().RecomputeCompactGenomes();
   return result;
 }

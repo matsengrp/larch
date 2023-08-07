@@ -62,7 +62,6 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
   for (auto node : dag.GetNodes()) {
     node.ClearConnections();
   }
-  EdgeId edge_id = {0};
   for (auto edge : dag.GetEdges()) {
     Assert(edge.GetParentId().value != NoId && "Edge has no parent");
     Assert(edge.GetChildId().value != NoId && "Edge has no child");
@@ -70,6 +69,5 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
     Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
     edge.GetParent().AddEdge(edge.GetClade(), edge, true);
     edge.GetChild().AddEdge(edge.GetClade(), edge, false);
-    ++edge_id.value;
   }
 }

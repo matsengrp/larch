@@ -137,7 +137,13 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     node_id_map_.merge(std::forward<decltype(node_id_map)>(node_id_map));
   }
 
-  void OnReassignedStates(const MAT::Tree&) {}
+  void OnReassignedStates(const MAT::Tree& tree) {
+    for (auto leaf_node: tree.get_leaves()) {
+      auto new_cg = sample_.GetNodeFromMAT(leaf_node).GetCompactGenome().Copy();
+      mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
+    }
+  }
+  std::map<MAT::Node*, CompactGenome> mat_node_to_cg_map_;
 
  private:
   NodeId ToMergedNodeId(MATNodePtr node) {

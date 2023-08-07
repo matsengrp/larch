@@ -64,6 +64,11 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   void OnReassignedStates(MAT::Tree& tree) {
     reassigned_states_storage_.View().BuildFromMAT(tree,
                                                    sample_dag_.GetReferenceSequence());
+    for (auto leaf_node: tree.get_leaves()) {
+      auto new_cg = sample_dag_.GetNodeFromMAT(leaf_node).GetCompactGenome().Copy();
+      mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
+    }
+
     check_edge_mutations(reassigned_states_storage_.View().Const());
     reassigned_states_storage_.View().RecomputeCompactGenomes(true);
     {
@@ -75,6 +80,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 
   DAG sample_dag_;
   MergeT& merge_;
+  std::map<MAT::Node*, CompactGenome> mat_node_to_cg_map_;
   decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
       AddMATConversion(Storage{});
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
@@ -166,10 +172,16 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
     sample_mat_ = std::addressof(tree);
   }
 
-  void OnReassignedStates(const MAT::Tree&) {}
+  void OnReassignedStates(const MAT::Tree& tree) {
+    for (auto leaf_node: tree.get_leaves()) {
+      auto new_cg = sample_.GetNodeFromMAT(leaf_node).GetCompactGenome().Copy();
+      mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
+    }
+  }
 
   Merge<MADAG>& merge_;
   SampleDAG sample_;
+  std::map<MAT::Node*, CompactGenome> mat_node_to_cg_map_;
   std::mutex mutex_;
   MAT::Tree* sample_mat_ = nullptr;
   bool approved_a_move_;

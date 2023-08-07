@@ -81,7 +81,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
   auto BuildCGFromMutation =
       [&dag](ContiguousMap<MutationPosition, MutationBase>&& new_muts, Node for_node) {
         CompactGenome new_cg = for_node.GetCompactGenome().Copy();
-        new_cg.ApplyChanges(std::move(new_muts));
+        new_cg.ApplyChanges(new_muts);
         for_node = std::move(new_cg);
       };
 
