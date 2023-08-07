@@ -14,7 +14,7 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
           clade_leafs.reserve(clade.size());
           for (Node child : clade | Transform::GetChild()) {
             if (child.IsLeaf()) {
-              clade_leafs.push_back(labels.at(child.GetId().value).GetCompactGenome());
+              clade_leafs.push_back(labels.at(child.GetId().value).GetSampleId());
             } else {
               for (auto& child_leafs :
                    computed_leafsets.at(child.GetId().value).clades_) {

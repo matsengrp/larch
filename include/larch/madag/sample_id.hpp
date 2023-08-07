@@ -2,6 +2,12 @@
 
 struct SampleId {
   std::optional<std::string> sample_id_;
+
+  inline std::string ToString() const { return sample_id_.value_or(std::string{}); }
+  inline size_t Hash() const {
+    return std::hash<std::string>{}(sample_id_.value_or(std::string{}));
+  }
+  inline static const SampleId *Empty();
 };
 
 template <>

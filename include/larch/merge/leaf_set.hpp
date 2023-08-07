@@ -1,7 +1,7 @@
 #pragma once
 
 #include "larch/common.hpp"
-#include "larch/madag/compact_genome.hpp"
+#include "larch/madag/sample_id.hpp"
 
 class NodeLabel;
 
@@ -13,7 +13,7 @@ class NodeLabel;
  * CompactGenomes.
  */
 class LeafSet {
-  using UniqueData = const CompactGenome*;
+  using UniqueData = const SampleId*;
   std::vector<std::vector<UniqueData>> clades_ = {};
   size_t hash_ = {};
 

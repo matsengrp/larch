@@ -1,9 +1,11 @@
 
+const SampleId* SampleId::Empty() {
+  static const SampleId empty = {};
+  return &empty;
+}
+
 std::size_t std::hash<SampleId>::operator()(const SampleId &sid) const noexcept {
-  if (not sid.sample_id_.has_value()) {
-    return 0;
-  }
-  return std::hash<std::string>{}(sid.sample_id_.value());
+  return std::hash<std::string>{}(sid.sample_id_.value_or(std::string{}));
 }
 
 bool std::equal_to<SampleId>::operator()(const SampleId &lhs,

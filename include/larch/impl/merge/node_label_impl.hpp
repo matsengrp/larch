@@ -2,10 +2,12 @@
 #include "larch/merge/leaf_set.hpp"
 
 NodeLabel::NodeLabel()
-    : compact_genome_{CompactGenome::Empty()}, leaf_set_{LeafSet::Empty()} {}
+    : compact_genome_{CompactGenome::Empty()},
+      leaf_set_{LeafSet::Empty()},
+      sample_id_{SampleId::Empty()} {}
 
-NodeLabel::NodeLabel(const CompactGenome* cg, const LeafSet* ls)
-    : compact_genome_{cg}, leaf_set_{ls} {
+NodeLabel::NodeLabel(const CompactGenome* cg, const LeafSet* ls, const SampleId* id)
+    : compact_genome_{cg}, leaf_set_{ls}, sample_id_{id} {
   Assert(compact_genome_);
   Assert(leaf_set_);
 }
@@ -20,6 +22,8 @@ const LeafSet* NodeLabel::GetLeafSet() const {
   return leaf_set_;
 }
 
+const SampleId* NodeLabel::GetSampleId() const { return sample_id_; }
+
 void NodeLabel::SetCompactGenome(const CompactGenome* cg) {
   compact_genome_ = cg;
   Assert(compact_genome_);
@@ -29,6 +33,8 @@ void NodeLabel::SetLeafSet(const LeafSet* ls) {
   leaf_set_ = ls;
   Assert(leaf_set_);
 }
+
+void NodeLabel::SetSampleId(const SampleId* id) { sample_id_ = id; }
 
 bool NodeLabel::operator==(const NodeLabel& rhs) const noexcept {
   return compact_genome_ == rhs.compact_genome_ && leaf_set_ == rhs.leaf_set_;

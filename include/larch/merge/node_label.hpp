@@ -13,13 +13,15 @@ class LeafSet;
 class NodeLabel {
  public:
   inline NodeLabel();
-  inline NodeLabel(const CompactGenome* cg, const LeafSet* ls);
+  inline NodeLabel(const CompactGenome* cg, const LeafSet* ls, const SampleId* id);
 
   inline const CompactGenome* GetCompactGenome() const;
   inline const LeafSet* GetLeafSet() const;
+  inline const SampleId* GetSampleId() const;
 
   inline void SetCompactGenome(const CompactGenome* cg);
   inline void SetLeafSet(const LeafSet* ls);
+  inline void SetSampleId(const SampleId* id);
 
   inline bool operator==(const NodeLabel& rhs) const noexcept;
 
@@ -37,7 +39,6 @@ class NodeLabel {
     }
     return false;
   }
-
   inline std::string ToString() const {
     std::string result = "[";
     result += compact_genome_->ToString();
@@ -50,6 +51,7 @@ class NodeLabel {
  private:
   const CompactGenome* compact_genome_;
   const LeafSet* leaf_set_;
+  const SampleId* sample_id_;
 };
 
 template <>
