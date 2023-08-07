@@ -22,7 +22,6 @@
 #include <mpi.h>
 
 #include "larch/usher_glue.hpp"
-#include <tbb/global_control.h>
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
@@ -216,6 +215,7 @@ struct Treebased_Move_Found_Callback : public Move_Found_Callback {
   void OnReassignedStates(MAT::Tree& tree) {
     reassigned_states_storage_.View().BuildFromMAT(tree,
                                                    sample_dag_.GetReferenceSequence());
+    // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
     for (auto leaf_node: tree.get_leaves()) {
       auto new_cg = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
       reassigned_states_storage_.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
@@ -293,6 +293,7 @@ struct Merge_All_Moves_Found_Callback : public Move_Found_Callback {
   void OnReassignedStates(MAT::Tree& tree) {
     reassigned_states_storage_.View().BuildFromMAT(tree,
                                                    sample_dag_.GetReferenceSequence());
+    // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
     for (auto leaf_node: tree.get_leaves()) {
       auto new_cg = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
       reassigned_states_storage_.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
@@ -339,6 +340,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
       MAT::Tree* mat = sample_mat_.load();
       auto mat_conv = AddMATConversion(Storage{});
       mat_conv.View().BuildFromMAT(*mat, ref_seq);
+      // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
       for (auto leaf_node: mat->get_leaves()) {
         auto new_cg = mat_node_to_cg_map_[leaf_node].Copy();
         mat_conv.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
@@ -422,6 +424,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
     decltype(AddMATConversion(Storage{})) storage;
     storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
 
+    // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
     for (auto leaf_node: tree.get_leaves()) {
       auto new_cg = mat_node_to_cg_map_[leaf_node].Copy();
       storage.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
@@ -439,6 +442,7 @@ struct Merge_All_Profitable_Moves_Found_Callback : public Move_Found_Callback {
   void OnReassignedStates(MAT::Tree& tree) {
     reassigned_states_storage_.View().BuildFromMAT(tree,
                                                    sample_dag_.GetReferenceSequence());
+    // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
     for (auto leaf_node: tree.get_leaves()) {
       auto new_cg = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
       reassigned_states_storage_.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
@@ -575,6 +579,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
   void OnReassignedStates(MAT::Tree& tree) {
     reassigned_states_storage_.View().BuildFromMAT(tree,
                                                    sample_dag_.GetReferenceSequence());
+    // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
     for (auto leaf_node: tree.get_leaves()) {
       auto new_cg = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
       reassigned_states_storage_.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
@@ -715,6 +720,7 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
   void OnReassignedStates(MAT::Tree& tree) {
     reassigned_states_storage_.View().BuildFromMAT(tree,
                                                    sample_dag_.GetReferenceSequence());
+    // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
     for (auto leaf_node: tree.get_leaves()) {
       auto new_cg = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
       reassigned_states_storage_.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
@@ -867,7 +873,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWors"
              "tParsimony\tSecondsElapsed";
 
-  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAGStorage input_dag =
       refseq_path.empty()
           ? LoadDAGFromProtobuf(input_dag_path)

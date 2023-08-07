@@ -87,7 +87,7 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   auto result = std::make_pair(AddMATConversion(MADAGStorage{}), std::move(tree));
   result.first.View().BuildFromMAT(result.second, dag.GetReferenceSequence());
 
-  // UPDATE LEAF CG's WITH AMBIUGOUS CG MAP
+  // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
   for (auto leaf: tree.get_leaves()) {
     auto new_cg = reassign_callback.mat_node_to_cg_map_[leaf].Copy();
     result.first.View().GetNodeFromMAT(leaf) = std::move(new_cg);
