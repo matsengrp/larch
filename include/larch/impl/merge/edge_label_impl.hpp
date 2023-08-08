@@ -16,7 +16,7 @@ size_t EdgeLabel::Hash() const noexcept {
 CladeIdx EdgeLabel::ComputeCladeIdx() const {
   auto parent_clade = child_.GetLeafSet()->ToParentClade();
   if (parent_clade.empty()) {
-    // parent_clade.push_back(child_.GetCompactGenome());//XXX
+    parent_clade.push_back(child_.GetSampleId());
   }
   CladeIdx result{0};
   for (const auto& clade : *parent_.GetLeafSet()) {

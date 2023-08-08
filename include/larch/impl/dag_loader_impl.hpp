@@ -19,7 +19,7 @@
 #include <boost/iostreams/copy.hpp>
 
 #include "larch/dag_loader.hpp"
-#include "dag.pb.h"
+#include "proto/dag.pb.h"
 #include "parsimony.pb.h"
 #include "larch/newick.hpp"
 

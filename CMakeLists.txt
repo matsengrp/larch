@@ -21,14 +21,47 @@ tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf
 find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-find_package(Protobuf REQUIRED)
 
-protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS
-  proto/dag.proto)
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
-  deps/usher/parsimony.proto)
-protobuf_generate_cpp(DETAILED_MUTATIONS_PROTO_SRCS DETAILED_MUTATIONS_PROTO_HDRS
-  deps/usher/mutation_detailed.proto)
+# FetchContent_Declare(protobuf
+#   GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
+#   GIT_TAG v23.4
+#   # SOURCE_SUBDIR cmake
+#   # FIND_PACKAGE_ARGS NAMES protobuf
+#   OVERRIDE_FIND_PACKAGE
+# )
+# set(ABSL_PROPAGATE_CXX_STD ON)
+# set(protobuf_MODULE_COMPATIBLE ON)
+# FetchContent_MakeAvailable(protobuf)
+# # include(FindProtobuf)
+# find_package(protobuf CONFIG REQUIRED HINTS ${${PROJECT_BINARY_DIR}/_deps/protobuf-build/cmake/protobuf} )
+# file(TOUCH ${PROJECT_BINARY_DIR}/_deps/protobuf-build/cmake/protobuf/protobuf-targets.cmake)
+# include(${PROJECT_BINARY_DIR}/_deps/protobuf-build/cmake/protobuf/protobuf-config.cmake)
+
+include(protobuf.cmake)
+
+add_library(larch-autogen OBJECT
+  ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
+  ${PROTO_SRCS} ${PROTO_HDRS}
+  ${DETAILED_MUTATIONS_PROTO_SRCS} ${DETAILED_MUTATIONS_PROTO_HDRS}
+)
+set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
+target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR})
+set_target_properties(larch-autogen
+  PROPERTIES CXX_CLANG_TIDY ""
+)
+
+protobuf_generate(
+  LANGUAGE cpp
+  TARGET larch-autogen
+  PROTOS proto/dag.proto deps/usher/parsimony.proto deps/usher/mutation_detailed.proto
+)
+
+# protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS
+#   proto/dag.proto)
+# protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
+#   deps/usher/parsimony.proto)
+# protobuf_generate_cpp(DETAILED_MUTATIONS_PROTO_SRCS DETAILED_MUTATIONS_PROTO_HDRS
+#   deps/usher/mutation_detailed.proto)
 
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
 FetchContent_MakeAvailable(json)
@@ -62,15 +95,6 @@ endif()
 
 find_package(ZLIB)
 
-add_library(larch-autogen OBJECT
-  ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
-  ${PROTO_SRCS} ${PROTO_HDRS}
-  ${DETAILED_MUTATIONS_PROTO_SRCS} ${DETAILED_MUTATIONS_PROTO_HDRS}
-)
-set_target_properties(larch-autogen
-  PROPERTIES CXX_CLANG_TIDY ""
-)
-
 set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
@@ -88,7 +112,8 @@ function(larch_compile_opts PRODUCT)
 
   target_include_directories(${PRODUCT} PUBLIC include tools test)
   target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
-  target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+  target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR})
+  target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR}/deps/usher)
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
   add_dependencies(${PRODUCT} range-v3)
 if(${USE_HTSLIB})
@@ -176,7 +201,7 @@ target_include_directories(usher PUBLIC include)
 target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
 target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
 add_dependencies(usher range-v3)
-target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(usher PUBLIC ${PROTO_OUT_DIR}/deps/usher)
 larch_link_opts(usher)
 target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
 set_target_properties(usher
