@@ -1,6 +1,7 @@
 include(FetchContent)
 
 set(Protobuf_USE_STATIC_LIBS ON)
+cmake_policy(SET CMP0026 OLD)
 
 FetchContent_Declare(
   protocolbuffers_protobuf
@@ -12,7 +13,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(protocolbuffers_protobuf)
 
 set(Protobuf_ROOT ${protocolbuffers_protobuf_SOURCE_DIR})
-set(Protobuf_DIR ${protocolbuffers_protobuf_BINARY_DIR}/cmake/protobuf)
 
 message(STATUS "Setting up protobuf ...")
 execute_process(
@@ -34,23 +34,22 @@ if(result)
 endif()
 
 message(STATUS "Installing protobuf ...")
-if(WIN32)
-    execute_process(
-        COMMAND ${CMAKE_COMMAND} --build . --target install --config ${CMAKE_BUILD_TYPE}
-    RESULT_VARIABLE result
-    WORKING_DIRECTORY ${Protobuf_ROOT})
-    if(result)
-        message(FATAL_ERROR "Failed to build protobuf (${result})!")
-    endif()
+execute_process(
+    COMMAND ${CMAKE_COMMAND} --install . --config ${CMAKE_BUILD_TYPE} --prefix ${Protobuf_ROOT}/install
+RESULT_VARIABLE result
+WORKING_DIRECTORY ${Protobuf_ROOT})
+if(result)
+    message(FATAL_ERROR "Failed to build protobuf (${result})!")
 endif()
 
-find_package(Protobuf CONFIG REQUIRED HINTS ${Protobuf_DIR})
+find_package(Protobuf CONFIG REQUIRED HINTS ${Protobuf_ROOT}/install/lib64/cmake)
 
-# file(TOUCH ${Protobuf_DIR}/protobuf-targets.cmake)
-# include(${Protobuf_DIR}/protobuf-config.cmake)
-# include(${Protobuf_DIR}/protobuf-module.cmake)
-# include(${Protobuf_DIR}/protobuf-options.cmake)
-# include(${Protobuf_DIR}/protobuf-targets.cmake)
+set(Protobuf_PROTOC_EXECUTABLE ${Protobuf_ROOT}/install/bin/protoc)
+
+include(${Protobuf_ROOT}/install/lib64/cmake/protobuf/protobuf-config.cmake)
+include(${Protobuf_ROOT}/install/lib64/cmake/protobuf/protobuf-module.cmake)
+include(${Protobuf_ROOT}/install/lib64/cmake/protobuf/protobuf-options.cmake)
+include(${Protobuf_ROOT}/install/lib64/cmake/protobuf/protobuf-targets.cmake)
 
 if(Protobuf_FOUND)
   message(STATUS "Protobuf version : ${Protobuf_VERSION}")
@@ -61,7 +60,7 @@ if(Protobuf_FOUND)
   message(STATUS "Protobuf protoc : ${Protobuf_PROTOC_EXECUTABLE}")
 else()
   message(
-    WARNING
+    FATAL_ERROR
       "Protobuf package not found -> specify search path via Protobuf_ROOT variable"
   )
 endif()

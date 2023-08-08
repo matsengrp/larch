@@ -22,21 +22,6 @@ find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
-# FetchContent_Declare(protobuf
-#   GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-#   GIT_TAG v23.4
-#   # SOURCE_SUBDIR cmake
-#   # FIND_PACKAGE_ARGS NAMES protobuf
-#   OVERRIDE_FIND_PACKAGE
-# )
-# set(ABSL_PROPAGATE_CXX_STD ON)
-# set(protobuf_MODULE_COMPATIBLE ON)
-# FetchContent_MakeAvailable(protobuf)
-# # include(FindProtobuf)
-# find_package(protobuf CONFIG REQUIRED HINTS ${${PROJECT_BINARY_DIR}/_deps/protobuf-build/cmake/protobuf} )
-# file(TOUCH ${PROJECT_BINARY_DIR}/_deps/protobuf-build/cmake/protobuf/protobuf-targets.cmake)
-# include(${PROJECT_BINARY_DIR}/_deps/protobuf-build/cmake/protobuf/protobuf-config.cmake)
-
 include(protobuf.cmake)
 
 add_library(larch-autogen OBJECT
@@ -46,6 +31,7 @@ add_library(larch-autogen OBJECT
 )
 set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
 target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR})
+target_link_libraries(larch-autogen PUBLIC absl::absl_check absl::absl_log absl::algorithm absl::base absl::bind_front absl::bits absl::btree absl::cleanup absl::cord absl::core_headers absl::debugging absl::die_if_null absl::dynamic_annotations absl::flags absl::flat_hash_map absl::flat_hash_set absl::function_ref absl::hash absl::layout absl::log_initialize absl::log_severity absl::memory absl::node_hash_map absl::node_hash_set absl::optional absl::span absl::status absl::statusor absl::strings absl::synchronization absl::time absl::type_traits absl::utility absl::variant utf8_range utf8_validity)
 set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
