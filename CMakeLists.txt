@@ -31,7 +31,7 @@ add_library(larch-autogen OBJECT
 )
 set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
 target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR})
-target_link_libraries(larch-autogen PUBLIC absl::absl_check absl::absl_log absl::algorithm absl::base absl::bind_front absl::bits absl::btree absl::cleanup absl::cord absl::core_headers absl::debugging absl::die_if_null absl::dynamic_annotations absl::flags absl::flat_hash_map absl::flat_hash_set absl::function_ref absl::hash absl::layout absl::log_initialize absl::log_severity absl::memory absl::node_hash_map absl::node_hash_set absl::optional absl::span absl::status absl::statusor absl::strings absl::synchronization absl::time absl::type_traits absl::utility absl::variant utf8_range utf8_validity)
+target_link_libraries(larch-autogen PUBLIC ${Protobuf_ABSL_LIBS})
 set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
@@ -41,13 +41,6 @@ protobuf_generate(
   TARGET larch-autogen
   PROTOS proto/dag.proto deps/usher/parsimony.proto deps/usher/mutation_detailed.proto
 )
-
-# protobuf_generate_cpp(DAG_PROTO_SRCS DAG_PROTO_HDRS
-#   proto/dag.proto)
-# protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
-#   deps/usher/parsimony.proto)
-# protobuf_generate_cpp(DETAILED_MUTATIONS_PROTO_SRCS DETAILED_MUTATIONS_PROTO_HDRS
-#   deps/usher/mutation_detailed.proto)
 
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
 FetchContent_MakeAvailable(json)
