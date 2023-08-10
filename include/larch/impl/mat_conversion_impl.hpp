@@ -235,7 +235,12 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(Node dag_node,
     size_t node_id = edge.GetChild().GetId().value;
     auto* node = new MAT::Node(node_id);
     edge.GetChild().SetMATNode(node);
-    new_tree.register_node_serial(node);
+    if (dag_node.GetSampleId().has_value()) {
+      std::string id = dag_node.GetSampleId().value();
+      new_tree.register_node_serial(node, id);
+    } else {
+      new_tree.register_node_serial(node);
+    }
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
       Assert(pos.value != NoId);
