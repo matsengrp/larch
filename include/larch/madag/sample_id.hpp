@@ -1,7 +1,14 @@
 #pragma once
 
 struct SampleId {
+  MOVE_ONLY(SampleId);
+
+  SampleId() = default;
+  SampleId(std::optional<std::string> id) : sample_id_{std::move(id)} {}
+
   std::optional<std::string> sample_id_;
+
+  inline SampleId Copy() const { return SampleId(sample_id_); }
 
   inline bool empty() const {
     if (not sample_id_.has_value()) {
