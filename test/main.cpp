@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
       opt_list_names = true;
     } else if (std::string("--range") == argv[i]) {
       opt_test_range = true;
-      range.first = atoi(argv[++i]);
-      range.second = atoi(argv[++i]);
+      range.first = static_cast<size_t>(atoi(argv[++i]));
+      range.second = static_cast<size_t>(atoi(argv[++i]));
     } else {
       regex = argv[i];
     }
@@ -57,7 +57,8 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
 
-  size_t failed = 0, ran = 0;
+  std::vector<Test> failed;
+  size_t ran = 0;
   const auto num_tests = tests.size();
   std::cout << "Running " << num_tests << " tests" << std::endl;
   for (auto& test : tests) {
@@ -75,15 +76,18 @@ int main(int argc, char* argv[]) {
         test.entry();
         std::cout << " passed." << std::endl;
       } catch (const std::exception& e) {
-        ++failed;
+        failed.push_back(test);
         std::cerr << std::endl
                   << "Test '" << test.name << "' failed with '" << e.what() << "'"
                   << std::endl;
       }
     }
   }
-  if (failed > 0) {
-    std::cerr << "Failed tests: " << failed << "/" << num_tests << std::endl;
+  if (not failed.empty()) {
+    std::cerr << "Failed tests: " << failed.size() << "/" << num_tests << std::endl;
+    for (auto& test : failed) {
+      std::cerr << "  " << test.name << "\n";
+    }
     return EXIT_FAILURE;
   }
 

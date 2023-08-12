@@ -20,7 +20,7 @@ std::pair<typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight,
 SimpleWeightOps<BinaryOperatorWeightOps>::WithinCladeAccumOptimum(
     std::vector<typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight> inweights) {
   typename SimpleWeightOps<BinaryOperatorWeightOps>::Weight optimal_weight =
-      inweights[0];
+      inweights.at(0);
   std::vector<size_t> optimal_indices;
   size_t inweight_idx = 0;
   for (auto weight : inweights) {

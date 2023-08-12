@@ -5,6 +5,8 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
 
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
 include(FetchContent)
@@ -15,7 +17,7 @@ FetchContent_Declare(oneTBB-src
 FetchContent_MakeAvailable(oneTBB-src)
 
 include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
-tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1)
+tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
 find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
@@ -42,6 +44,22 @@ ExternalProject_Add(range-v3
   PREFIX range-v3
   INSTALL_DIR range-v3/install
 )
+
+if(${USE_HTSLIB})
+ExternalProject_Add(htslib
+  GIT_REPOSITORY https://github.com/samtools/htslib.git
+  GIT_TAG 1.17
+  GIT_SHALLOW true
+  GIT_PROGRESS true
+  UPDATE_DISCONNECTED true
+  PREFIX htslib
+  BUILD_IN_SOURCE true
+  CONFIGURE_COMMAND autoreconf -i COMMAND ./configure --prefix=${PROJECT_BINARY_DIR}/htslib/install
+  BUILD_COMMAND make -j
+  INSTALL_COMMAND make install
+)
+endif()
+
 find_package(ZLIB)
 
 ExternalProject_Add(isa-l
@@ -69,19 +87,19 @@ set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
 
-set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses)
+set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   list(APPEND STRICT_WARNINGS -Wcast-align=strict)
 endif()
 
 function(larch_compile_opts PRODUCT)
-  target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17)
+  target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -fno-omit-frame-pointer -pipe)
 
   if(${USE_ASAN})
-    target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover)
+    target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
   elseif(${USE_TSAN})
-    target_compile_options(${PRODUCT} PUBLIC -Og -g3 -fsanitize=thread)
+    target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=thread)
   endif()
 
   target_include_directories(${PRODUCT} PUBLIC include tools test)
@@ -89,6 +107,10 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
   add_dependencies(${PRODUCT} range-v3)
+if(${USE_HTSLIB})
+  target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/include)
+  add_dependencies(${PRODUCT} htslib)
+endif()
 endfunction()
 
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
@@ -131,6 +153,11 @@ function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
+
+  if(${USE_HTSLIB})
+    target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/lib)
+    target_link_libraries(${PRODUCT} PUBLIC -lhts)
+  endif()
 endfunction()
 
 function(larch_executable PRODUCT)
@@ -157,12 +184,12 @@ larch_link_opts(larch)
 add_library(usher
   ${MATOPTIMIZE_SRC}
   src/usher_globals.cpp)
-target_compile_options(usher PRIVATE -march=native -std=c++17 -w)
+target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer)
 
 if(${USE_ASAN})
-  target_compile_options(usher PUBLIC -Og -g3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover)
+  target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
 elseif(${USE_TSAN})
-  target_compile_options(usher PUBLIC -Og -g3 -fsanitize=thread)
+  target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=thread)
 endif()
 
 target_include_directories(usher PUBLIC include)
@@ -197,6 +224,7 @@ larch_executable(larch-test
   test/test_compact_genome.cpp
   test/test_count_trees.cpp
   test/test_dag_trimming.cpp
+  test/test_larch_usher.cpp
   test/test_loading.cpp
   test/test_matOptimize.cpp
   test/test_merge.cpp

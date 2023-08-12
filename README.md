@@ -5,10 +5,6 @@ Requirements
 
 * GCC 7.5
 * cmake 3.16
-* clang-tidy
-* protobuf libraries and compiler
-* zlib
-* TBB
 
 For Ubuntu 18.04 LTS the following commands installs the requirements:
 
@@ -25,11 +21,7 @@ Building
 
 `cd build`
 
-`wget https://github.com/oneapi-src/oneTBB/archive/2019_U9.tar.gz`
-
-`tar -xvzf 2019_U9.tar.gz`
-
-`cmake -DTBB_DIR=${PWD}/oneTBB-2019_U9 -DCMAKE_PREFIX_PATH=${PWD}/oneTBB-2019_U9/cmake ..`
+`cmake -DCMAKE_BUILD_TYPE=Debug ..`
 
 `make -j16`
 

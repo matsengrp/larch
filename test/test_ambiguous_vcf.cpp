@@ -1,5 +1,6 @@
 
 #include "test_common.hpp"
+#include "sample_dag.hpp"
 
 #include "larch/dag_loader.hpp"
 #include "larch/spr/spr_view.hpp"

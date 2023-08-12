@@ -1,6 +1,7 @@
 #include "larch/madag/mutation_annotated_dag.hpp"
 #include "larch/subtree/subtree_weight.hpp"
 #include "larch/subtree/parsimony_score.hpp"
+#include "larch/subtree/parsimony_score_binary.hpp"
 
 #include <iostream>
 #include <string_view>
@@ -24,10 +25,24 @@ static void test_sample_tree(MADAG dag) {
   SubtreeWeight<TreeCount, MADAG> tree_count{dag};
   auto result2 = tree_count.UniformSampleTree({});
   assert_true(result2.View().IsTree(), "Tree");
+
+  SubtreeWeight<BinaryParsimonyScore, MADAG> binary_weight{dag};
+  auto result3 = binary_weight.SampleTree({});
+  assert_true(result3.View().IsTree(), "Tree");
+
+  Merge merge{dag.GetReferenceSequence()};
+  merge.AddDAGs(std::vector{dag});
+  merge.GetResult().GetRoot().Validate(true, true);
+  merge.ComputeResultEdgeMutations();
+
+  SubtreeWeight<BinaryParsimonyScore, MergeDAG> binary_merge_weight{merge.GetResult()};
+  auto result4 = binary_merge_weight.SampleTree({});
+  assert_true(result4.View().IsTree(), "Tree");
 }
 
 static void test_sample_tree(std::string_view path) {
   MADAGStorage dag = LoadDAGFromProtobuf(path);
+  dag.View().RecomputeCompactGenomes(true);
   test_sample_tree(dag.View());
 }
 
@@ -40,8 +55,8 @@ static void test_sample_tree(std::string_view path) {
 #endif
   Benchmark bench;
   bench.start();
-  Merge<MADAG> merge{dag.View().GetReferenceSequence()};
-  merge.AddDAGs({dag.View()});
+  Merge merge{dag.View().GetReferenceSequence()};
+  merge.AddDAGs(std::vector{dag.View()});
   merge.ComputeResultEdgeMutations();
   SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
   std::ignore = weight.MinWeightSampleTree({});

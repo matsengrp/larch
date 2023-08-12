@@ -1,0 +1,25 @@
+name: larch-dev
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - git
+  - isa-l
+  - cxx-compiler
+  - mafft
+  - boost-cpp
+  - openmpi
+  - python
+  - rsync
+  - wget
+  - cmake=3.19.6
+  - autoconf
+  - protobuf=3.12.3
+  - make
+  - openssh
+  - gdb
+  - bzip2
+  - backports.lzma
+  - libtool
+  - automake

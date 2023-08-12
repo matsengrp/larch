@@ -6,7 +6,7 @@
  * Stores a collection of elements (nodes or edges, distinguished by the `Id`
  * parameter).
  */
-template <typename Id, typename ElementStorageT, typename... Features>
+template <Component C, typename ElementStorageT, typename... Features>
 struct ElementsContainer {
  public:
   using FeatureTypes = std::tuple<Features...>;
@@ -41,16 +41,16 @@ struct ElementsContainer {
 
   size_t GetCount() const;
 
-  Id Append();
+  Id<C> Append();
 
-  void Add(Id id);
+  void Add(Id<C> id);
 
   void Initialize(size_t size);
 
   template <typename Feature>
-  auto& GetFeatureStorage(Id id);
+  auto& GetFeatureStorage(Id<C> id);
   template <typename Feature>
-  const auto& GetFeatureStorage(Id id) const;
+  const auto& GetFeatureStorage(Id<C> id) const;
 
   template <typename Feature>
   auto& GetFeatureExtraStorage();

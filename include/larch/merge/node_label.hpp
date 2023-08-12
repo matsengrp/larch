@@ -25,6 +25,28 @@ class NodeLabel {
 
   [[nodiscard]] inline size_t Hash() const noexcept;
 
+  inline bool Empty() const {
+    if (compact_genome_ == nullptr or leaf_set_ == nullptr) {
+      return true;
+    }
+    if (compact_genome_ == CompactGenome::Empty() or leaf_set_ == LeafSet::Empty()) {
+      return true;
+    }
+    if (compact_genome_->empty() and leaf_set_->empty()) {
+      // return true;
+    }
+    return false;
+  }
+
+  inline std::string ToString() const {
+    std::string result = "[";
+    result += compact_genome_->ToString();
+    result += "(";
+    result += leaf_set_->ToString();
+    result += ")";
+    return result;
+  }
+
  private:
   const CompactGenome* compact_genome_;
   const LeafSet* leaf_set_;

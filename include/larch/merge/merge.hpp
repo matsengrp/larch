@@ -34,11 +34,8 @@ using MergeDAGStorage =
 using MergeDAG = DAGView<const MergeDAGStorage>;
 using MutableMergeDAG = DAGView<MergeDAGStorage>;
 
-template <typename DAG>
 class Merge {
  public:
-  using Node = typename DAG::NodeView;
-  using Edge = typename DAG::EdgeView;
   /**
    * Construct a new Merge object, with the common reference sequence for all input
    * DAGs that will be merged later via the AddDAGs() method. The reference sequence is
@@ -59,14 +56,11 @@ class Merge {
    * Otherwise the compact genomes stored in the DAGs will be used, and will be moved
    * into the Merge object storage to avoid duplication.
    */
-  inline void AddDAGs(const std::vector<DAG>& dags);
+  template <typename DAGSRange>
+  inline void AddDAGs(const DAGSRange& dags, NodeId below = {});
 
-  template <typename D, typename N = std::nullopt_t>
-  void AddDAG(D dag, N below = std::nullopt);
-
-  template <typename D>
-  void AddFragment(D dag, const std::vector<NodeId>& nodes,
-                   const std::vector<EdgeId>& edges);
+  template <typename DAG>
+  inline void AddDAG(DAG& dag, NodeId below = {});
 
   /**
    * Get the DAG resulting from merge
@@ -78,9 +72,9 @@ class Merge {
   /**
    * Access the labels of the resulting DAG's nodes.
    */
-  inline const std::unordered_map<NodeLabel, NodeId>& GetResultNodes() const;
+  inline const ConcurrentUnorderedMap<NodeLabel, NodeId>& GetResultNodes() const;
 
-  inline const std::vector<NodeLabel>& GetResultNodeLabels() const;
+  inline const ConcurrentUnorderedMap<NodeId, NodeLabel>& GetResultNodeLabels() const;
 
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
@@ -92,23 +86,46 @@ class Merge {
  private:
   inline MutableMergeDAG ResultDAG();
 
-  inline void ComputeLeafSets(const std::vector<size_t>& tree_idxs);
+  template <typename DAGSRange>
+  static void MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
+                                  std::vector<std::vector<NodeLabel>>& dags_labels,
+                                  MutableMergeDAG result_dag);
 
-  inline void MergeTrees(const std::vector<size_t>& tree_idxs);
+  template <typename DAGSRange>
+  static void ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
+                              std::vector<std::vector<NodeLabel>>& dags_labels,
+                              ConcurrentUnorderedSet<LeafSet>& all_leaf_sets);
 
-  // Vector of externally owned input DAGs.
-  std::vector<DAG> trees_;
+  template <typename DAGSRange>
+  static void MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
+                         std::vector<std::vector<NodeLabel>>& dags_labels,
+                         ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
+                         ConcurrentUnorderedMap<NodeId, NodeLabel>& result_node_labels,
+                         std::atomic<size_t>& node_id);
+
+  template <typename DAGSRange>
+  static void MergeEdges(
+      size_t i, const DAGSRange& dags, NodeId below,
+      std::vector<std::vector<NodeLabel>>& dags_labels,
+      ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+      tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
+          added_edges);
+
+  static inline void BuildResult(
+      size_t i,
+      tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
+          added_edges,
+      std::atomic<size_t>& edge_id,
+      const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
+      const ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+      MutableMergeDAG result_dag);
 
   // Every unique node leaf set, found among all input DAGs.
   ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
 
-  // Node labels for all input DAGs. Outer vector is indexed by input tree idx, inner
-  // vector is indexed by node id.
-  std::vector<std::vector<NodeLabel>> tree_labels_;
-
   // Node ids of the resulting DAG's nodes.
-  std::unordered_map<NodeLabel, NodeId> result_nodes_;
-  std::vector<NodeLabel> result_node_labels_;
+  ConcurrentUnorderedMap<NodeLabel, NodeId> result_nodes_;
+  ConcurrentUnorderedMap<NodeId, NodeLabel> result_node_labels_;
 
   // Edge ids of the resulting DAG's edges.
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;

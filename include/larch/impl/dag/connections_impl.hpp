@@ -2,6 +2,9 @@
 #error "Don't include this header"
 #endif
 
+#include <atomic>
+#include <tbb/parallel_for_each.h>
+#include <tbb/concurrent_vector.h>
 #include <iostream>
 
 template <typename CRTP, typename Tag>
@@ -25,7 +28,7 @@ template <typename CRTP, typename Tag>
 auto FeatureConstView<Connections, CRTP, Tag>::GetLeafs() const {
   auto& dag = static_cast<const CRTP&>(*this);
   return GetFeatureStorage(this).leafs_ |
-         ranges::views::transform([*this, dag, idx = size_t{}](auto&) mutable {
+         ranges::views::transform([dag, idx = size_t{}](auto&) mutable {
            using Node = typename CRTP::NodeView;
            return Node{dag, {idx++}};
          });
@@ -38,30 +41,32 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
   storage.root_ = {NoId};
   storage.leafs_ = {};
   BuildConnectionsRaw();
-  for (auto node : dag.GetNodes()) {
+  std::atomic<size_t> root_id{NoId};
+  tbb::concurrent_vector<NodeId> leafs;
+  tbb::parallel_for_each(dag.GetNodes(), [&](auto node) {
     for (auto clade : node.GetClades()) {
       Assert(not clade.empty() && "Empty clade");
     }
     if (node.IsUA()) {
-      if (storage.root_.value != NoId) {
-        std::cout << "Duplicate root: " << storage.root_.value << " and "
-                  << node.GetId().value << "\n";
+      const size_t previous = root_id.exchange(node.GetId().value);
+      if (previous != NoId) {
+        std::cout << "Duplicate root: " << previous << " and " << node.GetId().value
+                  << "\n";
       }
-      Assert(storage.root_.value == NoId && "Duplicate root");
-      storage.root_ = node;
+      Assert(previous == NoId);
     }
     if (node.IsLeaf()) {
-      storage.leafs_.push_back(node);
+      leafs.push_back(node);
     }
-  }
+  });
+  storage.root_.value = root_id.load();
+  storage.leafs_.insert(storage.leafs_.end(), leafs.begin(), leafs.end());
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  for (auto node : dag.GetNodes()) {
-    node.ClearConnections();
-  }
+  tbb::parallel_for_each(dag.GetNodes(), [](auto node) { node.ClearConnections(); });
   for (auto edge : dag.GetEdges()) {
     Assert(edge.GetParentId().value != NoId && "Edge has no parent");
     Assert(edge.GetChildId().value != NoId && "Edge has no child");

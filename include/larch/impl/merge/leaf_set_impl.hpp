@@ -24,6 +24,7 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
             }
           }
           clade_leafs |= ranges::actions::sort | ranges::actions::unique;
+          Assert(not clade_leafs.empty());
           clades.emplace_back(std::move(clade_leafs));
         }
         clades |= ranges::actions::sort;
@@ -70,8 +71,9 @@ const std::vector<std::vector<const CompactGenome*>>& LeafSet::GetClades() const
 
 std::string LeafSet::ToString() const {
   std::string result = "{";
-  for (auto& clade : GetClades()) {
-    for (auto* cg : clade) {
+  for (const auto& clade : GetClades()) {
+    for (const auto* cg : clade) {
+      Assert(cg != nullptr);
       result += cg->ToString();
       result += ", ";
     }

@@ -2,45 +2,45 @@
 #error "Don't include this header"
 #endif
 
-template <typename Id, typename DAGViewType>
+template <Component C, typename DAGViewType>
 template <typename Feature>
-inline constexpr bool ElementView<Id, DAGViewType>::contains_feature =
-    DAGViewType::template contains_element_feature<Id, Feature>;
+inline constexpr bool ElementView<C, DAGViewType>::contains_feature =
+    DAGViewType::template contains_element_feature<C, Feature>;
 
-template <typename Id, typename DAGViewType>
-ElementView<Id, DAGViewType>::ElementView(DAGViewType dag_view, Id id)
+template <Component C, typename DAGViewType>
+ElementView<C, DAGViewType>::ElementView(DAGViewType dag_view, Id<C> id)
     : dag_view_{dag_view}, id_{id} {
   Assert(id.value not_eq NoId);
 }
 
-template <typename Id, typename DAGViewType>
-ElementView<Id, DAGViewType>::operator Id() const {
+template <Component C, typename DAGViewType>
+ElementView<C, DAGViewType>::operator Id<C>() const {
   return GetId();
 }
 
-template <typename Id, typename DAGViewType>
-auto ElementView<Id, DAGViewType>::Const() const {
+template <Component C, typename DAGViewType>
+auto ElementView<C, DAGViewType>::Const() const {
   return dag_view_.Const().Get(id_);
 }
 
-template <typename Id, typename DAGViewType>
-DAGViewType ElementView<Id, DAGViewType>::GetDAG() const {
+template <Component C, typename DAGViewType>
+DAGViewType ElementView<C, DAGViewType>::GetDAG() const {
   return dag_view_;
 }
 
-template <typename Id, typename DAGViewType>
-Id ElementView<Id, DAGViewType>::GetId() const {
+template <Component C, typename DAGViewType>
+Id<C> ElementView<C, DAGViewType>::GetId() const {
   return id_;
 }
 
-template <typename Id, typename DAGViewType>
+template <Component C, typename DAGViewType>
 template <typename Feature>
-auto& ElementView<Id, DAGViewType>::GetFeatureStorage() const {
+auto& ElementView<C, DAGViewType>::GetFeatureStorage() const {
   return dag_view_.template GetFeatureStorage<Feature>(id_);
 }
 
-template <typename Id, typename DAGViewType>
+template <Component C, typename DAGViewType>
 template <typename Feature>
-auto& ElementView<Id, DAGViewType>::GetFeatureExtraStorage() const {
-  return dag_view_.template GetFeatureExtraStorage<Id, Feature>();
+auto& ElementView<C, DAGViewType>::GetFeatureExtraStorage() const {
+  return dag_view_.template GetFeatureExtraStorage<C, Feature>();
 }

@@ -98,26 +98,26 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetAtSite(
   auto [old_fitch_sets, changes] =
       GetFitchSetParts();  // TODO: modify to also return boundary alleles
 
-  auto build_new_fitch_set =
-      [&node](nuc_one_hot old_major_alleles, nuc_one_hot old_boundary_alleles,
-              nuc_one_hot rem_set, nuc_one_hot add_set) -> FitchSet {
+  auto build_new_fitch_set = [](nuc_one_hot old_major_alleles,
+                                nuc_one_hot old_boundary_alleles, nuc_one_hot rem_set,
+                                nuc_one_hot add_set) -> FitchSet {
     Assert(old_major_alleles <= 16);
     Assert(old_boundary_alleles <= 16);
     Assert(rem_set <= 16);
     Assert(add_set <= 16);
-    if (old_major_alleles & add_set) {
+    if ((old_major_alleles & add_set) != 0) {
       auto result = old_major_alleles & add_set;
       Assert(0 < result);
       Assert(result <= 16);
-      return FitchSet(result);
+      return result;
     } else {
       auto result = (old_major_alleles & ~rem_set) | (old_boundary_alleles & add_set);
       Assert(result <= 16);
       if (result > 0) {
-        return FitchSet(result);
+        return result;
       } else {
         result = old_major_alleles | (old_boundary_alleles & ~rem_set);
-        return FitchSet(result);
+        return result;
       }
     }
   };
@@ -145,6 +145,7 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetAtSite(
                                     .GetParent()
                                     .GetCompactGenome()
                                     .GetBase(site, dag.GetReferenceSequence()));
+    // NOLINTBEGIN(bugprone-unchecked-optional-access)
     if (changes.has_value() and changes.value().Contains(site)) {
       return build_new_fitch_set(old_parent_base, boundary_allele,
                                  changes.value().at(site).get_decremented(),
@@ -158,6 +159,7 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetAtSite(
         old_fitch_sets.find(static_cast<int>(site.value))->get_boundary1_one_hot(),
         changes.value().at(site).get_decremented(),
         changes.value().at(site).get_incremented()));
+    // NOLINTEND(bugprone-unchecked-optional-access)
   } else {
     return FitchSet(
         old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele());
@@ -368,8 +370,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
 }
 
 template <typename DAG, typename CRTP, typename Tag>
-std::pair<std::vector<NodeId>, std::vector<EdgeId>>
-FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   auto& dag = static_cast<const CRTP&>(*this);
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
@@ -385,14 +386,32 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetFragment() const {
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
-  return {collapsed.first, collapsed.second};
-  // return {result_nodes, result_edges};
+  return Fragment{dag, std::move(collapsed.first), std::move(collapsed.second)};
+}
+
+template <typename DAG, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeUncollapsedFragment() const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  std::vector<NodeId> result_nodes;
+  std::vector<EdgeId> result_edges;
+  auto oldest_changed = dag.GetOldestChangedNode().GetSingleParent().GetParent();
+  if (oldest_changed.IsUA()) {
+    // we need to add the UA node as the root anchor node of the fragment,
+    // somehow
+    // TODO how is this being done, then? (Things seem to be working...)
+  } else {
+    result_nodes.push_back(oldest_changed.GetSingleParent().GetParent());
+    result_edges.push_back(oldest_changed.GetSingleParent());
+  }
+  oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
+  return Fragment{dag, std::move(result_nodes), std::move(result_edges)};
 }
 
 template <typename DAG, typename CRTP, typename Tag>
 std::pair<std::vector<NodeId>, std::vector<EdgeId>>
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
-    std::vector<NodeId> fragment_nodes, std::vector<EdgeId> fragment_edges) const {
+    const std::vector<NodeId>& fragment_nodes,
+    const std::vector<EdgeId>& fragment_edges) const {
   auto& dag = static_cast<const CRTP&>(*this);
 
   // fragment_nodes is computed in a preorder traversal
@@ -474,7 +493,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
           }
           // check if any of the grandchildren/edges we're trying to add are in turn
           // collapsible
-          if (still_to_collapse.size() > 0) {
+          if (not still_to_collapse.empty()) {
             current_children.clear();
             collapsed_all_children = false;
             current_children.insert(current_children.begin(), still_to_collapse.begin(),
@@ -633,20 +652,21 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
 }
 
 template <typename DAG>
-HypotheticalTree<DAG>::Data::Data(const Profitable_Moves& move, NodeId new_node,
+HypotheticalTree<DAG>::Data::Data(Profitable_Moves move, NodeId new_node,
                                   bool has_unifurcation_after_move,
                                   const std::vector<Node_With_Major_Allele_Set_Change>&
                                       nodes_with_major_allele_set_change)
-    : move_{move},
+    : move_{std::move(move)},
       new_node_{new_node},
       has_unifurcation_after_move_{has_unifurcation_after_move} {
-  for (auto& node_with_allele_set_change : nodes_with_major_allele_set_change) {
+  constexpr int end_sentinel = 2147483647;
+  for (const auto& node_with_allele_set_change : nodes_with_major_allele_set_change) {
     if (not node_with_allele_set_change.node->is_leaf()) {
       Assert(node_with_allele_set_change.node != nullptr);
       ContiguousMap<MutationPosition, Mutation_Count_Change> node_map;
-      for (auto& mutation_count_change :
+      for (const auto& mutation_count_change :
            node_with_allele_set_change.major_allele_set_change) {
-        if (mutation_count_change.get_position() >= 2147483647) {
+        if (mutation_count_change.get_position() >= end_sentinel) {
           continue;
         }
         MutationPosition pos = {

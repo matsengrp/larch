@@ -33,9 +33,10 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   std::string reference_sequence =
       std::string{LoadDAGFromJson(refseq_json_path).View().GetReferenceSequence()};
 
-  trees.resize(paths.size());
+  trees.reserve(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;
   for (size_t i = 0; i < paths.size(); ++i) {
+    trees.push_back(MADAGStorage{{}});
     paths_idx.emplace_back(i, paths.at(i));
   }
   std::cout << "Loading trees ";
@@ -49,7 +50,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
             << "\n";
 
   Benchmark merge_time;
-  Merge<MADAG> merge(reference_sequence);
+  Merge merge(reference_sequence);
   std::vector<MADAG> tree_refs{trees.begin(), trees.end()};
   merge_time.start();
   merge.AddDAGs(tree_refs);

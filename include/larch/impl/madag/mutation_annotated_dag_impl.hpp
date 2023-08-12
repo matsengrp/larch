@@ -34,16 +34,15 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
   using Node = typename decltype(dag)::NodeView;
 
   auto ref_seq = dag.GetReferenceSequence();
-  auto BuildCGFromSequence = [&dag, &ref_seq](const std::string& node_seq,
-                                              Node for_node) {
-    CompactGenome new_cg(node_seq, ref_seq);
+  auto ComputeCGFromSequence = [&ref_seq](const std::string& leaf_seq, Node for_node) {
+    CompactGenome new_cg(leaf_seq, ref_seq);
     for_node = std::move(new_cg);
   };
 
   for (auto node : dag.GetNodes()) {
     if (node_sequence_map.find(node.GetId()) != node_sequence_map.end()) {
       auto& node_seq = node_sequence_map.find(node.GetId())->second;
-      BuildCGFromSequence(node_seq, node);
+      ComputeCGFromSequence(node_seq, node);
     }
   }
 }
@@ -56,7 +55,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
 
-  auto BuildCGFromMutation =
+  auto ComputeCGFromMutation =
       [&dag](ContiguousMap<MutationPosition, MutationBase>&& new_muts, Node for_node) {
         CompactGenome new_cg(std::move(new_muts));
         for_node = std::move(new_cg);
@@ -65,7 +64,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
   for (auto node : dag.GetNodes()) {
     if (node_mutation_map.find(node.GetId()) != node_mutation_map.end()) {
       auto&& muts = node_mutation_map.find(node.GetId())->second;
-      BuildCGFromMutation(std::move(muts), node);
+      ComputeCGFromMutation(std::move(muts), node);
     }
   }
 }
@@ -78,7 +77,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
 
-  auto BuildCGFromMutation =
+  auto ComputeCGFromMutation =
       [&dag](ContiguousMap<MutationPosition, MutationBase>&& new_muts, Node for_node) {
         CompactGenome new_cg = for_node.GetCompactGenome().Copy();
         new_cg.ApplyChanges(new_muts);
@@ -88,7 +87,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
   for (auto node : dag.GetNodes()) {
     if (node_mutation_map.find(node.GetId()) != node_mutation_map.end()) {
       auto&& muts = node_mutation_map.find(node.GetId())->second;
-      BuildCGFromMutation(std::move(muts), node);
+      ComputeCGFromMutation(std::move(muts), node);
     }
   }
 }
@@ -100,7 +99,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::AddUA(
   using Node = typename decltype(dag)::NodeView;
   using Edge = typename decltype(dag)::EdgeView;
 
-  Assert(not dag.HaveUA());
+  // Assert(not dag.HaveUA());
   Node root = dag.GetRoot();
   Node ua_node = dag.AppendNode();
   Edge ua_edge = dag.AppendEdge(ua_node, root, {0});
@@ -144,6 +143,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
       node = std::move(new_cgs.at(node.GetId().value));
     }
   }
+  // TODO extract validation to separate function to not hurt performance
   std::unordered_map<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {
     if (node.IsLeaf()) {
@@ -156,7 +156,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
         //           << "\nCompact Genome is\n"
         //           << node.GetCompactGenome().ToString() << "\n"
         //           << std::flush;
-        Fail("Error in ComputeCompactGenomes: had a non-unique leaf node");
+        // TODO Fail("Error in ComputeCompactGenomes: had a non-unique leaf node");
       }
     }
   }

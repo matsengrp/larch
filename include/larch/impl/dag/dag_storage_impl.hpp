@@ -3,14 +3,16 @@
 #endif
 
 template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-template <typename Id, typename Feature>
+template <Component C, typename Feature>
 inline constexpr bool DAGStorage<NodesContainerT, EdgesContainerT,
                                  Features...>::contains_element_feature = [] {
-  if constexpr (std::is_same_v<Id, NodeId>) {
+  // NOLINTBEGIN
+  if constexpr (C == Component::Node) {
     return NodesContainerT::template contains_element_feature<Feature>;
   } else {
     return EdgesContainerT::template contains_element_feature<Feature>;
   }
+  // NOLINTEND
 }();
 
 template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
@@ -63,6 +65,12 @@ void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::InitializeNodes(
 }
 
 template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::InitializeEdges(
+    size_t size) {
+  edges_container_.Initialize(size);
+}
+
+template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
 template <typename Feature>
 auto& DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetFeatureStorage(
     NodeId id) {
@@ -91,10 +99,10 @@ const auto& DAGStorage<NodesContainerT, EdgesContainerT,
 }
 
 template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-template <typename Id, typename Feature>
+template <Component C, typename Feature>
 auto& DAGStorage<NodesContainerT, EdgesContainerT,
                  Features...>::GetFeatureExtraStorage() {
-  if constexpr (std::is_same_v<Id, NodeId>) {
+  if constexpr (std::is_same_v<C, Component::Node>) {
     return nodes_container_.template GetFeatureExtraStorage<Feature>();
   } else {
     return edges_container_.template GetFeatureExtraStorage<Feature>();
@@ -102,10 +110,10 @@ auto& DAGStorage<NodesContainerT, EdgesContainerT,
 }
 
 template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-template <typename Id, typename Feature>
+template <Component C, typename Feature>
 const auto& DAGStorage<NodesContainerT, EdgesContainerT,
                        Features...>::GetFeatureExtraStorage() const {
-  if constexpr (std::is_same_v<Id, NodeId>) {
+  if constexpr (std::is_same_v<C, Component::Node>) {
     return nodes_container_.template GetFeatureExtraStorage<Feature>();
   } else {
     return edges_container_.template GetFeatureExtraStorage<Feature>();
