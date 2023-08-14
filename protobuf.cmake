@@ -41,6 +41,10 @@ if(result)
     message(FATAL_ERROR "Failed to build protobuf (${result})!")
 endif()
 
+if (NOT EXISTS ${Protobuf_ROOT}/install/lib64)
+  file (CREATE_LINK ${Protobuf_ROOT}/install/lib ${Protobuf_ROOT}/install/lib64 SYMBOLIC)
+endif()
+
 find_package(Protobuf CONFIG REQUIRED HINTS ${Protobuf_ROOT}/install/lib64/cmake)
 
 set(Protobuf_PROTOC_EXECUTABLE ${Protobuf_ROOT}/install/bin/protoc)
