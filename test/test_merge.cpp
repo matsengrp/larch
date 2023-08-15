@@ -18,6 +18,7 @@ static void test_protobuf(const std::string& correct_path,
     trees.emplace_back(LoadDAGFromProtobuf(path));
     MutableMADAG view = trees.back().View();
     view.RecomputeCompactGenomes(true);
+    view.SampleIdsFromCG();
     tree_views.push_back(view);
   }
 
@@ -91,6 +92,12 @@ static void test_case_20d() {
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
     trees.at(path_idx.first) = LoadTreeFromProtobuf(
         path_idx.second, correct_result.View().GetReferenceSequence());
+    for (auto node : trees.at(path_idx.first).View().GetNodes()) {
+      if (node.IsLeaf()) {
+        Assert(node.GetSampleId().has_value());
+        Assert(not node.GetSampleId().value().empty());
+      }
+    }
     trees.at(path_idx.first).View().RecomputeCompactGenomes(true);
   });
 

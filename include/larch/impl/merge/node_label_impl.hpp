@@ -40,7 +40,7 @@ void NodeLabel::SetLeafSet(const LeafSet* ls) {
 
 void NodeLabel::SetSampleId(const SampleId* id) {
   Assert(id);
-  Assert(not id->empty());
+  Assert(not id->IsEmpty());
   sample_id_ = id;
 }
 

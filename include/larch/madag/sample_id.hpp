@@ -10,7 +10,7 @@ struct SampleId {
 
   inline SampleId Copy() const { return SampleId(sample_id_); }
 
-  inline bool empty() const {
+  inline bool IsEmpty() const {
     if (not sample_id_.has_value()) {
       return false;
     }
@@ -37,6 +37,14 @@ struct std::equal_to<SampleId> {
 template <typename CRTP, typename Tag>
 struct FeatureConstView<SampleId, CRTP, Tag> {
   const std::optional<std::string>& GetSampleId() const;
+
+  inline bool HaveSampleId() const {
+    auto& id = GetFeatureStorage(this).sample_id_;
+    if (not id.has_value()) {
+      return false;
+    }
+    return id.value().empty();
+  }
 };
 
 template <typename CRTP, typename Tag>

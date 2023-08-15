@@ -14,8 +14,8 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
           clade_leafs.reserve(clade.size());
           for (Node child : clade | Transform::GetChild()) {
             if (child.IsLeaf()) {
+              Assert(child.HaveSampleId());
               UniqueData id = labels.at(child.GetId().value).GetSampleId();
-              Assert(not id->empty());
               clade_leafs.push_back(id);
             } else {
               for (auto& child_leafs :

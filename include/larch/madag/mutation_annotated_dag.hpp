@@ -47,6 +47,7 @@ struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
       const std::unordered_map<NodeId, std::string> &leaf_sequence_map) const;
   void AddUA(const EdgeMutations &mutations_at_root) const;
   void RecomputeCompactGenomes(bool recompute_leaves = true) const;
+  void SampleIdsFromCG() const;
   void RecomputeEdgeMutations() const;
 };
 

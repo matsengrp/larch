@@ -118,6 +118,22 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
 }
 
 template <typename CRTP, typename Tag>
+void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG() const {
+  auto dag = static_cast<const CRTP&>(*this);
+  for (auto leaf : dag.GetLeafs()) {
+    if (not leaf.HaveSampleId()) {
+      if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
+        auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+            SampleId{leaf.GetCompactGenome().ToString()});
+        leaf = id_iter.first;
+      } else {
+        leaf.SetSampleId(leaf.GetCompactGenome().ToString());
+      }
+    }
+  }
+}
+
+template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeEdgeMutations() const {
   auto dag = static_cast<const CRTP&>(*this);
   using Edge = typename decltype(dag)::EdgeView;
