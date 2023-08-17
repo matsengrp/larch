@@ -30,7 +30,7 @@ add_library(larch-autogen OBJECT
   ${DETAILED_MUTATIONS_PROTO_SRCS} ${DETAILED_MUTATIONS_PROTO_HDRS}
 )
 set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
-target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR})
+target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR} ${Protobuf_INCLUDE_DIRS})
 target_link_libraries(larch-autogen PUBLIC ${Protobuf_ABSL_LIBS})
 set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
