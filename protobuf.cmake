@@ -25,7 +25,7 @@ endif()
 
 message(STATUS "Building protobuf ...")
 execute_process(
-  COMMAND ${CMAKE_COMMAND} --build .
+  COMMAND ${CMAKE_COMMAND} --build . --parallel
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${Protobuf_ROOT})
 if(result)
