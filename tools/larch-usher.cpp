@@ -677,7 +677,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     }
 
     auto optimized_view = optimized_dags.back().first.View();
-    optimized_view.RecomputeCompactGenomes(true);
+    optimized_view.RecomputeCompactGenomes(false);
     merge.AddDAG(optimized_view);
     logger(i + 1);
   }

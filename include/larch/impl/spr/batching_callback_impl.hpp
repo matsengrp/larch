@@ -28,16 +28,15 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
     auto& impl = static_cast<CRTP&>(*this);
     std::pair<bool, bool> accepted = impl.OnMove(storage.View(), fragment, move, best_score_change,
                                 nodes_with_major_allele_set_change);
-
     if (accepted.first) {
-
-  // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
-  for (auto leaf_node: storage.View().GetNodes()) {
-    if (leaf_node.IsLeaf()) {
-      auto new_cg = mat_node_to_cg_map_[fragment.GetMATNode(leaf_node)].Copy();
-      fragment.Get(leaf_node) = std::move(new_cg);
-    }
-  }
+      // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
+      for (auto leaf_node: fragment.GetNodes()) {
+        if (leaf_node.IsLeaf()) { // GetLeaves() does not work for a fragment -- perhaps this uses an inherited vector of NodeIds rather than computing new ones?
+          auto new_cg = mat_node_to_cg_map_[leaf_node.GetMATNode()].Copy();
+          fragment.Get(leaf_node).template SetOverlay<Deduplicate<CompactGenome>>();
+          fragment.Get(leaf_node) = std::move(new_cg);
+        }
+      }
       applied_moves_count_++;
       batch_.push_back(std::move(fragment));
       /*
@@ -68,7 +67,13 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   reassigned_states_storage_.View().BuildFromMAT(
       tree, merge_.GetResult().GetReferenceSequence());
   check_edge_mutations(reassigned_states_storage_.View().Const());
-  reassigned_states_storage_.View().RecomputeCompactGenomes(true);
+  reassigned_states_storage_.View().RecomputeCompactGenomes(false);
+  // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
+  for (auto leaf_node: tree.get_leaves()) {
+    auto new_cg = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
+    reassigned_states_storage_.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
+    mat_node_to_cg_map_[leaf_node] = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
+  }
   {
     std::unique_lock lock{merge_mtx_};
     if (not batch_.empty()) {
@@ -99,7 +104,7 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
     mat_node_to_cg_map_[leaf_node] = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
   }
   check_edge_mutations(reassigned_states_storage_.View().Const());
-  reassigned_states_storage_.View().RecomputeCompactGenomes(true);
+  reassigned_states_storage_.View().RecomputeCompactGenomes();
   {
     std::unique_lock lock{merge_mtx_};
     merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
@@ -128,7 +133,7 @@ auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
 }
 
 template <typename CRTP, typename SampleDAG>
-auto BatchingCallback<CRTP, SampleDAG>::GetMATNodeToCGMap() {
+ConcurrentUnorderedMap<MAT::Node*, CompactGenome>& BatchingCallback<CRTP, SampleDAG>::GetMATNodeToCGMap() {
   return mat_node_to_cg_map_;
 }
 

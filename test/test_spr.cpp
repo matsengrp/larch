@@ -56,7 +56,7 @@ struct Test_Move_Found_Callback
 }
 
 static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
-  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{input_dag});
@@ -77,7 +77,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     // Empty_Callback callback;
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
-    optimized_dags.back().first.View().RecomputeCompactGenomes(true);
+    optimized_dags.back().first.View().RecomputeCompactGenomes();
     merge.AddDAGs(std::vector{optimized_dags.back().first.View()},
                   optimized_dags.back().first.View().GetRoot());
   }
@@ -135,7 +135,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
   void OnReassignedStates(const MAT::Tree& tree) {
     for (auto leaf_node: tree.get_leaves()) {
-      auto new_cg = sample_.GetNodeFromMAT(leaf_node).GetCompactGenome().Copy();
+      auto new_cg = sample_.GetNodeFromMAT(sample_.GetMAT().get_node(leaf_node->node_id)).GetCompactGenome().Copy();
       mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
     }
   }
