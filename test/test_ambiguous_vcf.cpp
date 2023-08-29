@@ -406,15 +406,11 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
   std::cout << "unamb_mat_cg: " << OriginalStateInfo(unamb_mat_cg_og) << std::endl;
 }
 
-[[maybe_unused]] static const auto test_added0 =
-    add_test({[]() { test_ambiguous_vcf(); }, "Loading VCFs with Ambiguities Test"});
-/* Pseudocode for some tests:
-
+/*
 void test_vcf_compatible(MADAGStorage dag_storage, const std::string &vcf_path) {
-
   MADAG dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
-  auto id_to_cg_map = ReadVCFToCompactGenomeData(vcf_path, ref_seq)
+  auto id_to_cg_map = ReadVCFToCompactGenomeData(vcf_path, ref_seq);
 
   // make sure that each of the leaves in dag match exactly one key of id_to_cg_map
   for (auto leaf: dag.GetLeafs()) {
@@ -426,15 +422,20 @@ void test_vcf_compatible(MADAGStorage dag_storage, const std::string &vcf_path) 
   dag.RecomputeEdgeMutations();
   for (auto leaf: dag.GetLeafs()) {
     for (auto parent_edge: leaf.GetParents()) {
-      auto parent_node = parent_edge.GetParent();
-      Assert(...); // checking parent node and leaf node cgs are compatible with the edge mutation set
+      auto leaf_cg = leaf.GetCompactGenome().Copy();
+      auto parent_cg = parent_edge.GetParent().GetCompactGenome().Copy();
+      auto edge_mutations_from_dag = parent_edge.GetEdgeMutations();
+
+      Assert(leaf_cg.IsCompatible(parent_cg.ApplyChanges(edge_mutations_from_dag), ref_seq));
     }
   }
 }
+*/
+
 void test_vcf_reading(MADAGStorage dag_storage, const std::string &vcf_path) {
   MADAG dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
-  auto id_to_cg_map = ReadVCFToCompactGenomeData(vcf_path, ref_seq)
+  auto id_to_cg_map = ReadVCFToCompactGenomeData(vcf_path, ref_seq);
 
   SubtreeWeight<ParsimonyScore, MADAG> weight{dag};
   auto sample = AddMATConversion(weight.SampleTree({}));
@@ -442,10 +443,27 @@ void test_vcf_reading(MADAGStorage dag_storage, const std::string &vcf_path) {
   sample.View().BuildMAT(mat);
 
   // check these two methods apply the same set of changes
-  MADAGApplyCompactGenomeData(sample.GetStorage(), id_to_cg_map);
-  MATApplyCompactGenomeData(mat.GetStorage(), id_to_cg_map);
+  MADAGApplyCompactGenomeData(dag_storage, id_to_cg_map);
+  MATApplyCompactGenomeData(mat, id_to_cg_map);
 
   // this routine is from include/larch/impl/produce_mat.cpp
-  check_MAT_MADAG_Eq(tree, dag);
+  check_MAT_MADAG_Eq(mat, dag);
 }
- */
+
+[[maybe_unused]] void test_vcf_with_larch_usher() {
+  std::string command =
+      "./larch-usher -i data/test_ambiguous_vcf/unamb_mat.pb -r data/test_ambiguous_vcf/sample_reference_sequence.fasta -o "
+      "test_larch_usher_output.pb -c 2 -v data/test_ambiguous_vcf/SampleDAG_unique_ambiguous_leafs.vcf";
+
+  assert_equal(0, std::system(command.c_str()), "Child process failed");
+}
+
+[[maybe_unused]] static const auto test_added0 =
+    add_test({[]() { test_ambiguous_vcf(); }, "Loading VCFs with Ambiguities Test"});
+
+[[maybe_unused]] static const auto test_added1 =
+    add_test({[]() { test_vcf_reading(MakeSampleDAG(), "data/test_ambiguous_vcf/sample_reference_sequence.fasta"); }, "load vcf and create MAT conversion"});
+
+[[maybe_unused]] static const auto test_added2 =
+    add_test({[]() { test_vcf_with_larch_usher(); }, "Loading VCFs with Ambiguities and running with MatOptimize"});
+
