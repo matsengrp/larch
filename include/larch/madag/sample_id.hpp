@@ -43,7 +43,7 @@ struct FeatureConstView<SampleId, CRTP, Tag> {
     if (not id.has_value()) {
       return false;
     }
-    return id.value().empty();
+    return not id.value().empty();
   }
 };
 

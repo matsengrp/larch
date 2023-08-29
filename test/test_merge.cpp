@@ -19,6 +19,9 @@ static void test_protobuf(const std::string& correct_path,
     MutableMADAG view = trees.back().View();
     view.RecomputeCompactGenomes(true);
     view.SampleIdsFromCG();
+    for (auto leaf : view.GetLeafs()) {
+      Assert(leaf.HaveSampleId());
+    }
     tree_views.push_back(view);
   }
 

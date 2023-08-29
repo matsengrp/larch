@@ -122,12 +122,14 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG() const {
   auto dag = static_cast<const CRTP&>(*this);
   for (auto leaf : dag.GetLeafs()) {
     if (not leaf.HaveSampleId()) {
+      std::string id = leaf.GetCompactGenome().ToString();
+      Assert(not id.empty());
       if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
         auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-            SampleId{leaf.GetCompactGenome().ToString()});
+            SampleId{id});
         leaf = id_iter.first;
       } else {
-        leaf.SetSampleId(leaf.GetCompactGenome().ToString());
+        leaf.SetSampleId(id);
       }
     }
   }
