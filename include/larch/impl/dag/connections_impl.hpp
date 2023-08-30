@@ -27,11 +27,7 @@ auto FeatureConstView<Connections, CRTP, Tag>::GetRoot() const {
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Connections, CRTP, Tag>::GetLeafs() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return GetFeatureStorage(this).leafs_ |
-         ranges::views::transform([dag, idx = size_t{}](auto&) mutable {
-           using Node = typename CRTP::NodeView;
-           return Node{dag, {idx++}};
-         });
+  return GetFeatureStorage(this).leafs_ | Transform::ToNodes(dag);
 }
 
 template <typename CRTP, typename Tag>

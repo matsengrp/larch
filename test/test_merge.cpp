@@ -136,10 +136,12 @@ static void test_add_trees() {
   for (auto& path : paths1) {
     trees1.push_back(LoadDAGFromProtobuf(path));
     trees1.back().View().RecomputeCompactGenomes(true);
+    trees1.back().View().SampleIdsFromCG();
   }
   for (auto& path : paths2) {
     trees2.push_back(LoadDAGFromProtobuf(path));
     trees2.back().View().RecomputeCompactGenomes(true);
+    trees2.back().View().SampleIdsFromCG();
   }
 
   MADAGStorage correct_result = LoadDAGFromJson(correct_path);
@@ -181,6 +183,7 @@ static void test_subtree() {
   for (auto& path : paths) {
     trees.push_back(LoadDAGFromProtobuf(path));
     trees.back().View().RecomputeCompactGenomes(true);
+    trees.back().View().SampleIdsFromCG();
   }
 
   for (auto& tree : trees) {
