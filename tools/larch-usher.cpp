@@ -769,6 +769,9 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
           : LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path));
   auto input_dag_view = input_dag.View();
   input_dag_view.RecomputeCompactGenomes(true);
+  if (refseq_path.empty()) {
+    input_dag.View().SampleIdsFromCG();
+  }
   Merge merge{input_dag_view.GetReferenceSequence()};
   merge.AddDAG(input_dag_view);
   std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{{}})), MAT::Tree>>
