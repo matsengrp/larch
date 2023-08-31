@@ -278,6 +278,16 @@ void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGeno
   auto& node = static_cast<const CRTP&>(*this);
   if (not node.IsUA() and not node.IsMoveNew()) {
     node.template SetOverlay<Deduplicate<CompactGenome>>();
+    if constexpr (std::decay_t<decltype(node)>::template contains_feature<SampleId>) {
+      if (node.IsLeaf()) {
+        node.template SetOverlay<SampleId>();
+      }
+    } else if constexpr (std::decay_t<decltype(node)>::template contains_feature<
+                             Deduplicate<SampleId>>) {
+      if (node.IsLeaf()) {
+        node.template SetOverlay<Deduplicate<SampleId>>();
+      }
+    }
     node = node.ComputeNewCompactGenome();
   }
   result_nodes.push_back(node);
@@ -563,7 +573,8 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   auto first_src_node = dag.Get(src[0]);
   auto first_dst_node = dag.Get(dst[0]);
 
-  if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId() or first_dst_node.IsMATRoot()) {
+  if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId() or
+      first_dst_node.IsMATRoot()) {
     // no-op
     return {};
   }

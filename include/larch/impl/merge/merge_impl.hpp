@@ -140,7 +140,7 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
     Assert(leaf.Const().HaveSampleId());
     auto id_iter =
         result_dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-            leaf.GetSampleId());
+            leaf.Const().GetSampleId());
     labels.at(leaf.GetId().value).SetSampleId(id_iter.first);
   }
 }
