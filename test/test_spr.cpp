@@ -79,6 +79,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
     optimized_dags.back().first.View().RecomputeCompactGenomes(true);
+    optimized_dags.back().first.View().SampleIdsFromCG();
     merge.AddDAGs(std::vector{optimized_dags.back().first.View()},
                   optimized_dags.back().first.View().GetRoot());
   }

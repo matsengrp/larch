@@ -273,6 +273,7 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTree(NodeType input_node,
     result_node.SetOriginalId(input_node.GetId());
   }
   result_node = input_node.GetCompactGenome().Copy();
+  result_node = SampleId{input_node.GetSampleId()};
 
   CladeIdx clade_idx{0};
   for (auto clade : input_node.GetClades()) {
