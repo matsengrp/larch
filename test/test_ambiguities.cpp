@@ -177,10 +177,10 @@
 
   // (6) Test that recomputing edge mutations and compact genomes does not alter
   // leaves.
-  amb_dag.RecomputeCompactGenomes();
+  amb_dag.RecomputeCompactGenomes(false);
   assert_true(VerifyCompactGenomesCompatibleWithLeaves(amb_dag_storage, amb_seq_map),
               "Test_6a: RecomputeCompactGenomes incorrectly altered leaf CGs.");
-  unamb_dag.RecomputeCompactGenomes();
+  unamb_dag.RecomputeCompactGenomes(false);
   assert_true(
       VerifyCompactGenomesCompatibleWithLeaves(unamb_dag_storage, unamb_seq_map),
       "Test_6b: RecomputeCompactGenomes incorrectly altered leaf CGs.");
