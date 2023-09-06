@@ -218,6 +218,15 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
     }
     dag.BuildConnections();
   }
+  for (auto leaf: dag.GetLeafs()) {
+    if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
+      auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+          SampleId{std::to_string(leaf.GetMATNode()->node_id)});
+      leaf = id_iter.first;
+    } else {
+      leaf.SetSampleId(std::to_string(leaf.GetMATNode()->node_id));
+    }
+  }
   dag.AddUA(EdgeMutations{mutations_view(mat.root)});
 }
 
@@ -278,6 +287,13 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(MATNodePtr par_no
     MATNodePtr mat_child = par_node->children[clade_idx.value];
     auto child_node = dag.AppendNode();
     child_node.SetMATNode(mat_child);
+    if constexpr (decltype(child_node)::template contains_feature<Deduplicate<SampleId>>) {
+      auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+          SampleId{std::to_string(par_node->node_id)});
+      child_node = id_iter.first;
+    } else {
+      child_node.SetSampleId(std::to_string(par_node->node_id));
+    }
     auto child_edge = dag.AppendEdge(node, child_node, clade_idx);
     child_edge.SetEdgeMutations({mutations_view(mat_child)});
     BuildHelper(mat_child, child_node, dag);

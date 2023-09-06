@@ -184,7 +184,6 @@ static void test_matOptimize(std::string_view input_dag_path,
       auto temp_result = AddMappedNodes(AddMATConversion(MADAGStorage{{}}));
       temp_result.View().BuildFromMAT(tree, merge.GetResult().GetReferenceSequence());
       temp_result.View().RecomputeCompactGenomes(true);
-      temp_result.View().SampleIdsFromCG();
       optimized_dags.push_back(std::move(temp_result));
       auto result = optimized_dags.back().View();
       std::map<MATNodePtr, NodeId> full_map = [&] {
