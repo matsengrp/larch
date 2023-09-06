@@ -114,6 +114,9 @@ std::vector<std::vector<const CompactGenome*>> clades_difference(
   return result;
 }
 
+using Storage = MergeDAGStorage;
+using ReassignedStatesStorage = decltype(AddMappedNodes(AddMATConversion(Storage{{}})));
+
 template <typename SampleDAG>
 struct Treebased_Move_Found_Callback
     : public BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>, SampleDAG> {
@@ -144,18 +147,16 @@ struct Treebased_Move_Found_Callback
         move_score_coeffs_{1, 1} {};
 
   template <typename SPRView, typename FragmentType>
-  std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment,
+  std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& /*fragment*/,
                                Profitable_Moves& move, int /*best_score_change*/,
                                std::vector<Node_With_Major_Allele_Set_Change>&
-                               /*nodes_with_major_allele_set_change*/) {
+                                   nodes_with_major_allele_set_change) {
     int node_id_map_count = 0;
-    auto spr = storage.View();
     spr.GetRoot().Validate(true);
 
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
 
-      auto fragment = spr.GetFragment();
       if (move_score_coeffs_.first != 0) {
         /*
                 auto src_leaf_set = merge_.GetResultNodeLabels()
@@ -247,11 +248,15 @@ struct Merge_All_Profitable_Moves_Found_Callback
                                             std::pair<int, int> move_score_coeffs)
       : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
                          SampleDAG>{merge, sample_dag},
+        sample_dag_{sample_dag},
+        merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
   Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag)
       : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
                          SampleDAG>{merge, sample_dag},
+        sample_dag_{sample_dag},
+        merge_{merge},
         move_score_coeffs_{1, 1} {};
 
   Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
@@ -259,27 +264,29 @@ struct Merge_All_Profitable_Moves_Found_Callback
                                             bool collapse_empty_fragment_edges)
       : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
                          SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+        sample_dag_{sample_dag},
+        merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
   Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
                                             bool collapse_empty_fragment_edges)
       : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
                          SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+        sample_dag_{sample_dag},
+        merge_{merge},
         move_score_coeffs_{1, 1} {};
 
   template <typename SPRView, typename FragmentType>
   std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment,
                                Profitable_Moves& move, int /*best_score_change*/,
                                std::vector<Node_With_Major_Allele_Set_Change>&
-                               /*nodes_with_major_allele_set_change*/) {
+                                   nodes_with_major_allele_set_change) {
     int node_id_map_count = 0;
-    auto spr = storage.View();
     spr.GetRoot().Validate(true);
 
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
 
-      auto fragment = spr.GetFragment();
       /*
             if (move_score_coeffs_.first != 0) {
 
@@ -337,10 +344,10 @@ struct Merge_All_Profitable_Moves_Found_Callback
       */
       if (move.score_change <= 0) {
         std::scoped_lock<std::mutex> lock{merge_mtx_};
-        merge_.AddFragment(spr, fragment.first, fragment.second);
+        merge_.AddDAG(fragment);
       }
     } else {
-      return false;
+      return {false, false};
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
@@ -356,16 +363,16 @@ struct Merge_All_Profitable_Moves_Found_Callback
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAG(reassigned_states_storage_.View());
+      merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
       sample_mat_.store(std::addressof(tree));
       merge_.ComputeResultEdgeMutations();
     }
   }
 
-  DAG sample_dag_;
-  MergeT& merge_;
-  decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
-      AddMATConversion(Storage{});
+  SampleDAG sample_dag_;
+  Merge& merge_;
+  ReassignedStatesStorage reassigned_states_storage_ =
+      AddMappedNodes(AddMATConversion(Storage{{}}));
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
@@ -382,6 +389,8 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
       : BatchingCallback<
             Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
             SampleDAG>{merge, sample_dag},
+        sample_dag_{sample_dag},
+        merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
   Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(Merge& merge,
@@ -389,6 +398,8 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
       : BatchingCallback<
             Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
             SampleDAG>{merge, sample_dag},
+        sample_dag_{sample_dag},
+        merge_{merge},
         move_score_coeffs_{1, 1} {};
 
   Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(
@@ -397,6 +408,8 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
       : BatchingCallback<
             Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
             SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+        sample_dag_{sample_dag},
+        merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
   Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(
@@ -404,21 +417,21 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
       : BatchingCallback<
             Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
             SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+        sample_dag_{sample_dag},
+        merge_{merge},
         move_score_coeffs_{1, 1} {};
 
   template <typename SPRView, typename FragmentType>
-  std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment,
+  std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& /*fragment*/,
                                Profitable_Moves& move, int /*best_score_change*/,
                                std::vector<Node_With_Major_Allele_Set_Change>&
-                               /*nodes_with_major_allele_set_change*/) {
+                                   nodes_with_major_allele_set_change) {
     int node_id_map_count = 0;
-    auto spr = storage.View();
     spr.GetRoot().Validate(true);
 
     if (spr.InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
       spr.GetRoot().Validate(true);
 
-      auto fragment = spr.GetFragment();
       if (move_score_coeffs_.first != 0) {
         /*
                 auto src_leaf_set =
@@ -486,15 +499,15 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     reassigned_states_storage_.View().RecomputeCompactGenomes();
     {
       std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAG(reassigned_states_storage_.View());
+      merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
       merge_.ComputeResultEdgeMutations();
     }
   }
 
-  DAG sample_dag_;
-  MergeT& merge_;
-  decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
-      AddMATConversion(Storage{});
+  SampleDAG sample_dag_;
+  Merge& merge_;
+  ReassignedStatesStorage reassigned_states_storage_ =
+      AddMappedNodes(AddMATConversion(Storage{{}}));
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
@@ -510,11 +523,6 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
       : sample_dag_{sample_dag},
         merge_{merge},
         move_score_coeffs_{move_score_coeffs} {};
-
-  using Storage =
-      ExtendDAGStorage<DefaultDAGStorage,
-                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
-                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
   bool operator()(Profitable_Moves& move, int /*best_score_change*/,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
@@ -603,7 +611,7 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
   }
 
   void operator()(MAT::Tree& tree) {
-    decltype(AddMATConversion(Storage{})) storage;
+    auto storage = AddMATConversion(Storage{});
     storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
     storage.View().RecomputeCompactGenomes();
     {
@@ -630,8 +638,8 @@ struct Merge_All_Profitable_Moves_Found_So_Far_Callback : public Move_Found_Call
   DAG sample_dag_;
   MergeT& merge_;
   int running_best_score_change_ = INT_MAX;
-  decltype(AddMATConversion(Storage{})) reassigned_states_storage_ =
-      AddMATConversion(Storage{});
+  ReassignedStatesStorage reassigned_states_storage_ =
+      AddMappedNodes(AddMATConversion(Storage{{}}));
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
