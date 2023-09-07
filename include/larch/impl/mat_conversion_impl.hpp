@@ -218,7 +218,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
     }
     dag.BuildConnections();
   }
-  for (auto leaf: dag.GetLeafs()) {
+  for (auto leaf : dag.GetLeafs()) {
     if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
       auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
           SampleId{std::to_string(leaf.GetMATNode()->node_id)});
