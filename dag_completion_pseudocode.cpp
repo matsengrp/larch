@@ -14,16 +14,22 @@
  * during larch-usher optimization.
  *
  * I'm not sure where this should be implemented (perhaps as a method on the
- * merge object?) so I'll just write the pseudocode as a standalone function that modifies the
- * provided hDAG
+ * merge object?) so I'll just write the pseudocode as a standalone function that
+ * modifies the provided hDAG
  */
 
 // set<CompactGenome> is just to express the spirit of what we want.
 using CladeUnion = std::set<CompactGenome>;
 
-CladeUnion Node::GetCladeUnion() {
-    //return this node's LeafSet, but flattened, so that it's just
-    //a set/ordered vector of CompactGenomes
+template <typename NodeType>
+CladeUnion GetCladeUnion(NodeType node) {
+  // return this node's LeafSet, but flattened, so that it's just
+  // a set/ordered vector of CompactGenomes
+  CladeUnion clade_union;
+  for (const auto compact_genome : node.GetCompactGenomes()) {
+    clade_union.insert(compact_genomes);
+  }
+  return clade_union;
 }
 
 template <typename DAGType, NodeType>
@@ -35,11 +41,12 @@ void complete_dag(DAGTYPE dag) {
   }
 
   for (auto node : dag.GetNodes()) {
-    //assuming that LeafSet indices align with clade indices
+    // assuming that LeafSet indices align with clade indices
     LeafSet clades = node.GetLeafSet();
-    for (size_t clade_idx=0 ; i < clades.size(); i++) {
-      if (auto possible_children = target_nodes_map.find(clades[i]; possible_children != target_nodes_map.end())) {
-        for (auto child_node : possible_children->second){
+    for (size_t clade_idx = 0; i < clades.size(); i++) {
+      if (auto possible_children = target_nodes_map.find(
+              clades[i]; possible_children != target_nodes_map.end())) {
+        for (auto child_node : possible_children->second) {
           // of course, we don't want to duplicate edges that are already in
           // the DAG, but I assume that AddEdge handles this?
           dag.AddEdge(/*parent*/ node, /*child*/ child_node, /*clade index*/ clade_idx);
@@ -48,4 +55,3 @@ void complete_dag(DAGTYPE dag) {
     }
   }
 }
-
