@@ -17,6 +17,9 @@ LCA FindLCA(Node n0, Node n1) {
       result.lca = current_node_id0;
       while (dag.Get(result.path1.back()).GetParentId() != current_node_id0) {
         result.path1.pop_back();
+        if (result.path1.empty()) {
+          break;
+        }
       }
       break;
     }
@@ -25,6 +28,9 @@ LCA FindLCA(Node n0, Node n1) {
       result.lca = current_node_id1;
       while (dag.Get(result.path0.back()).GetParentId() != current_node_id1) {
         result.path0.pop_back();
+        if (result.path0.empty()) {
+          break;
+        }
       }
       break;
     }

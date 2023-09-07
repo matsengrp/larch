@@ -118,6 +118,24 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
 }
 
 template <typename CRTP, typename Tag>
+void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG() const {
+  auto dag = static_cast<const CRTP&>(*this);
+  for (auto leaf : dag.GetLeafs()) {
+    if (not leaf.HaveSampleId()) {
+      std::string id = leaf.GetCompactGenome().ToString();
+      Assert(not id.empty());
+      if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
+        auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+            SampleId{id});
+        leaf = id_iter.first;
+      } else {
+        leaf.SetSampleId(id);
+      }
+    }
+  }
+}
+
+template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeEdgeMutations() const {
   auto dag = static_cast<const CRTP&>(*this);
   using Edge = typename decltype(dag)::EdgeView;
@@ -127,16 +145,4 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeEdgeMutations() 
         dag.GetReferenceSequence(), edge.GetParent().GetCompactGenome(),
         edge.GetChild().GetCompactGenome()));
   }
-}
-
-template <typename CRTP, typename Tag>
-const std::optional<std::string>& FeatureConstView<SampleId, CRTP, Tag>::GetSampleId()
-    const {
-  return GetFeatureStorage(this).sample_id_;
-}
-
-template <typename CRTP, typename Tag>
-void FeatureMutableView<SampleId, CRTP, Tag>::SetSampleId(
-    const std::optional<std::string>& sample_id) const {
-  GetFeatureStorage(this).sample_id_ = sample_id;
 }

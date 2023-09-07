@@ -56,6 +56,9 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     for (auto& [label, id, parent_id, child_id, clade] : added_edges) {
       ResultDAG().Get(parent_id).AddEdge(clade, id, true);
       ResultDAG().Get(child_id).AddEdge(clade, id, false);
+      if (ResultDAG().Get(child_id).IsLeaf()) {
+        ResultDAG().AddLeaf(child_id);
+      }
     }
   }
 
@@ -128,8 +131,17 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
-    auto cg_iter = result_dag.AddDeduplicated(node.GetCompactGenome());
+    auto cg_iter =
+        result_dag.template AsFeature<Deduplicate<CompactGenome>>().AddDeduplicated(
+            node.GetCompactGenome());
     labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
+  }
+  for (auto leaf : dag.GetLeafs()) {
+    Assert(leaf.Const().HaveSampleId());
+    auto id_iter =
+        result_dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+            leaf.Const().GetSampleId());
+    labels.at(leaf.GetId().value).SetSampleId(id_iter.first);
   }
 }
 
@@ -244,6 +256,8 @@ void Merge::BuildResult(
   result_dag.Get(id).Set(parent->second, child->second, clade);
   result_dag.Get(parent->second) = parent->first.GetCompactGenome();
   result_dag.Get(child->second) = child->first.GetCompactGenome();
+  result_dag.Get(parent->second) = parent->first.GetSampleId();
+  result_dag.Get(child->second) = child->first.GetSampleId();
   auto result_edge_it = result_edges.find(edge);
   Assert(result_edge_it != result_edges.end());
   result_edge_it->second = id;

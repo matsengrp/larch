@@ -5,9 +5,20 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Woverflow"
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/gzip_stream.h>
+#include "proto/dag.pb.h"
+#include "parsimony.pb.h"
+#pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstack-usage="
@@ -18,9 +29,6 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/copy.hpp>
 
-#include "larch/dag_loader.hpp"
-#include "dag.pb.h"
-#include "parsimony.pb.h"
 #include "larch/newick.hpp"
 
 inline int32_t EncodeBasePB(char base) {

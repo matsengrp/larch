@@ -10,13 +10,16 @@ template <typename CRTP, typename SampleDAG>
 class BatchingCallback : public Move_Found_Callback {
  public:
   BatchingCallback(Merge& merge, SampleDAG sample_dag);
-  BatchingCallback(Merge& merge, SampleDAG sample_dag, bool collapse_empty_fragment_edges);
+  BatchingCallback(Merge& merge, SampleDAG sample_dag,
+                   bool collapse_empty_fragment_edges);
 
   virtual ~BatchingCallback() {}
 
   using Storage = MergeDAGStorage;
   using MATStorage = decltype(AddMATConversion(Storage{{}}));
   using SPRType = decltype(SPRStorage(AddMATConversion(Storage{{}}).View()));
+  using ReassignedStatesStorage =
+      decltype(AddMappedNodes(AddMATConversion(Storage{{}})));
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&
@@ -38,7 +41,7 @@ class BatchingCallback : public Move_Found_Callback {
   std::decay_t<SampleDAG> sample_dag_;
   bool collapse_empty_fragment_edges_;
   ArbitraryInt applied_moves_count_;
-  decltype(AddMappedNodes(AddMATConversion(Storage{{}}))) reassigned_states_storage_ =
+  ReassignedStatesStorage reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage{{}}));
   std::shared_mutex mat_mtx_;
   std::unique_ptr<MATStorage> sample_mat_storage_;

@@ -27,6 +27,7 @@
 #include "larch/madag/mutation_base.hpp"
 #include "larch/madag/compact_genome.hpp"
 #include "larch/madag/edge_mutations.hpp"
+#include "larch/madag/sample_id.hpp"
 
 struct ReferenceSequence {
   std::string reference_sequence_;
@@ -46,27 +47,15 @@ struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
       const std::unordered_map<NodeId, std::string> &leaf_sequence_map) const;
   void AddUA(const EdgeMutations &mutations_at_root) const;
   void RecomputeCompactGenomes(bool recompute_leaves = true) const;
+  void SampleIdsFromCG() const;
   void RecomputeEdgeMutations() const;
-};
-
-struct SampleId {
-  std::optional<std::string> sample_id_;
-};
-
-template <typename CRTP, typename Tag>
-struct FeatureConstView<SampleId, CRTP, Tag> {
-  const std::optional<std::string> &GetSampleId() const;
-};
-
-template <typename CRTP, typename Tag>
-struct FeatureMutableView<SampleId, CRTP, Tag> {
-  void SetSampleId(const std::optional<std::string> &sample_id) const;
 };
 
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"
 
 using MADAGStorage =
-    ExtendDAGStorage<DefaultDAGStorage, Extend::Nodes<CompactGenome, SampleId>,
+    ExtendDAGStorage<DefaultDAGStorage,
+                     Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
                      Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
 using MADAG = DAGView<const MADAGStorage>;

@@ -28,11 +28,13 @@ using MATNodePtr = MAT::Node*;
 
 struct MATConversion {
   MATNodePtr mat_node_ptr_ = nullptr;
+  bool is_condensed_in_mat_ = false;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATConversion, CRTP, Tag> {
   bool HaveMATNode() const;
+  bool IsCondensedInMAT() const;
   MATNodePtr GetMATNode() const;
 };
 
@@ -43,7 +45,12 @@ struct FeatureMutableView<MATConversion, CRTP, Tag> {
  private:
   template <typename, typename>
   friend struct ExtraFeatureMutableView;
-  void SetMATNode(MATNodePtr ptr) const;
+
+  void SetMATNode(MATNodePtr id) const;
+
+  template <typename, typename>
+  friend struct ExtraFeatureMutableView;
+  void SetUncondensedMATNode(MATNodePtr id) const;
 };
 
 template <>
@@ -52,12 +59,14 @@ struct ExtraFeatureStorage<MATConversion> {
   MOVE_ONLY(ExtraFeatureStorage);
   MAT::Tree* mat_tree_ = nullptr;
   ContiguousMap<MATNodePtr, NodeId> reverse_map_;
+  ContiguousMap<MATNodePtr, std::vector<NodeId>> uncondensed_reverse_map_;
 };
 
 template <typename CRTP>
 struct ExtraFeatureConstView<MATConversion, CRTP> {
   const MAT::Tree& GetMAT() const;
-  auto GetNodeFromMAT(MATNodePtr ptr) const;
+  auto GetNodeFromMAT(MATNodePtr mat_node_id) const;
+  auto GetUncondensedNodeFromMAT(const MATNodePtr mat_node_id) const;
 };
 
 template <typename CRTP>

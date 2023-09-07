@@ -3,8 +3,11 @@ template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag)
     : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {}
 template <typename CRTP, typename SampleDAG>
-BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag, bool collapse_empty_fragment_edges)
-    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {}
+BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag,
+                                                    bool collapse_empty_fragment_edges)
+    : merge_{merge},
+      sample_dag_{sample_dag},
+      collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {}
 
 template <typename CRTP, typename SampleDAG>
 bool BatchingCallback<CRTP, SampleDAG>::operator()(
@@ -23,11 +26,14 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
   if (storage.View().InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
     storage.View().GetRoot().Validate(true);
-    auto fragment = collapse_empty_fragment_edges_ ? storage.View().MakeFragment(): storage.View().MakeUncollapsedFragment();
+    auto fragment = collapse_empty_fragment_edges_
+                        ? storage.View().MakeFragment()
+                        : storage.View().MakeUncollapsedFragment();
 
     auto& impl = static_cast<CRTP&>(*this);
-    std::pair<bool, bool> accepted = impl.OnMove(storage.View(), fragment, move, best_score_change,
-                                nodes_with_major_allele_set_change);
+    std::pair<bool, bool> accepted =
+        impl.OnMove(storage.View(), fragment, move, best_score_change,
+                    nodes_with_major_allele_set_change);
 
     if (accepted.first) {
       applied_moves_count_++;
@@ -54,13 +60,15 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
-  std::cout << "Larch-Usher callback Applying " << applied_moves_count_ << "\n" << std::flush;
+  std::cout << "Larch-Usher callback Applying " << applied_moves_count_ << "\n"
+            << std::flush;
   applied_moves_count_ = 0;
   reassigned_states_storage_ = AddMappedNodes(AddMATConversion(Storage{{}}));
   reassigned_states_storage_.View().BuildFromMAT(
       tree, merge_.GetResult().GetReferenceSequence());
   check_edge_mutations(reassigned_states_storage_.View().Const());
   reassigned_states_storage_.View().RecomputeCompactGenomes(true);
+  reassigned_states_storage_.View().SampleIdsFromCG();
   {
     std::unique_lock lock{merge_mtx_};
     if (not batch_.empty()) {
@@ -86,6 +94,7 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
       tree, merge_.GetResult().GetReferenceSequence());
   check_edge_mutations(reassigned_states_storage_.View().Const());
   reassigned_states_storage_.View().RecomputeCompactGenomes(true);
+  reassigned_states_storage_.View().SampleIdsFromCG();
   {
     std::unique_lock lock{merge_mtx_};
     merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
@@ -121,5 +130,5 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
   view.BuildFromMAT(tree, ref_seq);
   check_edge_mutations(view.Const());
   view.RecomputeCompactGenomes(true);
+  view.SampleIdsFromCG();
 }
-

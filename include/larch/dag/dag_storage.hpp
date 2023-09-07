@@ -43,7 +43,12 @@ struct DAGStorage {
         FeatureMutableView<Features, CRTP>...,
         ExtraFeatureMutableView<Features, CRTP>...,
         NodesContainerT::template ExtraMutableElementViewBase<CRTP>,
-        EdgesContainerT::template ExtraMutableElementViewBase<CRTP> {};
+        EdgesContainerT::template ExtraMutableElementViewBase<CRTP> {
+    template <typename F>
+    constexpr auto& AsFeature() const noexcept {
+      return static_cast<const ExtraFeatureMutableView<F, CRTP>&>(*this);
+    }
+  };
 
   DAGStorage() = default;
   MOVE_ONLY(DAGStorage);

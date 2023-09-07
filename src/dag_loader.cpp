@@ -6,6 +6,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-align"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Woverflow"
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/gzip_stream.h>
@@ -18,7 +25,7 @@
 #include <boost/iostreams/copy.hpp>
 
 #include "larch/dag_loader.hpp"
-#include "dag.pb.h"
+#include "proto/dag.pb.h"
 #include "parsimony.pb.h"
 #include "larch/newick.hpp"
 
@@ -118,7 +125,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
   for (auto node : result.View().GetNodes()) {
     if (node.IsLeaf()) {
-      node.SetSampleId(seq_ids[node.GetId().value]);
+      node = SampleId{seq_ids[node.GetId().value]};
     }
   }
 
@@ -146,6 +153,67 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
   result.View().GetRoot().Validate(true, false);
   return result;
 }
+
+/*
+MADAGStorage LoadTreeFromProtobuf(std::string_view path,
+                                  std::string_view reference_sequence,
+                                  std::string_view vcf_path) {
+  Parsimony::data data;
+  Parse(data, path);
+
+  MADAGStorage result;
+  result.View().SetReferenceSequence(reference_sequence);
+
+  std::unordered_map<size_t, size_t> num_children;
+  std::map<size_t, std::optional<std::string>> seq_ids;
+  ParseNewick(
+      data.newick(),
+      [&seq_ids](size_t node_id, std::string_view label, std::optional<double>) {
+        seq_ids[node_id] = label;
+      },
+      [&result, &num_children](size_t parent, size_t child) {
+        result.View().AddEdge({child}, {parent}, {child}, {num_children[parent]++});
+      });
+  result.View().InitializeNodes(result.View().GetEdgesCount() + 1);
+  result.View().BuildConnections();
+
+  for (auto node : result.View().GetNodes()) {
+    if (node.IsLeaf()) {
+      node.SetSampleId(seq_ids[node.GetId().value]);
+    }
+  }
+
+  result.View().AddUA({});
+
+  Assert(static_cast<size_t>(data.node_mutations_size()) ==
+         result.View().GetNodesCount() - 1);
+  using Edge = MutableMADAG::EdgeView;
+  auto apply_mutations = [](auto& self, Edge edge, const auto& node_mutations,
+                            size_t& idx) -> void {
+    const auto& pb_muts = node_mutations.Get(static_cast<int>(idx++)).mutation();
+    EdgeMutations muts;
+    for (auto i : pb_muts | ranges::views::transform(DecodeMutation)) {
+      muts.insert(i);
+    }
+    edge.SetEdgeMutations(std::move(muts));
+    for (Edge child : edge.GetChild().GetChildren()) {
+      self(self, child, node_mutations, idx);
+    }
+  };
+  size_t muts_idx = 0;
+  apply_mutations(apply_mutations, result.View().GetRoot().GetFirstChild(),
+                  data.node_mutations(), muts_idx);
+
+  auto sample = AddMATConversion(result.View());
+  MAT::Tree mat;
+  sample.View().BuildMAT(mat);
+  VCF_input(std::string(vcf_path).c_str(), mat);
+  Original_State_t vcf_data;
+  check_samples(mat.root, vcf_data, &mat);
+
+  return result;
+}
+*/
 
 [[nodiscard]] nlohmann::json LoadJson(std::string_view path) {
   if (IsGzipped(path)) {
