@@ -28,6 +28,8 @@ static void test_sample_tree(MADAG dag) {
 
 static void test_sample_tree(std::string_view path) {
   MADAGStorage dag = LoadDAGFromProtobuf(path);
+  dag.View().RecomputeCompactGenomes(true);
+  dag.View().SampleIdsFromCG();
   test_sample_tree(dag.View());
 }
 

@@ -7,14 +7,16 @@ template <typename Node>
 LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
                  std::vector<LeafSet>& computed_leafsets)
     : clades_{[&] {
-        std::vector<std::vector<const CompactGenome*>> clades;
+        std::vector<std::vector<UniqueData>> clades;
         clades.reserve(node.GetCladesCount());
         for (auto clade : node.GetClades()) {
-          std::vector<const CompactGenome*> clade_leafs;
+          std::vector<UniqueData> clade_leafs;
           clade_leafs.reserve(clade.size());
           for (Node child : clade | Transform::GetChild()) {
             if (child.IsLeaf()) {
-              clade_leafs.push_back(labels.at(child.GetId().value).GetCompactGenome());
+              Assert(child.Const().HaveSampleId());
+              UniqueData id = labels.at(child.GetId().value).GetSampleId();
+              clade_leafs.push_back(id);
             } else {
               for (auto& child_leafs :
                    computed_leafsets.at(child.GetId().value).clades_) {
@@ -32,8 +34,8 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
       }()},
       hash_{ComputeHash(clades_)} {}
 
-LeafSet::LeafSet(std::vector<std::vector<const CompactGenome*>>&& clades)
-    : clades_{std::forward<std::vector<std::vector<const CompactGenome*>>>(clades)},
+LeafSet::LeafSet(std::vector<std::vector<UniqueData>>&& clades)
+    : clades_{std::forward<std::vector<std::vector<UniqueData>>>(clades)},
       hash_{ComputeHash(clades_)} {}
 
 bool LeafSet::operator==(const LeafSet& rhs) const noexcept {
@@ -50,9 +52,8 @@ bool LeafSet::empty() const { return clades_.empty(); }
 
 size_t LeafSet::size() const { return clades_.size(); }
 
-std::vector<const CompactGenome*> LeafSet::ToParentClade() const {
-  std::vector<const CompactGenome*> result =
-      ranges::to_vector(clades_ | ranges::views::join);
+std::vector<LeafSet::UniqueData> LeafSet::ToParentClade() const {
+  std::vector<UniqueData> result = ranges::to_vector(clades_ | ranges::views::join);
   result |= ranges::actions::sort | ranges::actions::unique;
   return result;
 }
@@ -65,7 +66,7 @@ size_t LeafSet::ParentCladeSize() const {
   return result;
 }
 
-const std::vector<std::vector<const CompactGenome*>>& LeafSet::GetClades() const {
+const std::vector<std::vector<LeafSet::UniqueData>>& LeafSet::GetClades() const {
   return clades_;
 }
 
@@ -104,7 +105,7 @@ std::vector<LeafSet> LeafSet::ComputeLeafSets(DAGType dag,
 }
 
 size_t LeafSet::ComputeHash(
-    const std::vector<std::vector<const CompactGenome*>>& clades) noexcept {
+    const std::vector<std::vector<UniqueData>>& clades) noexcept {
   size_t hash = 0;
   for (const auto& clade : clades) {
     for (const auto* leaf : clade) {

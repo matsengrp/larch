@@ -18,6 +18,10 @@ static void test_protobuf(const std::string& correct_path,
     trees.emplace_back(LoadDAGFromProtobuf(path));
     MutableMADAG view = trees.back().View();
     view.RecomputeCompactGenomes(true);
+    view.SampleIdsFromCG();
+    for (auto leaf : view.GetLeafs()) {
+      Assert(leaf.HaveSampleId());
+    }
     tree_views.push_back(view);
   }
 
@@ -91,6 +95,12 @@ static void test_case_20d() {
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
     trees.at(path_idx.first) = LoadTreeFromProtobuf(
         path_idx.second, correct_result.View().GetReferenceSequence());
+    for (auto node : trees.at(path_idx.first).View().GetNodes()) {
+      if (node.IsLeaf()) {
+        Assert(node.GetSampleId().has_value());
+        Assert(not node.GetSampleId().value().empty());
+      }
+    }
     trees.at(path_idx.first).View().RecomputeCompactGenomes(true);
   });
 
@@ -126,10 +136,12 @@ static void test_add_trees() {
   for (auto& path : paths1) {
     trees1.push_back(LoadDAGFromProtobuf(path));
     trees1.back().View().RecomputeCompactGenomes(true);
+    trees1.back().View().SampleIdsFromCG();
   }
   for (auto& path : paths2) {
     trees2.push_back(LoadDAGFromProtobuf(path));
     trees2.back().View().RecomputeCompactGenomes(true);
+    trees2.back().View().SampleIdsFromCG();
   }
 
   MADAGStorage correct_result = LoadDAGFromJson(correct_path);
@@ -171,6 +183,7 @@ static void test_subtree() {
   for (auto& path : paths) {
     trees.push_back(LoadDAGFromProtobuf(path));
     trees.back().View().RecomputeCompactGenomes(true);
+    trees.back().View().SampleIdsFromCG();
   }
 
   for (auto& tree : trees) {

@@ -10,7 +10,8 @@
 
 struct Empty_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
-                  std::vector<Node_With_Major_Allele_Set_Change>&) override {
+                  [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
+                      nodes_with_major_allele_set_change) override {
     return move.score_change < best_score_change;
   }
   void operator()(MAT::Tree&) {}
@@ -26,10 +27,10 @@ struct Test_Move_Found_Callback
                                                                          sample_dag} {};
 
   template <typename SPRView, typename FragmentType>
-    std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment, Profitable_Moves& move,
-              int best_score_change,
-              std::vector<Node_With_Major_Allele_Set_Change>&
-                  nodes_with_major_allele_set_change) {
+  std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment,
+                               Profitable_Moves& move, int best_score_change,
+                               std::vector<Node_With_Major_Allele_Set_Change>&
+                                   nodes_with_major_allele_set_change) {
     std::ignore = spr;
     std::ignore = fragment;
     std::ignore = nodes_with_major_allele_set_change;
@@ -52,6 +53,7 @@ struct Test_Move_Found_Callback
 [[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path) {
   MADAGStorage input_dag_storage = LoadDAGFromProtobuf(input_dag_path);
   input_dag_storage.View().RecomputeCompactGenomes(true);
+  input_dag_storage.View().SampleIdsFromCG();
   return input_dag_storage;
 }
 
@@ -192,8 +194,6 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   auto spr_storage = SPRStorage(dag);
   auto spr = spr_storage.View();
 
-  spr.GetRoot().Validate(true);
-  spr.ApplyMove({1}, {10});
   spr.GetRoot().Validate(true);
 
   for (auto node : spr.GetNodes()) {
