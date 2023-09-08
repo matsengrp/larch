@@ -1,0 +1,12 @@
+Bootstrap: library
+From: ubuntu:22.04
+
+%post
+  apt -y update
+  apt -y upgrade
+  apt -y install --no-install-recommends wget git ca-certificates make g++ mpi-default-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-date-time-dev libboost-iostreams-dev libtool yasm
+  mkdir /matsen
+  cd /matsen 
+  wget https://github.com/Kitware/CMake/releases/download/v3.27.3/cmake-3.27.3-linux-x86_64.tar.gz
+  tar xvf cmake-3.27.3-linux-x86_64.tar.gz 
+
