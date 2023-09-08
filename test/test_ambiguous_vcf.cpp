@@ -7,21 +7,6 @@
 #include "larch/mat_conversion.hpp"
 
 #include "larch/usher_glue.hpp"
-
-// #pragma GCC diagnostic push
-// #pragma GCC diagnostic ignored "-Wold-style-cast"
-// #pragma GCC diagnostic ignored "-Wunused-parameter"
-// #pragma GCC diagnostic ignored "-Wdeprecated-copy-with-user-provided-copy"
-// #pragma GCC diagnostic ignored "-Wunused-function"
-// #pragma GCC diagnostic ignored "-Wshadow"
-// #pragma GCC diagnostic ignored "-Wdeprecated-copy"
-// #pragma GCC diagnostic ignored "-Wextra"
-// #pragma GCC diagnostic ignored "-Wunused-function"
-// #pragma GCC diagnostic ignored "-Wconversion"
-// #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-// #include "src/matOptimize/import_vcf_fast.cpp"
-// #pragma GCC diagnostic pop
-
 #include "larch/import_vcf.hpp"
 
 [[maybe_unused]] static auto ConvertDAGToMAT(const MADAGStorage &dag_storage) {
@@ -112,13 +97,18 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
 [[maybe_unused]] static void MADAGLabelNodes(MADAGStorage &dag_storage,
                                              bool leaves_only = true) {
   auto dag = dag_storage.View();
-  size_t id = 0;
   for (auto node : dag.GetNodes()) {
     if (!leaves_only || node.IsLeaf()) {
       auto prefix = (node.IsLeaf() ? "x" : "y");
       prefix = (node.IsUA() ? "r" : prefix);
-      node.SetSampleId({prefix + std::to_string(node.GetId().value)});
-      id++;
+      auto full_str_id = prefix + std::to_string(node.GetId().value);
+      if constexpr (decltype(node)::template contains_feature<Deduplicate<SampleId>>) {
+        auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+            SampleId{full_str_id});
+        node = id_iter.first;
+      } else {
+        node.SetSampleId({full_str_id});
+      }
     }
   }
 }
@@ -308,7 +298,7 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
     MAT::Tree &tree,
     const std::unordered_map<std::string, CompactGenomeData> &mut_map) {
   for (const auto &[name, muts] : mut_map) {
-    auto node = tree.get_node(name);
+    auto node = tree.get_node(tree.node_name_to_node_idx(name));
     if (node) {
       node->mutations.clear();
       node->mutations.reserve(muts.size());
@@ -333,16 +323,11 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
 [[maybe_unused]] static auto test_ambiguous_vcf() {
   // Reference Sequence
   auto ref_seq = "GAA";
-  // Protobufs
-  // std::string amb_pb = "data/test_ambiguous_vcf/amb.pb";
-  // std::string unamb_pb = "data/test_ambiguous_vcf/unamb.pb";
   // VCFs
   std::string amb_vcf_path = "data/test_ambiguous_vcf/amb.vcf";
   std::string unamb_vcf_path = "data/test_ambiguous_vcf/unamb.vcf";
 
-  // Create topology and
-  // Build empty topology with labels (same topology as protobufs).
-  // auto topo_dag_storage = MakeSampleDAGTopology();
+  // Create topology
   auto topo_dag_storage = MakeUnambiguousSampleDAG();
   MADAGLabelNodes(topo_dag_storage, false);
 
@@ -399,43 +384,48 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
   std::cout << "unamb_mat_truth: " << OriginalStateInfo(unamb_mat_truth_og)
             << std::endl;
 
-  // std::cout << "amb_mat_vcf: " << OriginalStateInfo(amb_mat_vcf_og) << std::endl;
-  // std::cout << "unamb_mat_vcf: " << OriginalStateInfo(unamb_mat_vcf_og) << std::endl;
-
   std::cout << "amb_mat_cg: " << OriginalStateInfo(amb_mat_cg_og) << std::endl;
   std::cout << "unamb_mat_cg: " << OriginalStateInfo(unamb_mat_cg_og) << std::endl;
 }
 
-/*
-void test_vcf_compatible(MADAGStorage dag_storage, const std::string &vcf_path) {
+void test_vcf_compatible() {
+  auto dag_storage = MakeSampleDAG();
+  MADAGLabelNodes(dag_storage, false);
   MADAG dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
-  auto id_to_cg_map = ReadVCFToCompactGenomeData(vcf_path, ref_seq);
+  auto id_to_cg_map = ReadVCFToCompactGenomeData("data/test_ambiguous_vcf/SampleDAG_unique_ambiguous_leafs.vcf", ref_seq);
 
   // make sure that each of the leaves in dag match exactly one key of id_to_cg_map
-  for (auto leaf: dag.GetLeafs()) {
-    Assert(std::find(id_to_cg_map.begin(), id_to_cg_map.end(), leaf.GetSampleId()) != id_to_cg_map.end());
+  for (auto leaf_id: dag.GetLeafs()) {
+    if (leaf_id.GetSampleId().has_value()) {
+      Assert(id_to_cg_map.find(leaf_id.GetSampleId().value()) != id_to_cg_map.end());
+    }
   }
 
   // make sure that each parent edge is "compatible" with the leaf nodes
   MADAGApplyCompactGenomeData(dag_storage, id_to_cg_map);
-  dag.RecomputeEdgeMutations();
+  dag_storage.View().RecomputeEdgeMutations();
   for (auto leaf: dag.GetLeafs()) {
     for (auto parent_edge: leaf.GetParents()) {
       auto leaf_cg = leaf.GetCompactGenome().Copy();
       auto parent_cg = parent_edge.GetParent().GetCompactGenome().Copy();
-      auto edge_mutations_from_dag = parent_edge.GetEdgeMutations();
-
-      Assert(leaf_cg.IsCompatible(parent_cg.ApplyChanges(edge_mutations_from_dag), ref_seq));
+      auto edge_mutations_from_dag = parent_edge.GetEdgeMutations().Copy();
+      ContiguousMap<MutationPosition, MutationBase> current_edge_mutations;
+      for (auto posval: parent_edge.GetEdgeMutations()) {
+        current_edge_mutations[posval.first] = posval.second.second;
+      }
+      parent_cg.ApplyChanges(current_edge_mutations);
+      Assert(leaf_cg.IsCompatible(parent_cg, ref_seq));
     }
   }
 }
-*/
 
-void test_vcf_reading(MADAGStorage dag_storage, const std::string &vcf_path) {
+void test_vcf_reading() {
+  auto dag_storage = MakeSampleDAG();
+  MADAGLabelNodes(dag_storage, false);
   MADAG dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
-  auto id_to_cg_map = ReadVCFToCompactGenomeData(vcf_path, ref_seq);
+  auto id_to_cg_map = ReadVCFToCompactGenomeData("data/test_ambiguous_vcf/SampleDAG_unique_ambiguous_leafs.vcf", ref_seq);
 
   SubtreeWeight<ParsimonyScore, MADAG> weight{dag};
   auto sample = AddMATConversion(weight.SampleTree({}));
@@ -462,8 +452,11 @@ void test_vcf_reading(MADAGStorage dag_storage, const std::string &vcf_path) {
     add_test({[]() { test_ambiguous_vcf(); }, "Loading VCFs with Ambiguities Test"});
 
 [[maybe_unused]] static const auto test_added1 =
-    add_test({[]() { test_vcf_reading(MakeSampleDAG(), "data/test_ambiguous_vcf/sample_reference_sequence.fasta"); }, "load vcf and create MAT conversion"});
+    add_test({[]() { test_vcf_reading(); }, "load vcf and create MAT conversion"});
 
 [[maybe_unused]] static const auto test_added2 =
+    add_test({[]() { test_vcf_compatible(); }, "Loading VCFs with Ambiguities on a DAG and check pendant edge Mutations"});
+
+[[maybe_unused]] static const auto test_added3 =
     add_test({[]() { test_vcf_with_larch_usher(); }, "Loading VCFs with Ambiguities and running with MatOptimize"});
 

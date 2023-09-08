@@ -219,6 +219,7 @@ set_target_properties(larch-usher-glue
 
 larch_executable(larch-test
   test/main.cpp
+  test/test_ambiguous_vcf.cpp
   test/test_ambiguities.cpp
   test/test_compact_genome.cpp
   test/test_count_trees.cpp
