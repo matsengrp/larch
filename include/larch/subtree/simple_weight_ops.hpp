@@ -26,6 +26,11 @@ template <typename BinaryOperatorWeightOps>
 struct SimpleWeightOps {
   using Weight = typename BinaryOperatorWeightOps::Weight;
 
+  SimpleWeightOps() = default;
+
+  explicit SimpleWeightOps(BinaryOperatorWeightOps&& ops)
+      : binary_operator_weight_ops_{std::forward<BinaryOperatorWeightOps>(ops)} {}
+
   template <typename DAG>
   Weight ComputeLeaf(DAG dag, NodeId node_id);
 
