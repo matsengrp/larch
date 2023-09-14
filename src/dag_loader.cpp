@@ -24,6 +24,8 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/copy.hpp>
 
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score.hpp"
 #include "larch/dag_loader.hpp"
 #include "proto/dag.pb.h"
 #include "parsimony.pb.h"
@@ -33,7 +35,10 @@ namespace {
 
 bool IsGzipped(std::string_view path) {
   std::ifstream in{std::string{path}};
-  Assert(in);
+  if (!in) {
+    std::cerr << "Cannot open file: " << path << std::endl;
+    Assert(in);
+  }
   std::array<unsigned char, 2> header{};
   in >> header[0] >> header[1];
   constexpr const unsigned char HeaderMagic0 = 0x1f;
@@ -233,7 +238,10 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
   nlohmann::json result;
   std::ifstream in{std::string{path}};
-  Assert(in);
+  if (!in) {
+    std::cerr << "Cannot open file: " << path << std::endl;
+    Assert(in);
+  }
   in >> result;
   return result;
 }
@@ -358,4 +366,162 @@ void MATToDOT(const MAT::Tree& mat, std::ostream& out) {
   std::set<const MAT::Node*> visited;
   MATToDOT(mat.root, out, visited);
   out << "}\n";
+}
+
+[[maybe_unused]] static std::vector<std::string> SplitString(const std::string &str,
+                                                             char delimiter) {
+  std::vector<std::string> substrings;
+  std::string substring;
+
+  for (char ch : str) {
+    if (ch == delimiter) {
+      substrings.push_back(substring);
+      substring.clear();
+    } else {
+      substring += ch;
+    }
+  }
+
+  substrings.push_back(substring);
+
+  return substrings;
+}
+
+using CompactGenomeData = ContiguousMap<MutationPosition, MutationBase>;
+[[maybe_unused]] static std::unordered_map<std::string, CompactGenomeData>
+ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) {
+  std::unordered_map<std::string, CompactGenomeData> mut_map;
+
+  std::ifstream in;
+  in.open(path);
+  if (!in) {
+    std::cerr << "Failed to open file: " << path << std::endl;
+    Assert(in);
+  }
+
+  std::map<std::string, size_t> name_col_map;
+  std::map<size_t, std::string> col_name_map;
+  std::string line;
+
+  // parse header
+  while (std::getline(in, line)) {
+    // meta data
+    if (line.substr(0, 2) == "##") {
+      continue;
+    }
+    // column labels (capture node labels)
+    size_t field_id = 0;
+    std::string field;
+    std::istringstream iss(line);
+    if (line.substr(0, 1) == "#") {
+      while (iss >> field) {
+        field_id++;
+        name_col_map[field] = field_id;
+        col_name_map[field_id] = field;
+        if (field_id <= 9) continue;
+        mut_map[field] = CompactGenomeData();
+      }
+      break;
+    }
+  }
+
+  const auto chrom_col_id = name_col_map["#CHROME"];
+  const auto pos_col_id = name_col_map["POS"];
+  const auto ref_col_id = name_col_map["REF"];
+  const auto alt_col_id = name_col_map["ALT"];
+  const auto fmt_col_id = name_col_map["FORMAT"];
+
+  auto InsertMutation = [&mut_map, &ref_seq](const std::string &node_label,
+                                             MutationPosition pos, MutationBase base) {
+    if (base.ToChar() != ref_seq[pos.value]) {
+      mut_map[node_label][pos] = base;
+    }
+  };
+
+  // parse entries
+  size_t entry_count = 0;
+  while (std::getline(in, line)) {
+    std::map<size_t, MutationBase> base_map;
+    MutationPosition pos;
+    MutationBase base;
+
+    std::string chrom_name;
+    size_t field_id = 0;
+    std::string field;
+    std::istringstream iss(line);
+    while (iss >> field) {
+      field_id++;
+      if (field_id == chrom_col_id) {
+        chrom_name = field;
+        if (entry_count == 0) {
+          mut_map[chrom_name] = CompactGenomeData();
+        }
+      }
+      // Get mutation position
+      if (field_id == pos_col_id) {
+        pos = MutationPosition{size_t(std::stoi(field))};
+      }
+      // Get reference sequence base
+      if (field_id == ref_col_id) {
+        base = MutationBase(field[0]);
+        base_map[0] = base;
+        InsertMutation(chrom_name, pos, base);
+      }
+      // Get alternate mutations at position.
+      if (field_id == alt_col_id) {
+        size_t base_id = 1;
+        for (const auto &base_char : SplitString(field, ',')) {
+          base_map[base_id] = MutationBase(base_char[0]);
+          base_id++;
+        }
+      }
+      // Get samples from other nodes.
+      if (field_id > fmt_col_id) {
+        if (field == ".") {
+          base = MutationBase('N');
+          InsertMutation(col_name_map[field_id], pos, base);
+        } else if (base_map.find(std::stoi(field)) != base_map.end()) {
+          base = base_map[size_t(std::stoi(field))];
+          InsertMutation(col_name_map[field_id], pos, base);
+        } else {
+          std::cerr << "Invalid symbol found on col " << col_name_map[field_id] << ": "
+                    << field << std::endl;
+          Assert(false);
+        }
+      }
+    }
+    entry_count++;
+  }
+  in.close();
+
+  return mut_map;
+}
+
+[[maybe_unused]] static void MADAGApplyCompactGenomeData(
+    MADAGStorage &dag_storage,
+    const std::unordered_map<std::string, CompactGenomeData> &mut_map) {
+  auto dag = dag_storage.View();
+  // Convert node names to ids.
+  std::unordered_map<NodeId, CompactGenomeData> tmp_mut_map;
+  for (auto node : dag.GetNodes()) {
+    if (node.GetSampleId().has_value() and
+        mut_map.find(node.GetSampleId().value()) != mut_map.end()) {
+      const auto &[name, muts] = *mut_map.find(node.GetSampleId().value());
+      std::ignore = name;
+      tmp_mut_map[node.GetId()] = CompactGenomeData();
+      for (const auto &[pos, base] : muts) {
+        tmp_mut_map[node.GetId()][pos] = base;
+      }
+    }
+  }
+  dag.UpdateCompactGenomesFromNodeMutationMap(std::move(tmp_mut_map));
+  dag.RecomputeEdgeMutations();
+}
+
+void LoadVCFData(MADAGStorage &dag_storage, std::string &vcf_path) {
+  if (not vcf_path.empty()) {
+    auto ref_seq = dag_storage.View().GetReferenceSequence();
+    auto cg_data = ReadVCFToCompactGenomeData(vcf_path, ref_seq);
+    MADAGApplyCompactGenomeData(dag_storage, cg_data);
+  }
 }

@@ -36,6 +36,14 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
                     nodes_with_major_allele_set_change);
 
     if (accepted.first) {
+      // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
+      for (auto leaf_node: fragment.GetNodes()) {
+        if (leaf_node.IsLeaf()) {
+          auto new_cg = mat_node_to_cg_map_.at(leaf_node.GetMATNode()).Copy();
+          fragment.Get(leaf_node).template SetOverlay<Deduplicate<CompactGenome>>();
+          fragment.Get(leaf_node) = std::move(new_cg);
+        }
+      }
       applied_moves_count_++;
       batch_.push_back(std::move(fragment));
       /*
@@ -67,8 +75,13 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   reassigned_states_storage_.View().BuildFromMAT(
       tree, merge_.GetResult().GetReferenceSequence());
   check_edge_mutations(reassigned_states_storage_.View().Const());
-  reassigned_states_storage_.View().RecomputeCompactGenomes(true);
-  reassigned_states_storage_.View().SampleIdsFromCG();
+  reassigned_states_storage_.View().RecomputeCompactGenomes(false);
+  // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
+  for (auto* leaf_node: tree.get_leaves()) {
+    auto new_cg = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
+    reassigned_states_storage_.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
+    mat_node_to_cg_map_[leaf_node] = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
+  }
   {
     std::unique_lock lock{merge_mtx_};
     if (not batch_.empty()) {
@@ -92,9 +105,14 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   applied_moves_count_ = 0;
   reassigned_states_storage_.View().BuildFromMAT(
       tree, merge_.GetResult().GetReferenceSequence());
+  // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
+  for (auto leaf_node: tree.get_leaves()) {
+    auto new_cg = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
+    reassigned_states_storage_.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
+    mat_node_to_cg_map_[leaf_node] = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
+  }
   check_edge_mutations(reassigned_states_storage_.View().Const());
-  reassigned_states_storage_.View().RecomputeCompactGenomes(true);
-  reassigned_states_storage_.View().SampleIdsFromCG();
+  reassigned_states_storage_.View().RecomputeCompactGenomes();
   {
     std::unique_lock lock{merge_mtx_};
     merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
@@ -123,6 +141,11 @@ auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
 }
 
 template <typename CRTP, typename SampleDAG>
+const ConcurrentUnorderedMap<MAT::Node*, CompactGenome>& BatchingCallback<CRTP, SampleDAG>::GetMATNodeToCGMap() const {
+  return mat_node_to_cg_map_;
+}
+
+template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
                                                          std::string_view ref_seq) {
   sample_mat_storage_ = std::make_unique<MATStorage>(AddMATConversion(Storage{{}}));
@@ -132,3 +155,4 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
   view.RecomputeCompactGenomes(true);
   view.SampleIdsFromCG();
 }
+

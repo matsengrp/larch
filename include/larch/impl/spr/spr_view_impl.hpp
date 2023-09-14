@@ -276,7 +276,7 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGenome(
     std::vector<NodeId>& result_nodes, std::vector<EdgeId>& result_edges) const {
   auto& node = static_cast<const CRTP&>(*this);
-  if (not node.IsUA() and not node.IsMoveNew()) {
+  if (not node.IsUA() and not node.IsMoveNew() and not node.IsLeaf()) {
     node.template SetOverlay<Deduplicate<CompactGenome>>();
     if constexpr (std::decay_t<decltype(node)>::template contains_feature<SampleId>) {
       if (node.IsLeaf()) {

@@ -2,6 +2,8 @@
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 
+using NodeSeqMap = std::unordered_map<NodeId, std::string>;
+
 [[maybe_unused]] static auto MakeSampleDAG() {
   MADAGStorage input_storage{{}};
   auto dag = input_storage.View();
@@ -47,4 +49,96 @@
   dag.SampleIdsFromCG();
 
   return input_storage;
+}
+
+[[maybe_unused]] static auto MakeSampleDAGTopology() {
+  MADAGStorage dag_storage{{}};
+  auto dag = dag_storage.View();
+
+  dag.SetReferenceSequence("GAA");
+
+  dag.InitializeNodes(11);
+
+  dag.AddEdge({0}, {0}, {10}, {0});
+  dag.AddEdge({1}, {7}, {1}, {0});
+  dag.AddEdge({2}, {7}, {2}, {1});
+  dag.AddEdge({3}, {8}, {3}, {0});
+  dag.AddEdge({4}, {8}, {4}, {1});
+  dag.AddEdge({5}, {9}, {5}, {0});
+  dag.AddEdge({6}, {9}, {6}, {1});
+  dag.AddEdge({7}, {8}, {7}, {2});
+  dag.AddEdge({8}, {10}, {8}, {0});
+  dag.AddEdge({9}, {10}, {9}, {1});
+
+  dag.BuildConnections();
+
+  return dag_storage;
+}
+
+[[maybe_unused]] static auto MakeSampleUnambiguousCompleteSequenceMap() {
+  NodeSeqMap node_seq_map;
+  // leaf nodes
+  node_seq_map[{1}] = {"ACC"};
+  node_seq_map[{2}] = {"TAG"};
+  node_seq_map[{3}] = {"GGG"};
+  node_seq_map[{4}] = {"ACG"};
+  node_seq_map[{5}] = {"CTT"};
+  node_seq_map[{6}] = {"TCC"};
+  // internal nodes
+  node_seq_map[{7}] = {"TGG"};
+  node_seq_map[{8}] = {"GTC"};
+  node_seq_map[{9}] = {"AGT"};
+  node_seq_map[{10}] = {"GAA"};
+  return node_seq_map;
+}
+
+[[maybe_unused]] static auto MakeSampleUnambiguousCompleteSequenceMap2() {
+  NodeSeqMap node_seq_map;
+  // leaf nodes
+  node_seq_map[{1}] = {"ACC"};
+  node_seq_map[{2}] = {"TAG"};
+  node_seq_map[{3}] = {"GGG"};
+  node_seq_map[{4}] = {"ACG"};
+  node_seq_map[{5}] = {"CTT"};
+  node_seq_map[{6}] = {"TCC"};
+  // internal nodes
+  node_seq_map[{7}] = {"TGG"};
+  node_seq_map[{8}] = {"CTC"};
+  node_seq_map[{9}] = {"AGT"};
+  node_seq_map[{10}] = {"GAA"};
+  return node_seq_map;
+}
+
+[[maybe_unused]] static auto MakeSampleAmbiguousCompleteSequenceMap() {
+  NodeSeqMap node_seq_map = MakeSampleUnambiguousCompleteSequenceMap();
+  node_seq_map[{2}] = {"TNN"};
+  node_seq_map[{4}] = {"ANG"};
+  return node_seq_map;
+}
+
+[[maybe_unused]] static auto MakeAmbiguousSampleDAG() {
+  auto amb_dag_storage = MakeSampleDAGTopology();
+  auto amb_seq_map = MakeSampleAmbiguousCompleteSequenceMap();
+  auto amb_dag = amb_dag_storage.View();
+  amb_dag.SetCompactGenomesFromNodeSequenceMap(amb_seq_map);
+  amb_dag.RecomputeEdgeMutations();
+  return amb_dag_storage;
+}
+
+[[maybe_unused]] static auto MakeUnambiguousSampleDAG() {
+  auto unamb_dag_storage = MakeSampleDAGTopology();
+  auto unamb_seq_map = MakeSampleUnambiguousCompleteSequenceMap();
+  auto unamb_dag = unamb_dag_storage.View();
+  unamb_dag.SetCompactGenomesFromNodeSequenceMap(unamb_seq_map);
+  unamb_dag.RecomputeEdgeMutations();
+  return unamb_dag_storage;
+}
+
+[[maybe_unused]] static auto MakeUnambiguousSampleDAG2() {
+  auto unamb_dag_storage = MakeSampleDAGTopology();
+  auto unamb_seq_map = MakeSampleUnambiguousCompleteSequenceMap2();
+  auto unamb_dag = unamb_dag_storage.View();
+  unamb_dag.SetCompactGenomesFromNodeSequenceMap(unamb_seq_map);
+  unamb_dag.RecomputeEdgeMutations();
+  return unamb_dag_storage;
 }

@@ -70,7 +70,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
     Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
     edge.GetParent().AddEdge(edge.GetClade(), edge, true);
     edge.GetChild().AddEdge(edge.GetClade(), edge, false);
-  };
+  }
 }
 
 template <typename CRTP, typename Tag>

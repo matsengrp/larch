@@ -16,6 +16,7 @@ struct Empty_Callback : public Move_Found_Callback {
   }
   void operator()(MAT::Tree&) {}
   void OnReassignedStates(MAT::Tree&) {}
+  auto GetMATNodeToCGMap() {return std::map<MAT::Node*, CompactGenome>{};}
 };
 
 template <typename SampleDAG>
@@ -78,7 +79,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     // Empty_Callback callback;
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
-    optimized_dags.back().first.View().RecomputeCompactGenomes(true);
+    optimized_dags.back().first.View().RecomputeCompactGenomes();
     merge.AddDAGs(std::vector{optimized_dags.back().first.View()},
                   optimized_dags.back().first.View().GetRoot());
   }
@@ -134,10 +135,18 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
     sample_mat_ = std::addressof(tree);
   }
 
-  void OnReassignedStates(const MAT::Tree&) {}
+  void OnReassignedStates(const MAT::Tree& tree) {
+    for (auto leaf_node: tree.get_leaves()) {
+      auto new_cg = sample_.GetNodeFromMAT(sample_.GetMAT().get_node(leaf_node->node_id)).GetCompactGenome().Copy();
+      mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
+    }
+  }
+
+  auto GetMATNodeToCGMap() {return std::map<MAT::Node*, CompactGenome>{};}
 
   Merge& merge_;
   SampleDAG sample_;
+  std::map<MAT::Node*, CompactGenome> mat_node_to_cg_map_;
   std::mutex mutex_;
   MAT::Tree* sample_mat_ = nullptr;
   bool approved_a_move_;

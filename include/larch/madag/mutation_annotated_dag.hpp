@@ -43,8 +43,14 @@ struct FeatureConstView<ReferenceSequence, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
   void SetReferenceSequence(std::string_view reference_sequence) const;
-  void SetLeafCompactGenomesFromSequenceMap(
-      const std::unordered_map<NodeId, std::string> &leaf_sequence_map) const;
+  void SetCompactGenomesFromNodeSequenceMap(
+      const std::unordered_map<NodeId, std::string> &sequence_map) const;
+  void SetCompactGenomesFromNodeMutationMap(
+      std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>
+          &&node_mutation_map) const;
+  void UpdateCompactGenomesFromNodeMutationMap(
+      std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>
+          &&node_mutation_map) const;
   void AddUA(const EdgeMutations &mutations_at_root) const;
   void RecomputeCompactGenomes(bool recompute_leaves = true) const;
   void SampleIdsFromCG() const;
