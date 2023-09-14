@@ -33,7 +33,7 @@ class BatchingCallback : public Move_Found_Callback {
   void operator()(MAT::Tree& tree);
 
   void OnReassignedStates(MAT::Tree& tree);
-  ConcurrentUnorderedMap<MAT::Node*, CompactGenome>& GetMATNodeToCGMap();
+  const ConcurrentUnorderedMap<MAT::Node*, CompactGenome>& GetMATNodeToCGMap() const;
 
  protected:
   Merge& GetMerge();

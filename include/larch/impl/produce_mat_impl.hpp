@@ -92,7 +92,7 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
   if (not reassign_callback.GetMATNodeToCGMap().empty()) {
     for (auto leaf: tree.get_leaves()) {
-      auto new_cg = reassign_callback.GetMATNodeToCGMap()[leaf].Copy();
+      auto new_cg = reassign_callback.GetMATNodeToCGMap().at(leaf).Copy();
       result.first.View().GetNodeFromMAT(leaf) = std::move(new_cg);
     }
   }
