@@ -112,11 +112,19 @@ struct SumRFDistance_ {
   }
 
   template <typename DAG>
-  Weight ComputeEdge(DAG /*dag*/, EdgeId /*edge_id*/) {
-    // auto edge = dag.Get(edge_id);
+  Weight ComputeEdge(DAG dag, EdgeId edge_id) {
     // clade should be a LeafSet, the key type in the mapping
     // leafset_to_full_treecount:
-    auto clade = [] { return LeafSet{}; }();  // TODO
+    auto clade = [this, dag, edge_id] {
+      auto edge = dag.Get(edge_id);
+      std::vector<std::vector<const SampleId*>> leafs;
+      leafs.push_back(reference_dag_.GetResultNodeLabels()
+                          .at(edge.GetParent().GetId())
+                          .GetLeafSet()
+                          ->GetClades()
+                          .at(edge.GetClade().value));
+      return LeafSet{std::move(leafs)};
+    }();
     auto record = leafset_to_full_treecount.find(&clade);
     if (record == leafset_to_full_treecount.end()) {
       return num_trees_in_dag;
