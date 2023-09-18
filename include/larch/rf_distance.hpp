@@ -40,18 +40,17 @@ ArbitraryInt ComputeAboveTreeCount(Node node,
   ArbitraryInt above = 0;
   for (auto parent_edge : node.GetParents()) {
     auto parent_node = parent_edge.GetParent();
-    auto current_clade = parent_edge.GetClade();
+    auto current_clade = parent_node.GetClade(parent_edge.GetClade());
     ArbitraryInt below_parent = 1;
 
     for (auto clade : parent_node.GetClades()) {
-      if (not(clade == current_clade)) {
+      if (not ranges::equal(clade, current_clade)) {
         // sum up the list of values {cached_below_tree_counts[edge] : edge in clade}
         auto below_clade = ranges::accumulate(
-            parent_node.GetClade(clade) |
-                ranges::views::transform([&cached_below_tree_counts](auto edge) {
-                  return cached_below_tree_counts(edge.GetChild().GetId().value);
-                }),
-            0);
+            clade | ranges::views::transform([&cached_below_tree_counts](auto edge) {
+              return cached_below_tree_counts.ComputeWeightBelow(edge.GetChild(), {});
+            }),
+            ArbitraryInt{0});
         // multiply these sums across all the (other) clades below the current parent
         // node
         below_parent *= below_clade;
@@ -66,20 +65,27 @@ ArbitraryInt ComputeAboveTreeCount(Node node,
   return above;
 }
 
+struct LeafSetEq {
+  bool operator()(const LeafSet* lhs, const LeafSet* rhs) const { return *lhs == *rhs; }
+};
+
 // Create a BinaryOperatorWeightOps for computing sum RF distances to the provided
 // reference DAG (using SimpleWeightOps):
 struct SumRFDistance_ {
   using Weight = ArbitraryInt;
   static inline Weight Identity = 0;
   ArbitraryInt num_trees_in_dag;
-  std::unordered_map<const LeafSet*, ArbitraryInt> leafset_to_full_treecount;
+  std::unordered_map<const LeafSet*, ArbitraryInt, std::hash<const LeafSet*>, LeafSetEq>
+      leafset_to_full_treecount;
   ArbitraryInt shift_sum;
+  Merge& reference_dag_;
 
-  explicit SumRFDistance_(Merge& reference_dag) {
+  explicit SumRFDistance_(Merge& reference_dag) : reference_dag_{reference_dag} {
     SubtreeWeight<TreeCount, MergeDAG> below_tree_counts{reference_dag.GetResult()};
     std::vector<ArbitraryInt> above_tree_counts;
     above_tree_counts.resize(reference_dag.GetResult().GetNodesCount());
-    num_trees_in_dag = below_tree_counts(reference_dag.GetResult().GetRoot());
+    num_trees_in_dag =
+        below_tree_counts.ComputeWeightBelow(reference_dag.GetResult().GetRoot(), {});
     auto above_root_node = ComputeAboveTreeCount(reference_dag.GetResult().GetRoot(),
                                                  above_tree_counts, below_tree_counts);
 
@@ -90,17 +96,14 @@ struct SumRFDistance_ {
       if (not node.IsUA()) {
         leafset_to_full_treecount
             [reference_dag.GetResultNodeLabels().at(node.GetId()).GetLeafSet()] +=
-            above_tree_counts[node.GetId().value] * below_tree_counts[node];
+            above_tree_counts[node.GetId().value] *
+            below_tree_counts.ComputeWeightBelow(node, {});
       }
     }
 
     // sum all of the values in leafset_to_full_treecount
-    shift_sum = std::accumulate(leafset_to_full_treecount.begin(),
-                                leafset_to_full_treecount.end(), 0,
-                                [](const std::pair<LeafSet, ArbitraryInt>& v1,
-                                   const std::pair<LeafSet, ArbitraryInt>& v2) {
-                                  return v1.second + v2.second;
-                                });
+    shift_sum = ranges::accumulate(leafset_to_full_treecount | ranges::views::values,
+                                   ArbitraryInt{0});
   }
 
   template <typename DAG>
@@ -109,12 +112,12 @@ struct SumRFDistance_ {
   }
 
   template <typename DAG>
-  Weight ComputeEdge(DAG dag, EdgeId edge_id) {
-    auto edge = dag.Get(edge_id);
+  Weight ComputeEdge(DAG /*dag*/, EdgeId /*edge_id*/) {
+    // auto edge = dag.Get(edge_id);
     // clade should be a LeafSet, the key type in the mapping
     // leafset_to_full_treecount:
-    auto clade = edge.GetParent().GetClade(edge.GetClade());
-    auto record = leafset_to_full_treecount.find(clade);
+    auto clade = [] { return LeafSet{}; }();  // TODO
+    auto record = leafset_to_full_treecount.find(&clade);
     if (record == leafset_to_full_treecount.end()) {
       return num_trees_in_dag;
     } else {
