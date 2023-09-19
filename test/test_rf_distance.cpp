@@ -4,13 +4,19 @@
 #include "sample_dag.hpp"
 #include "larch/subtree/subtree_weight.hpp"
 
-static auto GetRFDistance(const Merge& merge) {
-  auto dag = merge.GetResult();
-  SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag)>> count{dag};
-  RFDistance weight_ops{merge};
+static auto GetRFDistance(const Merge& merge1, const Merge& merge2) {
+  // merge1 is the DAG we compute the weights for (summing distances to merge2)
+  auto dag1 = merge1.GetResult();
+  SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag1)>> count{dag1};
+  // merge2 is the reference DAG
+  SumRFDistance weight_ops{merge2};
   ArbitraryInt shift_sum = weight_ops.GetOps().GetShiftSum();
+  // make sure shift sum is correct
+  if (merge2.GetResult().IsTree()) {
+    Assert(weight_ops.GetOps().shift_sum_ == merge2.GetResult().GetNodesCount() - 1);
+  }
   auto result =
-      count.ComputeWeightBelow(dag.GetRoot(), std::move(weight_ops)) - shift_sum;
+      count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) - shift_sum;
   return result;
 }
 
@@ -19,7 +25,7 @@ static void test_zero_rf_distance() {
   auto view = storage.View();
   Merge merge{view.GetReferenceSequence()};
   merge.AddDAG(view);
-  Assert(GetRFDistance(merge) == 0);
+  Assert(GetRFDistance(merge, merge) == 0);
 }
 
 static void test_rf_on_two_identical_topologies() {
@@ -37,10 +43,12 @@ static void test_rf_on_two_identical_topologies() {
   dag2.Get(NodeId{10}) = CompactGenome{"AAA", "GAA"};
   dag2.RecomputeEdgeMutations();
 
-  Merge merge(dag1.GetReferenceSequence());
-  merge.AddDAGs(std::vector{dag1, dag2});
+  Merge merge1(dag1.GetReferenceSequence());
+  merge1.AddDAGs(std::vector{dag1});
+  Merge merge2(dag2.GetReferenceSequence());
+  merge2.AddDAGs(std::vector{dag2});
 
-  Assert(GetRFDistance(merge) == 0);
+  Assert(GetRFDistance(merge1, merge2) == 0);
 }
 
 static MADAGStorage MakeNonintersectingSampleDAG() {
@@ -56,8 +64,8 @@ static MADAGStorage MakeNonintersectingSampleDAG() {
   dag.AddEdge({5}, {7}, {5}, {1}).GetMutableEdgeMutations()[{2}] = {'A', 'C'};
   dag.AddEdge({6}, {9}, {6}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
   dag.AddEdge({7}, {9}, {7}, {1});
-  dag.AddEdge({9}, {10}, {8}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
-  dag.AddEdge({8}, {10}, {9}, {2}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
+  dag.AddEdge({8}, {10}, {8}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
+  dag.AddEdge({9}, {10}, {9}, {2}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
   dag.BuildConnections();
   dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{2}] = {'A', 'C'};
   dag.Get(EdgeId{6}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
@@ -78,9 +86,11 @@ static void test_rf_distance_hand_computed_example() {
   auto dag1 = dag1_storage.View();
   auto dag2 = dag2_storage.View();
 
-  Merge merge(dag1.GetReferenceSequence());
-  merge.AddDAGs(std::vector{dag1, dag2});
-  Assert(GetRFDistance(merge) == 2 * (dag1.GetNodesCount() + dag2.GetNodesCount() - dag1.GetLeafs().size() - dag2.GetLeafs().size()));
+  Merge merge1(dag1.GetReferenceSequence());
+  merge1.AddDAGs(std::vector{dag1});
+  Merge merge2(dag2.GetReferenceSequence());
+  merge2.AddDAGs(std::vector{dag2});
+  Assert(GetRFDistance(merge1, merge2) == (dag1.GetNodesCount() + dag2.GetNodesCount() - dag1.GetLeafs().size() - dag2.GetLeafs().size()));
 }
 
 [[maybe_unused]] static const auto test_added0 =

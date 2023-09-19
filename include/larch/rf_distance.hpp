@@ -86,13 +86,12 @@ struct SumRFDistance_ {
     above_tree_counts.resize(reference_dag.GetResult().GetNodesCount());
     num_trees_in_dag =
         below_tree_counts.ComputeWeightBelow(reference_dag.GetResult().GetRoot(), {});
-    auto above_root_node = ComputeAboveTreeCount(reference_dag.GetResult().GetRoot(),
-                                                 above_tree_counts, below_tree_counts);
 
     // create a list of unique (topologically) nodes in the DAG, and accumulate
     // above_tree_counts[n]*below_tree_counts[n] by adding over all n with identical
     // clade sets
     for (auto node : reference_dag.GetResult().GetNodes()) {
+      ComputeAboveTreeCount(node, above_tree_counts, below_tree_counts);
       if (not node.IsUA()) {
         leafset_to_full_treecount
             [reference_dag.GetResultNodeLabels().at(node.GetId()).GetLeafSet()] +=
