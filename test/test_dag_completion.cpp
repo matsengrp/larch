@@ -11,10 +11,7 @@ using Edge = MutableMADAG::EdgeView;
   std::cout << std::endl << "=== DAG_INFO [begin] ===" << std::endl;
   std::cout << "=== NODES: " << dag.GetNodesCount() << " ===" << std::endl;
   for (auto node : dag.GetNodes()) {
-    std::cout << "MADAG::Node: " << node.GetId() << " "
-              << (node.IsLeaf() ? "LEAF" : "NON-LEAF") << std::endl;
-    std::cout << "MADAG::CompactGenome: " << node.GetCompactGenome().ToString()
-              << std::endl;
+    std::cout << "MADAG::Node: " << node.GetId() << std::endl;
     std::cout << "MADAG::LeafSet: " << node.GetLeafsBelow() << std::endl;
     std::cout << "MADAG::Children: " << node.GetChildren() << std::endl;
     std::cout << "MADAG::Clades: " << node.GetClades() << std::endl;
@@ -41,7 +38,14 @@ using Edge = MutableMADAG::EdgeView;
                                              MADAGStorage& rhs_storage) {
   auto lhs_node_map = dag_make_node_pair_map(lhs_storage);
   auto rhs_node_map = dag_make_node_pair_map(rhs_storage);
-  return lhs_node_map == rhs_node_map;
+  bool compare_node_maps = (lhs_node_map == rhs_node_map);
+  // if (!compare_node_maps) {
+  //   std::cout << "lhs_node_map: " << lhs_node_map.size() << std::endl
+  //             << lhs_node_map << std::endl;
+  //   std::cout << "rhs_node_map: " << rhs_node_map.size() << std::endl
+  //             << rhs_node_map << std::endl;
+  // }
+  return compare_node_maps;
 }
 
 [[maybe_unused]] void dag_make_complete_rootsplits(MADAGStorage& dag_storage) {
@@ -60,27 +64,56 @@ using Edge = MutableMADAG::EdgeView;
   }
 }
 
-[[maybe_unused]] void test_dag_completion() {
-  auto dag_storage = MakeSampleDAG();
+[[maybe_unused]] void test_dag_completion_single(MADAGStorage& dag_storage,
+                                                 MADAGStorage& dag_storage_truth) {
   auto dag = dag_storage.View();
-  auto dag_storage_2 = MakeSampleDAG();
-
   dag.GetRoot().CalculateLeafsBelow();
   // dag_info(dag_storage);
-  assert_true(dag_compare_topologies(dag_storage, dag_storage_2),
-              "DAGs are not equal before removing edges.");
 
   dag.ClearConnections();
   // dag_info(dag_storage);
-  assert_false(dag_compare_topologies(dag_storage, dag_storage_2),
+  assert_false(dag_compare_topologies(dag_storage, dag_storage_truth),
                "DAGs are incorrectly equal after removing edges.");
 
-  dag_make_complete_rootsplits(dag_storage);
+  // dag_make_complete_rootsplits(dag_storage);
   dag.MakeComplete();
   // dag_info(dag_storage);
-  assert_true(dag_compare_topologies(dag_storage, dag_storage_2),
+  assert_true(dag_compare_topologies(dag_storage, dag_storage_truth),
               "DAGs are not equal after recompleting the DAG.");
 }
 
+[[maybe_unused]] void test_sample_dag_completion() {
+  auto dag_storage = MakeSampleDAGTopology();
+  auto dag_storage_truth = MakeSampleDAGTopology();
+  assert_true(dag_compare_topologies(dag_storage, dag_storage_truth),
+              "DAGs are not equal before altering.");
+  test_dag_completion_single(dag_storage, dag_storage_truth);
+}
+
+[[maybe_unused]] void test_big_sample_dag_completion_without_missing_edges() {
+  auto big_dag_storage_complete = MakeBigSampleDAGTopology(false);
+  auto big_dag_storage_truth = MakeBigSampleDAGTopology();
+  assert_true(dag_compare_topologies(big_dag_storage_complete, big_dag_storage_truth),
+              "DAGs are not equal before altering.");
+  test_dag_completion_single(big_dag_storage_complete, big_dag_storage_truth);
+}
+
+[[maybe_unused]] void test_big_sample_dag_completion_with_missing_edges() {
+  auto big_dag_storage_incomplete = MakeBigSampleDAGTopology(true);
+  auto big_dag_storage_truth = MakeBigSampleDAGTopology();
+  assert_false(
+      dag_compare_topologies(big_dag_storage_incomplete, big_dag_storage_truth),
+      "DAGs are incorrectly equal before altering.");
+  test_dag_completion_single(big_dag_storage_incomplete, big_dag_storage_truth);
+}
+
 [[maybe_unused]] static const auto test_added0 =
-    add_test({[] { test_dag_completion(); }, "DAG Completion"});
+    add_test({[] { test_sample_dag_completion(); }, "DAG Completion: Sample DAG"});
+
+[[maybe_unused]] static const auto test_added1 =
+    add_test({[] { test_big_sample_dag_completion_without_missing_edges(); },
+              "DAG Completion: Big Sample DAG (without missing edges)"});
+
+[[maybe_unused]] static const auto test_added2 =
+    add_test({[] { test_big_sample_dag_completion_with_missing_edges(); },
+              "DAG Completion: Big Sample DAG (with missing edges)"});

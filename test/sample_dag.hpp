@@ -9,19 +9,19 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   auto dag = input_storage.View();
 
   dag.SetReferenceSequence("GAA");
-
   dag.InitializeNodes(11);
 
-  dag.AddEdge({0}, {0}, {10}, {0});
-  dag.AddEdge({1}, {7}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'T', 'A'};
-  dag.AddEdge({2}, {7}, {2}, {1}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
-  dag.AddEdge({3}, {8}, {3}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
-  dag.AddEdge({4}, {8}, {4}, {1}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
-  dag.AddEdge({5}, {9}, {5}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
-  dag.AddEdge({6}, {9}, {6}, {1}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
-  dag.AddEdge({7}, {8}, {7}, {2}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
-  dag.AddEdge({8}, {10}, {8}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'C'};
-  dag.AddEdge({9}, {10}, {9}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
+  size_t edge_id = 0;
+  dag.AddEdge({edge_id++}, {0}, {10}, {0});
+  dag.AddEdge({edge_id++}, {7}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'T', 'A'};
+  dag.AddEdge({edge_id++}, {7}, {2}, {1}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
+  dag.AddEdge({edge_id++}, {8}, {3}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
+  dag.AddEdge({edge_id++}, {8}, {4}, {1}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
+  dag.AddEdge({edge_id++}, {9}, {5}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
+  dag.AddEdge({edge_id++}, {9}, {6}, {1}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
+  dag.AddEdge({edge_id++}, {8}, {7}, {2}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
+  dag.AddEdge({edge_id++}, {10}, {8}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'C'};
+  dag.AddEdge({edge_id++}, {10}, {9}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
 
   dag.BuildConnections();
 
@@ -46,7 +46,7 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   dag.Get(EdgeId{9}).GetMutableEdgeMutations()[{3}] = {'A', 'T'};
 
   dag.RecomputeCompactGenomes(true);
-  // dag.SampleIdsFromCG();
+  dag.SampleIdsFromCG();
 
   return input_storage;
 }
@@ -59,16 +59,17 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 
   dag.InitializeNodes(11);
 
-  dag.AddEdge({0}, {0}, {10}, {0});
-  dag.AddEdge({1}, {7}, {1}, {0});
-  dag.AddEdge({2}, {7}, {2}, {1});
-  dag.AddEdge({3}, {8}, {3}, {0});
-  dag.AddEdge({4}, {8}, {4}, {1});
-  dag.AddEdge({5}, {9}, {5}, {0});
-  dag.AddEdge({6}, {9}, {6}, {1});
-  dag.AddEdge({7}, {8}, {7}, {2});
-  dag.AddEdge({8}, {10}, {8}, {0});
-  dag.AddEdge({9}, {10}, {9}, {1});
+  size_t edge_id = 0;
+  dag.AddEdge({edge_id++}, {0}, {10}, {0});
+  dag.AddEdge({edge_id++}, {7}, {1}, {0});
+  dag.AddEdge({edge_id++}, {7}, {2}, {1});
+  dag.AddEdge({edge_id++}, {8}, {3}, {0});
+  dag.AddEdge({edge_id++}, {8}, {4}, {1});
+  dag.AddEdge({edge_id++}, {9}, {5}, {0});
+  dag.AddEdge({edge_id++}, {9}, {6}, {1});
+  dag.AddEdge({edge_id++}, {8}, {7}, {2});
+  dag.AddEdge({edge_id++}, {10}, {8}, {0});
+  dag.AddEdge({edge_id++}, {10}, {9}, {1});
 
   dag.BuildConnections();
 
@@ -141,4 +142,45 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   unamb_dag.SetCompactGenomesFromNodeSequenceMap(unamb_seq_map);
   unamb_dag.RecomputeEdgeMutations();
   return unamb_dag_storage;
-}
+
+  [[maybe_unused]] static auto MakeBigSampleDAGTopology(bool missing_edges = false) {
+    MADAGStorage dag_storage{{}};
+    auto dag = dag_storage.View();
+
+    dag.SetReferenceSequence("GAA");
+    dag.InitializeNodes(18);
+
+    size_t edge_id = 0;
+    dag.AddEdge({edge_id++}, {0}, {17}, {0});
+    dag.AddEdge({edge_id++}, {0}, {16}, {0});
+    dag.AddEdge({edge_id++}, {17}, {2}, {0});
+    dag.AddEdge({edge_id++}, {17}, {15}, {1});
+    dag.AddEdge({edge_id++}, {16}, {1}, {0});
+    dag.AddEdge({edge_id++}, {16}, {14}, {1});
+    dag.AddEdge({edge_id++}, {15}, {1}, {0});
+    if (!missing_edges) dag.AddEdge({edge_id++}, {15}, {13}, {1});
+    dag.AddEdge({edge_id++}, {15}, {12}, {1});
+    dag.AddEdge({edge_id++}, {14}, {2}, {0});
+    dag.AddEdge({edge_id++}, {14}, {13}, {1});
+    if (!missing_edges) dag.AddEdge({edge_id++}, {14}, {12}, {1});
+    dag.AddEdge({edge_id++}, {13}, {4}, {0});
+    dag.AddEdge({edge_id++}, {13}, {11}, {1});
+    dag.AddEdge({edge_id++}, {12}, {3}, {0});
+    dag.AddEdge({edge_id++}, {12}, {10}, {1});
+    dag.AddEdge({edge_id++}, {11}, {3}, {0});
+    if (!missing_edges) dag.AddEdge({edge_id++}, {11}, {9}, {1});
+    dag.AddEdge({edge_id++}, {11}, {8}, {1});
+    dag.AddEdge({edge_id++}, {10}, {4}, {0});
+    if (!missing_edges) dag.AddEdge({edge_id++}, {10}, {8}, {1});
+    dag.AddEdge({edge_id++}, {10}, {9}, {1});
+    dag.AddEdge({edge_id++}, {9}, {5}, {0});
+    dag.AddEdge({edge_id++}, {9}, {6}, {1});
+    dag.AddEdge({edge_id++}, {9}, {7}, {2});
+    dag.AddEdge({edge_id++}, {8}, {5}, {0});
+    dag.AddEdge({edge_id++}, {8}, {6}, {1});
+    dag.AddEdge({edge_id++}, {8}, {7}, {2});
+
+    dag.BuildConnections();
+
+    return dag_storage;
+  }

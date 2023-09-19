@@ -221,8 +221,21 @@ FeatureMutableView<ReferenceSequence, CRTP, Tag>::BuildCladeUnionMap() const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::MakeComplete() const {
   auto dag = static_cast<const CRTP&>(*this);
-
   auto clade_union_map = dag.BuildCladeUnionMap();
+  dag.ClearConnections();
+  // Connect rootsplit nodes.
+  size_t leaf_count = 0;
+  std::set<NodeId>* rootsplits = nullptr;
+  for (auto& [clade_union, node_ids] : clade_union_map) {
+    if (clade_union.size() > leaf_count) {
+      rootsplits = &node_ids;
+    }
+    leaf_count = std::max(leaf_count, clade_union.size());
+  }
+  for (auto node_id : *rootsplits) {
+    dag.AppendEdge(dag.GetRoot().GetId(), node_id, {0});
+  }
+  // Add all other nodes.
   for (auto parent_node : dag.GetNodes()) {
     auto leaf_sets = parent_node.GetLeafsBelow();
     for (size_t clade_idx = 0; clade_idx < leaf_sets.size(); clade_idx++) {
@@ -232,8 +245,8 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::MakeComplete() const {
       if (possible_children != clade_union_map.end()) {
         for (auto child_node_id : possible_children->second) {
           if (parent_node.GetId() == child_node_id) continue;
-          if (dag.FindEdge(parent_node.GetId(), child_node_id) != std::nullopt)
-            continue;
+          // if (dag.FindEdge(parent_node.GetId(), child_node_id) != std::nullopt)
+          //   continue;
           dag.AppendEdge(parent_node.GetId(), child_node_id, {clade_idx});
         }
       }

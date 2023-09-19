@@ -10,7 +10,6 @@
   NodeSeqMap node_seq_map;
   auto dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
-
   for (auto node : dag.GetNodes()) {
     if (include_nonleaf_nodes || node.IsLeaf()) {
       node_seq_map[node.GetId()] = node.GetCompactGenome().ToSequence(ref_seq);

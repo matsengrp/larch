@@ -157,52 +157,61 @@ inline std::string tuple_to_string() {
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-// template <typename T>
-// std::ostream& operator<<(std::ostream& os, const std::vector<T>& vector) {
-//   os << "[ ";
-//   for (const auto& element : vector) {
-//     os << element << " ";
-//   }
-//   os << "]";
-//   return os;
-// }
+template <typename T>
+inline std::ostream& operator<<(std::ostream& os, const std::vector<T>& vector) {
+  os << "[ ";
+  for (const auto& element : vector) {
+    os << element << " ";
+  }
+  os << "]";
+  return os;
+}
 
-// template <typename T>
-// std::ostream& operator<<(std::ostream& os, const std::set<T>& set) {
-//   os << "{ ";
-//   for (const auto& element : set) {
-//     os << element << " ";
-//   }
-//   os << "}";
-//   return os;
-// }
+template <typename T>
+inline std::ostream& operator<<(std::ostream& os, const std::set<T>& set) {
+  os << "{ ";
+  for (const auto& element : set) {
+    os << element << " ";
+  }
+  os << "}";
+  return os;
+}
 
-// template <typename T>
-// std::ostream& operator<<(std::ostream& os, const std::unordered_set<T>& set) {
-//   os << "{ ";
-//   for (const auto& element : set) {
-//     os << element << " ";
-//   }
-//   os << "}";
-//   return os;
-// }
+template <typename T>
+inline std::ostream& operator<<(std::ostream& os, const std::unordered_set<T>& set) {
+  os << "{ ";
+  for (const auto& element : set) {
+    os << element << " ";
+  }
+  os << "}";
+  return os;
+}
 
-// template <typename K, typename V>
-// std::ostream& operator<<(std::ostream& os, const std::map<K, V>& map) {
-//   os << "{ ";
-//   for (const auto& [key, value] : map) {
-//     os << "( " << key << ": " << value << " ) ";
-//   }
-//   os << "}";
-//   return os;
-// }
+template <typename K, typename V>
+inline std::ostream& operator<<(std::ostream& os, const std::map<K, V>& map) {
+  os << "{ ";
+  for (const auto& [key, value] : map) {
+    os << "( " << key << ": " << value << " ) ";
+  }
+  os << "}";
+  return os;
+}
 
-// template <typename K, typename V>
-// std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& map) {
-//   os << "{ ";
-//   for (const auto& [key, value] : map) {
-//     os << "( " << key << ": " << value << " ) ";
-//   }
-//   os << "}";
-//   return os;
-// }
+template <typename K, typename V>
+inline std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& map) {
+  os << "{ ";
+  for (const auto& [key, value] : map) {
+    os << "( " << key << ": " << value << " ) ";
+  }
+  os << "}";
+  return os;
+}
+
+template <typename T1, typename T2, typename T3>
+inline std::ostream& operator<<(std::ostream& os, const std::tuple<T1, T2, T3>& tup) {
+  os << "[ ";
+  os << std::get<0>(tup) << " ";
+  os << std::get<1>(tup) << " ";
+  os << std::get<2>(tup) << "]";
+  return os;
+}

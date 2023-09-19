@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  std::cout << "Run tests:" << std::endl;
+  std::cout << "LIST TESTS:" << std::endl;
   std::vector<Test> tests;
   size_t test_counter = 1;
   for (auto& test : get_all_tests()) {
@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
       if ((!opt_test_range) ||
           ((test_counter >= range.first) && (test_counter <= range.second))) {
         tests.push_back(test);
-        std::cout << "[" << test_counter << "] " << test.name << std::endl;
+        std::cout << "  [" << test_counter << "] " << test.name << std::endl;
       }
     }
     test_counter++;
@@ -60,36 +60,38 @@ int main(int argc, char* argv[]) {
   std::vector<Test> failed;
   size_t ran = 0;
   const auto num_tests = tests.size();
-  std::cout << "Running " << num_tests << " tests" << std::endl;
+  std::cout << "RUNNING " << num_tests << " TESTS ..." << std::endl;
   for (auto& test : tests) {
     ++ran;
-    std::cout << "Running test: " << test.name << " (" << ran << "/" << num_tests
-              << ") ..." << std::flush;
+    std::string run_number =
+        "  (" + std::to_string(ran) + "/" + std::to_string(num_tests) + ")";
+
+    std::cout << run_number << " TEST RUN: Begin '" << test.name << "' ... "
+              << std::endl
+              << std::flush;
 
     if (no_catch) {
       test.entry();
-      std::cout << " passed." << std::endl;
-
+      std::cout << run_number << " TEST RESULT: Passed." << std::endl;
     } else {
       try {
         test.entry();
-        std::cout << " passed." << std::endl;
+        std::cout << run_number << " TEST RESULT: Passed." << std::endl;
       } catch (const std::exception& e) {
         failed.push_back(test);
-        std::cerr << std::endl
-                  << "Test '" << test.name << "' failed with '" << e.what() << "'"
-                  << std::endl;
+        std::cerr << run_number << " TEST RESULT: Test '" << test.name
+                  << "' failed with '" << e.what() << "'" << std::endl;
       }
     }
   }
   if (not failed.empty()) {
-    std::cerr << "Failed tests: " << failed.size() << "/" << num_tests << std::endl;
+    std::cerr << "TESTS FAILED: " << failed.size() << "/" << num_tests << std::endl;
     for (auto& test : failed) {
       std::cerr << "  " << test.name << "\n";
     }
     return EXIT_FAILURE;
   }
 
-  std::cout << "All tests passed" << std::endl;
+  std::cout << "ALL TESTS PASSED." << std::endl;
   return EXIT_SUCCESS;
 }
