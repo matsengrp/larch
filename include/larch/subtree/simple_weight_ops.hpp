@@ -41,6 +41,8 @@ struct SimpleWeightOps {
   inline Weight BetweenClades(std::vector<Weight>);
   inline Weight AboveNode(Weight edgeweight, Weight childnodeweight);
 
+  inline const BinaryOperatorWeightOps& GetOps() const;
+
  private:
   BinaryOperatorWeightOps binary_operator_weight_ops_ = BinaryOperatorWeightOps();
 };

@@ -77,10 +77,10 @@ struct SumRFDistance_ {
   ArbitraryInt num_trees_in_dag;
   std::unordered_map<const LeafSet*, ArbitraryInt, std::hash<const LeafSet*>, LeafSetEq>
       leafset_to_full_treecount;
-  ArbitraryInt shift_sum;
-  Merge& reference_dag_;
+  ArbitraryInt shift_sum_;
+  const Merge& reference_dag_;
 
-  explicit SumRFDistance_(Merge& reference_dag) : reference_dag_{reference_dag} {
+  explicit SumRFDistance_(const Merge& reference_dag) : reference_dag_{reference_dag} {
     SubtreeWeight<TreeCount, MergeDAG> below_tree_counts{reference_dag.GetResult()};
     std::vector<ArbitraryInt> above_tree_counts;
     above_tree_counts.resize(reference_dag.GetResult().GetNodesCount());
@@ -102,8 +102,8 @@ struct SumRFDistance_ {
     }
 
     // sum all of the values in leafset_to_full_treecount
-    shift_sum = ranges::accumulate(leafset_to_full_treecount | ranges::views::values,
-                                   ArbitraryInt{0});
+    shift_sum_ = ranges::accumulate(leafset_to_full_treecount | ranges::views::values,
+                                    ArbitraryInt{0});
   }
 
   template <typename DAG>
@@ -150,17 +150,19 @@ struct SumRFDistance_ {
   /* clade_func = lambda clade: min(edge_func(e) for e in clade) */
   /* node_func = lambda internal_node: sum(clade_func(c) - shift_sum for c in
    * internal_node.GetClades()) + shift_sum */
+
+  const ArbitraryInt& GetShiftSum() const { return shift_sum_; }
 };
 
 // Not sure if you can substruct a templated struct like this...?
 struct SumRFDistance : SimpleWeightOps<SumRFDistance_> {
-  explicit SumRFDistance(Merge& reference_dag)
+  explicit SumRFDistance(const Merge& reference_dag)
       : SimpleWeightOps<SumRFDistance_>{SumRFDistance_{reference_dag}} {}
 };
 
 // Create a WeightOps for computing RF distances to the provided reference tree:
 struct RFDistance : SumRFDistance {
-  explicit RFDistance(Merge& reference_dag) : SumRFDistance{reference_dag} {
+  explicit RFDistance(const Merge& reference_dag) : SumRFDistance{reference_dag} {
     Assert(reference_dag.GetResult().IsTree());
     // now behave exactly like SumRFDistance
   }
@@ -168,18 +170,19 @@ struct RFDistance : SumRFDistance {
 
 struct MaxSumRFDistance_ : SumRFDistance_ {
   using Weight = typename SumRFDistance_::Weight;
-  explicit MaxSumRFDistance_(Merge& reference_dag) : SumRFDistance_{reference_dag} {}
+  explicit MaxSumRFDistance_(const Merge& reference_dag)
+      : SumRFDistance_{reference_dag} {}
   bool Compare(Weight lhs, Weight rhs) { return lhs > rhs; }
 };
 
 struct MaxSumRFDistance : SimpleWeightOps<MaxSumRFDistance_> {
-  explicit MaxSumRFDistance(Merge& reference_dag)
+  explicit MaxSumRFDistance(const Merge& reference_dag)
       : SimpleWeightOps<MaxSumRFDistance_>{MaxSumRFDistance_{reference_dag}} {}
 };
 
 // Create a WeightOps for computing RF distances to the provided reference tree:
 struct MaxRFDistance : MaxSumRFDistance {
-  explicit MaxRFDistance(Merge& reference_dag) : MaxSumRFDistance{reference_dag} {
+  explicit MaxRFDistance(const Merge& reference_dag) : MaxSumRFDistance{reference_dag} {
     Assert(reference_dag.GetResult().IsTree());
     // now behave exactly like MaxSumRFDistance
   }

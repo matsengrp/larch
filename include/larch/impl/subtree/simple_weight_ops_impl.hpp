@@ -56,3 +56,9 @@ SimpleWeightOps<BinaryOperatorWeightOps>::AboveNode(
     typename BinaryOperatorWeightOps::Weight childnodeweight) {
   return binary_operator_weight_ops_.Combine(edgeweight, childnodeweight);
 }
+
+template <typename BinaryOperatorWeightOps>
+const BinaryOperatorWeightOps& SimpleWeightOps<BinaryOperatorWeightOps>::GetOps()
+    const {
+  return binary_operator_weight_ops_;
+}

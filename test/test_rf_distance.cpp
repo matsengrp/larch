@@ -4,15 +4,22 @@
 #include "sample_dag.hpp"
 #include "larch/subtree/subtree_weight.hpp"
 
+static auto GetRFDistance(const Merge& merge) {
+  auto dag = merge.GetResult();
+  SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag)>> count{dag};
+  RFDistance weight_ops{merge};
+  ArbitraryInt shift_sum = weight_ops.GetOps().GetShiftSum();
+  auto result =
+      count.ComputeWeightBelow(dag.GetRoot(), std::move(weight_ops)) - shift_sum;
+  return result;
+}
+
 static void test_zero_rf_distance() {
   auto storage = MakeSampleDAG();
   auto view = storage.View();
   Merge merge{view.GetReferenceSequence()};
   merge.AddDAG(view);
-  auto dag = merge.GetResult();
-  SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag)>> count{dag};
-  auto score = count.ComputeWeightBelow(dag.GetRoot(), RFDistance{merge});
-  std::cout << "RF distance: " << score << "\n";
+  Assert(GetRFDistance(merge) == 0);
 }
 
 static void test_rf_on_two_identical_topologies() {
@@ -33,10 +40,7 @@ static void test_rf_on_two_identical_topologies() {
   Merge merge(dag1.GetReferenceSequence());
   merge.AddDAGs(std::vector{dag1, dag2});
 
-  auto dag = merge.GetResult();
-  SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag)>> count{dag};
-  auto score = count.ComputeWeightBelow(dag.GetRoot(), RFDistance{merge});
-  Assert(score == 0);
+  Assert(GetRFDistance(merge) == 0);
 }
 
 static MADAGStorage MakeNonintersectingSampleDAG() {
@@ -76,10 +80,7 @@ static void test_rf_distance_hand_computed_example() {
   auto dag2 = dag2_storage.View();
   Merge merge(dag1.GetReferenceSequence());
   merge.AddDAGs(std::vector{dag1, dag2});
-  auto dag = merge.GetResult();
-  SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag)>> count{dag};
-  auto score = count.ComputeWeightBelow(dag.GetRoot(), RFDistance{merge});
-  Assert(score == 2 * (dag1.GetNodesCount() + dag2.GetNodesCount()));
+  Assert(GetRFDistance(merge) == 2 * (dag1.GetNodesCount() + dag2.GetNodesCount()));
 }
 
 [[maybe_unused]] static const auto test_added0 =
