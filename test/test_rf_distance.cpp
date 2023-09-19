@@ -51,7 +51,7 @@ static MADAGStorage MakeNonintersectingSampleDAG() {
   dag.AddEdge({0}, {0}, {10}, {0});
   dag.AddEdge({1}, {8}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
   dag.AddEdge({2}, {8}, {2}, {1}).GetMutableEdgeMutations()[{2}] = {'A', 'C'};
-  dag.AddEdge({3}, {10}, {3}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'T'};
+  dag.AddEdge({3}, {10}, {3}, {0}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
   dag.AddEdge({4}, {7}, {4}, {0}).GetMutableEdgeMutations()[{2}] = {'A', 'G'};
   dag.AddEdge({5}, {7}, {5}, {1}).GetMutableEdgeMutations()[{2}] = {'A', 'C'};
   dag.AddEdge({6}, {9}, {6}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
@@ -60,7 +60,6 @@ static MADAGStorage MakeNonintersectingSampleDAG() {
   dag.AddEdge({8}, {10}, {9}, {2}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
   dag.BuildConnections();
   dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{2}] = {'A', 'C'};
-  dag.Get(EdgeId{3}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
   dag.Get(EdgeId{6}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
   dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{3}] = {'A', 'C'};
   dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{3}] = {'A', 'G'};
@@ -78,9 +77,10 @@ static void test_rf_distance_hand_computed_example() {
   auto dag2_storage = MakeNonintersectingSampleDAG();
   auto dag1 = dag1_storage.View();
   auto dag2 = dag2_storage.View();
+
   Merge merge(dag1.GetReferenceSequence());
   merge.AddDAGs(std::vector{dag1, dag2});
-  Assert(GetRFDistance(merge) == 2 * (dag1.GetNodesCount() + dag2.GetNodesCount()));
+  Assert(GetRFDistance(merge) == 2 * (dag1.GetNodesCount() + dag2.GetNodesCount() - dag1.GetLeafs().size() - dag2.GetLeafs().size()));
 }
 
 [[maybe_unused]] static const auto test_added0 =
