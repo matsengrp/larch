@@ -31,4 +31,6 @@ struct FeatureMutableView<Connections, CRTP, Tag> {
   void BuildConnections() const;
   void BuildConnectionsRaw() const;
   void AddLeaf(NodeId id) const;
+
+  void ClearConnections() const;
 };

@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <limits>
 #include <vector>
+#include <set>
+#include <unordered_set>
 #include <tuple>
 #include <typeinfo>
 
@@ -136,8 +138,8 @@ inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wc++20-extensions"
 template <typename T>
-inline const auto tuple_to_string_impl =
-    []<std::size_t... I>(std::index_sequence<I...>) {
+inline const auto tuple_to_string_impl = [
+]<std::size_t... I>(std::index_sequence<I...>) {
   std::string result = "std::tuple<";
   result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
                     std::string{", "}));
@@ -154,3 +156,53 @@ inline std::string tuple_to_string() {
 #pragma GCC diagnostic pop
 
 //////////////////////////////////////////////////////////////////////////////////////
+
+// template <typename T>
+// std::ostream& operator<<(std::ostream& os, const std::vector<T>& vector) {
+//   os << "[ ";
+//   for (const auto& element : vector) {
+//     os << element << " ";
+//   }
+//   os << "]";
+//   return os;
+// }
+
+// template <typename T>
+// std::ostream& operator<<(std::ostream& os, const std::set<T>& set) {
+//   os << "{ ";
+//   for (const auto& element : set) {
+//     os << element << " ";
+//   }
+//   os << "}";
+//   return os;
+// }
+
+// template <typename T>
+// std::ostream& operator<<(std::ostream& os, const std::unordered_set<T>& set) {
+//   os << "{ ";
+//   for (const auto& element : set) {
+//     os << element << " ";
+//   }
+//   os << "}";
+//   return os;
+// }
+
+// template <typename K, typename V>
+// std::ostream& operator<<(std::ostream& os, const std::map<K, V>& map) {
+//   os << "{ ";
+//   for (const auto& [key, value] : map) {
+//     os << "( " << key << ": " << value << " ) ";
+//   }
+//   os << "}";
+//   return os;
+// }
+
+// template <typename K, typename V>
+// std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& map) {
+//   os << "{ ";
+//   for (const auto& [key, value] : map) {
+//     os << "( " << key << ": " << value << " ) ";
+//   }
+//   os << "}";
+//   return os;
+// }

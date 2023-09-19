@@ -46,7 +46,7 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   dag.Get(EdgeId{9}).GetMutableEdgeMutations()[{3}] = {'A', 'T'};
 
   dag.RecomputeCompactGenomes(true);
-  dag.SampleIdsFromCG();
+  // dag.SampleIdsFromCG();
 
   return input_storage;
 }

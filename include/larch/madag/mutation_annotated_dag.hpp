@@ -55,6 +55,9 @@ struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
   void RecomputeCompactGenomes(bool recompute_leaves = true) const;
   void SampleIdsFromCG() const;
   void RecomputeEdgeMutations() const;
+
+  std::map<std::set<NodeId>, std::set<NodeId>> BuildCladeUnionMap() const;
+  void MakeComplete() const;
 };
 
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"

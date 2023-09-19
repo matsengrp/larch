@@ -4,87 +4,82 @@
 
 using Node = MutableMADAG::NodeView;
 using Edge = MutableMADAG::EdgeView;
-// set<CompactGenome> is just to express the spirit of what we want.
-using CladeUnion = std::set<CompactGenome>;
-using CladeUnionMap = std::map<CladeUnion, std::vector<NodeId>>;
 
-template <typename DAGType>
-CladeUnionMap BuildCladeUnionMap(DAGType &dag) {
-  CladeUnionMap clade_union_map;
+[[maybe_unused]] void dag_info(MADAGStorage& dag_storage) {
+  auto dag = dag_storage.View();
+
+  std::cout << std::endl << "=== DAG_INFO [begin] ===" << std::endl;
+  std::cout << "=== NODES: " << dag.GetNodesCount() << " ===" << std::endl;
   for (auto node : dag.GetNodes()) {
-    std::cout << "Node: " << node.GetId() << std::endl;
-    std::cout << "CompactGenome: " << node.GetCompactGenome().ToString() << std::endl;
-    // auto node_vec = target_nodes_map[GetCladeUnion(node)];
-    // node_vec.insert(node);
+    std::cout << "MADAG::Node: " << node.GetId() << " "
+              << (node.IsLeaf() ? "LEAF" : "NON-LEAF") << std::endl;
+    std::cout << "MADAG::CompactGenome: " << node.GetCompactGenome().ToString()
+              << std::endl;
+    std::cout << "MADAG::LeafSet: " << node.GetLeafsBelow() << std::endl;
+    std::cout << "MADAG::Children: " << node.GetChildren() << std::endl;
+    std::cout << "MADAG::Clades: " << node.GetClades() << std::endl;
   }
-  return clade_union_map;
+  std::cout << "=== EDGES: " << dag.GetEdgesCount() << " ===" << std::endl;
+  for (auto edge : dag.GetEdges()) {
+    std::cout << "MADAG::Edge: " << edge.GetId() << " [" << edge.GetParent() << " -> "
+              << edge.GetChild() << " | " << edge.GetClade() << "]" << std::endl;
+  }
+  std::cout << "=== DAG_INFO [end] ===" << std::endl << std::endl;
 }
 
-// std::vector<std::vector<const SampleId*>> clades_union(
-//     const std::vector<std::vector<const SampleId*>>& lhs,
-//     const std::vector<std::vector<const SampleId*>>& rhs) {
-//   std::vector<std::vector<const SampleId*>> result;
-
-//   for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-//     std::vector<const SampleId*> clade{lhs_clade};
-//     clade.insert(clade.end(), rhs_clade.begin(), rhs_clade.end());
-//     ranges::sort(clade);
-//     ranges::unique(clade);
-//     result.push_back(std::move(clade));
-//   }
-
-//   ranges::sort(result);
-//   return result;
-// }
-
-CladeUnion GetCladeUnion(Node node) {
-  std::cout << "GetCladeUnion: " << node.GetId() << std::endl;
-  // return this node's LeafSet, but flattened, so that it's just
-  // a set/ordered vector of CompactGenomes
-  CladeUnion clade_union;
-  std::cout << "CompactGenome: " << node.GetCompactGenome().ToString() << std::endl;
-  // for (const auto &compact_genome : node.GetCompactGenome()) {
-  //   clade_union.insert(compact_genome);
-  //   std::cout << compact_genome.
-  // }
-  return clade_union;
+[[maybe_unused]] std::set<std::tuple<NodeId, NodeId, CladeIdx>> dag_make_node_pair_map(
+    MADAGStorage& dag_storage) {
+  auto dag = dag_storage.View();
+  std::set<std::tuple<NodeId, NodeId, CladeIdx>> node_pairs;
+  for (auto edge : dag.GetEdges()) {
+    node_pairs.insert({edge.GetParent(), edge.GetChild(), edge.GetClade()});
+  }
+  return node_pairs;
 }
 
-template <typename DAGType>
-[[maybe_unused]] void CompleteDAG(DAGType &dag) {
-  auto clade_union_map = BuildCladeUnionMap(dag);
+[[maybe_unused]] bool dag_compare_topologies(MADAGStorage& lhs_storage,
+                                             MADAGStorage& rhs_storage) {
+  auto lhs_node_map = dag_make_node_pair_map(lhs_storage);
+  auto rhs_node_map = dag_make_node_pair_map(rhs_storage);
+  return lhs_node_map == rhs_node_map;
+}
 
-  for (auto node : dag.GetNodes()) {
-    node.CalculateLeafsBelow();
+[[maybe_unused]] void dag_make_complete_rootsplits(MADAGStorage& dag_storage) {
+  auto dag = dag_storage.View();
+  auto clade_union_map = dag.BuildCladeUnionMap();
+  size_t leaf_count = 0;
+  std::set<NodeId>* rootsplits = nullptr;
+  for (auto& [clade_union, node_ids] : clade_union_map) {
+    if (clade_union.size() > leaf_count) {
+      rootsplits = &node_ids;
+    }
+    leaf_count = std::max(leaf_count, clade_union.size());
   }
-
-  for (auto node : dag.GetNodes()) {
-    std::cout << "Node::FindChildren: " << node.GetId() << std::endl;
-    // assuming that LeafSet indices align with clade indices
-    auto clades = node.GetLeafsBelow();
-    std::cout << "Node::Leafset: " << clades << std::endl;
-    // for (size_t clade_idx = 0; clade_idx < clades.size(); clade_idx++) {
-    //   if (auto possible_children = target_nodes_map.find(clades[clade_idx]);
-    //       possible_children != target_nodes_map.end()) {
-    //     for (auto child_node : possible_children->second) {
-    //       // of course, we don't want to duplicate edges that are already in
-    //       // the DAG, but I assume that AddEdge handles this?
-    //       dag.AddEdge(/*parent*/ node, /*child*/ child_node,
-    //                   /*clade index*/ clade_idx);
-    //     }
-    //   }
-    // }
+  for (auto node_id : *rootsplits) {
+    dag.AppendEdge(dag.GetRoot().GetId(), node_id, {0});
   }
 }
 
 [[maybe_unused]] void test_dag_completion() {
-  std::cout << "test_dag_completion [begin]" << std::endl;
+  auto dag_storage = MakeSampleDAG();
+  auto dag = dag_storage.View();
+  auto dag_storage_2 = MakeSampleDAG();
 
-  auto dag = MakeSampleDAG();
-  dag.CalculateLeafsBelow();
-  CompleteDAG(dag);
+  dag.GetRoot().CalculateLeafsBelow();
+  // dag_info(dag_storage);
+  assert_true(dag_compare_topologies(dag_storage, dag_storage_2),
+              "DAGs are not equal before removing edges.");
 
-  std::cout << "test_dag_completion [end]" << std::endl;
+  dag.ClearConnections();
+  // dag_info(dag_storage);
+  assert_false(dag_compare_topologies(dag_storage, dag_storage_2),
+               "DAGs are incorrectly equal after removing edges.");
+
+  dag_make_complete_rootsplits(dag_storage);
+  dag.MakeComplete();
+  // dag_info(dag_storage);
+  assert_true(dag_compare_topologies(dag_storage, dag_storage_2),
+              "DAGs are not equal after recompleting the DAG.");
 }
 
 [[maybe_unused]] static const auto test_added0 =

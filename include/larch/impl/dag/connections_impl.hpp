@@ -78,3 +78,12 @@ void FeatureMutableView<Connections, CRTP, Tag>::AddLeaf(NodeId id) const {
   auto& storage = GetFeatureStorage(this);
   storage.leafs_.push_back(id);
 }
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Connections, CRTP, Tag>::ClearConnections() const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  for (auto node : dag.GetNodes()) {
+    node.ClearConnections();
+  }
+  dag.ClearEdges();
+}
