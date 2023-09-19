@@ -89,13 +89,6 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   auto result = std::make_pair(AddMATConversion(MADAGStorage{{}}), std::move(tree));
   result.first.View().BuildFromMAT(result.second, dag.GetReferenceSequence());
 
-  // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
-  if (not reassign_callback.GetMATNodeToCGMap().empty()) {
-    for (auto leaf: tree.get_leaves()) {
-      auto new_cg = reassign_callback.GetMATNodeToCGMap().at(leaf).Copy();
-      result.first.View().GetNodeFromMAT(leaf) = std::move(new_cg);
-    }
-  }
   // TODO tree.delete_nodes();
   result.first.View().RecomputeCompactGenomes();
   return result;

@@ -1,13 +1,25 @@
 
 template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag)
-    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {}
+    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {
+  for (auto leaf_node: merge.GetResult().GetLeafs()) {
+    Assert(leaf_node.HaveSampleId());
+    sample_id_to_cg_map_.at(leaf_node.GetSampleId()) = leaf_node.GetCompactGenome().Copy();
+    //sample_id_to_cg_map_.insert({leaf_node.GetSampleId(), leaf_node.GetCompactGenome().Copy()});
+  }
+}
 template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag,
                                                     bool collapse_empty_fragment_edges)
     : merge_{merge},
       sample_dag_{sample_dag},
-      collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {}
+      collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {
+  for (auto leaf_node: merge.GetResult().GetLeafs()) {
+    Assert(leaf_node.HaveSampleId());
+    sample_id_to_cg_map_.at(leaf_node.GetSampleId()) = leaf_node.GetCompactGenome().Copy();
+    //sample_id_to_cg_map_.insert({leaf_node.GetSampleId(), leaf_node.GetCompactGenome().Copy()});
+  }
+}
 
 template <typename CRTP, typename SampleDAG>
 bool BatchingCallback<CRTP, SampleDAG>::operator()(
@@ -39,7 +51,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
       // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
       for (auto leaf_node: fragment.GetNodes()) {
         if (leaf_node.IsLeaf()) {
-          auto new_cg = mat_node_to_cg_map_.at(leaf_node.GetMATNode()).Copy();
+          auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetOld().GetSampleId()).Copy();
           fragment.Get(leaf_node).template SetOverlay<Deduplicate<CompactGenome>>();
           fragment.Get(leaf_node) = std::move(new_cg);
         }
@@ -77,10 +89,9 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   check_edge_mutations(reassigned_states_storage_.View().Const());
   reassigned_states_storage_.View().RecomputeCompactGenomes(false);
   // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
-  for (auto* leaf_node: tree.get_leaves()) {
-    auto new_cg = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
-    reassigned_states_storage_.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
-    mat_node_to_cg_map_[leaf_node] = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
+  for (auto leaf_node: reassigned_states_storage_.View().GetLeafs()) {
+    auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId()).Copy();
+    leaf_node = std::move(new_cg);
   }
   {
     std::unique_lock lock{merge_mtx_};
@@ -106,10 +117,9 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   reassigned_states_storage_.View().BuildFromMAT(
       tree, merge_.GetResult().GetReferenceSequence());
   // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
-  for (auto leaf_node: tree.get_leaves()) {
-    auto new_cg = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
-    reassigned_states_storage_.View().GetNodeFromMAT(leaf_node) = std::move(new_cg);
-    mat_node_to_cg_map_[leaf_node] = sample_dag_.Get(NodeId{leaf_node->node_id}).GetCompactGenome().Copy();
+  for (auto leaf_node: reassigned_states_storage_.View().GetLeafs()) {
+    auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId()).Copy();
+    leaf_node = std::move(new_cg);
   }
   check_edge_mutations(reassigned_states_storage_.View().Const());
   reassigned_states_storage_.View().RecomputeCompactGenomes();
@@ -141,8 +151,8 @@ auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
 }
 
 template <typename CRTP, typename SampleDAG>
-const ConcurrentUnorderedMap<MAT::Node*, CompactGenome>& BatchingCallback<CRTP, SampleDAG>::GetMATNodeToCGMap() const {
-  return mat_node_to_cg_map_;
+const ConcurrentUnorderedMap<SampleId, CompactGenome>& BatchingCallback<CRTP, SampleDAG>::GetSampleIdToCGMap() const {
+  return sample_id_to_cg_map_;
 }
 
 template <typename CRTP, typename SampleDAG>
