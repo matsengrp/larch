@@ -118,10 +118,9 @@ struct SumRFDistance_ {
       auto edge = dag.Get(edge_id);
       std::vector<std::vector<const SampleId*>> leafs;
       leafs.push_back(reference_dag_.GetResultNodeLabels()
-                          .at(edge.GetParent().GetId())
+                          .at(edge.GetChild().GetId())
                           .GetLeafSet()
-                          ->GetClades()
-                          .at(edge.GetClade().value));
+                          ->ToParentClade());
       return LeafSet{std::move(leafs)};
     }();
     auto record = leafset_to_full_treecount.find(&clade);
