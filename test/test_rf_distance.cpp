@@ -13,7 +13,7 @@ static auto GetRFDistance(const Merge& merge1, const Merge& merge2) {
   ArbitraryInt shift_sum = weight_ops.GetOps().GetShiftSum();
   // make sure shift sum is correct
   if (merge2.GetResult().IsTree()) {
-    Assert(weight_ops.GetOps().shift_sum_ == merge2.GetResult().GetNodesCount() - 1);
+    Assert(shift_sum == merge2.GetResult().GetNodesCount() - 1);
   }
   auto result =
       count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) - shift_sum;
@@ -90,7 +90,9 @@ static void test_rf_distance_hand_computed_example() {
   merge1.AddDAGs(std::vector{dag1});
   Merge merge2(dag2.GetReferenceSequence());
   merge2.AddDAGs(std::vector{dag2});
-  Assert(GetRFDistance(merge1, merge2) == (dag1.GetNodesCount() + dag2.GetNodesCount() - dag1.GetLeafs().size() - dag2.GetLeafs().size()));
+  Assert(GetRFDistance(merge1, merge2) ==
+         (dag1.GetNodesCount() + dag2.GetNodesCount() - dag1.GetLeafs().size() -
+          dag2.GetLeafs().size()));
 }
 
 [[maybe_unused]] static const auto test_added0 =

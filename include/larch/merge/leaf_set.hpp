@@ -37,7 +37,8 @@ class LeafSet {
   inline bool empty() const;
   inline size_t size() const;
 
-  [[nodiscard]] inline std::vector<UniqueData> ToParentClade() const;
+  [[nodiscard]] inline std::vector<UniqueData> ToParentClade(
+      UniqueData sample_id) const;
 
   [[nodiscard]] inline size_t ParentCladeSize() const;
 

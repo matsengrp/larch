@@ -65,8 +65,37 @@ ArbitraryInt ComputeAboveTreeCount(Node node,
   return above;
 }
 
-struct LeafSetEq {
-  bool operator()(const LeafSet* lhs, const LeafSet* rhs) const { return *lhs == *rhs; }
+struct LeafSetKey {
+  size_t operator()(const LeafSet* key) const {
+    size_t hash = 0;
+    for (const auto& clade : key->GetClades()) {
+      for (const auto* leaf : clade) {
+        hash = HashCombine(hash, leaf->Hash());
+      }
+    }
+    return hash;
+  }
+
+  bool operator()(const LeafSet* lhs, const LeafSet* rhs) const {
+    auto& lhs_clades = lhs->GetClades();
+    auto& rhs_clades = rhs->GetClades();
+    if (lhs_clades.size() != rhs_clades.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < lhs_clades.size(); ++i) {
+      auto& lhs_clade = lhs_clades[i];
+      auto& rhs_clade = rhs_clades[i];
+      if (lhs_clade.size() != rhs_clade.size()) {
+        return false;
+      }
+      for (size_t j = 0; j < lhs_clade.size(); ++j) {
+        if (lhs_clade[j]->sample_id_ != rhs_clade[j]->sample_id_) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 };
 
 // Create a BinaryOperatorWeightOps for computing sum RF distances to the provided
@@ -75,7 +104,7 @@ struct SumRFDistance_ {
   using Weight = ArbitraryInt;
   static inline Weight Identity = 0;
   ArbitraryInt num_trees_in_dag;
-  std::unordered_map<const LeafSet*, ArbitraryInt, std::hash<const LeafSet*>, LeafSetEq>
+  std::unordered_map<const LeafSet*, ArbitraryInt, LeafSetKey, LeafSetKey>
       leafset_to_full_treecount;
   ArbitraryInt shift_sum_;
   const Merge& reference_dag_;
@@ -94,7 +123,7 @@ struct SumRFDistance_ {
       ComputeAboveTreeCount(node, above_tree_counts, below_tree_counts);
       if (not node.IsUA()) {
         leafset_to_full_treecount
-            [reference_dag.GetResultNodeLabels().at(node.GetId()).GetLeafSet()] +=
+            [reference_dag.GetResultNodeLabels().at(node).GetLeafSet()] +=
             above_tree_counts[node.GetId().value] *
             below_tree_counts.ComputeWeightBelow(node, {});
       }
@@ -116,11 +145,9 @@ struct SumRFDistance_ {
     // leafset_to_full_treecount:
     auto clade = [this, dag, edge_id] {
       auto edge = dag.Get(edge_id);
+      auto& label = reference_dag_.GetResultNodeLabels().at(edge.GetChild());
       std::vector<std::vector<const SampleId*>> leafs;
-      leafs.push_back(reference_dag_.GetResultNodeLabels()
-                          .at(edge.GetChild().GetId())
-                          .GetLeafSet()
-                          ->ToParentClade());
+      leafs.push_back(label.GetLeafSet()->ToParentClade(label.GetSampleId()));
       return LeafSet{std::move(leafs)};
     }();
     auto record = leafset_to_full_treecount.find(&clade);

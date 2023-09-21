@@ -7,29 +7,35 @@ template <typename Node>
 LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
                  std::vector<LeafSet>& computed_leafsets)
     : clades_{[&] {
+        auto get_id = [&labels](Node n) -> UniqueData {
+          Assert(n.Const().HaveSampleId());
+          return labels.at(n.GetId().value).GetSampleId();
+        };
         std::vector<std::vector<UniqueData>> clades;
-        clades.reserve(node.GetCladesCount());
-        for (auto clade : node.GetClades()) {
-          std::vector<UniqueData> clade_leafs;
-          clade_leafs.reserve(clade.size());
-          for (Node child : clade | Transform::GetChild()) {
-            if (child.IsLeaf()) {
-              Assert(child.Const().HaveSampleId());
-              UniqueData id = labels.at(child.GetId().value).GetSampleId();
-              clade_leafs.push_back(id);
-            } else {
-              for (auto& child_leafs :
-                   computed_leafsets.at(child.GetId().value).clades_) {
-                clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
-                                   child_leafs.end());
+        if (node.IsLeaf()) {
+          clades.push_back({get_id(node)});
+        } else {
+          clades.reserve(node.GetCladesCount());
+          for (auto clade : node.GetClades()) {
+            std::vector<UniqueData> clade_leafs;
+            clade_leafs.reserve(clade.size());
+            for (Node child : clade | Transform::GetChild()) {
+              if (child.IsLeaf()) {
+                clade_leafs.push_back(get_id(child));
+              } else {
+                for (auto& child_leafs :
+                     computed_leafsets.at(child.GetId().value).clades_) {
+                  clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
+                                     child_leafs.end());
+                }
               }
             }
+            clade_leafs |= ranges::actions::sort | ranges::actions::unique;
+            Assert(not clade_leafs.empty());
+            clades.emplace_back(std::move(clade_leafs));
           }
-          clade_leafs |= ranges::actions::sort | ranges::actions::unique;
-          Assert(not clade_leafs.empty());
-          clades.emplace_back(std::move(clade_leafs));
+          clades |= ranges::actions::sort;
         }
-        clades |= ranges::actions::sort;
         return clades;
       }()},
       hash_{ComputeHash(clades_)} {}
@@ -52,9 +58,13 @@ bool LeafSet::empty() const { return clades_.empty(); }
 
 size_t LeafSet::size() const { return clades_.size(); }
 
-std::vector<LeafSet::UniqueData> LeafSet::ToParentClade() const {
+std::vector<LeafSet::UniqueData> LeafSet::ToParentClade(UniqueData sample_id) const {
   std::vector<UniqueData> result = ranges::to_vector(clades_ | ranges::views::join);
-  result |= ranges::actions::sort | ranges::actions::unique;
+  if (result.empty()) {
+    result.push_back(sample_id);
+  } else {
+    result |= ranges::actions::sort | ranges::actions::unique;
+  }
   return result;
 }
 
