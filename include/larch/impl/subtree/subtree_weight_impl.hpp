@@ -8,7 +8,9 @@ SubtreeWeight<WeightOps, DAG>::SubtreeWeight(DAG dag)
       cached_weights_(dag_.GetNodesCount()),
       cached_subtree_counts_(dag_.GetNodesCount()),
       cached_min_weight_edges_(dag_.GetNodesCount()),
-      random_generator_{random_device_()} {}
+      random_generator_{random_device_()} {
+  std::cout << "\nfrom SubtreeWeight constructor: looking at dag with address " << &dag_ << "\n";
+}
 
 template <typename WeightOps, typename DAG>
 DAG SubtreeWeight<WeightOps, DAG>::GetDAG() const {

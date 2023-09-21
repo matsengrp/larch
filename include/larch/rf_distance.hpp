@@ -122,13 +122,21 @@ struct SumRFDistance_ {
     for (auto node : reference_dag.GetResult().GetNodes()) {
       ComputeAboveTreeCount(node, above_tree_counts, below_tree_counts);
       if (not node.IsUA()) {
+        auto& label = reference_dag_.GetResultNodeLabels().at(node);
         leafset_to_full_treecount
-            [reference_dag.GetResultNodeLabels().at(node).GetLeafSet()] +=
+            [label.GetLeafSet()] +=
             above_tree_counts[node.GetId().value] *
             below_tree_counts.ComputeWeightBelow(node, {});
       }
     }
+    std::cout << "\nfrom constructor: looking at dag with address " << &reference_dag_ << "\n";
 
+    //------------------------------------------------------
+    std::cout << "\nclades/keys for the treecount map:\n";
+    for (auto kv : leafset_to_full_treecount) {
+      std::cout << (*kv.first).ToString() << " : " << kv.second << "\n";
+    }
+    //------------------------------------------------------
     // sum all of the values in leafset_to_full_treecount
     shift_sum_ = ranges::accumulate(leafset_to_full_treecount | ranges::views::values,
                                     ArbitraryInt{0});
@@ -146,14 +154,18 @@ struct SumRFDistance_ {
     auto clade = [this, dag, edge_id] {
       auto edge = dag.Get(edge_id);
       auto& label = reference_dag_.GetResultNodeLabels().at(edge.GetChild());
-      std::vector<std::vector<const SampleId*>> leafs;
-      leafs.push_back(label.GetLeafSet()->ToParentClade(label.GetSampleId()));
-      return LeafSet{std::move(leafs)};
+      return label.GetLeafSet();
     }();
-    auto record = leafset_to_full_treecount.find(&clade);
+    auto record = leafset_to_full_treecount.find(clade);
     if (record == leafset_to_full_treecount.end()) {
+      //------------------------------------------------------
+      std::cout << "failed to find clade : " << clade->ToString() << "\n" << std::flush;
+      //------------------------------------------------------
       return num_trees_in_dag;
     } else {
+      //------------------------------------------------------
+      std::cout << "found clade : " << clade->ToString() << "\n" << std::flush;
+      //------------------------------------------------------
       return num_trees_in_dag - (2 * record->second);
     }
   }
@@ -182,7 +194,9 @@ struct SumRFDistance_ {
 // Not sure if you can substruct a templated struct like this...?
 struct SumRFDistance : SimpleWeightOps<SumRFDistance_> {
   explicit SumRFDistance(const Merge& reference_dag)
-      : SimpleWeightOps<SumRFDistance_>{SumRFDistance_{reference_dag}} {}
+      : SimpleWeightOps<SumRFDistance_>{SumRFDistance_{reference_dag}} {
+    std::cout << "\ncalled SimpleWeightOps SumRFDistance constructor for " << &reference_dag << "\n";
+  }
 };
 
 // Create a WeightOps for computing RF distances to the provided reference tree:
