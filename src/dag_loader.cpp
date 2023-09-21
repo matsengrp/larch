@@ -368,11 +368,10 @@ void MATToDOT(const MAT::Tree& mat, std::ostream& out) {
   out << "}\n";
 }
 
-[[maybe_unused]] static std::vector<std::string> SplitString(const std::string &str,
-                                                             char delimiter) {
+// Helper function for file parsing.
+static std::vector<std::string> SplitString(const std::string& str, char delimiter) {
   std::vector<std::string> substrings;
   std::string substring;
-
   for (char ch : str) {
     if (ch == delimiter) {
       substrings.push_back(substring);
@@ -381,15 +380,12 @@ void MATToDOT(const MAT::Tree& mat, std::ostream& out) {
       substring += ch;
     }
   }
-
   substrings.push_back(substring);
-
   return substrings;
 }
 
-using CompactGenomeData = ContiguousMap<MutationPosition, MutationBase>;
-[[maybe_unused]] static std::unordered_map<std::string, CompactGenomeData>
-ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) {
+std::unordered_map<std::string, CompactGenomeData> LoadCompactGenomeDataFromVCF(
+    const std::string& path, const std::string& ref_seq) {
   std::unordered_map<std::string, CompactGenomeData> mut_map;
 
   std::ifstream in;
@@ -425,15 +421,15 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
     }
   }
 
-  const auto chrom_col_id = name_col_map["#CHROME"];
+  const auto chrom_col_id = name_col_map["#CHROM"];
   const auto pos_col_id = name_col_map["POS"];
   const auto ref_col_id = name_col_map["REF"];
   const auto alt_col_id = name_col_map["ALT"];
   const auto fmt_col_id = name_col_map["FORMAT"];
 
-  auto InsertMutation = [&mut_map, &ref_seq](const std::string &node_label,
+  auto InsertMutation = [&mut_map, &ref_seq](const std::string& node_label,
                                              MutationPosition pos, MutationBase base) {
-    if (base.ToChar() != ref_seq[pos.value]) {
+    if (base.ToChar() != ref_seq[pos.value - 1]) {
       mut_map[node_label][pos] = base;
     }
   };
@@ -451,6 +447,7 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
     std::istringstream iss(line);
     while (iss >> field) {
       field_id++;
+      // Get chrom name
       if (field_id == chrom_col_id) {
         chrom_name = field;
         if (entry_count == 0) {
@@ -470,7 +467,7 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
       // Get alternate mutations at position.
       if (field_id == alt_col_id) {
         size_t base_id = 1;
-        for (const auto &base_char : SplitString(field, ',')) {
+        for (const auto& base_char : SplitString(field, ',')) {
           base_map[base_id] = MutationBase(base_char[0]);
           base_id++;
         }
@@ -497,19 +494,19 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
   return mut_map;
 }
 
-[[maybe_unused]] static void MADAGApplyCompactGenomeData(
-    MADAGStorage &dag_storage,
-    const std::unordered_map<std::string, CompactGenomeData> &mut_map) {
+void MADAGApplyCompactGenomeData(
+    MADAGStorage& dag_storage,
+    const std::unordered_map<std::string, CompactGenomeData>& mut_map) {
   auto dag = dag_storage.View();
   // Convert node names to ids.
   std::unordered_map<NodeId, CompactGenomeData> tmp_mut_map;
   for (auto node : dag.GetNodes()) {
     if (node.GetSampleId().has_value() and
         mut_map.find(node.GetSampleId().value()) != mut_map.end()) {
-      const auto &[name, muts] = *mut_map.find(node.GetSampleId().value());
+      const auto& [name, muts] = *mut_map.find(node.GetSampleId().value());
       std::ignore = name;
       tmp_mut_map[node.GetId()] = CompactGenomeData();
-      for (const auto &[pos, base] : muts) {
+      for (const auto& [pos, base] : muts) {
         tmp_mut_map[node.GetId()][pos] = base;
       }
     }
@@ -518,10 +515,10 @@ ReadVCFToCompactGenomeData(const std::string &path, const std::string &ref_seq) 
   dag.RecomputeEdgeMutations();
 }
 
-void LoadVCFData(MADAGStorage &dag_storage, std::string &vcf_path) {
+void LoadVCFData(MADAGStorage& dag_storage, std::string& vcf_path) {
   if (not vcf_path.empty()) {
     auto ref_seq = dag_storage.View().GetReferenceSequence();
-    auto cg_data = ReadVCFToCompactGenomeData(vcf_path, ref_seq);
+    auto cg_data = LoadCompactGenomeDataFromVCF(vcf_path, ref_seq);
     MADAGApplyCompactGenomeData(dag_storage, cg_data);
   }
 }

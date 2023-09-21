@@ -65,7 +65,8 @@ void CompactGenome::ApplyChanges(
 }
 
 bool CompactGenome::HasMutationAtPosition(MutationPosition pos) const {
-  return (mutations_.find(pos) != mutations_.end());
+  auto it = mutations_.find(pos);
+  return (it != mutations_.end() and it->first == pos);
 }
 
 MutationBase CompactGenome::GetBase(MutationPosition pos,

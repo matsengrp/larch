@@ -24,7 +24,13 @@
 
 [[nodiscard]] std::string LoadReferenceSequence(std::string_view path);
 
-void LoadVCFData(MADAGStorage &dag_storage, std::string &vcf_path);
+using CompactGenomeData = ContiguousMap<MutationPosition, MutationBase>;
+[[nodiscard]] std::unordered_map<std::string, CompactGenomeData>
+LoadCompactGenomeDataFromVCF(const std::string& path, const std::string& ref_seq);
+void MADAGApplyCompactGenomeData(
+    MADAGStorage& dag_storage,
+    const std::unordered_map<std::string, CompactGenomeData>& mut_map);
+void LoadVCFData(MADAGStorage& dag_storage, std::string& vcf_path);
 
 template <typename DAG>
 void StoreDAGToProtobuf(DAG dag, std::string_view path);

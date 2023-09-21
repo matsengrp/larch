@@ -76,7 +76,7 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   return dag_storage;
 }
 
-[[maybe_unused]] static auto MakeSampleUnambiguousCompleteSequenceMap() {
+[[maybe_unused]] static auto MakeSampleUnambiguousSequenceMap() {
   NodeSeqMap node_seq_map;
   // leaf nodes
   node_seq_map[{1}] = {"ACC"};
@@ -93,25 +93,9 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   return node_seq_map;
 }
 
-[[maybe_unused]] static auto MakeSampleUnambiguousCompleteSequenceMap2() {
-  NodeSeqMap node_seq_map;
-  // leaf nodes
-  node_seq_map[{1}] = {"ACC"};
-  node_seq_map[{2}] = {"TAG"};
-  node_seq_map[{3}] = {"GGG"};
-  node_seq_map[{4}] = {"ACG"};
-  node_seq_map[{5}] = {"CTT"};
-  node_seq_map[{6}] = {"TCC"};
-  // internal nodes
-  node_seq_map[{7}] = {"TGG"};
-  node_seq_map[{8}] = {"CTC"};
-  node_seq_map[{9}] = {"AGT"};
-  node_seq_map[{10}] = {"GAA"};
-  return node_seq_map;
-}
-
-[[maybe_unused]] static auto MakeSampleAmbiguousCompleteSequenceMap() {
-  NodeSeqMap node_seq_map = MakeSampleUnambiguousCompleteSequenceMap();
+[[maybe_unused]] static auto MakeSampleAmbiguousSequenceMap() {
+  NodeSeqMap node_seq_map = MakeSampleUnambiguousSequenceMap();
+  // adding ambiguity to leaf nodes.
   node_seq_map[{2}] = {"TNN"};
   node_seq_map[{4}] = {"ANG"};
   return node_seq_map;
@@ -119,7 +103,7 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 
 [[maybe_unused]] static auto MakeAmbiguousSampleDAG() {
   auto amb_dag_storage = MakeSampleDAGTopology();
-  auto amb_seq_map = MakeSampleAmbiguousCompleteSequenceMap();
+  auto amb_seq_map = MakeSampleAmbiguousSequenceMap();
   auto amb_dag = amb_dag_storage.View();
   amb_dag.SetCompactGenomesFromNodeSequenceMap(amb_seq_map);
   amb_dag.RecomputeEdgeMutations();
@@ -128,59 +112,52 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 
 [[maybe_unused]] static auto MakeUnambiguousSampleDAG() {
   auto unamb_dag_storage = MakeSampleDAGTopology();
-  auto unamb_seq_map = MakeSampleUnambiguousCompleteSequenceMap();
+  auto unamb_seq_map = MakeSampleUnambiguousSequenceMap();
   auto unamb_dag = unamb_dag_storage.View();
   unamb_dag.SetCompactGenomesFromNodeSequenceMap(unamb_seq_map);
   unamb_dag.RecomputeEdgeMutations();
   return unamb_dag_storage;
 }
 
-[[maybe_unused]] static auto MakeUnambiguousSampleDAG2() {
-  auto unamb_dag_storage = MakeSampleDAGTopology();
-  auto unamb_seq_map = MakeSampleUnambiguousCompleteSequenceMap2();
-  auto unamb_dag = unamb_dag_storage.View();
-  unamb_dag.SetCompactGenomesFromNodeSequenceMap(unamb_seq_map);
-  unamb_dag.RecomputeEdgeMutations();
-  return unamb_dag_storage;
+// missing_edges determines whether to build a complete or incomplete DAG.
+[[maybe_unused]] static auto MakeBigSampleDAGTopology(bool missing_edges = false) {
+  MADAGStorage dag_storage{{}};
+  auto dag = dag_storage.View();
 
-  [[maybe_unused]] static auto MakeBigSampleDAGTopology(bool missing_edges = false) {
-    MADAGStorage dag_storage{{}};
-    auto dag = dag_storage.View();
+  dag.SetReferenceSequence("GAA");
+  dag.InitializeNodes(18);
 
-    dag.SetReferenceSequence("GAA");
-    dag.InitializeNodes(18);
+  size_t edge_id = 0;
+  dag.AddEdge({edge_id++}, {0}, {17}, {0});
+  dag.AddEdge({edge_id++}, {0}, {16}, {0});
+  dag.AddEdge({edge_id++}, {17}, {2}, {0});
+  dag.AddEdge({edge_id++}, {17}, {15}, {1});
+  dag.AddEdge({edge_id++}, {16}, {1}, {0});
+  dag.AddEdge({edge_id++}, {16}, {14}, {1});
+  dag.AddEdge({edge_id++}, {15}, {1}, {0});
+  if (!missing_edges) dag.AddEdge({edge_id++}, {15}, {13}, {1});
+  dag.AddEdge({edge_id++}, {15}, {12}, {1});
+  dag.AddEdge({edge_id++}, {14}, {2}, {0});
+  dag.AddEdge({edge_id++}, {14}, {13}, {1});
+  if (!missing_edges) dag.AddEdge({edge_id++}, {14}, {12}, {1});
+  dag.AddEdge({edge_id++}, {13}, {4}, {0});
+  dag.AddEdge({edge_id++}, {13}, {11}, {1});
+  dag.AddEdge({edge_id++}, {12}, {3}, {0});
+  dag.AddEdge({edge_id++}, {12}, {10}, {1});
+  dag.AddEdge({edge_id++}, {11}, {3}, {0});
+  if (!missing_edges) dag.AddEdge({edge_id++}, {11}, {9}, {1});
+  dag.AddEdge({edge_id++}, {11}, {8}, {1});
+  dag.AddEdge({edge_id++}, {10}, {4}, {0});
+  if (!missing_edges) dag.AddEdge({edge_id++}, {10}, {8}, {1});
+  dag.AddEdge({edge_id++}, {10}, {9}, {1});
+  dag.AddEdge({edge_id++}, {9}, {5}, {0});
+  dag.AddEdge({edge_id++}, {9}, {6}, {1});
+  dag.AddEdge({edge_id++}, {9}, {7}, {2});
+  dag.AddEdge({edge_id++}, {8}, {5}, {0});
+  dag.AddEdge({edge_id++}, {8}, {6}, {1});
+  dag.AddEdge({edge_id++}, {8}, {7}, {2});
 
-    size_t edge_id = 0;
-    dag.AddEdge({edge_id++}, {0}, {17}, {0});
-    dag.AddEdge({edge_id++}, {0}, {16}, {0});
-    dag.AddEdge({edge_id++}, {17}, {2}, {0});
-    dag.AddEdge({edge_id++}, {17}, {15}, {1});
-    dag.AddEdge({edge_id++}, {16}, {1}, {0});
-    dag.AddEdge({edge_id++}, {16}, {14}, {1});
-    dag.AddEdge({edge_id++}, {15}, {1}, {0});
-    if (!missing_edges) dag.AddEdge({edge_id++}, {15}, {13}, {1});
-    dag.AddEdge({edge_id++}, {15}, {12}, {1});
-    dag.AddEdge({edge_id++}, {14}, {2}, {0});
-    dag.AddEdge({edge_id++}, {14}, {13}, {1});
-    if (!missing_edges) dag.AddEdge({edge_id++}, {14}, {12}, {1});
-    dag.AddEdge({edge_id++}, {13}, {4}, {0});
-    dag.AddEdge({edge_id++}, {13}, {11}, {1});
-    dag.AddEdge({edge_id++}, {12}, {3}, {0});
-    dag.AddEdge({edge_id++}, {12}, {10}, {1});
-    dag.AddEdge({edge_id++}, {11}, {3}, {0});
-    if (!missing_edges) dag.AddEdge({edge_id++}, {11}, {9}, {1});
-    dag.AddEdge({edge_id++}, {11}, {8}, {1});
-    dag.AddEdge({edge_id++}, {10}, {4}, {0});
-    if (!missing_edges) dag.AddEdge({edge_id++}, {10}, {8}, {1});
-    dag.AddEdge({edge_id++}, {10}, {9}, {1});
-    dag.AddEdge({edge_id++}, {9}, {5}, {0});
-    dag.AddEdge({edge_id++}, {9}, {6}, {1});
-    dag.AddEdge({edge_id++}, {9}, {7}, {2});
-    dag.AddEdge({edge_id++}, {8}, {5}, {0});
-    dag.AddEdge({edge_id++}, {8}, {6}, {1});
-    dag.AddEdge({edge_id++}, {8}, {7}, {2});
+  dag.BuildConnections();
 
-    dag.BuildConnections();
-
-    return dag_storage;
-  }
+  return dag_storage;
+}

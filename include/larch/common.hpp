@@ -207,11 +207,17 @@ inline std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>
   return os;
 }
 
-template <typename T1, typename T2, typename T3>
-inline std::ostream& operator<<(std::ostream& os, const std::tuple<T1, T2, T3>& tup) {
-  os << "[ ";
-  os << std::get<0>(tup) << " ";
-  os << std::get<1>(tup) << " ";
-  os << std::get<2>(tup) << "]";
+template <typename T1, typename T2>
+inline std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2>& tup) {
+  os << "[ " << tup.first << " " << tup.second << "]";
   return os;
 }
+
+template <typename T1, typename T2, typename T3>
+inline std::ostream& operator<<(std::ostream& os, const std::tuple<T1, T2, T3>& tup) {
+  os << "[ " << std::get<0>(tup) << " " << std::get<1>(tup) << " " << std::get<2>(tup)
+     << "]";
+  return os;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////

@@ -5,7 +5,7 @@
 using Node = MutableMADAG::NodeView;
 using Edge = MutableMADAG::EdgeView;
 
-[[maybe_unused]] void dag_info(MADAGStorage& dag_storage) {
+[[maybe_unused]] static void dag_info(MADAGStorage& dag_storage) {
   auto dag = dag_storage.View();
 
   std::cout << std::endl << "=== DAG_INFO [begin] ===" << std::endl;
@@ -39,12 +39,6 @@ using Edge = MutableMADAG::EdgeView;
   auto lhs_node_map = dag_make_node_pair_map(lhs_storage);
   auto rhs_node_map = dag_make_node_pair_map(rhs_storage);
   bool compare_node_maps = (lhs_node_map == rhs_node_map);
-  // if (!compare_node_maps) {
-  //   std::cout << "lhs_node_map: " << lhs_node_map.size() << std::endl
-  //             << lhs_node_map << std::endl;
-  //   std::cout << "rhs_node_map: " << rhs_node_map.size() << std::endl
-  //             << rhs_node_map << std::endl;
-  // }
   return compare_node_maps;
 }
 
@@ -82,7 +76,7 @@ using Edge = MutableMADAG::EdgeView;
               "DAGs are not equal after recompleting the DAG.");
 }
 
-[[maybe_unused]] void test_sample_dag_completion() {
+[[maybe_unused]] static void test_sample_dag_completion() {
   auto dag_storage = MakeSampleDAGTopology();
   auto dag_storage_truth = MakeSampleDAGTopology();
   assert_true(dag_compare_topologies(dag_storage, dag_storage_truth),
@@ -90,7 +84,7 @@ using Edge = MutableMADAG::EdgeView;
   test_dag_completion_single(dag_storage, dag_storage_truth);
 }
 
-[[maybe_unused]] void test_big_sample_dag_completion_without_missing_edges() {
+[[maybe_unused]] static void test_big_sample_dag_completion_without_missing_edges() {
   auto big_dag_storage_complete = MakeBigSampleDAGTopology(false);
   auto big_dag_storage_truth = MakeBigSampleDAGTopology();
   assert_true(dag_compare_topologies(big_dag_storage_complete, big_dag_storage_truth),
@@ -98,7 +92,7 @@ using Edge = MutableMADAG::EdgeView;
   test_dag_completion_single(big_dag_storage_complete, big_dag_storage_truth);
 }
 
-[[maybe_unused]] void test_big_sample_dag_completion_with_missing_edges() {
+[[maybe_unused]] static void test_big_sample_dag_completion_with_missing_edges() {
   auto big_dag_storage_incomplete = MakeBigSampleDAGTopology(true);
   auto big_dag_storage_truth = MakeBigSampleDAGTopology();
   assert_false(
