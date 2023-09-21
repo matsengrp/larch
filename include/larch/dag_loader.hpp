@@ -29,8 +29,10 @@ using CompactGenomeData = ContiguousMap<MutationPosition, MutationBase>;
 LoadCompactGenomeDataFromVCF(const std::string& path, const std::string& ref_seq);
 void MADAGApplyCompactGenomeData(
     MADAGStorage& dag_storage,
-    const std::unordered_map<std::string, CompactGenomeData>& mut_map);
-void LoadVCFData(MADAGStorage& dag_storage, std::string& vcf_path);
+    const std::unordered_map<std::string, CompactGenomeData>& mut_map,
+    bool silence_warnings = true);
+void LoadVCFData(MADAGStorage& dag_storage, std::string& vcf_path,
+                 bool silence_warnings = true);
 
 template <typename DAG>
 void StoreDAGToProtobuf(DAG dag, std::string_view path);

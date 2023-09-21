@@ -16,7 +16,7 @@ struct Empty_Callback : public Move_Found_Callback {
   }
   void operator()(MAT::Tree&) {}
   void OnReassignedStates(MAT::Tree&) {}
-  auto GetMATNodeToCGMap() {return std::map<MAT::Node*, CompactGenome>{};}
+  auto GetMATNodeToCGMap() { return std::map<MAT::Node*, CompactGenome>{}; }
 };
 
 template <typename SampleDAG>
@@ -136,13 +136,16 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   }
 
   void OnReassignedStates(const MAT::Tree& tree) {
-    for (auto leaf_node: tree.get_leaves()) {
-      auto new_cg = sample_.GetNodeFromMAT(sample_.GetMAT().get_node(leaf_node->node_id)).GetCompactGenome().Copy();
+    for (auto leaf_node : tree.get_leaves()) {
+      auto new_cg =
+          sample_.GetNodeFromMAT(sample_.GetMAT().get_node(leaf_node->node_id))
+              .GetCompactGenome()
+              .Copy();
       mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
     }
   }
 
-  auto GetMATNodeToCGMap() {return std::map<MAT::Node*, CompactGenome>{};}
+  auto GetMATNodeToCGMap() { return std::map<MAT::Node*, CompactGenome>{}; }
 
   Merge& merge_;
   SampleDAG sample_;
@@ -189,7 +192,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 }
 
 [[maybe_unused]] static void test_sample() {
-  auto input_storage = MakeSampleDAG();
+  auto input_storage = make_sample_dag();
   auto dag = input_storage.View();
   auto spr_storage = SPRStorage(dag);
   auto spr = spr_storage.View();
@@ -225,7 +228,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 //               "SPR: tree 20D_from_fasta"});
 
 [[maybe_unused]] static const auto test_added2 =
-    add_test({[] { test_spr(MakeSampleDAG(), 10); }, "SPR: sample"});
+    add_test({[] { test_spr(make_sample_dag(), 10); }, "SPR: sample"});
 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});

@@ -4,7 +4,7 @@
 
 using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 
-[[maybe_unused]] static auto MakeSampleDAG() {
+[[maybe_unused]] static auto make_sample_dag() {
   MADAGStorage input_storage{{}};
   auto dag = input_storage.View();
 
@@ -51,7 +51,7 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   return input_storage;
 }
 
-[[maybe_unused]] static auto MakeSampleDAGTopology() {
+[[maybe_unused]] static auto make_sample_dag_topology() {
   MADAGStorage dag_storage{{}};
   auto dag = dag_storage.View();
 
@@ -76,7 +76,7 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   return dag_storage;
 }
 
-[[maybe_unused]] static auto MakeSampleUnambiguousSequenceMap() {
+[[maybe_unused]] static auto make_sample_unambiguous_sequence_map() {
   NodeSeqMap node_seq_map;
   // leaf nodes
   node_seq_map[{1}] = {"ACC"};
@@ -93,34 +93,56 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   return node_seq_map;
 }
 
-[[maybe_unused]] static auto MakeSampleAmbiguousSequenceMap() {
-  NodeSeqMap node_seq_map = MakeSampleUnambiguousSequenceMap();
+[[maybe_unused]] static auto make_sample_ambiguous_sequence_map() {
+  NodeSeqMap node_seq_map = make_sample_unambiguous_sequence_map();
   // adding ambiguity to leaf nodes.
   node_seq_map[{2}] = {"TNN"};
   node_seq_map[{4}] = {"ANG"};
   return node_seq_map;
 }
 
-[[maybe_unused]] static auto MakeAmbiguousSampleDAG() {
-  auto amb_dag_storage = MakeSampleDAGTopology();
-  auto amb_seq_map = MakeSampleAmbiguousSequenceMap();
+[[maybe_unused]] static auto make_sample_unambiguous_sequence_map_2() {
+  NodeSeqMap node_seq_map = make_sample_unambiguous_sequence_map();
+  // alternate leaf nodes
+  node_seq_map[{1}] = {"TGA"};  // no matches
+  node_seq_map[{2}] = {"AAG"};  // pos 1 differing
+  node_seq_map[{3}] = {"GCG"};  // pos 2 differing
+  node_seq_map[{4}] = {"CGA"};  // shuffled
+  node_seq_map[{5}] = {"CGG"};  // 2 differing
+  node_seq_map[{6}] = {"TCC"};  // full match
+  return node_seq_map;
+}
+
+[[maybe_unused]] static auto make_ambiguous_sample_dag() {
+  auto amb_dag_storage = make_sample_dag_topology();
+  auto amb_seq_map = make_sample_ambiguous_sequence_map();
   auto amb_dag = amb_dag_storage.View();
   amb_dag.SetCompactGenomesFromNodeSequenceMap(amb_seq_map);
   amb_dag.RecomputeEdgeMutations();
   return amb_dag_storage;
 }
 
-[[maybe_unused]] static auto MakeUnambiguousSampleDAG() {
-  auto unamb_dag_storage = MakeSampleDAGTopology();
-  auto unamb_seq_map = MakeSampleUnambiguousSequenceMap();
+[[maybe_unused]] static auto make_unambiguous_sample_dag() {
+  auto unamb_dag_storage = make_sample_dag_topology();
+  auto unamb_seq_map = make_sample_unambiguous_sequence_map();
   auto unamb_dag = unamb_dag_storage.View();
   unamb_dag.SetCompactGenomesFromNodeSequenceMap(unamb_seq_map);
   unamb_dag.RecomputeEdgeMutations();
   return unamb_dag_storage;
 }
 
-// missing_edges determines whether to build a complete or incomplete DAG.
-[[maybe_unused]] static auto MakeBigSampleDAGTopology(bool missing_edges = false) {
+[[maybe_unused]] static auto make_unambiguous_sample_dag_2() {
+  auto amb_dag_storage = make_sample_dag_topology();
+  auto amb_seq_map = make_sample_unambiguous_sequence_map_2();
+  auto amb_dag = amb_dag_storage.View();
+  amb_dag.SetCompactGenomesFromNodeSequenceMap(amb_seq_map);
+  amb_dag.RecomputeEdgeMutations();
+  return amb_dag_storage;
+}
+
+// missing_edges determines whether to build a complete or incomplete DAG. Complete DAG
+// by default.
+[[maybe_unused]] static auto make_big_sample_dag_topology(bool missing_edges = false) {
   MADAGStorage dag_storage{{}};
   auto dag = dag_storage.View();
 

@@ -496,14 +496,17 @@ std::unordered_map<std::string, CompactGenomeData> LoadCompactGenomeDataFromVCF(
 
 void MADAGApplyCompactGenomeData(
     MADAGStorage& dag_storage,
-    const std::unordered_map<std::string, CompactGenomeData>& mut_map) {
+    const std::unordered_map<std::string, CompactGenomeData>& mut_map,
+    bool silence_warnings) {
   auto dag = dag_storage.View();
   // Convert node names to ids.
+  std::unordered_map<std::string, bool> visited_ids;
   std::unordered_map<NodeId, CompactGenomeData> tmp_mut_map;
   for (auto node : dag.GetNodes()) {
     if (node.GetSampleId().has_value() and
         mut_map.find(node.GetSampleId().value()) != mut_map.end()) {
       const auto& [name, muts] = *mut_map.find(node.GetSampleId().value());
+      visited_ids[name] = true;
       std::ignore = name;
       tmp_mut_map[node.GetId()] = CompactGenomeData();
       for (const auto& [pos, base] : muts) {
@@ -511,14 +514,23 @@ void MADAGApplyCompactGenomeData(
       }
     }
   }
+  if (!silence_warnings) {
+    for (auto& name_muts : mut_map) {
+      if (visited_ids.find(name_muts.first) == visited_ids.end()) {
+        std::cerr << "WARNING: Could not find sample_id `" << name_muts.first
+                  << "` in MADAG." << std::endl;
+      }
+    }
+  }
   dag.UpdateCompactGenomesFromNodeMutationMap(std::move(tmp_mut_map));
   dag.RecomputeEdgeMutations();
 }
 
-void LoadVCFData(MADAGStorage& dag_storage, std::string& vcf_path) {
+void LoadVCFData(MADAGStorage& dag_storage, std::string& vcf_path,
+                 bool silence_warnings) {
   if (not vcf_path.empty()) {
     auto ref_seq = dag_storage.View().GetReferenceSequence();
     auto cg_data = LoadCompactGenomeDataFromVCF(vcf_path, ref_seq);
-    MADAGApplyCompactGenomeData(dag_storage, cg_data);
+    MADAGApplyCompactGenomeData(dag_storage, cg_data, silence_warnings);
   }
 }

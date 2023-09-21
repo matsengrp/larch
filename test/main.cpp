@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
   std::vector<Test> failed;
   size_t ran = 0;
   const auto num_tests = tests.size();
-  std::cout << "RUNNING " << num_tests << " TESTS ..." << std::endl;
+  std::cout << "RUNNING " << num_tests << " TEST(S) ..." << std::endl;
   for (auto& test : tests) {
     ++ran;
     std::string run_number =

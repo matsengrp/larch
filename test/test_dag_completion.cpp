@@ -7,18 +7,17 @@ using Edge = MutableMADAG::EdgeView;
 
 [[maybe_unused]] static void dag_info(MADAGStorage& dag_storage) {
   auto dag = dag_storage.View();
-
-  std::cout << std::endl << "=== DAG_INFO [begin] ===" << std::endl;
+  std::cout << "=== DAG_INFO [begin] ===" << std::endl;
   std::cout << "=== NODES: " << dag.GetNodesCount() << " ===" << std::endl;
   for (auto node : dag.GetNodes()) {
-    std::cout << "MADAG::Node: " << node.GetId() << std::endl;
-    std::cout << "MADAG::LeafSet: " << node.GetLeafsBelow() << std::endl;
-    std::cout << "MADAG::Children: " << node.GetChildren() << std::endl;
-    std::cout << "MADAG::Clades: " << node.GetClades() << std::endl;
+    std::cout << "node: " << node.GetId() << std::endl;
+    std::cout << "  leaf_set: " << node.GetLeafsBelow() << std::endl;
+    std::cout << "  children: " << node.GetChildren() << std::endl;
+    std::cout << "  clades: " << node.GetClades() << std::endl;
   }
   std::cout << "=== EDGES: " << dag.GetEdgesCount() << " ===" << std::endl;
   for (auto edge : dag.GetEdges()) {
-    std::cout << "MADAG::Edge: " << edge.GetId() << " [" << edge.GetParent() << " -> "
+    std::cout << "edge: " << edge.GetId() << " [" << edge.GetParent() << " -> "
               << edge.GetChild() << " | " << edge.GetClade() << "]" << std::endl;
   }
   std::cout << "=== DAG_INFO [end] ===" << std::endl << std::endl;
@@ -77,24 +76,24 @@ using Edge = MutableMADAG::EdgeView;
 }
 
 [[maybe_unused]] static void test_sample_dag_completion() {
-  auto dag_storage = MakeSampleDAGTopology();
-  auto dag_storage_truth = MakeSampleDAGTopology();
+  auto dag_storage = make_sample_dag_topology();
+  auto dag_storage_truth = make_sample_dag_topology();
   assert_true(dag_compare_topologies(dag_storage, dag_storage_truth),
               "DAGs are not equal before altering.");
   test_dag_completion_single(dag_storage, dag_storage_truth);
 }
 
 [[maybe_unused]] static void test_big_sample_dag_completion_without_missing_edges() {
-  auto big_dag_storage_complete = MakeBigSampleDAGTopology(false);
-  auto big_dag_storage_truth = MakeBigSampleDAGTopology();
+  auto big_dag_storage_complete = make_big_sample_dag_topology(false);
+  auto big_dag_storage_truth = make_big_sample_dag_topology();
   assert_true(dag_compare_topologies(big_dag_storage_complete, big_dag_storage_truth),
               "DAGs are not equal before altering.");
   test_dag_completion_single(big_dag_storage_complete, big_dag_storage_truth);
 }
 
 [[maybe_unused]] static void test_big_sample_dag_completion_with_missing_edges() {
-  auto big_dag_storage_incomplete = MakeBigSampleDAGTopology(true);
-  auto big_dag_storage_truth = MakeBigSampleDAGTopology();
+  auto big_dag_storage_incomplete = make_big_sample_dag_topology(true);
+  auto big_dag_storage_truth = make_big_sample_dag_topology();
   assert_false(
       dag_compare_topologies(big_dag_storage_incomplete, big_dag_storage_truth),
       "DAGs are incorrectly equal before altering.");

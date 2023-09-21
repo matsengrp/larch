@@ -58,12 +58,12 @@
 }
 
 [[maybe_unused]] void test_compare_ambiguities() {
-  auto amb_dag_storage = MakeAmbiguousSampleDAG();
-  auto amb_seq_map = MakeSampleAmbiguousSequenceMap();
+  auto amb_dag_storage = make_ambiguous_sample_dag();
+  auto amb_seq_map = make_sample_ambiguous_sequence_map();
   auto amb_dag = amb_dag_storage.View();
 
-  auto unamb_dag_storage = MakeUnambiguousSampleDAG();
-  auto unamb_seq_map = MakeSampleUnambiguousSequenceMap();
+  auto unamb_dag_storage = make_unambiguous_sample_dag();
+  auto unamb_seq_map = make_sample_unambiguous_sequence_map();
   auto unamb_dag = unamb_dag_storage.View();
 
   bool write_files = true;
