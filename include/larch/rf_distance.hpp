@@ -122,9 +122,14 @@ struct SumRFDistance_ {
     for (auto node : reference_dag.GetResult().GetNodes()) {
       ComputeAboveTreeCount(node, above_tree_counts, below_tree_counts);
       if (not node.IsUA()) {
-        auto& label = reference_dag_.GetResultNodeLabels().at(node);
+        auto clade = [this, node] {
+          auto& label = reference_dag_.GetResultNodeLabels().at(node);
+          std::vector<std::vector<const SampleId*>> leafs;
+          leafs.push_back(label.GetLeafSet()->ToParentClade(label.GetSampleId()));
+          return LeafSet{std::move(leafs)};
+        }();
         leafset_to_full_treecount
-            [label.GetLeafSet()] +=
+            [&clade] +=
             above_tree_counts[node.GetId().value] *
             below_tree_counts.ComputeWeightBelow(node, {});
       }
@@ -132,10 +137,10 @@ struct SumRFDistance_ {
     std::cout << "\nfrom SumRFDistance_ constructor: looking at dag with address " << &reference_dag_.GetResult().GetStorage() << "\n";
 
     //------------------------------------------------------
-    std::cout << "\nclades/keys for the treecount map:\n";
-    for (auto kv : leafset_to_full_treecount) {
-      std::cout << (*kv.first).ToString() << " : " << kv.second << "\n";
-    }
+    /* std::cout << "\nclades/keys for the treecount map:\n"; */
+    /* for (auto kv : leafset_to_full_treecount) { */
+    /*   std::cout << (*kv.first).ToString() << " : " << kv.second << "\n"; */
+    /* } */
     //------------------------------------------------------
     // sum all of the values in leafset_to_full_treecount
     shift_sum_ = ranges::accumulate(leafset_to_full_treecount | ranges::views::values,
@@ -151,21 +156,24 @@ struct SumRFDistance_ {
   Weight ComputeEdge(DAG dag, EdgeId edge_id) {
     // clade should be a LeafSet, the key type in the mapping
     // leafset_to_full_treecount:
-    auto clade = [this, dag, edge_id] {
+    auto clade = [dag, edge_id] {
       auto edge = dag.Get(edge_id);
-      auto& label = reference_dag_.GetResultNodeLabels().at(edge.GetChild());
-      return label.GetLeafSet();
+      auto& label = dag.GetNodes().at(edge.GetChildId().value).GetLabel();
+      /* return label.GetLeafSet(); */
+      std::vector<std::vector<const SampleId*>> leafs;
+      leafs.push_back(label.GetLeafSet()->ToParentClade(label.GetSampleId()));
+      return LeafSet{std::move(leafs)};
     }();
-    auto record = leafset_to_full_treecount.find(clade);
+    auto record = leafset_to_full_treecount.find(&clade);
     std::cout <<  "For dag " << &dag.GetStorage() << ": ";
     if (record == leafset_to_full_treecount.end()) {
       //------------------------------------------------------
-      std::cout << "failed to find clade : " << clade->ToString() << "\n" << std::flush;
+      std::cout << "failed to find clade : " << clade.ToString() << "\n" << std::flush;
       //------------------------------------------------------
       return num_trees_in_dag;
     } else {
       //------------------------------------------------------
-      std::cout << "found clade : " << clade->ToString() << "\n" << std::flush;
+      std::cout << "found clade : " << clade.ToString() << "\n" << std::flush;
       //------------------------------------------------------
       return num_trees_in_dag - (2 * record->second);
     }

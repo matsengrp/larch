@@ -91,9 +91,13 @@ static void test_rf_two_distinct_topologies_single_merge() {
 
   Merge merge(dag1.GetReferenceSequence());
   merge.AddDAGs(std::vector{dag1, dag2});
-  Assert(GetRFDistance(merge, merge) ==
-         (dag1.GetNodesCount() + dag2.GetNodesCount() - dag1.GetLeafs().size() -
-          dag2.GetLeafs().size() - 2));
+  auto dist = GetRFDistance(merge, merge);
+  auto truedist = (dag1.GetNodesCount() + dag2.GetNodesCount() - dag1.GetLeafs().size() -
+          dag2.GetLeafs().size() - 2);
+  if (dist != truedist) {
+    std::cout << "expected distance of " << truedist << " but computed distance was " << dist << "\n";
+    Assert(false)
+  }
 }
 
 static void test_rf_distance_hand_computed_example() {
