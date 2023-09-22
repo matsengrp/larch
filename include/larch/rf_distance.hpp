@@ -129,7 +129,7 @@ struct SumRFDistance_ {
             below_tree_counts.ComputeWeightBelow(node, {});
       }
     }
-    std::cout << "\nfrom constructor: looking at dag with address " << &reference_dag_ << "\n";
+    std::cout << "\nfrom SumRFDistance_ constructor: looking at dag with address " << &reference_dag_.GetResult().GetStorage() << "\n";
 
     //------------------------------------------------------
     std::cout << "\nclades/keys for the treecount map:\n";
@@ -157,6 +157,7 @@ struct SumRFDistance_ {
       return label.GetLeafSet();
     }();
     auto record = leafset_to_full_treecount.find(clade);
+    std::cout <<  "For dag " << &dag.GetStorage() << ": ";
     if (record == leafset_to_full_treecount.end()) {
       //------------------------------------------------------
       std::cout << "failed to find clade : " << clade->ToString() << "\n" << std::flush;
@@ -195,7 +196,7 @@ struct SumRFDistance_ {
 struct SumRFDistance : SimpleWeightOps<SumRFDistance_> {
   explicit SumRFDistance(const Merge& reference_dag)
       : SimpleWeightOps<SumRFDistance_>{SumRFDistance_{reference_dag}} {
-    std::cout << "\ncalled SimpleWeightOps SumRFDistance constructor for " << &reference_dag << "\n";
+    std::cout << "\ncalled SimpleWeightOps SumRFDistance constructor for " << &reference_dag.GetResult().GetStorage()  << "\n";
   }
 };
 
