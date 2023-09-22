@@ -1,3 +1,5 @@
+// TODO this code should not be included in the final merge.
+
 /* Describes "history DAG completion", which means that all allowed edges are
  * added between the nodes already in the hDAG. An edge is allowed if the clade
  * it descends from matches the clade union of the target node. So, we start

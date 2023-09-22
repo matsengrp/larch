@@ -329,5 +329,5 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
 }
 
 [[maybe_unused]] static const auto test_added0 =
-    add_test({[]() { validate_dag_after_spr("sample_dag", true); },
+    add_test({[]() { validate_dag_after_spr("sample_dag", false); },
               "SPR: validate DAG after SPR (sample_dag)"});

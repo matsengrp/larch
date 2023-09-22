@@ -368,7 +368,6 @@ void MATToDOT(const MAT::Tree& mat, std::ostream& out) {
   out << "}\n";
 }
 
-// Helper function for file parsing.
 static std::vector<std::string> SplitString(const std::string& str, char delimiter) {
   std::vector<std::string> substrings;
   std::string substring;
