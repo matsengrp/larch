@@ -143,8 +143,6 @@ void FeatureMutableView<Connections, CRTP, Tag>::MakeComplete() const {
       if (possible_children != clade_union_map.end()) {
         for (auto child_node_id : possible_children->second) {
           if (parent_node.GetId() == child_node_id) continue;
-          // if (dag.FindEdge(parent_node.GetId(), child_node_id) != std::nullopt)
-          //   continue;
           dag.AppendEdge(parent_node.GetId(), child_node_id, {clade_idx});
         }
       }

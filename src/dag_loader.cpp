@@ -506,8 +506,9 @@ void MADAGApplyCompactGenomeData(
     if (node.GetSampleId().has_value() and
         mut_map.find(node.GetSampleId().value()) != mut_map.end()) {
       const auto& [name, muts] = *mut_map.find(node.GetSampleId().value());
-      visited_ids[name] = true;
-      std::ignore = name;
+      if (!silence_warnings) {
+        visited_ids[name] = true;
+      }
       tmp_mut_map[node.GetId()] = CompactGenomeData();
       for (const auto& [pos, base] : muts) {
         tmp_mut_map[node.GetId()][pos] = base;

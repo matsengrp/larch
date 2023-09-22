@@ -4,9 +4,7 @@
 #include "larch/dag_loader.hpp"
 #include "larch/spr/spr_view.hpp"
 #include "larch/mat_conversion.hpp"
-
 #include "larch/usher_glue.hpp"
-// #include "larch/import_vcf.hpp"
 
 std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   os << mut.get_string();
@@ -85,22 +83,6 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   }
   os << "]";
   return os.str();
-}
-
-[[maybe_unused]] static int original_state_compare(const Original_State_t &lhs,
-                                                   const Original_State_t &rhs) {
-  std::ignore = lhs;
-  std::ignore = rhs;
-  // for (const auto &[lhs_id, lhs_mut_set] : lhs) {
-  //   const auto &[rhs_id, rhs_mut_set] = rhs[lhs_id];
-  //   for (const auto &mut : mut_set) {
-  //   }
-  // }
-  return 0;
-}
-
-bool operator==(const Original_State_t &lhs, const Original_State_t &rhs) {
-  return original_state_compare(lhs, rhs) == 0;
 }
 
 [[maybe_unused]] static auto convert_madag_to_mat(const MADAGStorage &dag_storage) {
@@ -211,6 +193,8 @@ bool operator==(const Original_State_t &lhs, const Original_State_t &rhs) {
                                            const MADAGStorage &rhs_storage) {
   auto lhs = lhs_storage.View();
   auto rhs = rhs_storage.View();
+  if (lhs.GetNodesCount() != rhs.GetNodesCount()) return false;
+  if (lhs.GetEdgesCount() != rhs.GetEdgesCount()) return false;
   for (auto lhs_node : lhs.GetNodes()) {
     auto rhs_node = rhs.Get(lhs_node.GetId());
     if (lhs_node.GetCompactGenome() != rhs_node.GetCompactGenome()) return false;
@@ -330,10 +314,10 @@ void test_vcf_reading() {
 
 [[maybe_unused]] void test_vcf_with_larch_usher() {
   std::string command =
-      "./larch-usher -i data/test_ambiguous_vcf/unamb_mat.pb -r data / "
-      "test_ambiguous_vcf / sample_reference_sequence.fasta - o "
-      "test_larch_usher_output.pb -c 2 -v data / test_ambiguous_vcf / "
-      "SampleDAG_unique_ambiguous_leafs.vcf ";
+      "./larch-usher -i data/test_ambiguous_vcf/unamb_mat.pb -r "
+      "data/test_ambiguous_vcf/sample_reference_sequence.fasta -o "
+      "test_larch_usher_output.pb -c 2 -v "
+      "data/test_ambiguous_vcf/SampleDAG_unique_ambiguous_leafs.vcf ";
 
   assert_equal(0, std::system(command.c_str()), "Child process failed");
 }
