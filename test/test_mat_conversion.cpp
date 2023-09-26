@@ -54,7 +54,7 @@ template <typename DAG>
     add_test({[]() { test_sample_id_conversion("data/startmat/startmat_no_ancestral.pb.gz",
                                                "data/startmat/refseq.txt.gz",
                                                ""); },
-                     "check SampleIds on startmat"});
+                     "Check SampleIds on startmat"});
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[]() { test_sample_id_conversion("data/test_ambiguous_vcf/amb_mat.pb",

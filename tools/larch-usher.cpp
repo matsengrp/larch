@@ -32,8 +32,9 @@
   std::cout << "  -i,--input   Path to input DAG\n";
   std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
                "reference sequence\nif input points to MAT protobuf\n";
+  std::cout << "  -v,--vcf-file   Provide a path to a vcf file containing "
+               "ambiguous leaf sequence data\n";
   std::cout << "  -o,--output  Path to output DAG\n";
-  std::cout << "  -m,--matopt  Path to matOptimize executable. Default: matOptimize\n";
   std::cout << "  -l,--logpath Path for logging\n";
   std::cout << "  -c,--count   Number of iterations. Default: 1\n";
   std::cout << "  -s,--switch-subtrees          Switch to optimizing subtrees after "
@@ -478,7 +479,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   int ignored{};
   std::string input_dag_path;
   std::string output_dag_path;
-  std::string matoptimize_path = "matOptimize";
   std::string logfile_path = "optimization_log";
   std::string refseq_path;
   std::string vcf_path;
@@ -509,12 +509,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         Fail();
       }
       output_dag_path = *params.begin();
-    } else if (name == "-m" or name == "--matopt") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      matoptimize_path = *params.begin();
     } else if (name == "-c" or name == "--count") {
       if (params.empty()) {
         std::cerr << "Count not specified.\n";
