@@ -223,10 +223,10 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
   for (auto leaf : dag.GetLeafs()) {
     if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
       auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-          SampleId{std::to_string(leaf.GetMATNode()->node_id)});
+          SampleId{mat.get_node_name(leaf.GetMATNode()->node_id).c_str()});
       leaf = id_iter.first;
     } else {
-      leaf.SetSampleId(std::to_string(leaf.GetMATNode()->node_id));
+      leaf.SetSampleId(mat.get_node_name(leaf.GetMATNode()->node_id).c_str());
     }
   }
   dag.AddUA(EdgeMutations{mutations_view(mat.root)});

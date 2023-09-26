@@ -33,7 +33,7 @@ class BatchingCallback : public Move_Found_Callback {
   void operator()(MAT::Tree& tree);
 
   void OnReassignedStates(MAT::Tree& tree);
-  const ConcurrentUnorderedMap<SampleId, CompactGenome>& GetSampleIdToCGMap() const;
+  const ConcurrentUnorderedMap<std::string, CompactGenome>& GetSampleIdToCGMap() const;
 
  protected:
   Merge& GetMerge();
@@ -47,7 +47,7 @@ class BatchingCallback : public Move_Found_Callback {
   std::decay_t<SampleDAG> sample_dag_;
   bool collapse_empty_fragment_edges_;
   ArbitraryInt applied_moves_count_;
-  ConcurrentUnorderedMap<SampleId, CompactGenome> sample_id_to_cg_map_;
+  ConcurrentUnorderedMap<std::string, CompactGenome> sample_id_to_cg_map_;
   ReassignedStatesStorage reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage{{}}));
   std::shared_mutex mat_mtx_;

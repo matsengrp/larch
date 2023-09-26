@@ -4,8 +4,11 @@ BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG samp
     : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {
   for (auto leaf_node: merge.GetResult().GetLeafs()) {
     Assert(leaf_node.HaveSampleId());
-    sample_id_to_cg_map_.at(leaf_node.GetSampleId()) = leaf_node.GetCompactGenome().Copy();
-    //sample_id_to_cg_map_.insert({leaf_node.GetSampleId(), leaf_node.GetCompactGenome().Copy()});
+    //sample_id_to_cg_map_.at(leaf_node.GetSampleId()) = leaf_node.GetCompactGenome().Copy();
+    //sample_id_to_cg_map_.insert({SampleId{leaf_node.GetSampleId().value_or("no_id")}, leaf_node.GetCompactGenome().Copy()});
+    //sample_id_to_cg_map_[SampleId{leaf_node.GetSampleId().value_or("no_id")}] = std::move(leaf_node.GetCompactGenome().Copy());
+    auto sid = leaf_node.GetSampleId().value_or(leaf_node.GetCompactGenome().ToString());
+    sample_id_to_cg_map_[sid] = leaf_node.GetCompactGenome().Copy();
   }
 }
 template <typename CRTP, typename SampleDAG>
@@ -16,8 +19,11 @@ BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG samp
       collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {
   for (auto leaf_node: merge.GetResult().GetLeafs()) {
     Assert(leaf_node.HaveSampleId());
-    sample_id_to_cg_map_.at(leaf_node.GetSampleId()) = leaf_node.GetCompactGenome().Copy();
-    //sample_id_to_cg_map_.insert({leaf_node.GetSampleId(), leaf_node.GetCompactGenome().Copy()});
+    //sample_id_to_cg_map_.at(leaf_node.GetSampleId()) = leaf_node.GetCompactGenome().Copy();
+    //sample_id_to_cg_map_.insert({SampleId{leaf_node.GetSampleId().value_or("no_id")}, leaf_node.GetCompactGenome().Copy()});
+    //sample_id_to_cg_map_[SampleId{leaf_node.GetSampleId().value_or("no_id")}] = std::move(leaf_node.GetCompactGenome().Copy());
+    auto sid = leaf_node.GetSampleId().value_or(leaf_node.GetCompactGenome().ToString());
+    sample_id_to_cg_map_[sid] = leaf_node.GetCompactGenome().Copy();
   }
 }
 
@@ -51,7 +57,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
       // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
       for (auto leaf_node: fragment.GetNodes()) {
         if (leaf_node.IsLeaf()) {
-          auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetOld().GetSampleId()).Copy();
+          auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId().value_or(leaf_node.GetCompactGenome().ToString())).Copy();
           fragment.Get(leaf_node).template SetOverlay<Deduplicate<CompactGenome>>();
           fragment.Get(leaf_node) = std::move(new_cg);
         }
@@ -88,13 +94,13 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
       tree, merge_.GetResult().GetReferenceSequence());
   check_edge_mutations(reassigned_states_storage_.View().Const());
   reassigned_states_storage_.View().RecomputeCompactGenomes(false);
-  // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
-  for (auto leaf_node: reassigned_states_storage_.View().GetLeafs()) {
-    auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId()).Copy();
-    leaf_node = std::move(new_cg);
-  }
   {
     std::unique_lock lock{merge_mtx_};
+    // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
+    for (auto leaf_node: reassigned_states_storage_.View().GetLeafs()) {
+      auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId().value_or(leaf_node.GetCompactGenome().ToString())).Copy();
+      leaf_node = std::move(new_cg);
+    }
     if (not batch_.empty()) {
       merge_.AddDAGs(batch_);
       batch_.clear();
@@ -118,7 +124,7 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
       tree, merge_.GetResult().GetReferenceSequence());
   // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
   for (auto leaf_node: reassigned_states_storage_.View().GetLeafs()) {
-    auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId()).Copy();
+    auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId().value_or(leaf_node.GetCompactGenome().ToString())).Copy();
     leaf_node = std::move(new_cg);
   }
   check_edge_mutations(reassigned_states_storage_.View().Const());
@@ -151,7 +157,7 @@ auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
 }
 
 template <typename CRTP, typename SampleDAG>
-const ConcurrentUnorderedMap<SampleId, CompactGenome>& BatchingCallback<CRTP, SampleDAG>::GetSampleIdToCGMap() const {
+const ConcurrentUnorderedMap<std::string, CompactGenome>& BatchingCallback<CRTP, SampleDAG>::GetSampleIdToCGMap() const {
   return sample_id_to_cg_map_;
 }
 

@@ -615,7 +615,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   LoadVCFData(input_dag, vcf_path);
   auto input_dag_view = input_dag.View();
   // if the DAG is from a DAG protobuf file, then it needs to be equipped with SampleIds
-  if (refseq_path.empty()) {
+  if (vcf_path.empty()) {
     input_dag_view.SampleIdsFromCG();
   }
   Merge merge{input_dag_view.GetReferenceSequence()};
