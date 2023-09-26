@@ -1,5 +1,12 @@
-Merge::Merge(std::string_view reference_sequence) : result_dag_storage_{{}} {
+Merge::Merge(std::string_view reference_sequence)
+    : all_leaf_sets_{ConcurrentUnorderedSet<LeafSet>{}}, result_dag_storage_{{}} {
   ResultDAG().SetReferenceSequence(reference_sequence);
+}
+
+Merge::Merge(Merge& other)
+    : all_leaf_sets_{std::reference_wrapper{other.AllLeafSets()}},
+      result_dag_storage_{{}} {
+  ResultDAG().SetReferenceSequence(other.GetResult().GetReferenceSequence());
 }
 
 template <typename DAGSRange>
@@ -29,7 +36,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   });
 
   tbb::parallel_for_each(idxs, [&](size_t i) {
-    ComputeLeafSets(i, dags, below, dags_labels, all_leaf_sets_);
+    ComputeLeafSets(i, dags, below, dags_labels, AllLeafSets());
   });
 
   std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
@@ -116,7 +123,7 @@ void Merge::ComputeResultEdgeMutations() {
 }
 
 bool Merge::ContainsLeafset(const LeafSet& leafset) const {
-  return all_leaf_sets_.find(leafset) != all_leaf_sets_.end();
+  return AllLeafSets().find(leafset) != AllLeafSets().end();
 }
 
 template <typename DAGSRange>

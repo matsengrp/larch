@@ -8,6 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <numeric>
+#include <variant>
 
 #include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_unordered_map.h>
@@ -42,6 +43,7 @@ class Merge {
    * externally owned, and should outlive the Merge object.
    */
   inline explicit Merge(std::string_view reference_sequence);
+  inline explicit Merge(Merge& other);
 
   Merge(Merge&&) = delete;
   Merge(const Merge&) = delete;
@@ -120,8 +122,21 @@ class Merge {
       const ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
       MutableMergeDAG result_dag);
 
+  inline ConcurrentUnorderedSet<LeafSet>& AllLeafSets() {
+    return std::visit([](auto& all) -> ConcurrentUnorderedSet<LeafSet>& { return all; },
+                      all_leaf_sets_);
+  }
+
+  inline const ConcurrentUnorderedSet<LeafSet>& AllLeafSets() const {
+    return std::visit(
+        [](auto& all) -> const ConcurrentUnorderedSet<LeafSet>& { return all; },
+        all_leaf_sets_);
+  }
+
   // Every unique node leaf set, found among all input DAGs.
-  ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
+  std::variant<std::reference_wrapper<ConcurrentUnorderedSet<LeafSet>>,
+               ConcurrentUnorderedSet<LeafSet>>
+      all_leaf_sets_;
 
   // Node ids of the resulting DAG's nodes.
   ConcurrentUnorderedMap<NodeLabel, NodeId> result_nodes_;

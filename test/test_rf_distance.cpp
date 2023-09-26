@@ -8,7 +8,8 @@ static auto GetRFDistance(const Merge& merge1, const Merge& merge2) {
   // merge1 is the DAG we compute the weights for (summing distances to merge2)
   auto dag1 = merge1.GetResult();
   std::cout << "\ndag1 (compute dag) address: " << &dag1.GetStorage() << "\n";
-  std::cout << "dag2 (reference dag) address: " << &merge2.GetResult().GetStorage() << "\n";
+  std::cout << "dag2 (reference dag) address: " << &merge2.GetResult().GetStorage()
+            << "\n";
   SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag1)>> count{dag1};
   // merge2 is the reference DAG
   SumRFDistance weight_ops{merge2, merge1};
@@ -47,7 +48,7 @@ static void test_rf_on_two_identical_topologies() {
 
   Merge merge1(dag1.GetReferenceSequence());
   merge1.AddDAGs(std::vector{dag1});
-  Merge merge2(dag2.GetReferenceSequence());
+  Merge merge2(merge1);
   merge2.AddDAGs(std::vector{dag2});
 
   Assert(GetRFDistance(merge1, merge2) == 0);
@@ -82,7 +83,6 @@ static MADAGStorage MakeNonintersectingSampleDAG() {
   return input_storage;
 }
 
-
 static void test_rf_two_distinct_topologies_single_merge() {
   auto dag1_storage = MakeSampleDAG();
   auto dag2_storage = MakeNonintersectingSampleDAG();
@@ -92,10 +92,11 @@ static void test_rf_two_distinct_topologies_single_merge() {
   Merge merge(dag1.GetReferenceSequence());
   merge.AddDAGs(std::vector{dag1, dag2});
   auto dist = GetRFDistance(merge, merge);
-  auto truedist = (dag1.GetNodesCount() + dag2.GetNodesCount() - dag1.GetLeafs().size() -
-          dag2.GetLeafs().size() - 2);
+  auto truedist = (dag1.GetNodesCount() + dag2.GetNodesCount() -
+                   dag1.GetLeafs().size() - dag2.GetLeafs().size() - 2);
   if (dist != truedist) {
-    std::cout << "expected distance of " << truedist << " but computed distance was " << dist << "\n";
+    std::cout << "expected distance of " << truedist << " but computed distance was "
+              << dist << "\n";
     Assert(false)
   }
 }
@@ -108,7 +109,7 @@ static void test_rf_distance_hand_computed_example() {
 
   Merge merge1(dag1.GetReferenceSequence());
   merge1.AddDAGs(std::vector{dag1});
-  Merge merge2(dag2.GetReferenceSequence());
+  Merge merge2(merge1);
   merge2.AddDAGs(std::vector{dag2});
   Assert(GetRFDistance(merge1, merge2) ==
          (dag1.GetNodesCount() + dag2.GetNodesCount() - dag1.GetLeafs().size() -
@@ -125,5 +126,6 @@ static void test_rf_distance_hand_computed_example() {
 [[maybe_unused]] static const auto test_added2 = add_test(
     {[] { test_rf_distance_hand_computed_example(); }, "RF distance: hand computed"});
 
-[[maybe_unused]] static const auto test_added3 = add_test(
-    {[] { test_rf_two_distinct_topologies_single_merge(); }, "RF distance: distinct topologies, one merge"});
+[[maybe_unused]] static const auto test_added3 =
+    add_test({[] { test_rf_two_distinct_topologies_single_merge(); },
+              "RF distance: distinct topologies, one merge"});
