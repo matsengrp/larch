@@ -3,10 +3,6 @@ template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag)
     : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {
   for (auto leaf_node: merge.GetResult().GetLeafs()) {
-    Assert(leaf_node.HaveSampleId());
-    //sample_id_to_cg_map_.at(leaf_node.GetSampleId()) = leaf_node.GetCompactGenome().Copy();
-    //sample_id_to_cg_map_.insert({SampleId{leaf_node.GetSampleId().value_or("no_id")}, leaf_node.GetCompactGenome().Copy()});
-    //sample_id_to_cg_map_[SampleId{leaf_node.GetSampleId().value_or("no_id")}] = std::move(leaf_node.GetCompactGenome().Copy());
     auto sid = leaf_node.GetSampleId().value_or(leaf_node.GetCompactGenome().ToString());
     sample_id_to_cg_map_[sid] = leaf_node.GetCompactGenome().Copy();
   }
@@ -18,10 +14,6 @@ BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG samp
       sample_dag_{sample_dag},
       collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {
   for (auto leaf_node: merge.GetResult().GetLeafs()) {
-    Assert(leaf_node.HaveSampleId());
-    //sample_id_to_cg_map_.at(leaf_node.GetSampleId()) = leaf_node.GetCompactGenome().Copy();
-    //sample_id_to_cg_map_.insert({SampleId{leaf_node.GetSampleId().value_or("no_id")}, leaf_node.GetCompactGenome().Copy()});
-    //sample_id_to_cg_map_[SampleId{leaf_node.GetSampleId().value_or("no_id")}] = std::move(leaf_node.GetCompactGenome().Copy());
     auto sid = leaf_node.GetSampleId().value_or(leaf_node.GetCompactGenome().ToString());
     sample_id_to_cg_map_[sid] = leaf_node.GetCompactGenome().Copy();
   }
@@ -52,12 +44,11 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
     std::pair<bool, bool> accepted =
         impl.OnMove(storage.View(), fragment, move, best_score_change,
                     nodes_with_major_allele_set_change);
-
     if (accepted.first) {
       // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
       for (auto leaf_node: fragment.GetNodes()) {
         if (leaf_node.IsLeaf()) {
-          auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId().value_or(leaf_node.GetCompactGenome().ToString())).Copy();
+          auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetOld().GetSampleId().value_or(leaf_node.GetOld().GetCompactGenome().ToString())).Copy();
           fragment.Get(leaf_node).template SetOverlay<Deduplicate<CompactGenome>>();
           fragment.Get(leaf_node) = std::move(new_cg);
         }
