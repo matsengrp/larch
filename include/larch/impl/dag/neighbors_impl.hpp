@@ -2,6 +2,9 @@
 #error "Don't include this header"
 #endif
 
+#include <set>
+#include "larch/contiguous_set.hpp"
+
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetParents() const {
   auto dag = static_cast<const CRTP&>(*this).GetDAG();
@@ -115,6 +118,10 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   auto node = static_cast<const CRTP&>(*this);
   auto dag = node.GetDAG();
   auto& storage = GetFeatureStorage(this);
+  if (node.IsUA()) {
+    Assert(dag.HaveUA());
+    Assert(node.GetId() == dag.GetRoot());
+  }
   if (not allow_dag) {
     if (storage.parents_.size() > 1) {
       throw std::runtime_error{std::string{"Mulptiple parents at node "} +
@@ -167,6 +174,13 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
     for (auto i : node.GetChildren()) {
       CheckCycle(i, visited_finished);
     }
+    std::set<NodeId> leafs1;
+    std::set<NodeId> leafs2;
+    ranges::actions::insert(leafs1, dag.GetLeafs());
+    ranges::actions::insert(leafs2, dag.GetNodes() | ranges::view::filter([](auto i) {
+                                      return i.IsLeaf();
+                                    }));
+    Assert(ranges::equal(leafs1, leafs2));
   }
 }
 
