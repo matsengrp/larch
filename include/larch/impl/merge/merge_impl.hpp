@@ -56,6 +56,8 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     for (auto& [label, id, parent_id, child_id, clade] : added_edges) {
       ResultDAG().Get(parent_id).AddEdge(clade, id, true);
       ResultDAG().Get(child_id).AddEdge(clade, id, false);
+    }
+    for ([[maybe_unused]] auto& [label, id, parent_id, child_id, clade] : added_edges) {
       if (ResultDAG().Get(child_id).IsLeaf()) {
         ResultDAG().AddLeaf(child_id);
       }
