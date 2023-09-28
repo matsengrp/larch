@@ -631,24 +631,28 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
     for (auto e_id : src_sibling_edges) {
       if (std::find(dst_edges.begin(), dst_edges.end(), e_id) == dst_edges.end()) {
         auto e = dag.Get(e_id);
+        auto e_child = e.GetChild();
         e.template SetOverlay<Endpoints>();
-        e.Set(src_parent_node, e.GetChild(), {clade_ctr});
+        e.Set(src_parent_node, e_child, {clade_ctr});
         src_parent_node.AddEdge({clade_ctr++}, e, true);
       }
     }
     new_edge.Set(src_parent_node, new_node, {clade_ctr});
     src_parent_node.AddEdge({clade_ctr}, new_edge, true);
+    new_node.SetSingleParent(new_edge);
     clade_ctr = 0;
     for (auto e_id : src_edges) {
       auto e = dag.Get(e_id);
+      auto e_child = e.GetChild();
       e.template SetOverlay<Endpoints>();
-      e.Set(new_node, e.GetChild(), {clade_ctr});
+      e.Set(new_node, e_child, {clade_ctr});
       new_node.AddEdge({clade_ctr++}, e, true);
     }
     for (auto e_id : dst_edges) {
       auto e = dag.Get(e_id);
+      auto e_child = e.GetChild();
       e.template SetOverlay<Endpoints>();
-      e.Set(new_node, e.GetChild(), {clade_ctr});
+      e.Set(new_node, e_child, {clade_ctr});
       new_node.AddEdge({clade_ctr++}, e, true);
     }
   } else if (has_unifurcation_after_move) {
