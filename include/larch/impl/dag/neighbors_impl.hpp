@@ -112,6 +112,8 @@ void CheckCycle(Edge edge, std::vector<std::pair<bool, bool>>& visited_finished)
 
 }  // namespace
 
+struct SampleId;
+
 template <typename CRTP, typename Tag>
 void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
                                                       bool allow_dag) const {
@@ -121,6 +123,17 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   if (node.IsUA()) {
     Assert(dag.HaveUA());
     Assert(node.GetId() == dag.GetRoot());
+  }
+  if (node.IsLeaf()) {
+    Assert(storage.clades_.empty());
+    if constexpr (std::decay_t<decltype(node)>::template contains_feature<SampleId> or
+                  std::decay_t<decltype(node)>::template contains_feature<
+                      Deduplicate<SampleId>>) {
+      Assert(node.Const().HaveSampleId());
+    }
+  }
+  for (auto& i : storage.clades_) {
+    Assert(not i.empty());
   }
   if (not allow_dag) {
     if (storage.parents_.size() > 1) {
@@ -174,8 +187,14 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
     for (auto i : node.GetChildren()) {
       CheckCycle(i, visited_finished);
     }
-    std::set<NodeId> leafs1;
-    std::set<NodeId> leafs2;
+
+    for (auto i : dag.GetEdges()) {
+      Assert(i.GetChild().ContainsParent(i.GetParent()));
+      Assert(i.GetParent().ContainsChild(i.GetChild()));
+    }
+
+    ContiguousSet<NodeId> leafs1;
+    ContiguousSet<NodeId> leafs2;
     ranges::actions::insert(leafs1, dag.GetLeafs());
     ranges::actions::insert(leafs2, dag.GetNodes() | ranges::view::filter([](auto i) {
                                       return i.IsLeaf();

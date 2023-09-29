@@ -32,7 +32,7 @@ class ContiguousSet {
 
   template <class InputIt>
   ContiguousSet(InputIt first, InputIt last) : data_{first, last} {
-    data_ |= ranges::actions::sort(Compare{});
+    data_ |= ranges::actions::sort(Compare{}) | ranges::actions::unique(Compare{});
   }
 
   ContiguousSet Copy() const { return ContiguousSet{*this}; }
@@ -88,7 +88,7 @@ class ContiguousSet {
   template <typename InputIt>
   void insert(InputIt first, InputIt last) {
     data_.insert(data_.end(), first, last);
-    data_ |= ranges::actions::sort(Compare{});
+    data_ |= ranges::actions::sort(Compare{}) | ranges::actions::unique(Compare{});
   }
 
   void Union(const ContiguousSet& other) {

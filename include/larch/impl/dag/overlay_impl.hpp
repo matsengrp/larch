@@ -54,11 +54,14 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
       "Attempted to SetOverlay on a Feature not supported by given DAG Element.");
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     if (id.value < storage.GetTarget().GetNodesCount()) {
+      auto& replaced_node_storage =
+          std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_);
+      Assert(replaced_node_storage.find(id) == replaced_node_storage.end());
       if constexpr (std::is_copy_assignable_v<F>) {
-        std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_)[id] =
+        replaced_node_storage[id] =
             storage.GetTarget().template GetFeatureStorage<F>(id);
       } else {
-        std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_)[id] =
+        replaced_node_storage[id] =
             storage.GetTarget().template GetFeatureStorage<F>(id).Copy();
       }
     } else {
@@ -66,11 +69,14 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
     }
   } else {
     if (id.value < storage.GetTarget().GetEdgesCount()) {
+      auto& replaced_edge_storage =
+          std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_);
+      Assert(replaced_edge_storage.find(id) == replaced_edge_storage.end());
       if constexpr (std::is_copy_assignable_v<F>) {
-        std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_)[id] =
+        replaced_edge_storage[id] =
             storage.GetTarget().template GetFeatureStorage<F>(id);
       } else {
-        std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_)[id] =
+        replaced_edge_storage[id] =
             storage.GetTarget().template GetFeatureStorage<F>(id).Copy();
       }
     } else {

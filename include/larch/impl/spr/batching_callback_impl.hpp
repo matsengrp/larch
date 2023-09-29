@@ -39,14 +39,6 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
   if (storage.View().InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
     storage.View().GetRoot().Validate(true);
-    for (auto i : storage.View().Const().GetNodes()) {
-      if (not i.IsLeaf()) continue;
-      Assert(i.HaveSampleId());
-    }
-    for (auto i : storage.View().Const().GetNodes()) {
-      if (not i.IsLeaf()) continue;
-      Assert(i.GetOld().HaveSampleId());
-    }
     auto fragment = collapse_empty_fragment_edges_
                         ? storage.View().MakeFragment()
                         : storage.View().MakeUncollapsedFragment();
