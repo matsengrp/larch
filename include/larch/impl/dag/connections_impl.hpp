@@ -120,20 +120,20 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::MakeComplete() const {
   auto& dag = static_cast<const CRTP&>(*this);
   auto clade_union_map = dag.BuildCladeUnionMap();
+  size_t leaf_count = dag.GetLeafsCount();
   dag.ClearConnections();
   // Connect rootsplit nodes.
-  size_t leaf_count = 0;
   std::set<NodeId>* rootsplits = nullptr;
   for (auto& [clade_union, node_ids] : clade_union_map) {
-    if (clade_union.size() > leaf_count) {
+    if (clade_union.size() == leaf_count) {
       rootsplits = &node_ids;
     }
-    leaf_count = std::max(leaf_count, clade_union.size());
+    break;
   }
   for (auto node_id : *rootsplits) {
     dag.AppendEdge(dag.GetRoot().GetId(), node_id, {0});
   }
-  // Add all other nodes.
+  // Connect all other nodes.
   for (auto parent_node : dag.GetNodes()) {
     auto leaf_sets = parent_node.GetLeafsBelow();
     for (size_t clade_idx = 0; clade_idx < leaf_sets.size(); clade_idx++) {
