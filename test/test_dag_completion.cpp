@@ -62,7 +62,6 @@ using Edge = MutableMADAG::EdgeView;
   auto dag = dag_storage.View();
   dag.GetRoot().CalculateLeafsBelow();
   // dag_info(dag_storage);
-
   dag.ClearConnections();
   // dag_info(dag_storage);
   assert_false(dag_compare_topologies(dag_storage, dag_storage_truth),
