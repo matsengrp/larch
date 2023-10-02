@@ -20,6 +20,7 @@ struct FeatureConstView<Connections, CRTP, Tag> {
    * Return a range containing leaf Nodes in the DAG
    */
   auto GetLeafs() const;
+  auto GetLeafsCount() const;
 };
 
 template <typename CRTP, typename Tag>
@@ -31,4 +32,8 @@ struct FeatureMutableView<Connections, CRTP, Tag> {
   void BuildConnections() const;
   void BuildConnectionsRaw() const;
   void AddLeaf(NodeId id) const;
+
+  std::map<std::set<NodeId>, std::set<NodeId>> BuildCladeUnionMap() const;
+  void MakeComplete() const;
+  void ClearConnections() const;
 };

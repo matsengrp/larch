@@ -291,4 +291,3 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(MATNodePtr par_no
     BuildHelper(mat_child, child_node, dag);
   }
 }
-

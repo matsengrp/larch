@@ -47,6 +47,8 @@ struct ElementsContainer {
 
   void Initialize(size_t size);
 
+  void Clear();
+
   template <typename Feature>
   auto& GetFeatureStorage(Id<C> id);
   template <typename Feature>
