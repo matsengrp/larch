@@ -279,7 +279,8 @@ void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGeno
   if (not node.IsUA() and not node.IsMoveNew() and not node.IsLeaf()) {
     node.template SetOverlay<Deduplicate<CompactGenome>>();
     // TODO: we shouldn't overlay SampleID - leafs will not be moving
-    // if constexpr (std::decay_t<decltype(node)>::template contains_feature<SampleId>) {
+    // if constexpr (std::decay_t<decltype(node)>::template contains_feature<SampleId>)
+    // {
     //   if (node.IsLeaf()) {
     //     node.template SetOverlay<SampleId>();
     //   }
@@ -485,7 +486,9 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
         auto grandparent_edge = parent.GetSingleParent();
         size_t current_clade = 0;
 
-        parent.template SetOverlay<Neighbors>();
+        if (not parent.template IsOverlaid<Neighbors>()) {
+          parent.template SetOverlay<Neighbors>();
+        }
         parent.ClearConnections();
 
         bool collapsed_all_children = false;
@@ -511,13 +514,17 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
                   still_to_collapse.push_back(child_edge);
                 } else {
                   auto grandchild_node = child_edge.GetChild();
-                  child_edge.template SetOverlay<Endpoints>();
+                  if (not child_edge.template IsOverlaid<Endpoints>()) {
+                    child_edge.template SetOverlay<Endpoints>();
+                  }
                   child_edge.Set(parent, grandchild_node, {current_clade});
                   parent.AddEdge({current_clade++}, child_edge, true);
                 }
               }
             } else {
-              edge.template SetOverlay<Endpoints>();
+              if (not edge.template IsOverlaid<Endpoints>()) {
+                edge.template SetOverlay<Endpoints>();
+              }
               edge.Set(parent, child, {current_clade});
               parent.AddEdge({current_clade++}, edge, true);
             }
@@ -669,7 +676,9 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
     size_t clade_ctr = 0;
 
     src_grandparent.template SetOverlay<Neighbors>();
-    dst_parent_node.template SetOverlay<Neighbors>();
+    if (not dst_parent_node.template IsOverlaid<Neighbors>()) {
+      dst_parent_node.template SetOverlay<Neighbors>();
+    }
     new_node.template SetOverlay<Neighbors>();
     new_edge.template SetOverlay<Endpoints>();
 
@@ -719,7 +728,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
         dst_parent_node.AddEdge({clade_ctr++}, e, true);
       }
     }
-    new_edge.template SetOverlay<Endpoints>();
     new_edge.Set(dst_parent_node, new_node, {clade_ctr});
     dst_parent_node.AddEdge({clade_ctr++}, new_edge, true);
     clade_ctr = 0;

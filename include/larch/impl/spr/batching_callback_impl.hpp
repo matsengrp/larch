@@ -94,6 +94,7 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
     std::unique_lock lock{merge_mtx_};
     // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
     for (auto leaf_node : reassigned_states_storage_.View().GetLeafs()) {
+      Assert(leaf_node.HaveSampleId());
       auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId().value()).Copy();
       leaf_node = std::move(new_cg);
     }
