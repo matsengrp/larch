@@ -51,11 +51,11 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
       // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
       for (auto leaf_node : fragment.GetNodes()) {
         if (leaf_node.IsLeaf()) {
-          // Assert(leaf_node.GetOld().HaveSampleId());
-          // auto new_cg =
-          //     sample_id_to_cg_map_.at(leaf_node.GetOld().GetSampleId().value()).Copy();
-          // fragment.Get(leaf_node).template SetOverlay<Deduplicate<CompactGenome>>();
-          // fragment.Get(leaf_node) = std::move(new_cg);
+          Assert(leaf_node.GetOld().HaveSampleId());
+          auto new_cg =
+              sample_id_to_cg_map_.at(leaf_node.GetOld().GetSampleId().value()).Copy();
+          fragment.Get(leaf_node).template SetOverlay<Deduplicate<CompactGenome>>();
+          fragment.Get(leaf_node) = std::move(new_cg);
         }
       }
       applied_moves_count_++;

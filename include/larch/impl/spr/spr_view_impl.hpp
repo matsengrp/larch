@@ -593,20 +593,16 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
 
   const bool has_unifurcation_after_move =
       src_parent_node.GetCladesCount() == src.size() + 1;
-  if ((is_sibling_move and src_parent_node.GetCladesCount() == (src.size() + dst.size() + 1)) or
-      src_parent_node.IsTreeRoot() or
+  if ((is_sibling_move and (src_parent_node.GetCladesCount() == (src.size() + dst.size()))) or
+      src_parent_node.IsTreeRoot() or src_parent_node.IsUA() or
       (not is_sibling_move and src_parent_node == lca)) {
     // no-op
     return {};
   }
 
-  size_t old_num_edges = 0;
-  for (auto edge: dag.GetEdges()) {std::ignore = edge;old_num_edges++;}
-
   auto new_node = has_unifurcation_after_move ? src_parent_node : dag.AppendNode();
   auto new_edge = has_unifurcation_after_move ? src_parent_node.GetSingleParent()
                                               : dag.AppendEdge();
-
   std::vector<EdgeId> src_edges;
   std::vector<EdgeId> src_sibling_edges;
   for (auto e : src_parent_node.GetChildren()) {
@@ -633,11 +629,9 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
                                         ? src_parent_node.GetSingleParent()
                                         : EdgeId{NoId};
     src_parent_node.template SetOverlay<Neighbors>();
-    new_node.template SetOverlay<Neighbors>();
-    new_edge.template SetOverlay<Endpoints>();
     src_parent_node.ClearConnections();
     if (src_parent_single_parent != EdgeId{NoId}) { src_parent_node.SetSingleParent(src_parent_single_parent); }
-    new_node.ClearConnections();
+    //new_node.ClearConnections();
     size_t clade_ctr = 0;
     for (auto e_id : src_sibling_edges) {
       if (std::find(dst_edges.begin(), dst_edges.end(), e_id) == dst_edges.end()) {
@@ -747,14 +741,12 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   } else {
     src_parent_node.template SetOverlay<Neighbors>();
     dst_parent_node.template SetOverlay<Neighbors>();
-    new_node.template SetOverlay<Neighbors>();
     auto src_grandparent_edge = src_parent_node.GetSingleParent();
     auto dst_grandparent_edge = dst_parent_node.GetSingleParent();
     src_parent_node.ClearConnections();
     dst_parent_node.ClearConnections();
     src_parent_node.SetSingleParent(src_grandparent_edge);
     dst_parent_node.SetSingleParent(dst_grandparent_edge);
-    new_node.ClearConnections();
     size_t src_parent_clade_ctr = 0;
     for (auto src_sib_edge_id : src_sibling_edges) {
       auto src_sib_edge = dag.Get(src_sib_edge_id);
@@ -786,19 +778,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
       dst_edge.Set(new_node, dst_node, {new_node_clade_ctr});
       new_node.AddEdge({new_node_clade_ctr++}, dst_edge, true);
     }
-    new_edge.template SetOverlay<Endpoints>();
     new_edge.Set(dst_parent_node, new_node, {dst_parent_clade_ctr});
     dst_parent_node.AddEdge({dst_parent_clade_ctr}, new_edge, true);
     new_node.SetSingleParent(new_edge);
   }
-
-
-  size_t new_num_edges = 0;
-  for (auto edge: dag.GetEdges()) {std::ignore = edge; new_num_edges++;}
-  if (not has_unifurcation_after_move) {new_num_edges--;}
-  std::cout << old_num_edges << " vs " << new_num_edges << "\n" << std::flush;
-  Assert(old_num_edges == new_num_edges);
-
   return {new_node, has_unifurcation_after_move};
 }
 
