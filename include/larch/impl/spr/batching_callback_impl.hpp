@@ -125,7 +125,7 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
     leaf_node = std::move(new_cg);
   }
   check_edge_mutations(reassigned_states_storage_.View().Const());
-  reassigned_states_storage_.View().RecomputeCompactGenomes();
+  reassigned_states_storage_.View().RecomputeCompactGenomes(false);
   {
     std::unique_lock lock{merge_mtx_};
     merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});

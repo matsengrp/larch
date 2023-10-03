@@ -580,7 +580,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
 
   auto first_src_node = dag.Get(src[0]);
   auto first_dst_node = dag.Get(dst[0]);
-
   if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId() or
       first_dst_node.IsMATRoot()) {
     // no-op
@@ -590,9 +589,9 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   auto src_parent_node = first_src_node.GetSingleParent().GetParent();
   auto dst_parent_node = first_dst_node.GetSingleParent().GetParent();
   const bool is_sibling_move = src_parent_node.GetId() == dst_parent_node.GetId();
-
-  const bool has_unifurcation_after_move =
-      src_parent_node.GetCladesCount() == src.size() + 1;
+  const bool has_unifurcation_after_move = is_sibling_move ?
+      src_parent_node.GetCladesCount() <= (src.size() + dst.size()) :
+      src_parent_node.GetCladesCount() <= (src.size() + 1);
   if ((is_sibling_move and
        (src_parent_node.GetCladesCount() == (src.size() + dst.size()))) or
       src_parent_node.IsTreeRoot() or src_parent_node.IsUA() or
