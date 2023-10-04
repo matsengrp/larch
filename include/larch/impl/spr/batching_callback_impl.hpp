@@ -85,6 +85,15 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   std::cout << "Larch-Usher callback Applying " << applied_moves_count_ << "\n"
             << std::flush;
   applied_moves_count_ = 0;
+  for (auto leaf: tree.get_leaves()) {
+    std::string this_sample_id = tree.get_node_name(leaf->node_id);
+    if (this_sample_id.empty()) {
+      auto current_storage_leaf = reassigned_states_storage_.View().Get(NodeId{leaf->node_id});
+      Assert(current_storage_leaf.HaveSampleId());
+      std::string correct_sample_id = current_storage_leaf.GetSampleId().value();
+      tree.rename_node(leaf->node_id, correct_sample_id);
+    }
+  }
   reassigned_states_storage_ = AddMappedNodes(AddMATConversion(Storage{{}}));
   reassigned_states_storage_.View().BuildFromMAT(
       tree, merge_.GetResult().GetReferenceSequence());
