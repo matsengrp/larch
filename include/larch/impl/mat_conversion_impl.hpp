@@ -221,15 +221,21 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
     dag.BuildConnections();
   }
   for (auto leaf : dag.GetLeafs()) {
+    std::string sample_id = mat.get_node_name(leaf.GetMATNode()->node_id);
+    Assert(not sample_id.empty());
     if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
       auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-          SampleId{mat.get_node_name(leaf.GetMATNode()->node_id).c_str()});
+          SampleId{sample_id});
       leaf = id_iter.first;
     } else {
-      leaf.SetSampleId(mat.get_node_name(leaf.GetMATNode()->node_id).c_str());
+      leaf.SetSampleId(sample_id);
     }
   }
   dag.AddUA(EdgeMutations{mutations_view(mat.root)});
+  for (auto leaf : dag.GetLeafs()) {
+    Assert(leaf.HaveSampleId());
+  }
+  dag.GetRoot().Validate(true, false);
 }
 
 template <typename CRTP>
@@ -291,4 +297,3 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(MATNodePtr par_no
     BuildHelper(mat_child, child_node, dag);
   }
 }
-
