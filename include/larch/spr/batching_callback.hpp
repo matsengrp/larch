@@ -48,6 +48,7 @@ class BatchingCallback : public Move_Found_Callback {
   bool collapse_empty_fragment_edges_;
   ArbitraryInt applied_moves_count_;
   ConcurrentUnorderedMap<std::string, CompactGenome> sample_id_to_cg_map_;
+  std::map<std::string, std::string> cg_to_sample_id_map_;
   ReassignedStatesStorage reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage{{}}));
   std::shared_mutex mat_mtx_;

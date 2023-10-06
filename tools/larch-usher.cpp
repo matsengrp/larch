@@ -330,19 +330,6 @@ struct Merge_All_Profitable_Moves_Found_Callback
 
   void OnRadius(){};
 
-  void OnReassignedStates(MAT::Tree& tree) {
-    reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
-    check_edge_mutations(reassigned_states_storage_.View().Const());
-    reassigned_states_storage_.View().RecomputeCompactGenomes();
-    {
-      std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
-      sample_mat_.store(std::addressof(tree));
-      merge_.ComputeResultEdgeMutations();
-    }
-  }
-
   SampleDAG sample_dag_;
   Merge& merge_;
   ReassignedStatesStorage reassigned_states_storage_ =
@@ -452,18 +439,6 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
   }
 
   void OnRadius(){};
-
-  void OnReassignedStates(MAT::Tree& tree) {
-    reassigned_states_storage_.View().BuildFromMAT(tree,
-                                                   sample_dag_.GetReferenceSequence());
-    check_edge_mutations(reassigned_states_storage_.View().Const());
-    reassigned_states_storage_.View().RecomputeCompactGenomes();
-    {
-      std::scoped_lock<std::mutex> lock{merge_mtx_};
-      merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
-      merge_.ComputeResultEdgeMutations();
-    }
-  }
 
   SampleDAG sample_dag_;
   Merge& merge_;

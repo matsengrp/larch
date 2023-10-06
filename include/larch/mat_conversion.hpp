@@ -75,6 +75,8 @@ struct ExtraFeatureMutableView<MATConversion, CRTP> {
   auto GetMutableNodeFromMAT(MATNodePtr ptr) const;
   void BuildMAT(MAT::Tree& tree) const;
   void BuildFromMAT(MAT::Tree& mat, std::string_view reference_sequence) const;
+  void BuildFromMAT(MAT::Tree& mat, std::string_view reference_sequence,
+  std::map<std::string, std::string> cg_to_sample_id_map) const;
 
  private:
   template <typename Node>
