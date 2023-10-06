@@ -58,6 +58,22 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
           fragment.Get(leaf_node) = std::move(new_cg);
         }
       }
+      for (auto node: fragment.GetNodes()) {
+        if (not node.IsUA()) {
+          Assert(node.GetId().value != NoId);
+         if (node.IsLeaf()) {
+           Assert(node.GetOld().HaveSampleId());
+           Assert(not node.GetOld().GetSampleId().value().empty());
+         }
+        }
+      }
+      for (auto edge: fragment.GetEdges()) {
+        Assert(edge.GetId().value != NoId);
+        Assert(edge.GetChild().GetId().value != NoId);
+        if (not edge.GetParent().IsUA()) {
+          Assert(edge.GetParent().GetId().value != NoId);
+        }
+      }
       applied_moves_count_++;
       batch_.push_back(std::move(fragment));
       /*
