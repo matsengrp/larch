@@ -41,6 +41,10 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     MergeEdges(i, dags, below, dags_labels, result_edges_, added_edges);
   });
 
+  for (auto& i : result_nodes_) {
+    Assert(i.second.value != NoId);
+  }
+
   ResultDAG().InitializeNodes(result_nodes_.size());
   std::atomic<size_t> edge_id{ResultDAG().GetEdgesCount()};
   ResultDAG().InitializeEdges(result_edges_.size());
@@ -191,6 +195,7 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
       } else {
         new_id.value = ins_pair.first->second.value;
       }
+      Assert(new_id.value != NoId);
       auto result = std::make_pair(ins_pair, new_id);
       return result;
     }();
@@ -247,10 +252,15 @@ void Merge::BuildResult(
   id = {edge_id.fetch_add(1)};
   auto parent = result_nodes.find(edge.GetParent());
   auto child = result_nodes.find(edge.GetChild());
-  Assert(parent != result_nodes.end());
-  Assert(child != result_nodes.end());
+  Assert(parent->second.value != NoId);
+  Assert(child->second.value != NoId);
+  if (result_dag.Get(child->second).IsLeaf()) {
+    Assert(not child->first.GetSampleId()->IsEmpty());
+  }
   Assert(parent->second.value < result_dag.GetNodesCount());
   Assert(child->second.value < result_dag.GetNodesCount());
+  Assert(parent != result_nodes.end());
+  Assert(child != result_nodes.end());
   parent_id = parent->second;
   child_id = child->second;
   clade = edge.ComputeCladeIdx();
