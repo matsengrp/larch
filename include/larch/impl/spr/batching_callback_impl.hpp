@@ -103,7 +103,7 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   applied_moves_count_ = 0;
   reassigned_states_storage_ = AddMappedNodes(AddMATConversion(Storage{{}}));
   reassigned_states_storage_.View().BuildFromMAT(
-      tree, merge_.GetResult().GetReferenceSequence(), cg_to_sample_id_map_);
+      tree, merge_.GetResult().GetReferenceSequence());
   check_edge_mutations(reassigned_states_storage_.View().Const());
   reassigned_states_storage_.View().RecomputeCompactGenomes();
   {
@@ -139,7 +139,6 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
   for (auto leaf_node : reassigned_states_storage_.View().GetLeafs()) {
     auto this_cg = leaf_node.GetCompactGenome().ToString();
-    cg_to_sample_id_map_.emplace(this_cg, leaf_node.GetSampleId().value());
     auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId().value()).Copy();
     leaf_node = std::move(new_cg);
   }

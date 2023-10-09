@@ -170,6 +170,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT(MAT::Tree& tree) con
   tree.root = mat_root_node;
   tree.register_node_serial(mat_root_node);
   BuildHelper(root_node, mat_root_node, tree);
+  tree.fix_node_idx();
 }
 
 template <typename CRTP>
@@ -232,83 +233,6 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
     }
   }
   dag.AddUA(EdgeMutations{mutations_view(mat.root)});
-  for (auto leaf : dag.GetLeafs()) {
-    Assert(leaf.HaveSampleId());
-  }
-  dag.GetRoot().Validate(true, false);
-}
-
-template <typename CRTP>
-void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
-    MAT::Tree& mat, std::string_view reference_sequence,
-    std::map<std::string, std::string> cg_to_sample_id_map
-    ) const {
-  auto& dag = static_cast<const CRTP&>(*this);
-  Assert(dag.IsEmpty());
-  dag.template GetFeatureExtraStorage<Component::Node, MATConversion>().mat_tree_ =
-      std::addressof(mat);
-  dag.SetReferenceSequence(reference_sequence);
-  auto root_node = dag.AppendNode();
-  root_node.SetMATNode(mat.root);
-  BuildHelper(mat.root, root_node, dag);
-  dag.BuildConnections();
-
-  if (mat.condensed_nodes.size() > 0) {
-    std::cout << "Here is a problem! We are not condensing MAT nodes right now...\n" << std::flush;
-    Assert(false);
-    for (auto cn = mat.condensed_nodes.begin(); cn != mat.condensed_nodes.end(); cn++) {
-      auto node_to_uncondense = mat.get_node(cn->first);
-      auto parent_node = (node_to_uncondense->parent != NULL)
-                             ? node_to_uncondense->parent
-                             : node_to_uncondense;
-      auto dag_parent_node = dag.GetNodeFromMAT(
-          parent_node);  // there's only ever one parent because MATs are tree-shaped
-      size_t num_samples = cn->second.size();
-      if (num_samples > 0) {
-        // reset the DAG node that points to the condensed node so that it
-        // now points to the first node in the vector of condensed nodes.
-        for (auto node : dag_parent_node.GetChildren() | Transform::GetChild()) {
-          if (node.GetMATNode() == node_to_uncondense) {
-            node.SetMATNode(mat.get_node(cn->second[0]));
-            node.SetUncondensedMATNode(mat.get_node(cn->second[0]));
-            break;
-          }
-        }
-        // add all of the remaining condensed nodes as siblings
-        CladeIdx clade_idx = {dag_parent_node.GetCladesCount()};
-        for (size_t s = 1; s < num_samples; s++) {
-          auto dag_child_node = dag.AppendNode();
-          auto mat_child_node = mat.get_node(cn->second[s]);
-          dag_child_node.SetMATNode(mat.get_node(cn->second[0]));
-          dag_child_node.SetUncondensedMATNode(mat_child_node);
-
-          auto child_edge = dag.AppendEdge(dag_parent_node, dag_child_node, clade_idx);
-          child_edge.SetEdgeMutations({mutations_view(mat_child_node)});
-          ++clade_idx.value;
-        }
-      }
-    }
-    dag.BuildConnections();
-  }
-
-  dag.AddUA(EdgeMutations{mutations_view(mat.root)});
-  dag.BuildConnections();
-  dag.RecomputeCompactGenomes(true);
-
-  for (auto leaf : dag.GetLeafs()) {
-    std::string sample_id = mat.get_node_name(leaf.GetMATNode()->node_id);
-    if (sample_id.empty()) {
-      sample_id = cg_to_sample_id_map[leaf.GetCompactGenome().ToString()];
-    }
-    Assert(not sample_id.empty());
-    if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
-      auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-          SampleId{sample_id});
-      leaf = id_iter.first;
-    } else {
-      leaf.SetSampleId(sample_id);
-    }
-  }
   for (auto leaf : dag.GetLeafs()) {
     Assert(leaf.HaveSampleId());
   }

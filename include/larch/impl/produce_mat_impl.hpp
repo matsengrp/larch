@@ -66,7 +66,7 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   for (; static_cast<size_t>(1) << rad_exp <= ddepth; rad_exp++) {
     auto all_nodes = tree.depth_first_expansion();
     std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
-
+    tree.fix_node_idx();
     optimize_inner_loop(all_nodes,     // nodes to search
                         tree,          // tree
                         1 << rad_exp,  // radius
