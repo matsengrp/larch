@@ -406,6 +406,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
   auto oldest_changed = dag.GetOldestChangedNode().GetSingleParent().GetParent();
+  NodeId oldest_node = dag.GetOldestChangedNode().GetSingleParent().GetParent().GetId();
   if (oldest_changed.IsUA()) {
     // we need to add the UA node as the root anchor node of the fragment,
     // somehow
@@ -413,11 +414,12 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   } else {
     result_nodes.push_back(oldest_changed.GetSingleParent().GetParent());
     result_edges.push_back(oldest_changed.GetSingleParent());
+    oldest_node = oldest_changed.GetSingleParent().GetParent().GetId();
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
-  return Fragment{dag, std::move(collapsed.first), std::move(collapsed.second), oldest_changed};
+  return Fragment{dag, std::move(collapsed.first), std::move(collapsed.second), oldest_node};
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -427,6 +429,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeUncollapsedFragment
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
   auto oldest_changed = dag.GetOldestChangedNode().GetSingleParent().GetParent();
+  NodeId oldest_node = dag.GetOldestChangedNode().GetSingleParent().GetParent().GetId();
   if (oldest_changed.IsUA()) {
     // we need to add the UA node as the root anchor node of the fragment,
     // somehow
@@ -434,9 +437,10 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeUncollapsedFragment
   } else {
     result_nodes.push_back(oldest_changed.GetSingleParent().GetParent());
     result_edges.push_back(oldest_changed.GetSingleParent());
+    oldest_node = oldest_changed.GetSingleParent().GetParent().GetId();
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
-  return Fragment{dag, std::move(result_nodes), std::move(result_edges), oldest_changed};
+  return Fragment{dag, std::move(result_nodes), std::move(result_edges), oldest_node};
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -544,7 +548,9 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   for (auto node_id : current_nodes) {
     auto node = dag.Get(node_id);
     for (auto child : node.GetChildren()) {
-      current_edges.push_back(child);
+      if (std::find(current_nodes.begin(), current_nodes.end(), child.GetChild().GetId()) != current_nodes.end()) {
+        current_edges.push_back(child);
+      }
     }
   }
   return {current_nodes, current_edges};
