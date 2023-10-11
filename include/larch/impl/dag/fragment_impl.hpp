@@ -48,3 +48,8 @@ template <typename DAG>
 auto Fragment<DAG>::GetRoot() const {
   return dag_.GetRoot();
 }
+
+template <typename DAG>
+bool Fragment<DAG>::IsTree() const {
+  return GetNodesCount() == GetEdgesCount() + 1;
+}

@@ -4,6 +4,7 @@ Merge::Merge(std::string_view reference_sequence) : result_dag_storage_{{}} {
 
 template <typename DAGSRange>
 void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
+  std::unique_lock lock{add_dags_mtx_};
   if (below.value != NoId and dags.size() != 1) {
     Fail("Pass exactly one DAG when merging below given node.");
   }
@@ -20,6 +21,10 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   std::vector<size_t> idxs;
   idxs.resize(dags.size());
   std::iota(idxs.begin(), idxs.end(), 0);
+
+  tbb::parallel_for_each(idxs, [&](size_t i) {
+    dags.at(i).GetRoot().Validate(true, dags.at(i).IsTree());
+  });
 
   std::vector<std::vector<NodeLabel>> dags_labels;
   dags_labels.resize(dags.size());
@@ -38,12 +43,15 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   tbb::parallel_for_each(idxs, [&](size_t i) {
     MergeNodes(i, dags, below, dags_labels, result_nodes_, result_node_labels_,
                node_id);
-    MergeEdges(i, dags, below, dags_labels, result_edges_, added_edges);
   });
 
   for (auto& i : result_nodes_) {
     Assert(i.second.value != NoId);
   }
+
+  tbb::parallel_for_each(idxs, [&](size_t i) {
+    MergeEdges(i, dags, below, dags_labels, result_nodes_, result_edges_, added_edges);
+  });
 
   ResultDAG().InitializeNodes(result_nodes_.size());
   std::atomic<size_t> edge_id{ResultDAG().GetEdgesCount()};
@@ -190,15 +198,18 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
       auto ins_pair = result_nodes.insert({label, new_id});
       if (ins_pair.second) {
         new_id.value = node_id.fetch_add(1);
+        Assert(new_id.value != NoId);
         ins_pair.first->second = new_id;
         result_node_labels[new_id] = label;
       } else {
         new_id.value = ins_pair.first->second.value;
+        Assert(new_id.value != NoId);
       }
-      Assert(new_id.value != NoId);
       auto result = std::make_pair(ins_pair, new_id);
       return result;
     }();
+    Assert(insert_pair.first->second.value != NoId);
+    Assert(result_nodes.find(label) != result_nodes.end());
     if (insert_pair.second) {
       if constexpr (std::decay_t<decltype(dag)>::template contains_element_feature<
                         Component::Node, MappedNodes>) {
@@ -220,6 +231,7 @@ template <typename DAGSRange>
 void Merge::MergeEdges(
     size_t i, const DAGSRange& dags, NodeId below,
     std::vector<std::vector<NodeLabel>>& dags_labels,
+    const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
     ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
     tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
         added_edges) {
@@ -233,6 +245,8 @@ void Merge::MergeEdges(
     const auto& child_label = labels.at(edge.GetChildId().value);
     Assert(not parent_label.Empty());
     Assert(not child_label.Empty());
+    Assert(result_nodes.find(parent_label) != result_nodes.end());
+    Assert(result_nodes.find(child_label) != result_nodes.end());
     auto ins = result_edges.insert({{parent_label, child_label}, {}});
     if (ins.second) {
       added_edges.push_back({{parent_label, child_label}, {}, {}, {}, {}});

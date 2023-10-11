@@ -20,6 +20,7 @@ class Fragment {
   auto GetNodes() const;
   auto GetEdges() const;
   auto GetRoot() const;
+  bool IsTree() const;
 
  private:
   DAG dag_;

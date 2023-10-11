@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <shared_mutex>
+#include <mutex>
 #include <thread>
 #include <atomic>
 #include <numeric>
@@ -107,6 +108,7 @@ class Merge {
   static void MergeEdges(
       size_t i, const DAGSRange& dags, NodeId below,
       std::vector<std::vector<NodeLabel>>& dags_labels,
+      const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
       ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
       tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
           added_edges);
@@ -132,6 +134,8 @@ class Merge {
 
   // Resulting DAG from merging the input DAGs.
   MergeDAGStorage result_dag_storage_;
+
+  std::mutex add_dags_mtx_;
 };
 
 #include "larch/impl/merge/merge_impl.hpp"
