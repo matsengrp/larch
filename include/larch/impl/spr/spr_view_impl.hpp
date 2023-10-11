@@ -417,7 +417,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
-  return Fragment{dag, std::move(collapsed.first), std::move(collapsed.second)};
+  return Fragment{dag, std::move(collapsed.first), std::move(collapsed.second), oldest_changed};
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -436,7 +436,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeUncollapsedFragment
     result_edges.push_back(oldest_changed.GetSingleParent());
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
-  return Fragment{dag, std::move(result_nodes), std::move(result_edges)};
+  return Fragment{dag, std::move(result_nodes), std::move(result_edges), oldest_changed};
 }
 
 template <typename DAG, typename CRTP, typename Tag>

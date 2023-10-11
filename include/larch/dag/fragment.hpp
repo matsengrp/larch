@@ -10,7 +10,7 @@ class Fragment {
   static const bool contains_element_feature =
       DAG::template contains_element_feature<C, Feature>;
 
-  Fragment(DAG dag, std::vector<NodeId>&& nodes, std::vector<EdgeId>&& edges);
+  Fragment(DAG dag, std::vector<NodeId>&& nodes, std::vector<EdgeId>&& edges, NodeId root_node_id);
 
   void AssertUA() const;
   size_t GetNodesCount() const;
@@ -26,4 +26,5 @@ class Fragment {
   DAG dag_;
   const std::vector<NodeId> nodes_;
   const std::vector<EdgeId> edges_;
+  const NodeId root_node_id_;
 };

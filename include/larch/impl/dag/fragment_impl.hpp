@@ -4,10 +4,11 @@
 
 template <typename DAG>
 Fragment<DAG>::Fragment(DAG dag, std::vector<NodeId>&& nodes,
-                        std::vector<EdgeId>&& edges)
+                        std::vector<EdgeId>&& edges, NodeId root_node_id)
     : dag_{dag},
       nodes_{std::forward<std::vector<NodeId>>(nodes)},
-      edges_{std::forward<std::vector<EdgeId>>(edges)} {}
+      edges_{std::forward<std::vector<EdgeId>>(edges)},
+      root_node_id_{root_node_id} {}
 
 template <typename DAG>
 void Fragment<DAG>::AssertUA() const {
@@ -46,7 +47,7 @@ auto Fragment<DAG>::GetEdges() const {
 
 template <typename DAG>
 auto Fragment<DAG>::GetRoot() const {
-  return dag_.GetRoot();
+  return dag_.Get(root_node_id_);
 }
 
 template <typename DAG>
