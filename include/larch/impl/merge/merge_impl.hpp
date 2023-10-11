@@ -22,9 +22,9 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   idxs.resize(dags.size());
   std::iota(idxs.begin(), idxs.end(), 0);
 
-  //tbb::parallel_for_each(idxs, [&](size_t i) {
-  //  dags.at(i).GetRoot().Validate(true, dags.at(i).IsTree());
-  //});
+  tbb::parallel_for_each(idxs, [&](size_t i) {
+    dags.at(i).GetRoot().Validate(true, dags.at(i).IsTree());
+  });
 
   std::vector<std::vector<NodeLabel>> dags_labels;
   dags_labels.resize(dags.size());
