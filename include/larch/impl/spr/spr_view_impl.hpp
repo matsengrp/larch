@@ -494,6 +494,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
           parent.template SetOverlay<Neighbors>();
         }
         parent.ClearConnections();
+        parent.SetSingleParent(grandparent_edge);
 
         bool collapsed_all_children = false;
         while (not collapsed_all_children) {
@@ -507,7 +508,19 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
             auto child = edge.GetChild();
             if (is_collapsible_edge[edge]) {
               if (child.IsNonrootAnchorNode()) {
-                child.template SetOverlay<HypotheticalNode>();
+                if (not child.template IsOverlaid<HypotheticalNode>()) {
+                  child.template SetOverlay<HypotheticalNode>();
+                }
+                if (not edge.template IsOverlaid<Endpoints>()) {
+                  edge.template SetOverlay<Endpoints>();
+                }
+                edge.Set(parent, child, {current_clade});
+                parent.AddEdge({current_clade++}, edge, true);
+                if (not child.template IsOverlaid<Neighbors>()) {
+                  child.template SetOverlay<Neighbors>();
+                }
+                child.SetSingleParent(edge);
+                
               } else if (node_id == fragment_root) {
                 // that is, if parent is root anchor node...
                 current_nodes.insert(current_nodes.begin(),
@@ -523,6 +536,10 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
                   }
                   child_edge.Set(parent, grandchild_node, {current_clade});
                   parent.AddEdge({current_clade++}, child_edge, true);
+                  if (not grandchild_node.template IsOverlaid<Neighbors>()) {
+                    grandchild_node.template SetOverlay<Neighbors>();
+                  }
+                  grandchild_node.SetSingleParent(child_edge);
                 }
               }
             } else {
