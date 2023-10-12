@@ -456,120 +456,97 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   // keep track of edges/nodes that are collapsible
   std::unordered_map<NodeId, bool> is_parent_of_collapsible_edge;
   std::unordered_map<NodeId, bool> is_child_of_collapsible_edge;
-  std::unordered_map<EdgeId, bool> is_collapsible_edge;
+  std::unordered_map<NodeId, bool> parent_is_in_fragment;
+  std::unordered_map<NodeId, size_t> clades_count;
   for (auto edge_id : fragment_edges) {
     auto edge = dag.Get(edge_id);
     auto parent = edge.GetParent();
     auto child = edge.GetChild();
+    parent_is_in_fragment.insert({child, true});
     if (not(parent.Const().GetCompactGenome() != child.Const().GetCompactGenome() or
-            child.IsLeaf() or parent.IsUA())) {
+            child.IsLeaf() or parent.IsUA() or child.IsNonrootAnchorNode())) {
       is_parent_of_collapsible_edge.insert({parent, true});
       is_child_of_collapsible_edge.insert({child, true});
-      is_collapsible_edge.insert({edge, true});
     }
   }
-
+  auto FindFinalParent = [&](auto&& self, NodeId node_id) -> std::pair<EdgeId, NodeId> {
+    if (dag.Get(node_id) == dag.GetRoot()) {
+      return {EdgeId{NoId}, node_id};
+    }
+    auto parent_edge = dag.Get(node_id).GetSingleParent();
+    auto parent_node = parent_edge.GetParent();
+    if (is_child_of_collapsible_edge[node_id]) {
+      return self(self, parent_node);
+    } else if (is_child_of_collapsible_edge[parent_node]) {
+      auto grandparent = self(self, parent_node);
+      return {grandparent.first, dag.Get(grandparent.first).GetChild()};
+    } else {
+      return {parent_edge, parent_node};
+    }
+  };
   std::vector<NodeId> current_nodes;
   std::vector<EdgeId> current_edges;
-
-  for (auto node_id : fragment_nodes) {
-    if (not is_child_of_collapsible_edge[node_id]) {
+  for (auto node_id: fragment_nodes) {
+    auto this_node = dag.Get(node_id);
+    if (this_node.IsNonrootAnchorNode() or this_node.IsLeaf() or (not is_child_of_collapsible_edge[node_id])) {
       current_nodes.push_back(node_id);
-      if (is_parent_of_collapsible_edge[node_id]) {
-        auto parent = dag.Get(node_id);
-
-        std::vector<EdgeId> current_children;
-        if (parent.IsMoveNew()) {
-          current_children.push_back(dag.GetMoveSource().GetSingleParent());
-          current_children.push_back(dag.GetMoveTarget().GetSingleParent());
-        } else {
-          for (auto c : parent.GetChildren() | Transform::GetId()) {
-            current_children.push_back(c);
-          }
+      if (is_parent_of_collapsible_edge[node_id] and node_id == fragment_root) {
+        auto grandparent_edge = this_node.GetSingleParent();
+        current_nodes.insert(current_nodes.begin(), grandparent_edge.GetParent().GetId());
+        current_edges.insert(current_edges.begin(), grandparent_edge.GetId());
+      }
+      if (parent_is_in_fragment[node_id]) {
+        if (not this_node.template IsOverlaid<HypotheticalNode>()) {
+          this_node.template SetOverlay<HypotheticalNode>();
         }
-        auto grandparent_edge = parent.GetSingleParent();
-        size_t current_clade = 0;
-
-        if (not parent.template IsOverlaid<Neighbors>()) {
-          parent.template SetOverlay<Neighbors>();
+        auto parent_pair = FindFinalParent(FindFinalParent, node_id);
+        auto parent_edge = dag.Get(node_id).GetSingleParent();
+        auto parent_node = dag.Get(parent_pair.second);
+        if (not parent_edge.template IsOverlaid<Endpoints>()) {
+          parent_edge.template SetOverlay<Endpoints>();
         }
-        parent.ClearConnections();
-        parent.SetSingleParent(grandparent_edge);
-
-        bool collapsed_all_children = false;
-        while (not collapsed_all_children) {
-          collapsed_all_children = true;
-          std::vector<EdgeId> still_to_collapse;
-
-          // try to add all (non-collapsible) edges below current node, as well as the
-          // children of any collapsible edges
-          for (auto edge_id : current_children) {
-            auto edge = dag.Get(edge_id);
-            auto child = edge.GetChild();
-            if (is_collapsible_edge[edge]) {
-              if (child.IsNonrootAnchorNode()) {
-                if (not child.template IsOverlaid<HypotheticalNode>()) {
-                  child.template SetOverlay<HypotheticalNode>();
-                }
-                if (not edge.template IsOverlaid<Endpoints>()) {
-                  edge.template SetOverlay<Endpoints>();
-                }
-                edge.Set(parent, child, {current_clade});
-                parent.AddEdge({current_clade++}, edge, true);
-                if (not child.template IsOverlaid<Neighbors>()) {
-                  child.template SetOverlay<Neighbors>();
-                }
-                child.SetSingleParent(edge);
-                
-              } else if (node_id == fragment_root) {
-                // that is, if parent is root anchor node...
-                current_nodes.insert(current_nodes.begin(),
-                                     grandparent_edge.GetParent().GetId());
-              }
-              for (auto child_edge : child.GetChildren()) {
-                if (is_collapsible_edge[child_edge]) {
-                  still_to_collapse.push_back(child_edge);
-                } else {
-                  auto grandchild_node = child_edge.GetChild();
-                  if (not child_edge.template IsOverlaid<Endpoints>()) {
-                    child_edge.template SetOverlay<Endpoints>();
-                  }
-                  child_edge.Set(parent, grandchild_node, {current_clade});
-                  parent.AddEdge({current_clade++}, child_edge, true);
-                  if (not grandchild_node.template IsOverlaid<Neighbors>()) {
-                    grandchild_node.template SetOverlay<Neighbors>();
-                  }
-                  grandchild_node.SetSingleParent(child_edge);
-                }
-              }
-            } else {
-              if (not edge.template IsOverlaid<Endpoints>()) {
-                edge.template SetOverlay<Endpoints>();
-              }
-              edge.Set(parent, child, {current_clade});
-              parent.AddEdge({current_clade++}, edge, true);
-            }
-          }
-          // check if any of the grandchildren/edges we're trying to add are in turn
-          // collapsible
-          if (not still_to_collapse.empty()) {
-            current_children.clear();
-            collapsed_all_children = false;
-            current_children.insert(current_children.begin(), still_to_collapse.begin(),
-                                    still_to_collapse.end());
-          }
+        if (not this_node.template IsOverlaid<Neighbors>()) {
+          this_node.template SetOverlay<Neighbors>();
         }
+        size_t clade = clades_count[parent_node];
+        if (not parent_node.template IsOverlaid<HypotheticalNode>()) {
+          parent_node.template SetOverlay<HypotheticalNode>();
+        }
+        if (not parent_node.template IsOverlaid<Neighbors>()) {
+          [[maybe_unused]] auto gp_edge = parent_node.IsUA() ? EdgeId{NoId} : parent_node.GetSingleParent();
+          parent_node.template SetOverlay<Neighbors>();
+          parent_node.ClearConnections();
+          if (gp_edge.value != NoId) {
+            parent_node.SetSingleParent(gp_edge);
+          }
+          clade = 0;
+        }
+        parent_edge.Set(parent_node, this_node, {clade});
+        parent_node.AddEdge({clade}, parent_edge, true);
+        clades_count.insert_or_assign(parent_node, clade + 1);
+        this_node.SetSingleParent(parent_edge);
+        current_edges.push_back(parent_edge);
       }
     }
   }
-  for (auto node_id : current_nodes) {
+  for (auto node_id: current_nodes) {
     auto node = dag.Get(node_id);
-    for (auto child : node.GetChildren()) {
-      if (std::find(current_nodes.begin(), current_nodes.end(), child.GetChild().GetId()) != current_nodes.end()) {
-        current_edges.push_back(child);
-      }
+    if (node != dag.GetRoot()) {
+      Assert(node.GetParentsCount() == 1);
     }
   }
+  for (auto edge_id: current_edges) {
+    auto parent = dag.Get(edge_id).GetParent();
+    auto child = dag.Get(edge_id).GetChild();
+    Assert(child.GetParentsCount() == 1);
+    if (parent != dag.GetRoot()) {
+      Assert(parent.GetParentsCount() == 1);
+    }
+    Assert(std::find(current_nodes.begin(), current_nodes.end(), parent) != current_nodes.end());
+    Assert(std::find(current_nodes.begin(), current_nodes.end(), child) != current_nodes.end());
+  }
+  Assert(current_nodes.size() == current_edges.size() + 1);
+
   return {current_nodes, current_edges};
 }
 
@@ -662,7 +639,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
     if (src_parent_single_parent != EdgeId{NoId}) {
       src_parent_node.SetSingleParent(src_parent_single_parent);
     }
-    // new_node.ClearConnections();
     size_t clade_ctr = 0;
     for (auto e_id : src_sibling_edges) {
       if (std::find(dst_edges.begin(), dst_edges.end(), e_id) == dst_edges.end()) {
