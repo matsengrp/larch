@@ -508,24 +508,29 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
         if (not this_node.template IsOverlaid<Neighbors>()) {
           this_node.template SetOverlay<Neighbors>();
         }
-        size_t clade = clades_count[parent_node];
         if (not parent_node.template IsOverlaid<HypotheticalNode>()) {
           parent_node.template SetOverlay<HypotheticalNode>();
         }
         if (not parent_node.template IsOverlaid<Neighbors>()) {
-          [[maybe_unused]] auto gp_edge = parent_node.IsUA() ? EdgeId{NoId} : parent_node.GetSingleParent();
+          [[maybe_unused]] auto gp_edge_id = parent_node.IsUA() ? EdgeId{NoId} : parent_node.GetSingleParent();
           parent_node.template SetOverlay<Neighbors>();
           parent_node.ClearConnections();
-          if (gp_edge.value != NoId) {
+          clades_count.insert({parent_node, 0});
+          if (gp_edge_id.value != NoId) {
+            auto gp_edge = dag.Get(gp_edge_id);
+            if (not gp_edge.template IsOverlaid<Endpoints>()) {
+              gp_edge.template SetOverlay<Endpoints>();
+            }
+            gp_edge.Set(gp_edge.GetParent(), parent_node, {gp_edge.GetClade().value});
             parent_node.SetSingleParent(gp_edge);
           }
-          clade = 0;
         }
+        size_t clade = clades_count[parent_node];
         parent_edge.Set(parent_node, this_node, {clade});
         parent_node.AddEdge({clade}, parent_edge, true);
-        clades_count.insert_or_assign(parent_node, clade + 1);
         this_node.SetSingleParent(parent_edge);
         current_edges.push_back(parent_edge);
+        clades_count.insert_or_assign(parent_node, clade + 1);
       }
     }
   }
