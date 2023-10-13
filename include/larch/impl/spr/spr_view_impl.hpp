@@ -512,10 +512,12 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
           parent_node.template SetOverlay<HypotheticalNode>();
         }
         if (not parent_node.template IsOverlaid<Neighbors>()) {
-          [[maybe_unused]] auto gp_edge_id = parent_node.IsUA() ? EdgeId{NoId} : parent_node.GetSingleParent();
           parent_node.template SetOverlay<Neighbors>();
+        }
+        auto clade_ins = clades_count.insert({parent_node, 0});
+        if (clade_ins.second) {
+          [[maybe_unused]] auto gp_edge_id = parent_node.IsUA() ? EdgeId{NoId} : parent_node.GetSingleParent();
           parent_node.ClearConnections();
-          clades_count.insert({parent_node, 0});
           if (gp_edge_id.value != NoId) {
             auto gp_edge = dag.Get(gp_edge_id);
             if (not gp_edge.template IsOverlaid<Endpoints>()) {
@@ -523,9 +525,11 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
             }
             gp_edge.Set(gp_edge.GetParent(), parent_node, {gp_edge.GetClade().value});
             parent_node.SetSingleParent(gp_edge);
+            current_nodes.insert(current_nodes.begin(), gp_edge.GetParent());
+            current_edges.push_back(gp_edge);
           }
         }
-        size_t clade = clades_count[parent_node];
+        size_t clade = clade_ins.first->second;
         parent_edge.Set(parent_node, this_node, {clade});
         parent_node.AddEdge({clade}, parent_edge, true);
         this_node.SetSingleParent(parent_edge);
@@ -549,6 +553,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     }
     Assert(std::find(current_nodes.begin(), current_nodes.end(), parent) != current_nodes.end());
     Assert(std::find(current_nodes.begin(), current_nodes.end(), child) != current_nodes.end());
+    Assert(parent.ContainsChild(child));
   }
   Assert(current_nodes.size() == current_edges.size() + 1);
 
