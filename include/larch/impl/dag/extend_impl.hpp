@@ -22,7 +22,7 @@ inline constexpr bool ExtendDAGStorage<Target, Arg0, Arg1,
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::ExtendDAGStorage(Target&& target)
-    : target_{std::forward<Target>(target)} {
+    : target_{std::forward<Target>(target)}, additional_dag_features_storage_{target_} {
   additional_node_features_storage_.resize(GetTarget().GetNodesCount());
   additional_edge_features_storage_.resize(GetTarget().GetEdgesCount());
 }
@@ -102,21 +102,13 @@ void ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::InitializeEdges(size_t size) {
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 template <typename F>
 auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureStorage() {
-  if constexpr (tuple_contains_v<decltype(additional_dag_features_storage_), F>) {
-    return std::get<F>(additional_dag_features_storage_);
-  } else {
-    return GetTarget().template GetFeatureStorage<F>();
-  }
+  return additional_dag_features_storage_.template GetFeatureStorage<F>();
 }
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 template <typename F>
 const auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureStorage() const {
-  if constexpr (tuple_contains_v<decltype(additional_dag_features_storage_), F>) {
-    return std::get<F>(additional_dag_features_storage_);
-  } else {
-    return GetTarget().template GetFeatureStorage<F>();
-  }
+  return additional_dag_features_storage_.template GetFeatureStorage<F>();
 }
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>

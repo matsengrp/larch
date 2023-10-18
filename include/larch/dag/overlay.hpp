@@ -26,8 +26,7 @@ struct FeatureConstView<OverlayDAG, CRTP, Tag> {
 };
 
 template <typename CRTP, typename Tag>
-struct FeatureMutableView<OverlayDAG, CRTP, Tag>
-    : FeatureConstView<OverlayDAG, CRTP, Tag> {};
+struct FeatureMutableView<OverlayDAG, CRTP, Tag> {};
 
 namespace {
 template <typename>
@@ -48,7 +47,11 @@ struct OverlayDAGStorage {
 
   using TargetView = decltype(ViewOf(std::declval<Target>()));
 
+  using ExtraStorageType = typename TargetView::StorageType::ExtraStorageType;
+
   using FeatureTypes = typename TargetView::StorageType::FeatureTypes;
+  template <Component C>
+  using Container = typename TargetView::StorageType::template Container<C>;
   using AllNodeFeatures = typename TargetView::StorageType::AllNodeFeatures;
   using AllEdgeFeatures = typename TargetView::StorageType::AllEdgeFeatures;
 
@@ -59,8 +62,7 @@ struct OverlayDAGStorage {
 
   template <Component C, typename CRTP>
   struct MutableElementViewBase
-      : FeatureConstView<Overlay, CRTP>,
-        FeatureMutableView<Overlay, CRTP>,
+      : FeatureMutableView<Overlay, CRTP>,
         TargetView::StorageType::template MutableElementViewBase<C, CRTP> {
     using TargetView::StorageType::template MutableElementViewBase<C, CRTP>::operator=;
   };
@@ -122,6 +124,16 @@ struct OverlayDAGStorage {
 
   template <Component C, typename F>
   const auto& GetFeatureExtraStorage() const;
+
+  template <Component C>
+  auto& GetContainer() {
+    return GetTarget().GetStorage().template GetContainer<C>();
+  }
+
+  template <Component C>
+  const auto& GetContainer() const {
+    return GetTarget().GetStorage().template GetContainer<C>();
+  }
 
  private:
   auto GetTarget();

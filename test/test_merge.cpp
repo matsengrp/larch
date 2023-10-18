@@ -187,10 +187,11 @@ static void test_subtree() {
   }
 
   for (auto& tree : trees) {
-    Fragment frag{tree.View(),
-                  tree.View().GetNodes() | Transform::GetId() | ranges::to_vector,
-                  tree.View().GetEdges() | Transform::GetId() | ranges::to_vector};
-    merge.AddDAG(frag);
+    auto frag = FragmentStorage(
+        tree.View(), tree.View().GetNodes() | Transform::GetId() | ranges::to_vector,
+        tree.View().GetEdges() | Transform::GetId() | ranges::to_vector,
+        tree.View().GetRoot());
+    merge.AddDAG(frag.View());
     merge.GetResult().GetRoot().Validate(true, true);
   }
 

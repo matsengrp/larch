@@ -2,10 +2,18 @@
 #error "Don't include this header"
 #endif
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::DAGStorage(
+    NodesContainerT&& nodes_container, EdgesContainerT&& edges_container,
+    ExtraStorageT&& features_storage)
+    : nodes_container_{std::move(nodes_container)},
+      edges_container_{std::move(edges_container)},
+      features_storage_{std::move(features_storage)} {}
+
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 template <Component C, typename Feature>
 inline constexpr bool DAGStorage<NodesContainerT, EdgesContainerT,
-                                 Features...>::contains_element_feature = [] {
+                                 ExtraStorageT>::contains_element_feature = [] {
   // NOLINTBEGIN
   if constexpr (C == Component::Node) {
     return NodesContainerT::template contains_element_feature<Feature>;
@@ -15,93 +23,93 @@ inline constexpr bool DAGStorage<NodesContainerT, EdgesContainerT,
   // NOLINTEND
 }();
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-auto DAGStorage<NodesContainerT, EdgesContainerT, Features...>::View() {
-  return DAGView<DAGStorage<NodesContainerT, EdgesContainerT, Features...>>{*this};
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+auto DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::View() {
+  return DAGView<DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>>{*this};
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-auto DAGStorage<NodesContainerT, EdgesContainerT, Features...>::View() const {
-  return DAGView<const DAGStorage<NodesContainerT, EdgesContainerT, Features...>>{
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+auto DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::View() const {
+  return DAGView<const DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>>{
       *this};
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-NodeId DAGStorage<NodesContainerT, EdgesContainerT, Features...>::AppendNode() {
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+NodeId DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::AppendNode() {
   return nodes_container_.Append();
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-EdgeId DAGStorage<NodesContainerT, EdgesContainerT, Features...>::AppendEdge() {
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+EdgeId DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::AppendEdge() {
   return edges_container_.Append();
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::AddNode(NodeId id) {
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+void DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::AddNode(NodeId id) {
   nodes_container_.Add(id);
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::AddEdge(EdgeId id) {
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+void DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::AddEdge(EdgeId id) {
   edges_container_.Add(id);
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-size_t DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetNodesCount()
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+size_t DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetNodesCount()
     const {
   return nodes_container_.GetCount();
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-size_t DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetEdgesCount()
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+size_t DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetEdgesCount()
     const {
   return edges_container_.GetCount();
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::InitializeNodes(
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+void DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::InitializeNodes(
     size_t size) {
   nodes_container_.Initialize(size);
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
-void DAGStorage<NodesContainerT, EdgesContainerT, Features...>::InitializeEdges(
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+void DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::InitializeEdges(
     size_t size) {
   edges_container_.Initialize(size);
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 template <typename Feature>
-auto& DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetFeatureStorage(
+auto& DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetFeatureStorage(
     NodeId id) {
   return nodes_container_.template GetFeatureStorage<Feature>(id);
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 template <typename Feature>
 const auto& DAGStorage<NodesContainerT, EdgesContainerT,
-                       Features...>::GetFeatureStorage(NodeId id) const {
+                       ExtraStorageT>::GetFeatureStorage(NodeId id) const {
   return nodes_container_.template GetFeatureStorage<Feature>(id);
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 template <typename Feature>
-auto& DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetFeatureStorage(
+auto& DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetFeatureStorage(
     EdgeId id) {
   return edges_container_.template GetFeatureStorage<Feature>(id);
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 template <typename Feature>
 const auto& DAGStorage<NodesContainerT, EdgesContainerT,
-                       Features...>::GetFeatureStorage(EdgeId id) const {
+                       ExtraStorageT>::GetFeatureStorage(EdgeId id) const {
   return edges_container_.template GetFeatureStorage<Feature>(id);
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 template <Component C, typename Feature>
 auto& DAGStorage<NodesContainerT, EdgesContainerT,
-                 Features...>::GetFeatureExtraStorage() {
+                 ExtraStorageT>::GetFeatureExtraStorage() {
   if constexpr (std::is_same_v<C, Component::Node>) {
     return nodes_container_.template GetFeatureExtraStorage<Feature>();
   } else {
@@ -109,10 +117,10 @@ auto& DAGStorage<NodesContainerT, EdgesContainerT,
   }
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 template <Component C, typename Feature>
 const auto& DAGStorage<NodesContainerT, EdgesContainerT,
-                       Features...>::GetFeatureExtraStorage() const {
+                       ExtraStorageT>::GetFeatureExtraStorage() const {
   if constexpr (std::is_same_v<C, Component::Node>) {
     return nodes_container_.template GetFeatureExtraStorage<Feature>();
   } else {
@@ -120,15 +128,15 @@ const auto& DAGStorage<NodesContainerT, EdgesContainerT,
   }
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 template <typename Feature>
-auto& DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetFeatureStorage() {
-  return std::get<Feature>(features_storage_);
+auto& DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetFeatureStorage() {
+  return features_storage_.template GetFeatureStorage<Feature>();
 }
 
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 template <typename Feature>
 const auto&
-DAGStorage<NodesContainerT, EdgesContainerT, Features...>::GetFeatureStorage() const {
-  return std::get<Feature>(features_storage_);
+DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetFeatureStorage() const {
+  return features_storage_.template GetFeatureStorage<Feature>();
 }

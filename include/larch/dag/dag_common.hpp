@@ -94,18 +94,32 @@ struct ElementView;
 
 template <typename DAGStorageType, typename DAGViewType>
 struct DefaultViewBase {
+ private:
+  struct MutableDAGViewBase : DAGStorageType::template ConstDAGViewBase<DAGViewType>,
+                              DAGStorageType::template MutableDAGViewBase<DAGViewType> {
+  };
+
+  template <Component C>
+  struct MutableElementViewBase
+      : DAGStorageType::template ConstElementViewBase<C, ElementView<C, DAGViewType>>,
+        DAGStorageType::template MutableElementViewBase<C,
+                                                        ElementView<C, DAGViewType>> {
+    using DAGStorageType::template MutableElementViewBase<
+        C, ElementView<C, DAGViewType>>::operator=;
+  };
+
+ public:
   using DAGViewBase = std::conditional_t<
       std::is_const_v<DAGStorageType>,
       typename DAGStorageType::template ConstDAGViewBase<DAGViewType>,
-      typename DAGStorageType::template MutableDAGViewBase<DAGViewType>>;
+      MutableDAGViewBase>;
 
   template <Component C>
   using ElementViewBase =
       std::conditional_t<std::is_const_v<DAGStorageType>,
                          typename DAGStorageType::template ConstElementViewBase<
                              C, ElementView<C, DAGViewType>>,
-                         typename DAGStorageType::template MutableElementViewBase<
-                             C, ElementView<C, DAGViewType>>>;
+                         MutableElementViewBase<C>>;
 };
 
 /**
@@ -190,7 +204,10 @@ auto ViewOf(T&& dag);
 template <typename, template <typename, typename> typename>
 struct DAGView;
 
-template <typename, typename, typename...>
+template <typename...>
+struct ExtraStorage;
+
+template <typename, typename, typename>
 struct DAGStorage;
 
 template <Component, typename, typename...>
@@ -208,4 +225,4 @@ struct Connections;
 using DefaultDAGStorage =
     DAGStorage<ElementsContainer<Component::Node, ElementStorage<Neighbors>>,
                ElementsContainer<Component::Edge, ElementStorage<Endpoints>>,
-               Connections>;
+               ExtraStorage<Connections>>;

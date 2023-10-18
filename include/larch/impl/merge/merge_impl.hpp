@@ -83,7 +83,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
 }
 
 template <typename DAG>
-void Merge::AddDAG(DAG& dag, NodeId below) {
+void Merge::AddDAG(DAG dag, NodeId below) {
   if (below.value != NoId and dag.Get(below).IsUA()) {
     below.value = NoId;
   }

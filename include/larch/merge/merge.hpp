@@ -61,7 +61,7 @@ class Merge {
   inline void AddDAGs(const DAGSRange& dags, NodeId below = {});
 
   template <typename DAG>
-  inline void AddDAG(DAG& dag, NodeId below = {});
+  inline void AddDAG(DAG dag, NodeId below = {});
 
   /**
    * Get the DAG resulting from merge

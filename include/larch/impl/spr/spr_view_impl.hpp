@@ -419,7 +419,8 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
-  return Fragment{dag, std::move(collapsed.first), std::move(collapsed.second), oldest_node};
+  return FragmentStorage(dag, std::move(collapsed.first), std::move(collapsed.second),
+                         oldest_node);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -440,7 +441,8 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeUncollapsedFragment
     oldest_node = oldest_changed.GetSingleParent().GetParent().GetId();
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
-  return Fragment{dag, std::move(result_nodes), std::move(result_edges), oldest_node};
+  return FragmentStorage(dag, std::move(result_nodes), std::move(result_edges),
+                         oldest_node);
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -486,13 +488,15 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   };
   std::vector<NodeId> current_nodes;
   std::vector<EdgeId> current_edges;
-  for (auto node_id: fragment_nodes) {
+  for (auto node_id : fragment_nodes) {
     auto this_node = dag.Get(node_id);
-    if (this_node.IsNonrootAnchorNode() or this_node.IsLeaf() or (not is_child_of_collapsible_edge[node_id])) {
+    if (this_node.IsNonrootAnchorNode() or this_node.IsLeaf() or
+        (not is_child_of_collapsible_edge[node_id])) {
       current_nodes.push_back(node_id);
       if (is_parent_of_collapsible_edge[node_id] and node_id == fragment_root) {
         auto grandparent_edge = this_node.GetSingleParent();
-        current_nodes.insert(current_nodes.begin(), grandparent_edge.GetParent().GetId());
+        current_nodes.insert(current_nodes.begin(),
+                             grandparent_edge.GetParent().GetId());
         current_edges.insert(current_edges.begin(), grandparent_edge.GetId());
       }
       if (parent_is_in_fragment[node_id]) {
@@ -516,7 +520,8 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
         }
         auto clade_ins = clades_count.insert({parent_node, 0});
         if (clade_ins.second) {
-          [[maybe_unused]] auto gp_edge_id = parent_node.IsUA() ? EdgeId{NoId} : parent_node.GetSingleParent();
+          [[maybe_unused]] auto gp_edge_id =
+              parent_node.IsUA() ? EdgeId{NoId} : parent_node.GetSingleParent();
           parent_node.ClearConnections();
           if (gp_edge_id.value != NoId) {
             auto gp_edge = dag.Get(gp_edge_id);
@@ -538,21 +543,23 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
       }
     }
   }
-  for (auto node_id: current_nodes) {
+  for (auto node_id : current_nodes) {
     auto node = dag.Get(node_id);
     if (node != dag.GetRoot()) {
       Assert(node.GetParentsCount() == 1);
     }
   }
-  for (auto edge_id: current_edges) {
+  for (auto edge_id : current_edges) {
     auto parent = dag.Get(edge_id).GetParent();
     auto child = dag.Get(edge_id).GetChild();
     Assert(child.GetParentsCount() == 1);
     if (parent != dag.GetRoot()) {
       Assert(parent.GetParentsCount() == 1);
     }
-    Assert(std::find(current_nodes.begin(), current_nodes.end(), parent) != current_nodes.end());
-    Assert(std::find(current_nodes.begin(), current_nodes.end(), child) != current_nodes.end());
+    Assert(std::find(current_nodes.begin(), current_nodes.end(), parent) !=
+           current_nodes.end());
+    Assert(std::find(current_nodes.begin(), current_nodes.end(), child) !=
+           current_nodes.end());
     Assert(parent.ContainsChild(child));
   }
   Assert(current_nodes.size() == current_edges.size() + 1);
@@ -599,9 +606,9 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   auto src_parent_node = first_src_node.GetSingleParent().GetParent();
   auto dst_parent_node = first_dst_node.GetSingleParent().GetParent();
   const bool is_sibling_move = src_parent_node.GetId() == dst_parent_node.GetId();
-  const bool has_unifurcation_after_move = is_sibling_move ?
-      src_parent_node.GetCladesCount() <= (src.size() + dst.size()) :
-      src_parent_node.GetCladesCount() <= (src.size() + 1);
+  const bool has_unifurcation_after_move =
+      is_sibling_move ? src_parent_node.GetCladesCount() <= (src.size() + dst.size())
+                      : src_parent_node.GetCladesCount() <= (src.size() + 1);
   if ((is_sibling_move and
        (src_parent_node.GetCladesCount() == (src.size() + dst.size()))) or
       src_parent_node.IsTreeRoot() or src_parent_node.IsUA() or

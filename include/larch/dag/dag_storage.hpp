@@ -2,18 +2,42 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+template <typename... Features>
+struct ExtraStorage {
+  using FeatureTypes = std::tuple<Features...>;
+
+  template <template <typename, typename> typename T, typename CRTP>
+  struct Base : T<Features, CRTP>... {};
+
+  template <typename Feature>
+  auto& GetFeatureStorage() {
+    return std::get<Feature>(features_storage_);
+  }
+
+  template <typename Feature>
+  const auto& GetFeatureStorage() const {
+    return std::get<Feature>(features_storage_);
+  }
+
+ private:
+  FeatureTypes features_storage_;
+};
+
 /**
  * Owning storage for an entire DAG. All views (DAG, node or edge) are
  * internally pointing to an instance of DAGStorage or classes providing
  * the same interface, like ExtendDAGStorage.
  */
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 struct DAGStorage {
- public:
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 
-  using FeatureTypes = std::tuple<Features...>;
+  using ExtraStorageType = ExtraStorageT;
+  using FeatureTypes = typename ExtraStorageT::FeatureTypes;
+  template <Component C>
+  using Container =
+      std::conditional_t<C == Component::Node, NodesContainerT, EdgesContainerT>;
   using AllNodeFeatures = typename NodesContainerT::AllFeatureTypes;
   using AllEdgeFeatures = typename EdgesContainerT::AllFeatureTypes;
 
@@ -32,16 +56,16 @@ struct DAGStorage {
   static const bool contains_element_feature;
 
   template <typename CRTP>
-  struct ConstDAGViewBase : FeatureConstView<Features, CRTP>...,
-                            ExtraFeatureConstView<Features, CRTP>...,
+  struct ConstDAGViewBase : ExtraStorageT::template Base<FeatureConstView, CRTP>,
+                            ExtraStorageT::template Base<ExtraFeatureConstView, CRTP>,
                             NodesContainerT::template ExtraConstElementViewBase<CRTP>,
                             EdgesContainerT::template ExtraConstElementViewBase<CRTP> {
   };
+
   template <typename CRTP>
   struct MutableDAGViewBase
-      : ConstDAGViewBase<CRTP>,
-        FeatureMutableView<Features, CRTP>...,
-        ExtraFeatureMutableView<Features, CRTP>...,
+      : ExtraStorageT::template Base<FeatureMutableView, CRTP>,
+        ExtraStorageT::template Base<ExtraFeatureMutableView, CRTP>,
         NodesContainerT::template ExtraMutableElementViewBase<CRTP>,
         EdgesContainerT::template ExtraMutableElementViewBase<CRTP> {
     template <typename F>
@@ -51,6 +75,8 @@ struct DAGStorage {
   };
 
   DAGStorage() = default;
+  DAGStorage(NodesContainerT&& nodes_container, EdgesContainerT&& edges_container,
+             ExtraStorageT&& features_storage);
   MOVE_ONLY(DAGStorage);
 
   auto View();
@@ -92,8 +118,26 @@ struct DAGStorage {
   template <typename Feature>
   const auto& GetFeatureStorage() const;
 
+  template <Component C>
+  auto& GetContainer() {
+    if constexpr (C == Component::Node) {
+      return nodes_container_;
+    } else {
+      return edges_container_;
+    }
+  }
+
+  template <Component C>
+  const auto& GetContainer() const {
+    if constexpr (C == Component::Node) {
+      return nodes_container_;
+    } else {
+      return edges_container_;
+    }
+  }
+
  private:
   NodesContainerT nodes_container_;
   EdgesContainerT edges_container_;
-  std::tuple<Features...> features_storage_;
+  ExtraStorageT features_storage_;
 };
