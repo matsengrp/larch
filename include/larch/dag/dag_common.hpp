@@ -180,6 +180,7 @@ auto ToNodes(DAG dag);
 template <typename DAG>
 auto ToEdges(DAG dag);
 inline auto ToConst();
+inline auto ToView();
 
 }  // namespace Transform
 

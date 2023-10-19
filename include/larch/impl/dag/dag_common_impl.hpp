@@ -66,6 +66,10 @@ auto ToConst() {
   return ranges::views::transform([](auto&& i) { return i.Const(); });
 }
 
+auto ToView() {
+  return ranges::views::transform([](auto&& i) { return i.View(); });
+}
+
 }  // namespace Transform
 
 template <template <typename...> typename Template, size_t I, typename... Ts>

@@ -34,11 +34,11 @@ const auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id) co
 template <typename Target, Component C>
 template <typename Feature>
 auto& FragmentElementsContainer<Target, C>::GetFeatureExtraStorage() {
-  return target_.GetStorage().template GetFeatureExtraStorage<Feature>();
+  return target_.GetStorage().template GetFeatureExtraStorage<C, Feature>();
 }
 
 template <typename Target, Component C>
 template <typename Feature>
 const auto& FragmentElementsContainer<Target, C>::GetFeatureExtraStorage() const {
-  return target_.GetStorage().template GetFeatureExtraStorage<Feature>();
+  return target_.GetStorage().template GetFeatureExtraStorage<C, Feature>();
 }

@@ -185,7 +185,7 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
                        ConcurrentUnorderedMap<NodeId, NodeLabel>& result_node_labels,
                        std::atomic<size_t>& node_id) {
   NodeId id{0};
-  auto& dag = dags.at(i);
+  auto&& dag = dags.at(i);
   auto& labels = dags_labels.at(i);
   for (auto node : dag.GetNodes()) {
     auto& label = labels.at(node.GetId().value);
@@ -235,7 +235,7 @@ void Merge::MergeEdges(
     ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
     tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
         added_edges) {
-  auto& dag = dags.at(i);
+  auto&& dag = dags.at(i);
   const std::vector<NodeLabel>& labels = dags_labels.at(i);
   for (auto edge : dag.GetEdges()) {
     if (below.value != NoId and edge.IsUA()) {

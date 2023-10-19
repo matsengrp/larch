@@ -39,9 +39,10 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
   if (storage.View().InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
     storage.View().GetRoot().Validate(true);
-    auto fragment = collapse_empty_fragment_edges_
-                        ? storage.View().MakeFragment()
-                        : storage.View().MakeUncollapsedFragment();
+    auto fragment_storage = collapse_empty_fragment_edges_
+                                ? storage.View().MakeFragment()
+                                : storage.View().MakeUncollapsedFragment();
+    auto fragment = fragment_storage.View();
 
     auto& impl = static_cast<CRTP&>(*this);
     std::pair<bool, bool> accepted =
@@ -58,16 +59,16 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
           fragment.Get(leaf_node) = std::move(new_cg);
         }
       }
-      for (auto node: fragment.GetNodes()) {
+      for (auto node : fragment.GetNodes()) {
         if (not node.IsUA()) {
           Assert(node.GetId().value != NoId);
-         if (node.IsLeaf()) {
-           Assert(node.GetOld().HaveSampleId());
-           Assert(not node.GetOld().GetSampleId().value().empty());
-         }
+          if (node.IsLeaf()) {
+            Assert(node.GetOld().HaveSampleId());
+            Assert(not node.GetOld().GetSampleId().value().empty());
+          }
         }
       }
-      for (auto edge: fragment.GetEdges()) {
+      for (auto edge : fragment.GetEdges()) {
         Assert(edge.GetId().value != NoId);
         Assert(edge.GetChild().GetId().value != NoId);
         if (not edge.GetParent().IsUA()) {
@@ -75,7 +76,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         }
       }
       applied_moves_count_++;
-      batch_.push_back(std::move(fragment));
+      batch_.push_back(std::move(fragment_storage));
       /*
       if (batch_.size() > 2048) {
         std::unique_lock lock{merge_mtx_};
@@ -115,7 +116,7 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
       leaf_node = std::move(new_cg);
     }
     if (not batch_.empty()) {
-      merge_.AddDAGs(batch_);
+      merge_.AddDAGs(batch_ | Transform::ToView());
       batch_.clear();
       batch_storage_.clear();
     }

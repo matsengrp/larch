@@ -48,7 +48,7 @@ template <typename F>
 auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   auto& element_view = static_cast<const CRTP&>(*this);
   auto id = element_view.GetId();
-  auto& storage = element_view.GetDAG().GetStorage();
+  auto& storage = element_view.GetDAG().GetStorage().GetTargetStorage();
   static_assert(
       CRTP::template contains_feature<F>,
       "Attempted to SetOverlay on a Feature not supported by given DAG Element.");
@@ -81,7 +81,7 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
 template <typename CRTP, typename Tag>
 auto FeatureConstView<OverlayDAG, CRTP, Tag>::GetOriginal() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetStorage().GetTarget();
+  return dag.GetStorage().GetTargetStorage().GetTarget();
 }
 
 template <typename CRTP, typename Tag>

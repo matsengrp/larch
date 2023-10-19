@@ -47,9 +47,26 @@ struct OverlayDAGStorage {
 
   using TargetView = decltype(ViewOf(std::declval<Target>()));
 
-  using ExtraStorageType = typename TargetView::StorageType::ExtraStorageType;
+  struct ExtraStorageType : TargetView::StorageType::ExtraStorageType {
+    using FeatureTypes = decltype(std::tuple_cat(
+        typename TargetView::StorageType::ExtraStorageType::FeatureTypes{},
+        std::tuple<OverlayDAG>{}));
 
-  using FeatureTypes = typename TargetView::StorageType::FeatureTypes;
+    template <template <typename, typename> typename T, typename CRTP>
+    struct Base : TargetView::StorageType::ExtraStorageType::template Base<T, CRTP> {};
+
+    template <typename CRTP>
+    struct Base<FeatureConstView, CRTP>
+        : TargetView::StorageType::template ConstDAGViewBase<CRTP>,
+          FeatureConstView<OverlayDAG, CRTP> {};
+
+    template <typename CRTP>
+    struct Base<FeatureMutableView, CRTP>
+        : TargetView::StorageType::template MutableDAGViewBase<CRTP>,
+          FeatureMutableView<OverlayDAG, CRTP> {};
+  };
+
+  using FeatureTypes = typename ExtraStorageType::FeatureTypes;
   template <Component C>
   using Container = typename TargetView::StorageType::template Container<C>;
   using AllNodeFeatures = typename TargetView::StorageType::AllNodeFeatures;
@@ -71,13 +88,11 @@ struct OverlayDAGStorage {
   static const bool contains_element_feature;
 
   template <typename CRTP>
-  struct ConstDAGViewBase : FeatureConstView<OverlayDAG, CRTP>,
-                            TargetView::StorageType::template ConstDAGViewBase<CRTP> {};
+  struct ConstDAGViewBase : ExtraStorageType::template Base<FeatureConstView, CRTP> {};
 
   template <typename CRTP>
   struct MutableDAGViewBase
-      : FeatureMutableView<OverlayDAG, CRTP>,
-        TargetView::StorageType::template MutableDAGViewBase<CRTP> {};
+      : ExtraStorageType::template Base<FeatureMutableView, CRTP> {};
 
   MOVE_ONLY(OverlayDAGStorage);
 
@@ -127,13 +142,16 @@ struct OverlayDAGStorage {
 
   template <Component C>
   auto& GetContainer() {
-    return GetTarget().GetStorage().template GetContainer<C>();
+    return GetTargetStorage().template GetContainer<C>();
   }
 
   template <Component C>
   const auto& GetContainer() const {
-    return GetTarget().GetStorage().template GetContainer<C>();
+    return GetTargetStorage().template GetContainer<C>();
   }
+
+  auto& GetTargetStorage() { return *this; }
+  auto& GetTargetStorage() const { return *this; }
 
  private:
   auto GetTarget();

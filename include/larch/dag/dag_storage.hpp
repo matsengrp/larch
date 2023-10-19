@@ -19,6 +19,16 @@ struct ExtraStorage {
     return std::get<Feature>(features_storage_);
   }
 
+  template <typename Storage>
+  auto& GetTargetStorage(Storage& storage) const {
+    return storage;
+  }
+
+  template <typename Storage>
+  auto& GetTargetStorage(Storage& storage) {
+    return storage;
+  }
+
  private:
   FeatureTypes features_storage_;
 };
@@ -135,6 +145,9 @@ struct DAGStorage {
       return edges_container_;
     }
   }
+
+  auto& GetTargetStorage() { return features_storage_.GetTargetStorage(*this); }
+  auto& GetTargetStorage() const { return features_storage_.GetTargetStorage(*this); }
 
  private:
   NodesContainerT nodes_container_;

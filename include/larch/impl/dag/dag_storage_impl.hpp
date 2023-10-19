@@ -110,7 +110,7 @@ template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStor
 template <Component C, typename Feature>
 auto& DAGStorage<NodesContainerT, EdgesContainerT,
                  ExtraStorageT>::GetFeatureExtraStorage() {
-  if constexpr (std::is_same_v<C, Component::Node>) {
+  if constexpr (C == Component::Node) {
     return nodes_container_.template GetFeatureExtraStorage<Feature>();
   } else {
     return edges_container_.template GetFeatureExtraStorage<Feature>();
@@ -121,7 +121,7 @@ template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStor
 template <Component C, typename Feature>
 const auto& DAGStorage<NodesContainerT, EdgesContainerT,
                        ExtraStorageT>::GetFeatureExtraStorage() const {
-  if constexpr (std::is_same_v<C, Component::Node>) {
+  if constexpr (C == Component::Node) {
     return nodes_container_.template GetFeatureExtraStorage<Feature>();
   } else {
     return edges_container_.template GetFeatureExtraStorage<Feature>();

@@ -76,6 +76,16 @@ struct FragmentExtraStorage {
     return target_.GetStorage().template GetFeatureStorage<Feature>();
   }
 
+  template <typename Storage>
+  auto& GetTargetStorage(Storage&) const {
+    return target_.GetStorage();
+  }
+
+  template <typename Storage>
+  auto& GetTargetStorage(Storage&) {
+    return target_.GetStorage();
+  }
+
  private:
   Target target_;
 };

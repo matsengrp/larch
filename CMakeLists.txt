@@ -233,7 +233,7 @@ larch_executable(larch-test
   test/test_sample_tree.cpp
   test/test_sample_best_tree.cpp
   test/test_spr_after_move.cpp
-  # test/test_spr.cpp
+  test/test_spr.cpp
   test/test_subtree_weight.cpp
   test/test_weight_accum.cpp
   test/test_weight_counter.cpp
