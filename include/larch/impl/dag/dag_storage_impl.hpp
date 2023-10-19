@@ -140,3 +140,24 @@ const auto&
 DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetFeatureStorage() const {
   return features_storage_.template GetFeatureStorage<Feature>();
 }
+
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+template <Component C>
+auto& DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetContainer() {
+  if constexpr (C == Component::Node) {
+    return nodes_container_;
+  } else {
+    return edges_container_;
+  }
+}
+
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+template <Component C>
+const auto& DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetContainer()
+    const {
+  if constexpr (C == Component::Node) {
+    return nodes_container_;
+  } else {
+    return edges_container_;
+  }
+}

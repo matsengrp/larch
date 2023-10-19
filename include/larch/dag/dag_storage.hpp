@@ -129,22 +129,10 @@ struct DAGStorage {
   const auto& GetFeatureStorage() const;
 
   template <Component C>
-  auto& GetContainer() {
-    if constexpr (C == Component::Node) {
-      return nodes_container_;
-    } else {
-      return edges_container_;
-    }
-  }
+  auto& GetContainer();
 
   template <Component C>
-  const auto& GetContainer() const {
-    if constexpr (C == Component::Node) {
-      return nodes_container_;
-    } else {
-      return edges_container_;
-    }
-  }
+  const auto& GetContainer() const;
 
   auto& GetTargetStorage() { return features_storage_.GetTargetStorage(*this); }
   auto& GetTargetStorage() const { return features_storage_.GetTargetStorage(*this); }

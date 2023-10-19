@@ -190,6 +190,20 @@ const auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage()
 }
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
+template <Component C>
+auto ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetContainer() ->
+    typename TargetView::StorageType::template Container<C>& {
+  return GetTarget().GetStorage().template GetContainer<C>();
+}
+
+template <typename Target, typename Arg0, typename Arg1, typename Arg2>
+template <Component C>
+auto ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetContainer() const -> const
+    typename TargetView::StorageType::template Container<C>& {
+  return GetTarget().GetStorage().template GetContainer<C>();
+}
+
+template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 auto ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetTarget() {
   return ViewOf(target_);
 }

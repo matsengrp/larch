@@ -99,17 +99,17 @@ bool DAGView<Storage, Base>::IsEmpty() const {
 
 template <typename Storage, template <typename, typename> typename Base>
 auto DAGView<Storage, Base>::GetNodes() const {
-  return ranges::views::indices(GetNodesCount()) |
-         ranges::views::transform([*this](size_t i) {
-           return ElementView{*this, NodeId{i}};
+  return dag_storage_.template GetContainer<Component::Node>().All() |
+         ranges::views::transform([*this](NodeId i) {
+           return ElementView{*this, i};
          });
 }
 
 template <typename Storage, template <typename, typename> typename Base>
 auto DAGView<Storage, Base>::GetEdges() const {
-  return ranges::views::indices(GetEdgesCount()) |
-         ranges::views::transform([*this](size_t i) {
-           return ElementView{*this, EdgeId{i}};
+  return dag_storage_.template GetContainer<Component::Edge>().All() |
+         ranges::views::transform([*this](EdgeId i) {
+           return ElementView{*this, i};
          });
 }
 

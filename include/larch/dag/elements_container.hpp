@@ -57,6 +57,11 @@ struct ElementsContainer {
   template <typename Feature>
   const auto& GetFeatureExtraStorage() const;
 
+  auto All() const {
+    return ranges::views::iota(size_t{0}, GetCount()) |
+           ranges::views::transform([](size_t i) -> Id<C> { return {i}; });
+  }
+
  private:
   std::vector<ElementStorageT> elements_storage_;
   std::vector<std::tuple<Features...>> features_storage_;

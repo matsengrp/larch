@@ -142,12 +142,12 @@ struct OverlayDAGStorage {
 
   template <Component C>
   auto& GetContainer() {
-    return GetTargetStorage().template GetContainer<C>();
+    return GetTarget().GetStorage().template GetContainer<C>();
   }
 
   template <Component C>
   const auto& GetContainer() const {
-    return GetTargetStorage().template GetContainer<C>();
+    return GetTarget().GetStorage().template GetContainer<C>();
   }
 
   auto& GetTargetStorage() { return *this; }

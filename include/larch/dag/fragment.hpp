@@ -50,6 +50,8 @@ struct FragmentElementsContainer {
   template <typename Feature>
   const auto& GetFeatureExtraStorage() const;
 
+  auto All() const { return ids_ | ranges::views::all; }
+
  private:
   Target target_;
   const std::vector<Id<C>> ids_;
