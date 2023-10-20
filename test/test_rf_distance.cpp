@@ -24,7 +24,7 @@ static auto GetRFDistance(const Merge& merge1, const Merge& merge2) {
 }
 
 static void test_zero_rf_distance() {
-  auto storage = MakeSampleDAG();
+  auto storage = make_sample_dag();
   auto view = storage.View();
   Merge merge{view.GetReferenceSequence()};
   merge.AddDAG(view);
@@ -32,8 +32,8 @@ static void test_zero_rf_distance() {
 }
 
 static void test_rf_on_two_identical_topologies() {
-  auto dag1_storage = MakeSampleDAG();
-  auto dag2_storage = MakeSampleDAG();
+  auto dag1_storage = make_sample_dag();
+  auto dag2_storage = make_sample_dag();
   auto dag1 = dag1_storage.View();
   auto dag2 = dag2_storage.View();
   dag1.RecomputeCompactGenomes();
@@ -84,7 +84,7 @@ static MADAGStorage MakeNonintersectingSampleDAG() {
 }
 
 static void test_rf_two_distinct_topologies_single_merge() {
-  auto dag1_storage = MakeSampleDAG();
+  auto dag1_storage = make_sample_dag();
   auto dag2_storage = MakeNonintersectingSampleDAG();
   auto dag1 = dag1_storage.View();
   auto dag2 = dag2_storage.View();
@@ -102,7 +102,7 @@ static void test_rf_two_distinct_topologies_single_merge() {
 }
 
 static void test_rf_distance_hand_computed_example() {
-  auto dag1_storage = MakeSampleDAG();
+  auto dag1_storage = make_sample_dag();
   auto dag2_storage = MakeNonintersectingSampleDAG();
   auto dag1 = dag1_storage.View();
   auto dag2 = dag2_storage.View();
