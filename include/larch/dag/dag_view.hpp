@@ -66,6 +66,14 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
+  template <Component C>
+  size_t GetElementsCount() const {
+    if constexpr (C == Component::Node) {
+      return GetNodesCount();
+    } else {
+      return GetEdgesCount();
+    }
+  }
   bool IsEmpty() const;
 
   /**

@@ -241,6 +241,7 @@ auto OverlayDAGStorage<Target>::GetFeatureStorageImpl(OverlayStorageType& self,
     -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
                               OverlayStorageType::TargetView::is_mutable,
                           F&, const F&> {
+  Assert(id.value < self.GetNodesCount());
   if (id.value < self.GetTarget().GetNodesCount()) {
     auto it =
         std::get<std::unordered_map<NodeId, F>>(self.replaced_node_storage_).find(id);

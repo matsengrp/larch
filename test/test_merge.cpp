@@ -23,6 +23,7 @@ static void test_protobuf(const std::string& correct_path,
       Assert(leaf.HaveSampleId());
     }
     tree_views.push_back(view);
+    view.GetRoot().Validate(true);
   }
 
   MADAGStorage correct_result = LoadDAGFromJson(correct_path);

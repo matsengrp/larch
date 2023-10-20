@@ -274,6 +274,7 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
   auto dag = dag_storage.View();
   MAT::Tree tree;
   dag.BuildMAT(tree);
+  dag.GetRoot().Validate(true);
   auto child_counts = get_child_counts(dag);
 
   if (write_dot_files) {

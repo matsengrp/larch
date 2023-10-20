@@ -11,6 +11,7 @@ template <Component C, typename DAGViewType>
 ElementView<C, DAGViewType>::ElementView(DAGViewType dag_view, Id<C> id)
     : dag_view_{dag_view}, id_{id} {
   Assert(id.value not_eq NoId);
+  Assert(id.value < dag_view.template GetElementsCount<C>());
 }
 
 template <Component C, typename DAGViewType>
