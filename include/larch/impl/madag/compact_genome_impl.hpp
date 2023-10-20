@@ -60,12 +60,13 @@ void CompactGenome::ApplyChanges(
     const ContiguousMap<MutationPosition, MutationBase>& changes) {
   for (auto change : changes) {
     AssertMut(change.first, change.second);
-    mutations_.insert(change);
+    mutations_.insert_or_assign(change);
   }
 }
 
 bool CompactGenome::HasMutationAtPosition(MutationPosition pos) const {
-  return (mutations_.find(pos) != mutations_.end());
+  auto it = mutations_.find(pos);
+  return (it != mutations_.end() and it->first == pos);
 }
 
 MutationBase CompactGenome::GetBase(MutationPosition pos,

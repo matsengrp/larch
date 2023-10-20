@@ -13,6 +13,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
                   std::vector<Node_With_Major_Allele_Set_Change>&) override {
     return move.score_change < best_score_change;
   }
+  auto GetMATNodeToCGMap() {return std::map<MAT::Node*, CompactGenome>{};}
 };
 
 [[maybe_unused]] static auto choose_root = [](const auto& subtree_weight) {
@@ -133,7 +134,16 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
     node_id_map_.merge(std::forward<decltype(node_id_map)>(node_id_map));
   }
 
-  void OnReassignedStates(const MAT::Tree&) {}
+  void OnReassignedStates(const MAT::Tree& tree) {
+    for (auto leaf_node: tree.get_leaves()) {
+      auto new_cg = sample_.GetNodeFromMAT(leaf_node).GetCompactGenome().Copy();
+      mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
+    }
+  }
+
+  auto GetMATNodeToCGMap() {return std::map<MAT::Node*, CompactGenome>{};}
+
+  std::map<MAT::Node*, CompactGenome> mat_node_to_cg_map_;
 
  private:
   NodeId ToMergedNodeId(MATNodePtr node) {

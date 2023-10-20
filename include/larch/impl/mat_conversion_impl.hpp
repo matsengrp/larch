@@ -113,7 +113,9 @@ static inline uint8_t EncodeBaseMAT(char base) {
     case 'G':
       return 4;
     case 'T':
-      return 8;  // NOLINT
+      return 8;
+    case 'N':
+      return 1 + 2 + 4 + 8;  // NOLINT
     default:
       Fail("Invalid base");
   };
@@ -242,14 +244,11 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(Node dag_node,
     const auto& mutations = edge.GetEdgeMutations();
     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
     size_t node_id = edge.GetChild().GetId().value;
+    auto node_name = edge.GetChild().GetSampleId().value_or(std::to_string(node_id));
     auto* node = new MAT::Node(node_id);
     edge.GetChild().SetMATNode(node);
-    if (dag_node.GetSampleId().has_value()) {
-      std::string id = dag_node.GetSampleId().value();
-      new_tree.register_node_serial(node, id);
-    } else {
-      new_tree.register_node_serial(node);
-    }
+    node->clade_annotations.resize(new_tree.get_num_annotations(), "");
+    new_tree.register_node_serial(node, node_name);
     node->mutations.reserve(mutations.size());
     for (auto [pos, muts] : mutations) {
       Assert(pos.value != NoId);

@@ -35,6 +35,12 @@ void ElementsContainer<C, ElementStorageT, Features...>::Initialize(size_t size)
 }
 
 template <Component C, typename ElementStorageT, typename... Features>
+void ElementsContainer<C, ElementStorageT, Features...>::Clear() {
+  elements_storage_.clear();
+  features_storage_.clear();
+}
+
+template <Component C, typename ElementStorageT, typename... Features>
 template <typename Feature>
 auto& ElementsContainer<C, ElementStorageT, Features...>::GetFeatureStorage(Id<C> id) {
   if constexpr (tuple_contains_v<std::tuple<Features...>, Feature>) {

@@ -31,6 +31,11 @@ auto FeatureConstView<Connections, CRTP, Tag>::GetLeafs() const {
 }
 
 template <typename CRTP, typename Tag>
+auto FeatureConstView<Connections, CRTP, Tag>::GetLeafsCount() const {
+  return GetFeatureStorage(this).leafs_.size();
+}
+
+template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
   auto& storage = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
@@ -70,11 +75,78 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
     Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
     edge.GetParent().AddEdge(edge.GetClade(), edge, true);
     edge.GetChild().AddEdge(edge.GetClade(), edge, false);
-  };
+  }
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::AddLeaf(NodeId id) const {
   auto& storage = GetFeatureStorage(this);
   storage.leafs_.push_back(id);
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Connections, CRTP, Tag>::ClearConnections() const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  for (auto node : dag.GetNodes()) {
+    node.ClearConnections();
+  }
+  dag.ClearEdges();
+}
+
+template <typename CRTP, typename Tag>
+std::map<std::set<NodeId>, std::set<NodeId>>
+FeatureMutableView<Connections, CRTP, Tag>::BuildCladeUnionMap() const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  std::map<std::set<NodeId>, std::set<NodeId>> clade_union_map;
+  dag.GetRoot().CalculateLeafsBelow();
+  for (auto node : dag.GetNodes()) {
+    std::set<NodeId> full_leafset;
+    if (node.GetLeafsBelow().size() > 0) {
+      for (const auto clade_leafset : node.GetLeafsBelow()) {
+        full_leafset.insert(clade_leafset.begin(), clade_leafset.end());
+      }
+    } else {
+      full_leafset.insert(node.GetId());
+    }
+    if (clade_union_map.find(full_leafset) == clade_union_map.end()) {
+      clade_union_map[full_leafset] = std::set<NodeId>();
+    }
+    clade_union_map[full_leafset].insert(node.GetId());
+  }
+  return clade_union_map;
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Connections, CRTP, Tag>::MakeComplete() const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  auto clade_union_map = dag.BuildCladeUnionMap();
+  size_t taxon_count = dag.GetLeafsCount();
+  dag.ClearConnections();
+  // Connect rootsplit nodes.
+  std::set<NodeId>* rootsplits = nullptr;
+  for (auto& [clade_union, node_ids] : clade_union_map) {
+    if (clade_union.size() == taxon_count) {
+      rootsplits = &node_ids;
+      break;
+    }
+  }
+  Assert(rootsplits != nullptr);
+  for (auto node_id : *rootsplits) {
+    dag.AppendEdge(dag.GetRoot().GetId(), node_id, {0});
+  }
+  // Connect all other nodes.
+  for (auto parent_node : dag.GetNodes()) {
+    auto leaf_sets = parent_node.GetLeafsBelow();
+    for (size_t clade_idx = 0; clade_idx < leaf_sets.size(); clade_idx++) {
+      auto leaf_clade = leaf_sets[clade_idx];
+      std::set<NodeId> clade_set(leaf_clade.begin(), leaf_clade.end());
+      auto possible_children = clade_union_map.find(clade_set);
+      if (possible_children != clade_union_map.end()) {
+        for (auto child_node_id : possible_children->second) {
+          if (parent_node.GetId() == child_node_id) continue;
+          dag.AppendEdge(parent_node.GetId(), child_node_id, {clade_idx});
+        }
+      }
+    }
+  }
 }

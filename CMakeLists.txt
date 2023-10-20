@@ -58,22 +58,37 @@ ExternalProject_Add(range-v3
 )
 
 if(${USE_HTSLIB})
-ExternalProject_Add(htslib
-  GIT_REPOSITORY https://github.com/samtools/htslib.git
-  GIT_TAG 1.17
-  GIT_SHALLOW true
-  GIT_PROGRESS true
-  UPDATE_DISCONNECTED true
-  PREFIX htslib
-  BUILD_IN_SOURCE true
-  CONFIGURE_COMMAND autoreconf -i COMMAND ./configure --prefix=${PROJECT_BINARY_DIR}/htslib/install
-  BUILD_COMMAND make -j
-  INSTALL_COMMAND make install
-)
+  ExternalProject_Add(htslib
+    GIT_REPOSITORY https://github.com/samtools/htslib.git
+    GIT_TAG 1.17
+    GIT_SHALLOW true
+    GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+    PREFIX htslib
+    BUILD_IN_SOURCE true
+    CONFIGURE_COMMAND autoreconf -i COMMAND ./configure --prefix=${PROJECT_BINARY_DIR}/htslib/install
+    BUILD_COMMAND make -j
+    INSTALL_COMMAND make install
+  )
 endif()
 
 find_package(ZLIB)
 
+ExternalProject_Add(isa-l
+  GIT_REPOSITORY https://github.com/intel/isa-l.git
+  GIT_TAG v2.30.0
+  GIT_SHALLOW true
+  GIT_PROGRESS true
+  UPDATE_DISCONNECTED true
+  PREFIX isa-l
+  SOURCE_DIR isa-l/source
+  BINARY_DIR isa-l/source
+  INSTALL_DIR isa-l/install
+  CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env SED=/bin/sed GREP=/bin/grep ./autogen.sh && ${CMAKE_COMMAND} -E env AS=yasm ./configure --prefix=${CMAKE_BINARY_DIR}/isa-l/install --libdir=${CMAKE_BINARY_DIR}/isa-l/install
+  BUILD_COMMAND make && make other
+  INSTALL_COMMAND make install
+)
+set(isal_lib ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
 set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
@@ -95,10 +110,11 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR}/deps/usher)
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
   add_dependencies(${PRODUCT} range-v3)
-if(${USE_HTSLIB})
-  target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/include)
-  add_dependencies(${PRODUCT} htslib)
-endif()
+
+  if(${USE_HTSLIB})
+    target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/include)
+    add_dependencies(${PRODUCT} htslib)
+  endif()
 endfunction()
 
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
@@ -179,10 +195,16 @@ endif()
 target_include_directories(usher PUBLIC include)
 target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
 target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
+
+target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/isa-l/install/include)
 add_dependencies(usher range-v3)
+
+add_dependencies(usher isa-l)
 target_include_directories(usher PUBLIC ${PROTO_OUT_DIR}/deps/usher)
 larch_link_opts(usher)
 target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+
+target_link_libraries(usher PUBLIC ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
 set_target_properties(usher
   PROPERTIES CXX_CLANG_TIDY ""
 )
@@ -200,9 +222,11 @@ set_target_properties(larch-usher-glue
 
 larch_executable(larch-test
   test/main.cpp
+  test/test_ambiguous_vcf.cpp
   test/test_ambiguities.cpp
   test/test_compact_genome.cpp
   test/test_count_trees.cpp
+  test/test_dag_completion.cpp
   test/test_dag_trimming.cpp
   test/test_larch_usher.cpp
   test/test_loading.cpp

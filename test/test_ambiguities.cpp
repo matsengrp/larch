@@ -1,20 +1,12 @@
 #include "test_common.hpp"
+#include "sample_dag.hpp"
 #include "larch/dag_loader.hpp"
-#include "larch/merge/merge.hpp"
-#include "larch/subtree/subtree_weight.hpp"
-#include "larch/subtree/parsimony_score.hpp"
-#include "larch/spr/spr_view.hpp"
-
-#include <tbb/global_control.h>
-
-using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 
 [[maybe_unused]] static auto BuildNodeSequenceMap(MADAGStorage &dag_storage,
                                                   bool include_nonleaf_nodes = false) {
   NodeSeqMap node_seq_map;
   auto dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
-
   for (auto node : dag.GetNodes()) {
     if (include_nonleaf_nodes || node.IsLeaf()) {
       node_seq_map[node.GetId()] = node.GetCompactGenome().ToSequence(ref_seq);
@@ -44,53 +36,6 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
   return true;
 }
 
-[[maybe_unused]] static auto MakeSampleDAGTopology() {
-  MADAGStorage dag_storage{{}};
-  auto dag = dag_storage.View();
-
-  dag.SetReferenceSequence("GAA");
-
-  dag.InitializeNodes(11);
-
-  dag.AddEdge({0}, {0}, {10}, {0});
-  dag.AddEdge({1}, {7}, {1}, {0});
-  dag.AddEdge({2}, {7}, {2}, {1});
-  dag.AddEdge({3}, {8}, {3}, {0});
-  dag.AddEdge({4}, {8}, {4}, {1});
-  dag.AddEdge({5}, {9}, {5}, {0});
-  dag.AddEdge({6}, {9}, {6}, {1});
-  dag.AddEdge({7}, {8}, {7}, {2});
-  dag.AddEdge({8}, {10}, {8}, {0});
-  dag.AddEdge({9}, {10}, {9}, {1});
-
-  dag.BuildConnections();
-
-  return dag_storage;
-}
-
-[[maybe_unused]] static auto MakeSampleUnambiguousCompleteSequenceMap() {
-  NodeSeqMap node_seq_map;
-  node_seq_map[{1}] = "ACC";
-  node_seq_map[{2}] = "TAG";
-  node_seq_map[{3}] = "AGG";
-  node_seq_map[{4}] = "ACG";
-  node_seq_map[{5}] = "CTT";
-  node_seq_map[{6}] = "TCC";
-
-  node_seq_map[{7}] = "TGG";
-  node_seq_map[{8}] = "CTC";
-  node_seq_map[{9}] = "AGT";
-  node_seq_map[{10}] = "GAA";
-  return node_seq_map;
-}
-
-[[maybe_unused]] static auto MakeSampleAmbiguousCompleteSequenceMap() {
-  NodeSeqMap node_seq_map = MakeSampleUnambiguousCompleteSequenceMap();
-  node_seq_map[{2}] = "TNN";
-  node_seq_map[{4}] = "ANG";
-  return node_seq_map;
-}
-
 [[maybe_unused]] static auto VerifyCompactGenomesCompatibleWithLeaves(
     MADAGStorage &dag_storage, NodeSeqMap &truth_leaf_seq_map) {
   auto dag = dag_storage.View();
@@ -113,22 +58,20 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 }
 
 [[maybe_unused]] void test_compare_ambiguities() {
-  auto amb_dag_storage = MakeSampleDAGTopology();
-  auto amb_seq_map = MakeSampleAmbiguousCompleteSequenceMap();
+  auto amb_dag_storage = make_ambiguous_sample_dag();
+  auto amb_seq_map = make_sample_ambiguous_sequence_map();
   auto amb_dag = amb_dag_storage.View();
-  amb_dag.SetLeafCompactGenomesFromSequenceMap(amb_seq_map);
-  amb_dag.RecomputeEdgeMutations();
 
-  auto unamb_dag_storage = MakeSampleDAGTopology();
-  auto unamb_seq_map = MakeSampleUnambiguousCompleteSequenceMap();
+  auto unamb_dag_storage = make_unambiguous_sample_dag();
+  auto unamb_seq_map = make_sample_unambiguous_sequence_map();
   auto unamb_dag = unamb_dag_storage.View();
-  unamb_dag.SetLeafCompactGenomesFromSequenceMap(unamb_seq_map);
-  unamb_dag.RecomputeEdgeMutations();
 
-  bool write_dot_files = true;
-  if (write_dot_files) {
+  bool write_files = true;
+  if (write_files) {
     WriteDAGToFile(amb_dag_storage, "_ignore/amb_dag.dot");
     WriteDAGToFile(unamb_dag_storage, "_ignore/unamb_dag.dot");
+    StoreDAGToProtobuf(amb_dag, "_ignore/amb_dag.pb");
+    StoreDAGToProtobuf(unamb_dag, "_ignore/unamb_dag.pb");
   }
 
   // (0) Test checks that all edges mutations are compatible with adjacent compact
@@ -230,10 +173,10 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 
   // (6) Test that recomputing edge mutations and compact genomes does not alter
   // leaves.
-  amb_dag.RecomputeCompactGenomes();
+  amb_dag.RecomputeCompactGenomes(false);
   assert_true(VerifyCompactGenomesCompatibleWithLeaves(amb_dag_storage, amb_seq_map),
               "Test_6a: RecomputeCompactGenomes incorrectly altered leaf CGs.");
-  unamb_dag.RecomputeCompactGenomes();
+  unamb_dag.RecomputeCompactGenomes(false);
   assert_true(
       VerifyCompactGenomesCompatibleWithLeaves(unamb_dag_storage, unamb_seq_map),
       "Test_6b: RecomputeCompactGenomes incorrectly altered leaf CGs.");

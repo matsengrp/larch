@@ -481,6 +481,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string matoptimize_path = "matOptimize";
   std::string logfile_path = "optimization_log";
   std::string refseq_path;
+  std::string vcf_path;
   std::string callback_config = "best-moves";
   bool sample_best_tree = true;
   size_t count = 1;
@@ -566,6 +567,12 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         Fail();
       }
       refseq_path = *params.begin();
+    } else if (name == "-v" or name == "--VCF-input-file") {
+      if (params.empty()) {
+        std::cerr << "VCF file path not specified.\n";
+        Fail();
+      }
+      vcf_path = *params.begin();
     } else if (name == "--callback-option") {
       if (params.empty()) {
         std::cerr << "Callback configuration not specified.\n";
@@ -603,11 +610,13 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       refseq_path.empty()
           ? LoadDAGFromProtobuf(input_dag_path)
           : LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path));
+
+  input_dag.View().RecomputeCompactGenomes(true);
+  LoadVCFData(input_dag, vcf_path);
   auto input_dag_view = input_dag.View();
-  input_dag_view.RecomputeCompactGenomes(true);
   // if the DAG is from a DAG protobuf file, then it needs to be equipped with SampleIds
   if (refseq_path.empty()) {
-    input_dag.View().SampleIdsFromCG();
+    input_dag_view.SampleIdsFromCG();
   }
   Merge merge{input_dag_view.GetReferenceSequence()};
   merge.AddDAG(input_dag_view);
@@ -724,6 +733,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       return std::nullopt;
     }();
 
+    merge.ComputeResultEdgeMutations();
     auto sample =
         sample_best_tree
             ? sample_uniformly
@@ -735,6 +745,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
                            : AddMATConversion(weight.SampleTree({}, subtree_node));
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
               << sample.GetNodesCount() << "\n";
+    sample.View().RecomputeEdgeMutations();
     MAT::Tree mat;
     sample.View().GetRoot().Validate(true);
     sample.View().BuildMAT(mat);
@@ -771,7 +782,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     }
 
     auto optimized_view = optimized_dags.back().first.View();
-    optimized_view.RecomputeCompactGenomes(true);
+    optimized_view.RecomputeCompactGenomes(false);
     merge.AddDAG(optimized_view);
     logger(i + 1);
   }
@@ -783,3 +794,4 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   return EXIT_SUCCESS;
 }
+

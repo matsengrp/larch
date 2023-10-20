@@ -2,9 +2,14 @@
 
 #include <mutex>
 #include <shared_mutex>
+#include <tbb/concurrent_unordered_map.h>
 
 #include "larch/spr/spr_view.hpp"
 #include "larch/merge/merge.hpp"
+
+template <typename K, typename V>
+using ConcurrentUnorderedMap =
+    tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
 template <typename CRTP, typename SampleDAG>
 class BatchingCallback : public Move_Found_Callback {
@@ -28,6 +33,7 @@ class BatchingCallback : public Move_Found_Callback {
   void operator()(MAT::Tree& tree);
 
   void OnReassignedStates(MAT::Tree& tree);
+  const ConcurrentUnorderedMap<MAT::Node*, CompactGenome>& GetMATNodeToCGMap() const;
 
  protected:
   Merge& GetMerge();
@@ -41,6 +47,7 @@ class BatchingCallback : public Move_Found_Callback {
   std::decay_t<SampleDAG> sample_dag_;
   bool collapse_empty_fragment_edges_;
   ArbitraryInt applied_moves_count_;
+  ConcurrentUnorderedMap<MAT::Node*, CompactGenome> mat_node_to_cg_map_;
   ReassignedStatesStorage reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage{{}}));
   std::shared_mutex mat_mtx_;

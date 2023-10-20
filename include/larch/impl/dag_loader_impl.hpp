@@ -29,6 +29,7 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/copy.hpp>
 
+#include "larch/dag_loader.hpp"
 #include "larch/newick.hpp"
 
 inline int32_t EncodeBasePB(char base) {
