@@ -51,6 +51,9 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   ElementView<Component::Edge, DAGView<Storage, Base>> Get(EdgeId id) const;
   /** @} */
 
+  std::optional<ElementView<Component::Edge, DAGView<Storage, Base>>> FindEdge(
+      NodeId parent_id, NodeId child_id) const;
+
   ElementView<Component::Node, DAGView<Storage, Base>> AppendNode() const;
   ElementView<Component::Edge, DAGView<Storage, Base>> AppendEdge() const;
 
@@ -88,6 +91,9 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   void InitializeNodes(size_t size) const;
   void InitializeEdges(size_t size) const;
+
+  void ClearNodes() const;
+  void ClearEdges() const;
 
   template <typename Feature>
   auto& GetFeatureStorage() const;

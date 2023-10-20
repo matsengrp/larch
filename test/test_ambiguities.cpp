@@ -1,16 +1,12 @@
 #include "test_common.hpp"
 #include "sample_dag.hpp"
 #include "larch/dag_loader.hpp"
-#include "larch/spr/spr_view.hpp"
-
-#include <tbb/global_control.h>
 
 [[maybe_unused]] static auto BuildNodeSequenceMap(MADAGStorage &dag_storage,
                                                   bool include_nonleaf_nodes = false) {
   NodeSeqMap node_seq_map;
   auto dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
-
   for (auto node : dag.GetNodes()) {
     if (include_nonleaf_nodes || node.IsLeaf()) {
       node_seq_map[node.GetId()] = node.GetCompactGenome().ToSequence(ref_seq);
@@ -62,12 +58,12 @@
 }
 
 [[maybe_unused]] void test_compare_ambiguities() {
-  auto amb_dag_storage = MakeAmbiguousSampleDAG();
-  auto amb_seq_map = MakeSampleAmbiguousCompleteSequenceMap();
+  auto amb_dag_storage = make_ambiguous_sample_dag();
+  auto amb_seq_map = make_sample_ambiguous_sequence_map();
   auto amb_dag = amb_dag_storage.View();
 
-  auto unamb_dag_storage = MakeUnambiguousSampleDAG();
-  auto unamb_seq_map = MakeSampleUnambiguousCompleteSequenceMap();
+  auto unamb_dag_storage = make_unambiguous_sample_dag();
+  auto unamb_seq_map = make_sample_unambiguous_sequence_map();
   auto unamb_dag = unamb_dag_storage.View();
 
   bool write_files = true;

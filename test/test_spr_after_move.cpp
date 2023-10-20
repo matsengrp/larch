@@ -270,7 +270,7 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
   std::string output_folder = "_ignore/";
   std::string output_ext = ".dot";
 
-  auto dag_storage = AddMATConversion(MakeSampleDAG());
+  auto dag_storage = AddMATConversion(make_sample_dag());
   auto dag = dag_storage.View();
   MAT::Tree tree;
   dag.BuildMAT(tree);
@@ -279,7 +279,7 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
 
   if (write_dot_files) {
     output_filename = output_folder + dag_name + output_ext;
-    std::cout << ">> WRITE DOTFILE [pre]: " << output_filename << std::endl;
+    std::cout << ">> WRITE DOTFILE: " << output_filename << std::endl;
     os.open(output_filename);
     MADAGToDOT(dag, os);
     os.close();

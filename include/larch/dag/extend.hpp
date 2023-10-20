@@ -228,6 +228,9 @@ struct ExtendDAGStorage {
   void InitializeNodes(size_t size);
   void InitializeEdges(size_t size);
 
+  void ClearNodes();
+  void ClearEdges();
+
   template <typename F>
   auto& GetFeatureStorage();
 

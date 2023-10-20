@@ -100,6 +100,18 @@ void ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::InitializeEdges(size_t size) {
 }
 
 template <typename Target, typename Arg0, typename Arg1, typename Arg2>
+void ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::ClearNodes() {
+  GetTarget().ClearNodes();
+  additional_node_features_storage_.clear();
+}
+
+template <typename Target, typename Arg0, typename Arg1, typename Arg2>
+void ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::ClearEdges() {
+  GetTarget().ClearEdges();
+  additional_edge_features_storage_.clear();
+}
+
+template <typename Target, typename Arg0, typename Arg1, typename Arg2>
 template <typename F>
 auto& ExtendDAGStorage<Target, Arg0, Arg1, Arg2>::GetFeatureStorage() {
   return additional_dag_features_storage_.template GetFeatureStorage<F>();

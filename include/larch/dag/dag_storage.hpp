@@ -104,6 +104,9 @@ struct DAGStorage {
   void InitializeNodes(size_t size);
   void InitializeEdges(size_t size);
 
+  void ClearNodes();
+  void ClearEdges();
+
   template <typename Feature>
   auto& GetFeatureStorage(NodeId id);
 

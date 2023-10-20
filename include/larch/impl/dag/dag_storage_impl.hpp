@@ -79,6 +79,16 @@ void DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::InitializeEdge
 }
 
 template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+void DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::ClearNodes() {
+  nodes_container_.Clear();
+}
+
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+void DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::ClearEdges() {
+  edges_container_.Clear();
+}
+
+template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 template <typename Feature>
 auto& DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetFeatureStorage(
     NodeId id) {
