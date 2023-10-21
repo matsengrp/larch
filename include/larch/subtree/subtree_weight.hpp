@@ -35,14 +35,21 @@ WithinCladeAccumOptimum(std::vector<Weight>);
 
 using ArbitraryInt = boost::multiprecision::cpp_int;
 
+template <typename DAG>
+struct SampledDAGStorage
+    : ExtendDAGStorage<SampledDAGStorage<DAG>, DAG, Extend::Nodes<MappedNodes>> {
+  using ExtendDAGStorage<SampledDAGStorage<DAG>, DAG,
+                         Extend::Nodes<MappedNodes>>::ExtendDAGStorage;
+};
+
 template <typename WeightOps, typename DAG>
 class SubtreeWeight {
  public:
   using Storage = std::remove_const_t<typename DAG::StorageType>;
+  using SampledDAGStorage = ::SampledDAGStorage<Storage>;
   using MutableDAG = typename DAG::MutableType;
   using Node = typename DAG::NodeView;
   using Edge = typename DAG::EdgeView;
-  using SampledDAGStorage = ExtendDAGStorage<Storage, Extend::Nodes<MappedNodes>>;
   explicit SubtreeWeight(DAG dag);
 
   DAG GetDAG() const;

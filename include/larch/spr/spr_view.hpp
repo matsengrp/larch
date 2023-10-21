@@ -182,10 +182,18 @@ struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
 };
 
 template <typename DAG>
-auto SPRStorage(DAG&& dag) {
-  auto extend = ExtendStorage(std::forward<DAG>(dag), Extend::Nodes<HypotheticalNode>{},
-                              Extend::DAG<HypotheticalTree<std::decay_t<DAG>>>{});
-  return OverlayDAGStorage{std::move(extend)};
+struct SPRStorage
+    : ExtendDAGStorage<SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
+                       Extend::DAG<HypotheticalTree<std::decay_t<DAG>>>> {
+  using ExtendDAGStorage<
+      SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
+      Extend::DAG<HypotheticalTree<std::decay_t<DAG>>>>::ExtendDAGStorage;
+};
+
+template <typename DAG>
+auto AddSPRStorage(DAG&& dag) {
+  SPRStorage<DAG> result{std::forward<DAG>(dag)};
+  return OverlayDAGStorage{std::move(result)};
 }
 
 #include "larch/impl/spr/spr_view_impl.hpp"

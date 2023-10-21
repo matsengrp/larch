@@ -36,21 +36,6 @@ ElementView<Component::Edge, DAGView<Storage, Base>> DAGView<Storage, Base>::Get
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-std::optional<ElementView<Component::Edge, DAGView<Storage, Base>>>
-DAGView<Storage, Base>::FindEdge(NodeId parent_id, NodeId child_id) const {
-  auto dag = DAGView<const Storage, Base>{dag_storage_};
-
-  auto parent_node = dag.Get(parent_id);
-  for (auto edge_id : parent_node.GetChildren()) {
-    auto edge = dag.Get(edge_id);
-    if (edge.GetChild() == child_id) {
-      return {{*this, edge.GetId()}};
-    }
-  }
-  return std::nullopt;
-}
-
-template <typename Storage, template <typename, typename> typename Base>
 ElementView<Component::Node, DAGView<Storage, Base>>
 DAGView<Storage, Base>::AppendNode() const {
   NodeId result = dag_storage_.AppendNode();
@@ -92,13 +77,8 @@ template <typename Storage, template <typename, typename> typename Base>
 ElementView<Component::Edge, DAGView<Storage, Base>> DAGView<Storage, Base>::AppendEdge(
     NodeId parent, NodeId child,
     CladeIdx clade) const {  // TODO
-  auto dag = dag_storage_.View();
   auto result = AppendEdge();
   result.Set(parent, child, clade);
-  auto parent_node = dag.Get(parent);
-  auto child_node = dag.Get(child);
-  parent_node.AddEdge(clade, result.GetId(), true);
-  child_node.AddEdge(clade, result.GetId(), false);
   return result;
 }
 
@@ -144,16 +124,6 @@ void DAGView<Storage, Base>::InitializeEdges(size_t size) const {
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-void DAGView<Storage, Base>::ClearNodes() const {
-  dag_storage_.ClearNodes();
-}
-
-template <typename Storage, template <typename, typename> typename Base>
-void DAGView<Storage, Base>::ClearEdges() const {
-  dag_storage_.ClearEdges();
-}
-
-template <typename Storage, template <typename, typename> typename Base>
 template <typename Feature>
 auto& DAGView<Storage, Base>::GetFeatureStorage() const {
   return dag_storage_.template GetFeatureStorage<Feature>();
@@ -178,11 +148,6 @@ auto& DAGView<Storage, Base>::GetFeatureExtraStorage() const {
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-const Storage& DAGView<Storage, Base>::GetStorage() const {
-  return dag_storage_;
-}
-
-template <typename Storage, template <typename, typename> typename Base>
-Storage& DAGView<Storage, Base>::GetStorage() {
+Storage& DAGView<Storage, Base>::GetStorage() const {
   return dag_storage_;
 }

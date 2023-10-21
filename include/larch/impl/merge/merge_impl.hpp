@@ -106,7 +106,7 @@ void Merge::AddDAG(DAG dag, NodeId below) {
   AddDAGs(dags, below);
 }
 
-MergeDAG Merge::GetResult() const { return result_dag_storage_.View(); }
+MergeDAG Merge::GetResult() const { return result_dag_storage_.View().Const(); }
 
 MutableMergeDAG Merge::ResultDAG() { return result_dag_storage_.View(); }
 

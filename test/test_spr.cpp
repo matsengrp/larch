@@ -99,14 +99,12 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
       auto storage = [this](std::string ref_seq) {
         std::unique_lock<std::mutex> lock{mutex_};
         Assert(sample_mat_ != nullptr);
-        using Storage = ExtendDAGStorage<
-            DefaultDAGStorage, Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
-            Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+        using Storage = MergeDAGStorage;
         auto mat_conv = AddMATConversion(Storage{{}});
         mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
         check_edge_mutations(mat_conv.View());
         mat_conv.View().RecomputeCompactGenomes(true);
-        return SPRStorage(std::move(mat_conv));
+        return AddSPRStorage(std::move(mat_conv));
       }(sample_.GetReferenceSequence());
       auto spr = storage.View();
 
@@ -194,7 +192,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 [[maybe_unused]] static void test_sample() {
   auto input_storage = make_sample_dag();
   auto dag = input_storage.View();
-  auto spr_storage = SPRStorage(dag);
+  auto spr_storage = AddSPRStorage(dag);
   auto spr = spr_storage.View();
 
   spr.GetRoot().Validate(true);

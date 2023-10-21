@@ -87,14 +87,17 @@ struct Empty {
 /**
  * Adds new features to an existing DAG. See `namespace Extend` for more info.
  */
-template <typename Target, typename Arg0 = Extend::Empty<>,
+template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
 struct ExtendDAGStorage {
  public:
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 
-  using Self = ExtendDAGStorage<Target, Arg0, Arg1, Arg2>;
+  using Self = std::conditional_t<std::is_same_v<ShortName, void>,
+                                  ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>,
+                                  ShortName>;
+  // using Self = ShortName;
   using TargetView = decltype(ViewOf(std::declval<Target>()));
   using OnNodes = select_argument_t<Extend::Nodes, Arg0, Arg1, Arg2>;
   using OnEdges = select_argument_t<Extend::Edges, Arg0, Arg1, Arg2>;
@@ -277,7 +280,3 @@ struct ExtendDAGStorage {
   typename OnEdges::ExtraStorage additional_edge_extra_features_storage_;
 };
 
-template <typename Target, typename Arg0 = Extend::Empty<>,
-          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
-auto ExtendStorage(Target&& target, Arg0 = Extend::Empty<>{}, Arg1 = Extend::Empty<>{},
-                   Arg2 = Extend::Empty<>{});

@@ -29,7 +29,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
   auto& storage = [this]() -> SPRType& {
     std::shared_lock lock{mat_mtx_};
     Assert(sample_mat_storage_ != nullptr);
-    return *batch_storage_.push_back(SPRStorage(sample_mat_storage_->View()));
+    return *batch_storage_.push_back(AddSPRStorage(sample_mat_storage_->View()));
   }();
 
   storage.View().GetRoot().Validate(true);

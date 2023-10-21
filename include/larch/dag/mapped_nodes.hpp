@@ -32,6 +32,13 @@ struct ExtraFeatureMutableView<MappedNodes, CRTP> {
 };
 
 template <typename DAG>
-auto AddMappedNodes(DAG&& dag) {
-  return ExtendStorage(std::forward<DAG>(dag), Extend::Nodes<MappedNodes>{});
+struct MappedNodesStorage
+    : ExtendDAGStorage<MappedNodesStorage<DAG>, DAG, Extend::Nodes<MappedNodes>> {
+  using ExtendDAGStorage<MappedNodesStorage<DAG>, DAG,
+                         Extend::Nodes<MappedNodes>>::ExtendDAGStorage;
+};
+
+template <typename DAG>
+MappedNodesStorage<DAG> AddMappedNodes(DAG&& dag) {
+  return MappedNodesStorage<DAG>{std::forward<DAG>(dag)};
 }

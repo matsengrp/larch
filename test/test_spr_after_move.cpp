@@ -14,10 +14,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag, MergeT& merge)
       : sample_dag_{sample_dag}, merge_{merge} {};
 
-  using Storage =
-      ExtendDAGStorage<DefaultDAGStorage,
-                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
-                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+  using Storage = MergeDAGStorage;
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
@@ -293,7 +290,7 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
       }
 
       // Apply SPR
-      auto spr_storage = SPRStorage(dag);
+      auto spr_storage = AddSPRStorage(dag);
       auto spr = spr_storage.View();
       spr.GetRoot().Validate(true);
       LCA lca = FindLCA(src_node, dest_node);

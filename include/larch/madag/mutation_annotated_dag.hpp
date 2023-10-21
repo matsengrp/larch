@@ -59,10 +59,15 @@ struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
 
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"
 
-using MADAGStorage =
-    ExtendDAGStorage<DefaultDAGStorage,
-                     Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
-                     Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+struct MADAGStorage
+    : ExtendDAGStorage<MADAGStorage, DefaultDAGStorage,
+                       Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
+                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>> {
+  using ExtendDAGStorage<MADAGStorage, DefaultDAGStorage,
+                         Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
+                         Extend::Edges<EdgeMutations>,
+                         Extend::DAG<ReferenceSequence>>::ExtendDAGStorage;
+};
 
 using MADAG = DAGView<const MADAGStorage>;
 using MutableMADAG = DAGView<MADAGStorage>;

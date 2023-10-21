@@ -138,8 +138,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
   Assert(static_cast<size_t>(data.node_mutations_size()) ==
          result.View().GetNodesCount() - 1);
-  using Edge = MutableMADAG::EdgeView;
-  auto apply_mutations = [](auto& self, Edge edge, const auto& node_mutations,
+  auto apply_mutations = [](auto& self, auto edge, const auto& node_mutations,
                             size_t& idx) -> void {
     const auto& pb_muts = node_mutations.Get(static_cast<int>(idx++)).mutation();
     EdgeMutations muts;
@@ -147,7 +146,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
       muts.insert(i);
     }
     edge.SetEdgeMutations(std::move(muts));
-    for (Edge child : edge.GetChild().GetChildren()) {
+    for (auto child : edge.GetChild().GetChildren()) {
       self(self, child, node_mutations, idx);
     }
   };

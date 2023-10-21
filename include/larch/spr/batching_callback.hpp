@@ -22,7 +22,7 @@ class BatchingCallback : public Move_Found_Callback {
 
   using Storage = MergeDAGStorage;
   using MATStorage = decltype(AddMATConversion(Storage{{}}));
-  using SPRType = decltype(SPRStorage(AddMATConversion(Storage{{}}).View()));
+  using SPRType = decltype(AddSPRStorage(AddMATConversion(Storage{{}}).View()));
   using ReassignedStatesStorage =
       decltype(AddMappedNodes(AddMATConversion(Storage{{}})));
 

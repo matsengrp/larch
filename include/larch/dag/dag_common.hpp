@@ -223,7 +223,4 @@ struct Endpoints;
 
 struct Connections;
 
-using DefaultDAGStorage =
-    DAGStorage<ElementsContainer<Component::Node, ElementStorage<Neighbors>>,
-               ElementsContainer<Component::Edge, ElementStorage<Endpoints>>,
-               ExtraStorage<Connections>>;
+struct DefaultDAGStorage;

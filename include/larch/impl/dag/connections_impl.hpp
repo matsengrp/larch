@@ -90,7 +90,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::ClearConnections() const {
   for (auto node : dag.GetNodes()) {
     node.ClearConnections();
   }
-  dag.ClearEdges();
+  dag.GetStorage().ClearEdges();
 }
 
 template <typename CRTP, typename Tag>
