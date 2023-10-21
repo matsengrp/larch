@@ -44,7 +44,7 @@ class BatchingCallback : public Move_Found_Callback {
   void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq);
 
   Merge& merge_;
-  std::decay_t<SampleDAG> sample_dag_;
+  SampleDAG sample_dag_;
   bool collapse_empty_fragment_edges_;
   ArbitraryInt applied_moves_count_;
   ConcurrentUnorderedMap<std::string, CompactGenome> sample_id_to_cg_map_;

@@ -126,8 +126,9 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   }
   if (node.IsLeaf()) {
     Assert(storage.clades_.empty());
-    if constexpr (std::decay_t<decltype(node)>::template contains_feature<SampleId> or
-                  std::decay_t<decltype(node)>::template contains_feature<
+    if constexpr (std::remove_reference_t<decltype(node)>::template contains_feature<
+                      SampleId> or
+                  std::remove_reference_t<decltype(node)>::template contains_feature<
                       Deduplicate<SampleId>>) {
       Assert(node.Const().HaveSampleId());
     }

@@ -53,14 +53,14 @@ struct FragmentElementsContainer {
   auto All() const { return ids_ | ranges::views::all; }
 
  private:
-  std::decay_t<Target> target_;
+  Target target_;
   const std::vector<Id<C>> ids_;
   const NodeId root_node_id_;
 };
 
 template <typename Target>
 struct FragmentExtraStorage {
-  static_assert(std::decay_t<Target>::role == Role::View);
+  static_assert(Target::role == Role::View);
 
   explicit FragmentExtraStorage(Target target) : target_{target} {}
   MOVE_ONLY(FragmentExtraStorage);
@@ -91,7 +91,7 @@ struct FragmentExtraStorage {
   }
 
  private:
-  std::decay_t<Target> target_;
+  Target target_;
 };
 
 template <typename Target>

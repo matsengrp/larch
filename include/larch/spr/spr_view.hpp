@@ -184,10 +184,9 @@ struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
 template <typename DAG>
 struct SPRStorage
     : ExtendDAGStorage<SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
-                       Extend::DAG<HypotheticalTree<std::decay_t<DAG>>>> {
-  using ExtendDAGStorage<
-      SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
-      Extend::DAG<HypotheticalTree<std::decay_t<DAG>>>>::ExtendDAGStorage;
+                       Extend::DAG<HypotheticalTree<DAG>>> {
+  using ExtendDAGStorage<SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
+                         Extend::DAG<HypotheticalTree<DAG>>>::ExtendDAGStorage;
 };
 
 template <typename DAG>

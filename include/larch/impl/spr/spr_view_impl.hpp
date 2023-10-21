@@ -278,18 +278,6 @@ void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGeno
   auto& node = static_cast<const CRTP&>(*this);
   if (not node.IsUA() and not node.IsMoveNew() and not node.IsLeaf()) {
     node.template SetOverlay<Deduplicate<CompactGenome>>();
-    // TODO: we shouldn't overlay SampleID - leafs will not be moving
-    // if constexpr (std::decay_t<decltype(node)>::template contains_feature<SampleId>)
-    // {
-    //   if (node.IsLeaf()) {
-    //     node.template SetOverlay<SampleId>();
-    //   }
-    // } else if constexpr (std::decay_t<decltype(node)>::template contains_feature<
-    //                          Deduplicate<SampleId>>) {
-    //   if (node.IsLeaf()) {
-    //     node.template SetOverlay<Deduplicate<SampleId>>();
-    //   }
-    // }
     node = node.ComputeNewCompactGenome();
   }
   result_nodes.push_back(node);

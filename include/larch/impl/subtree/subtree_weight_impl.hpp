@@ -105,7 +105,7 @@ template <typename WeightOps, typename DAG>
 typename SubtreeWeight<WeightOps, DAG>::SampledDAGStorage
 SubtreeWeight<WeightOps, DAG>::UniformSampleTree(WeightOps&& weight_ops,
                                                  std::optional<NodeId> below) {
-  static_assert(std::is_same_v<std::decay_t<WeightOps>, TreeCount>,
+  static_assert(std::is_same_v<WeightOps, TreeCount>,
                 "UniformSampleTree needs TreeCount");
   Node below_node = below.has_value() ? dag_.Get(*below) : dag_.GetRoot();
   // Ensure cache is filled

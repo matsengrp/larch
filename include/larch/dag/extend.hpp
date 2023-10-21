@@ -104,7 +104,7 @@ struct ExtendDAGStorage {
   using OnDAG = select_argument_t<Extend::DAG, Arg0, Arg1, Arg2>;
 
   struct ExtraStorageType {
-    explicit ExtraStorageType(std::decay_t<Target>& target) : target_{target} {}
+    explicit ExtraStorageType(Target& target) : target_{target} {}
     ExtraStorageType(ExtraStorageType&& other) = default;
     ExtraStorageType& operator=(ExtraStorageType&&) = default;
 
@@ -144,7 +144,7 @@ struct ExtendDAGStorage {
     }
 
    private:
-    std::reference_wrapper<std::decay_t<Target>> target_;
+    std::reference_wrapper<std::remove_reference_t<Target>> target_;
     typename OnDAG::Storage storage_;
   };
 
@@ -272,11 +272,10 @@ struct ExtendDAGStorage {
   auto GetTarget();
   auto GetTarget() const;
 
-  std::decay_t<Target> target_ = {};
+  Target target_;
   typename OnNodes::Storage additional_node_features_storage_;
   typename OnEdges::Storage additional_edge_features_storage_;
   ExtraStorageType additional_dag_features_storage_;
   typename OnNodes::ExtraStorage additional_node_extra_features_storage_;
   typename OnEdges::ExtraStorage additional_edge_extra_features_storage_;
 };
-

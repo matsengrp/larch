@@ -88,7 +88,7 @@ static constexpr auto select_argument() {
 
 template <typename T>
 auto ViewOf(T&& dag) {
-  if constexpr (std::decay_t<T>::role == Role::View) {
+  if constexpr (std::remove_reference_t<T>::role == Role::View) {
     return dag;
   } else {
     return dag.View();

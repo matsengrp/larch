@@ -36,7 +36,7 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
   auto& GetFeatureExtraStorage() const;
 
  private:
-  std::decay_t<DAGViewType> dag_view_;
+  DAGViewType dag_view_;
   Id<C> id_;
 };
 

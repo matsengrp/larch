@@ -211,14 +211,16 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
     Assert(insert_pair.first->second.value != NoId);
     Assert(result_nodes.find(label) != result_nodes.end());
     if (insert_pair.second) {
-      if constexpr (std::decay_t<decltype(dag)>::template contains_element_feature<
-                        Component::Node, MappedNodes>) {
+      if constexpr (std::remove_reference_t<decltype(dag)>::
+                        template contains_element_feature<Component::Node,
+                                                          MappedNodes>) {
         dag.Get(id).SetOriginalId(orig_id);
       }
     } else {
       if (id.value != dag.GetNodesCount() - 1) {
-        if constexpr (std::decay_t<decltype(dag)>::template contains_element_feature<
-                          Component::Node, MappedNodes>) {
+        if constexpr (std::remove_reference_t<decltype(dag)>::
+                          template contains_element_feature<Component::Node,
+                                                            MappedNodes>) {
           dag.Get(id).SetOriginalId(insert_pair.first->second);
         }
       }

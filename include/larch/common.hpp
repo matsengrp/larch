@@ -128,6 +128,10 @@ template <typename... Types, typename Type>
 struct tuple_contains<std::tuple<Types...>, Type>
     : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
 
+template <typename... Types, typename Type>
+struct tuple_contains<const std::tuple<Types...>, Type>
+    : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
+
 template <typename Tuple, typename Type>
 inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
 
@@ -138,8 +142,8 @@ inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wc++20-extensions"
 template <typename T>
-inline const auto tuple_to_string_impl = [
-]<std::size_t... I>(std::index_sequence<I...>) {
+inline const auto tuple_to_string_impl =
+    []<std::size_t... I>(std::index_sequence<I...>) {
   std::string result = "std::tuple<";
   result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
                     std::string{", "}));

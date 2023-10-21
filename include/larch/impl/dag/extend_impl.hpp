@@ -149,9 +149,9 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
 template <typename F>
 auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
     NodeId id) {
-  if constexpr (tuple_contains_v<
-                    std::decay_t<decltype(additional_node_features_storage_.at(0))>,
-                    F>) {
+  if constexpr (tuple_contains_v<std::remove_reference_t<
+                                     decltype(additional_node_features_storage_.at(0))>,
+                                 F>) {
     return std::get<F>(additional_node_features_storage_.at(id.value));
   } else {
     return GetTarget().template GetFeatureStorage<F>(id);
@@ -164,7 +164,7 @@ template <typename F>
 const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
     NodeId id) const {
   if constexpr (tuple_contains_v<
-                    std::decay_t<decltype(additional_node_features_storage_.at(0))>,
+                    typename decltype(additional_node_features_storage_)::value_type,
                     F>) {
     return std::get<F>(additional_node_features_storage_.at(id.value));
   } else {
@@ -178,7 +178,7 @@ template <typename F>
 auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
     EdgeId id) {
   if constexpr (tuple_contains_v<
-                    std::decay_t<decltype(additional_edge_features_storage_.at(0))>,
+                    typename decltype(additional_edge_features_storage_)::value_type,
                     F>) {
     return std::get<F>(additional_edge_features_storage_.at(id.value));
   } else {
@@ -192,7 +192,7 @@ template <typename F>
 const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
     EdgeId id) const {
   if constexpr (tuple_contains_v<
-                    std::decay_t<decltype(additional_edge_features_storage_.at(0))>,
+                    typename decltype(additional_edge_features_storage_)::value_type,
                     F>) {
     return std::get<F>(additional_edge_features_storage_.at(id.value));
   } else {
@@ -204,7 +204,8 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2>
 template <Component C, typename F>
 auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() {
-  if constexpr (std::decay_t<Target>::template contains_element_feature<C, F>) {
+  if constexpr (std::remove_reference_t<Target>::template contains_element_feature<C,
+                                                                                   F>) {
     return GetTarget().template GetFeatureExtraStorage<C, F>();
   } else {
     if constexpr (C == Component::Node) {
@@ -220,7 +221,7 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
 template <Component C, typename F>
 const auto&
 ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() const {
-  if constexpr (std::decay_t<Target>::template contains_element_feature<C, F>) {
+  if constexpr (Target::template contains_element_feature<C, F>) {
     return GetTarget().template GetFeatureExtraStorage<C, F>();
   } else {
     if constexpr (C == Component::Node) {

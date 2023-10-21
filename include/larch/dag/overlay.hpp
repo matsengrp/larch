@@ -175,7 +175,7 @@ struct OverlayDAGStorage {
   template <typename, typename, typename>
   friend struct FeatureMutableView;
 
-  std::decay_t<Target> target_ = {};
+  Target target_;
   typename ToOverlayStorage<AllNodeFeatures>::template type<NodeId>
       replaced_node_storage_;
   typename ToOverlayStorage<AllEdgeFeatures>::template type<EdgeId>
