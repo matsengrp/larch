@@ -4,7 +4,9 @@
 
 template <typename Target, Component C>
 struct FragmentElementsContainer {
- public:
+  static_assert(Target::role == Role::View);
+  static_assert(Target::component == Component::DAG);
+
   using TargetStorage = typename Target::StorageType;
   using TargetContainer = typename TargetStorage::template Container<C>;
   using FeatureTypes = typename TargetStorage::FeatureTypes;
@@ -60,7 +62,11 @@ struct FragmentElementsContainer {
 
 template <typename Target>
 struct FragmentExtraStorage {
+  constexpr static const Component component = Component::DAG;
+  constexpr static const Role role = Role::Storage;
+
   static_assert(Target::role == Role::View);
+  static_assert(Target::component == Component::DAG);
 
   explicit FragmentExtraStorage(Target target) : target_{target} {}
   MOVE_ONLY(FragmentExtraStorage);

@@ -23,6 +23,9 @@
 template <typename Storage,
           template <typename, typename> typename Base = DefaultViewBase>
 struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
+  static_assert(Storage::role == Role::Storage);
+  static_assert(Storage::component == Component::DAG);
+
  public:
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::View;

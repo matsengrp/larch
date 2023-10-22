@@ -41,9 +41,11 @@ struct ToOverlayStorage<std::tuple<Features...>> {
 
 template <typename Target>
 struct OverlayDAGStorage {
- public:
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
+
+  static_assert(not std::is_reference_v<Target>);
+  static_assert(Target::component == Component::DAG);
 
   using TargetView = decltype(ViewOf(std::declval<Target>()));
 
@@ -96,7 +98,15 @@ struct OverlayDAGStorage {
 
   MOVE_ONLY(OverlayDAGStorage);
 
-  explicit OverlayDAGStorage(Target&& target);
+  static OverlayDAGStorage Consume(Target&& target) {
+    static_assert(Target::role == Role::Storage);
+    return OverlayDAGStorage{std::move(target)};
+  }
+
+  static OverlayDAGStorage FromView(const Target& target) {
+    static_assert(Target::role == Role::View);
+    return OverlayDAGStorage{Target{target}};
+  }
 
   auto View();
   auto View() const;
@@ -154,6 +164,8 @@ struct OverlayDAGStorage {
   auto& GetTargetStorage() const { return *this; }
 
  private:
+  explicit OverlayDAGStorage(Target&& target);
+
   auto GetTarget();
   auto GetTarget() const;
 
@@ -184,7 +196,12 @@ struct OverlayDAGStorage {
   std::vector<AllEdgeFeatures> added_edge_storage_;
 };
 
-template <typename DAG>
-auto AddOverlay(DAG&& dag) {
-  return OverlayDAGStorage<DAG>{std::forward<DAG>(dag)};
+template <typename DAG, typename = std::enable_if_t<DAG::role == Role::Storage>>
+OverlayDAGStorage<DAG> AddOverlay(DAG&& dag) {
+  return OverlayDAGStorage<DAG>::Consume(std::move(dag));
+}
+
+template <typename DAG, typename = std::enable_if_t<DAG::role == Role::View>>
+OverlayDAGStorage<DAG> AddOverlay(const DAG& dag) {
+  return OverlayDAGStorage<DAG>::FromView(std::move(dag));
 }

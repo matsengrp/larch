@@ -192,7 +192,7 @@ struct SPRStorage
 template <typename DAG>
 auto AddSPRStorage(DAG&& dag) {
   SPRStorage<DAG> result{std::forward<DAG>(dag)};
-  return OverlayDAGStorage{std::move(result)};
+  return AddOverlay(std::move(result));
 }
 
 #include "larch/impl/spr/spr_view_impl.hpp"

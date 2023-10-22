@@ -4,6 +4,9 @@
 
 template <typename... Features>
 struct ExtraStorage {
+  constexpr static const Component component = Component::DAG;
+  constexpr static const Role role = Role::Storage;
+
   using FeatureTypes = std::tuple<Features...>;
 
   template <template <typename, typename> typename T, typename CRTP>
@@ -40,6 +43,9 @@ struct ExtraStorage {
  */
 template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
 struct DAGStorage {
+  static_assert(ExtraStorageT::role == Role::Storage);
+  static_assert(ExtraStorageT::component == Component::DAG);
+
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 

@@ -7,6 +7,9 @@
  */
 template <Component C, typename DAGViewType>
 struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
+  static_assert(DAGViewType::role == Role::View);
+  static_assert(DAGViewType::component == Component::DAG);
+
  public:
   constexpr static const Component component = C;
   constexpr static const Role role = Role::View;
