@@ -17,6 +17,8 @@ static auto GetRFDistance(const Merge& merge1, const Merge& merge2) {
   // make sure shift sum is correct
   if (merge2.GetResult().IsTree()) {
     Assert(shift_sum == merge2.GetResult().GetNodesCount() - 1);
+  } else {
+    std::cout << "shift sum is : " << shift_sum << "\n" << std::flush;
   }
   auto result =
       count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;
@@ -92,7 +94,7 @@ static void test_rf_two_distinct_topologies_single_merge() {
   Merge merge(dag1.GetReferenceSequence());
   merge.AddDAGs(std::vector{dag1, dag2});
   auto dist = GetRFDistance(merge, merge);
-  auto truedist = (dag1.GetNodesCount() + dag2.GetNodesCount() -
+  auto truedist = (dag1.GetEdgesCount() + dag2.GetEdgesCount() -
                    dag1.GetLeafs().size() - dag2.GetLeafs().size() - 2);
   if (dist != truedist) {
     std::cout << "expected distance of " << truedist << " but computed distance was "
@@ -112,7 +114,7 @@ static void test_rf_distance_hand_computed_example() {
   Merge merge2(merge1);
   merge2.AddDAGs(std::vector{dag2});
   Assert(GetRFDistance(merge1, merge2) ==
-         (dag1.GetNodesCount() + dag2.GetNodesCount() - dag1.GetLeafs().size() -
+         (dag1.GetEdgesCount() + dag2.GetEdgesCount() - dag1.GetLeafs().size() -
           dag2.GetLeafs().size() - 2));
 }
 
