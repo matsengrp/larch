@@ -102,7 +102,8 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   std::cout << "Larch-Usher callback Applying " << applied_moves_count_ << "\n"
             << std::flush;
   applied_moves_count_ = 0;
-  reassigned_states_storage_ = AddMappedNodes(AddMATConversion(Storage{{}}));
+  reassigned_states_storage_ =
+      AddMappedNodes(AddMATConversion(Storage::EmptyDefault()));
   reassigned_states_storage_.View().BuildFromMAT(
       tree, merge_.GetResult().GetReferenceSequence());
   check_edge_mutations(reassigned_states_storage_.View().Const());
@@ -181,7 +182,8 @@ BatchingCallback<CRTP, SampleDAG>::GetSampleIdToCGMap() const {
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
                                                          std::string_view ref_seq) {
-  sample_mat_storage_ = std::make_unique<MATStorage>(AddMATConversion(Storage{{}}));
+  sample_mat_storage_ =
+      std::make_unique<MATStorage>(AddMATConversion(Storage::EmptyDefault()));
   auto view = sample_mat_storage_->View();
   view.BuildFromMAT(tree, ref_seq);
   check_edge_mutations(view.Const());

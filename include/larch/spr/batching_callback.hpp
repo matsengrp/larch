@@ -21,10 +21,11 @@ class BatchingCallback : public Move_Found_Callback {
   virtual ~BatchingCallback() {}
 
   using Storage = MergeDAGStorage;
-  using MATStorage = decltype(AddMATConversion(Storage{{}}));
-  using SPRType = decltype(AddSPRStorage(AddMATConversion(Storage{{}}).View()));
+  using MATStorage = decltype(AddMATConversion(Storage::EmptyDefault()));
+  using SPRType =
+      decltype(AddSPRStorage(AddMATConversion(Storage::EmptyDefault()).View()));
   using ReassignedStatesStorage =
-      decltype(AddMappedNodes(AddMATConversion(Storage{{}})));
+      decltype(AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&
@@ -49,7 +50,7 @@ class BatchingCallback : public Move_Found_Callback {
   ArbitraryInt applied_moves_count_;
   ConcurrentUnorderedMap<std::string, CompactGenome> sample_id_to_cg_map_;
   ReassignedStatesStorage reassigned_states_storage_ =
-      AddMappedNodes(AddMATConversion(Storage{{}}));
+      AddMappedNodes(AddMATConversion(Storage::EmptyDefault()));
   std::shared_mutex mat_mtx_;
   std::unique_ptr<MATStorage> sample_mat_storage_;
   std::mutex merge_mtx_;

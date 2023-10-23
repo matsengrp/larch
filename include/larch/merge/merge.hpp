@@ -28,10 +28,11 @@ using ConcurrentUnorderedMap =
     tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
 struct MergeDAGStorage
-    : ExtendDAGStorage<MergeDAGStorage, DefaultDAGStorage,
-                       Extend::Nodes<Deduplicate<CompactGenome>, Deduplicate<SampleId>>,
-                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>> {
-  using ExtendDAGStorage<
+    : ExtendStorageType<
+          MergeDAGStorage, DefaultDAGStorage,
+          Extend::Nodes<Deduplicate<CompactGenome>, Deduplicate<SampleId>>,
+          Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>> {
+  using ExtendStorageType<
       MergeDAGStorage, DefaultDAGStorage,
       Extend::Nodes<Deduplicate<CompactGenome>, Deduplicate<SampleId>>,
       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>::ExtendDAGStorage;

@@ -37,9 +37,9 @@ using ArbitraryInt = boost::multiprecision::cpp_int;
 
 template <typename DAG>
 struct SampledDAGStorage
-    : ExtendDAGStorage<SampledDAGStorage<DAG>, DAG, Extend::Nodes<MappedNodes>> {
-  using ExtendDAGStorage<SampledDAGStorage<DAG>, DAG,
-                         Extend::Nodes<MappedNodes>>::ExtendDAGStorage;
+    : ExtendStorageType<SampledDAGStorage<DAG>, DAG, Extend::Nodes<MappedNodes>> {
+  using ExtendStorageType<SampledDAGStorage<DAG>, DAG,
+                          Extend::Nodes<MappedNodes>>::ExtendDAGStorage;
 };
 
 template <typename WeightOps, typename DAG>

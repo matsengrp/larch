@@ -108,6 +108,11 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x& operator=(const x&) = delete;      \
   virtual ~x() = default
 
+#define NO_COPY(x)                 \
+  x(const x&) = delete;            \
+  x& operator=(const x&) = delete; \
+  ~x() = default
+
 //////////////////////////////////////////////////////////////////////////////////////
 
 template <typename, template <typename...> typename>

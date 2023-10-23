@@ -47,7 +47,7 @@ template <typename DAG>
   Assert(check_leaf_sample_ids(dag, mat));
 
   // check BuildFromMAT
-  auto dag_from_mat = AddMATConversion(Storage{{}});
+  auto dag_from_mat = AddMATConversion(Storage::EmptyDefault());
   dag_from_mat.View().BuildFromMAT(mat, dag.GetReferenceSequence());
   dag_from_mat.View().GetRoot().Validate(true);
   check_MAT_MADAG_Eq(mat, dag_from_mat.View());

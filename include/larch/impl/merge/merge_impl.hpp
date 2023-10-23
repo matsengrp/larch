@@ -1,4 +1,5 @@
-Merge::Merge(std::string_view reference_sequence) : result_dag_storage_{{}} {
+Merge::Merge(std::string_view reference_sequence)
+    : result_dag_storage_{MergeDAGStorage::EmptyDefault()} {
   ResultDAG().SetReferenceSequence(reference_sequence);
 }
 

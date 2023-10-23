@@ -62,7 +62,8 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{input_dag});
-  std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{{}})), MAT::Tree>>
+  std::vector<
+      std::pair<decltype(AddMATConversion(MADAGStorage::EmptyDefault())), MAT::Tree>>
       optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
@@ -100,7 +101,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
         std::unique_lock<std::mutex> lock{mutex_};
         Assert(sample_mat_ != nullptr);
         using Storage = MergeDAGStorage;
-        auto mat_conv = AddMATConversion(Storage{{}});
+        auto mat_conv = AddMATConversion(Storage::EmptyDefault());
         mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
         check_edge_mutations(mat_conv.View());
         mat_conv.View().RecomputeCompactGenomes(true);

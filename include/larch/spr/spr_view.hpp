@@ -183,15 +183,21 @@ struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
 
 template <typename DAG>
 struct SPRStorage
-    : ExtendDAGStorage<SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
-                       Extend::DAG<HypotheticalTree<DAG>>> {
-  using ExtendDAGStorage<SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
-                         Extend::DAG<HypotheticalTree<DAG>>>::ExtendDAGStorage;
+    : ExtendStorageType<SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
+                        Extend::DAG<HypotheticalTree<DAG>>> {
+  using ExtendStorageType<SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
+                          Extend::DAG<HypotheticalTree<DAG>>>::ExtendDAGStorage;
 };
 
-template <typename DAG>
+template <typename DAG, typename = std::enable_if_t<DAG::role == Role::Storage>>
 auto AddSPRStorage(DAG&& dag) {
-  SPRStorage<DAG> result{std::forward<DAG>(dag)};
+  SPRStorage<DAG> result = SPRStorage<DAG>::Consume(std::move(dag));
+  return AddOverlay(std::move(result));
+}
+
+template <typename DAG, typename = std::enable_if_t<DAG::role == Role::View>>
+auto AddSPRStorage(const DAG& dag) {
+  SPRStorage<DAG> result = SPRStorage<DAG>::FromView(std::move(dag));
   return AddOverlay(std::move(result));
 }
 

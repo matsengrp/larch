@@ -87,12 +87,15 @@ struct Empty {
 /**
  * Adds new features to an existing DAG. See `namespace Extend` for more info.
  */
-template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
-          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
+template <typename ShortName, typename Target, typename Arg0, typename Arg1,
+          typename Arg2>
 struct ExtendDAGStorage {
  public:
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
+
+  static_assert(not std::is_reference_v<Target>);
+  static_assert(Target::component == Component::DAG);
 
   using Self = std::conditional_t<std::is_same_v<ShortName, void>,
                                   ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>,
@@ -104,9 +107,15 @@ struct ExtendDAGStorage {
   using OnDAG = select_argument_t<Extend::DAG, Arg0, Arg1, Arg2>;
 
   struct ExtraStorageType {
-    explicit ExtraStorageType(Target& target) : target_{target} {}
+    explicit ExtraStorageType(const TargetView& target)
+        : target_{std::make_unique<TargetView>(target)} {}
+
     ExtraStorageType(ExtraStorageType&& other) = default;
-    ExtraStorageType& operator=(ExtraStorageType&&) = default;
+    ExtraStorageType& operator=(ExtraStorageType&& other) {
+      target_ = std::move(other.target_);
+      storage_ = std::move(other.storage_);
+      return *this;
+    }
 
     using FeatureTypes = decltype(std::tuple_cat(
         typename TargetView::StorageType::ExtraStorageType::FeatureTypes{},
@@ -130,7 +139,7 @@ struct ExtendDAGStorage {
       if constexpr (tuple_contains_v<decltype(storage_), Feature>) {
         return std::get<Feature>(storage_);
       } else {
-        return target_.get().template GetFeatureStorage<Feature>();
+        return target_->template GetFeatureStorage<Feature>();
       }
     }
 
@@ -139,12 +148,12 @@ struct ExtendDAGStorage {
       if constexpr (tuple_contains_v<decltype(storage_), Feature>) {
         return std::get<Feature>(storage_);
       } else {
-        return target_.get().template GetFeatureStorage<Feature>();
+        return target_->template GetFeatureStorage<Feature>();
       }
     }
 
    private:
-    std::reference_wrapper<std::remove_reference_t<Target>> target_;
+    std::unique_ptr<TargetView> target_;
     typename OnDAG::Storage storage_;
   };
 
@@ -209,9 +218,51 @@ struct ExtendDAGStorage {
     }
   };
 
-  MOVE_ONLY(ExtendDAGStorage);
+  NO_COPY(ExtendDAGStorage);
 
-  explicit ExtendDAGStorage(Target&& target);
+  ExtendDAGStorage(ShortName&& other)
+      : target_{other.target_},
+        additional_node_features_storage_{other.additional_node_features_storage_},
+        additional_edge_features_storage_{other.additional_edge_features_storage_},
+        additional_dag_features_storage_{other.additional_dag_features_storage_},
+        additional_node_extra_features_storage_{
+            other.additional_node_extra_features_storage_},
+        additional_edge_extra_features_storage_{
+            other.additional_edge_extra_features_storage_} {};
+
+  ExtendDAGStorage(ExtendDAGStorage&&) = default;
+
+  ExtendDAGStorage& operator=(ShortName&& other) {
+    target_ = std::move(other.target_);
+    additional_node_features_storage_ =
+        std::move(other.additional_node_features_storage_);
+    additional_edge_features_storage_ =
+        std::move(other.additional_edge_features_storage_);
+    additional_dag_features_storage_ =
+        std::move(other.additional_dag_features_storage_);
+    additional_node_extra_features_storage_ =
+        std::move(other.additional_node_extra_features_storage_);
+    additional_edge_extra_features_storage_ =
+        std::move(other.additional_edge_extra_features_storage_);
+    return *this;
+  }
+
+  ExtendDAGStorage& operator=(ExtendDAGStorage&& other) = default;
+
+  static ShortName Consume(Target&& target) {
+    static_assert(Target::role == Role::Storage);
+    return ShortName{std::move(target)};
+  }
+
+  static ShortName FromView(const Target& target) {
+    static_assert(Target::role == Role::View);
+    return ShortName{Target{target}};
+  }
+
+  static ShortName EmptyDefault() {
+    static_assert(Target::role == Role::Storage);
+    return ShortName{Target{}};
+  }
 
   auto View();
   auto View() const;
@@ -269,6 +320,8 @@ struct ExtendDAGStorage {
   auto& GetTargetStorage() const { return *this; }
 
  private:
+  explicit ExtendDAGStorage(Target&& target);
+
   auto GetTarget();
   auto GetTarget() const;
 
@@ -279,3 +332,23 @@ struct ExtendDAGStorage {
   typename OnNodes::ExtraStorage additional_node_extra_features_storage_;
   typename OnEdges::ExtraStorage additional_edge_extra_features_storage_;
 };
+
+template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
+          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
+using ExtendStorageType = ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>;
+
+template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
+          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
+          typename = std::enable_if_t<Target::role == Role::Storage>>
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2> AddExtend(Target&& target) {
+  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::Consume(
+      std::move(target));
+}
+
+template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
+          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
+          typename = std::enable_if_t<Target::role == Role::View>>
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2> AddExtend(const Target& target) {
+  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::FromView(
+      std::move(target));
+}

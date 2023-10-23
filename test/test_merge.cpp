@@ -90,7 +90,7 @@ static void test_case_20d() {
   trees.reserve(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;
   for (size_t i = 0; i < paths.size(); ++i) {
-    trees.push_back(MADAGStorage{{}});
+    trees.push_back(MADAGStorage::EmptyDefault());
     paths_idx.push_back({i, paths.at(i)});
   }
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {

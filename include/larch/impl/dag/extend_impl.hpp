@@ -23,14 +23,6 @@ inline constexpr bool ExtendDAGStorage<ShortName, Target, Arg0, Arg1,
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::ExtendDAGStorage(Target&& target)
-    : target_{std::forward<Target>(target)}, additional_dag_features_storage_{target_} {
-  additional_node_features_storage_.resize(GetTarget().GetNodesCount());
-  additional_edge_features_storage_.resize(GetTarget().GetEdgesCount());
-}
-
-template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
 auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::View() {
   return DAGView<Self>{static_cast<Self&>(*this)};
 }
@@ -246,6 +238,15 @@ template <Component C>
 auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetContainer() const
     -> const typename TargetView::StorageType::template Container<C>& {
   return GetTarget().GetStorage().template GetContainer<C>();
+}
+
+template <typename ShortName, typename Target, typename Arg0, typename Arg1,
+          typename Arg2>
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::ExtendDAGStorage(Target&& target)
+    : target_{std::forward<Target>(target)},
+      additional_dag_features_storage_{ViewOf(target_)} {
+  additional_node_features_storage_.resize(GetTarget().GetNodesCount());
+  additional_edge_features_storage_.resize(GetTarget().GetEdgesCount());
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
