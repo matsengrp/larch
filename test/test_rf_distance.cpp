@@ -114,6 +114,11 @@ static void test_rf_distance_hand_computed_example() {
   Assert(GetRFDistance(merge1, merge2) ==
          (dag1.GetEdgesCount() + dag2.GetEdgesCount() - dag1.GetLeafs().size() -
           dag2.GetLeafs().size() - 2));
+
+  Merge merge(dag1.GetReferenceSequence());
+  merge.AddDAGs(std::vector{dag1, dag2});
+  Assert(GetRFDistance(merge1, merge2) == GetRFDistance(merge, merge));
+         
 }
 
 [[maybe_unused]] static const auto test_added0 =
