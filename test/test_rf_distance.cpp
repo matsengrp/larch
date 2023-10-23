@@ -17,8 +17,6 @@ static auto GetRFDistance(const Merge& merge1, const Merge& merge2) {
   // make sure shift sum is correct
   if (merge2.GetResult().IsTree()) {
     Assert(shift_sum == merge2.GetResult().GetNodesCount() - 1);
-  } else {
-    std::cout << "shift sum is : " << shift_sum << "\n" << std::flush;
   }
   auto result =
       count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;

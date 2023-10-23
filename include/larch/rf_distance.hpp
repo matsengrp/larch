@@ -104,8 +104,7 @@ struct SumRFDistance_ {
   using Weight = ArbitraryInt;
   static inline Weight Identity = 0;
   ArbitraryInt num_trees_in_dag;
-  std::map<std::set<std::string>, ArbitraryInt>
-      leafset_to_full_treecount;
+  std::map<std::set<std::string>, ArbitraryInt> leafset_to_full_treecount;
   ArbitraryInt shift_sum_;
   const Merge& reference_dag_;
   const Merge& compute_dag_;
@@ -134,14 +133,6 @@ struct SumRFDistance_ {
         leafset_to_full_treecount[clade] += above_tree_counts[node.GetId().value] * below_tree_counts.ComputeWeightBelow(node, {});
       }
     }
-    std::cout << "\nfrom SumRFDistance_ constructor: looking at dag with address " << &reference_dag_.GetResult().GetStorage() << "\n";
-
-    //------------------------------------------------------
-    std::cout << "\nclades/keys for the treecount map:\n";
-    for (auto kv : leafset_to_full_treecount) {
-      std::cout << kv.first << " : " << kv.second << "\n";
-    }
-    //------------------------------------------------------
     // sum all of the values in leafset_to_full_treecount
     shift_sum_ = ranges::accumulate(leafset_to_full_treecount | ranges::views::values,
                                     ArbitraryInt{0});
@@ -166,16 +157,9 @@ struct SumRFDistance_ {
       return leafs;
     }();
     auto record = leafset_to_full_treecount.find(clade);
-    std::cout <<  "For dag " << &dag.GetStorage() << ": ";
     if (record == leafset_to_full_treecount.end()) {
-      //------------------------------------------------------
-      std::cout << "failed to find clade : " << clade << "\n" << std::flush;
-      //------------------------------------------------------
       return num_trees_in_dag;
     } else {
-      //------------------------------------------------------
-      std::cout << "found clade : " << clade << "\n" << std::flush;
-      //------------------------------------------------------
       return num_trees_in_dag - (2 * record->second);
     }
   }
@@ -185,18 +169,6 @@ struct SumRFDistance_ {
   bool CompareEqual(Weight lhs, Weight rhs) { return lhs == rhs; }
 
   Weight Combine(Weight lhs, Weight rhs) { return lhs + rhs; }
-  // Will: I think the above BinaryOperatorWeightOps methods achieve all that's written
-  // in the following TODO, although the resulting values from using this WeightOps with
-  // SubtreeWeight will need to be have shift_sum added to them to get correct summed RF
-  // distances.
-  /* //TODO: create a SubtreeWeight that has: */
-  /* leaf_func = lambda leaf_node: shift_sum */
-  /* edge_func = lambda edge: num_trees_in_dag -
-   * 2*leaf_set_to_full_treecount[reference_dag.GetResultNodeLabels.at(edge.GetChild().GetId().value).GetLeafSet()]
-   */
-  /* clade_func = lambda clade: min(edge_func(e) for e in clade) */
-  /* node_func = lambda internal_node: sum(clade_func(c) - shift_sum for c in
-   * internal_node.GetClades()) + shift_sum */
 
   const ArbitraryInt& GetShiftSum() const { return shift_sum_; }
 };
@@ -205,7 +177,6 @@ struct SumRFDistance_ {
 struct SumRFDistance : SimpleWeightOps<SumRFDistance_> {
   explicit SumRFDistance(const Merge& reference_dag, const Merge& compute_dag)
       : SimpleWeightOps<SumRFDistance_>{SumRFDistance_{reference_dag, compute_dag}} {
-    std::cout << "\ncalled SimpleWeightOps SumRFDistance constructor for " << &reference_dag.GetResult().GetStorage()  << "\n";
   }
 };
 
