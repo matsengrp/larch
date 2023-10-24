@@ -82,7 +82,7 @@ static void test_case_20d() {
     }
   }
 
-  std::vector<MADAGStorage> trees;
+  std::vector<std::unique_ptr<MADAGStorage>> trees;
 
   MADAGStorage correct_result = LoadDAGFromJson("data/20D_from_fasta/full_dag.json.gz");
   correct_result.View().RecomputeEdgeMutations();
@@ -90,24 +90,24 @@ static void test_case_20d() {
   trees.reserve(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;
   for (size_t i = 0; i < paths.size(); ++i) {
-    trees.push_back(MADAGStorage::EmptyDefault());
+    trees.push_back({});
     paths_idx.push_back({i, paths.at(i)});
   }
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
-    trees.at(path_idx.first) = LoadTreeFromProtobuf(
-        path_idx.second, correct_result.View().GetReferenceSequence());
-    for (auto node : trees.at(path_idx.first).View().GetNodes()) {
+    trees.at(path_idx.first) = std::make_unique<MADAGStorage>(LoadTreeFromProtobuf(
+        path_idx.second, correct_result.View().GetReferenceSequence()));
+    for (auto node : trees.at(path_idx.first)->View().GetNodes()) {
       if (node.IsLeaf()) {
         Assert(node.GetSampleId().has_value());
         Assert(not node.GetSampleId().value().empty());
       }
     }
-    trees.at(path_idx.first).View().RecomputeCompactGenomes(true);
+    trees.at(path_idx.first)->View().RecomputeCompactGenomes(true);
   });
 
   std::vector<MADAG> tree_views;
   for (auto& i : trees) {
-    tree_views.emplace_back(i);
+    tree_views.emplace_back(*i);
   }
 
   Benchmark merge_time;

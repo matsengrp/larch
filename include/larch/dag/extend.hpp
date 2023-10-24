@@ -107,15 +107,9 @@ struct ExtendDAGStorage {
   using OnDAG = select_argument_t<Extend::DAG, Arg0, Arg1, Arg2>;
 
   struct ExtraStorageType {
-    explicit ExtraStorageType(const TargetView& target)
-        : target_{std::make_unique<TargetView>(target)} {}
+    MOVE_ONLY(ExtraStorageType);
 
-    ExtraStorageType(ExtraStorageType&& other) = default;
-    ExtraStorageType& operator=(ExtraStorageType&& other) {
-      target_ = std::move(other.target_);
-      storage_ = std::move(other.storage_);
-      return *this;
-    }
+    explicit ExtraStorageType(const TargetView& target) : target_{target} {}
 
     using FeatureTypes = decltype(std::tuple_cat(
         typename TargetView::StorageType::ExtraStorageType::FeatureTypes{},
@@ -139,7 +133,7 @@ struct ExtendDAGStorage {
       if constexpr (tuple_contains_v<decltype(storage_), Feature>) {
         return std::get<Feature>(storage_);
       } else {
-        return target_->template GetFeatureStorage<Feature>();
+        return target_.template GetFeatureStorage<Feature>();
       }
     }
 
@@ -148,12 +142,12 @@ struct ExtendDAGStorage {
       if constexpr (tuple_contains_v<decltype(storage_), Feature>) {
         return std::get<Feature>(storage_);
       } else {
-        return target_->template GetFeatureStorage<Feature>();
+        return target_.template GetFeatureStorage<Feature>();
       }
     }
 
    private:
-    std::unique_ptr<TargetView> target_;
+    TargetView target_;
     typename OnDAG::Storage storage_;
   };
 
@@ -218,7 +212,7 @@ struct ExtendDAGStorage {
     }
   };
 
-  NO_COPY(ExtendDAGStorage);
+  MOVE_ONLY(ExtendDAGStorage);
 
   ExtendDAGStorage(ShortName&& other)
       : target_{other.target_},
@@ -229,25 +223,6 @@ struct ExtendDAGStorage {
             other.additional_node_extra_features_storage_},
         additional_edge_extra_features_storage_{
             other.additional_edge_extra_features_storage_} {};
-
-  ExtendDAGStorage(ExtendDAGStorage&&) = default;
-
-  ExtendDAGStorage& operator=(ShortName&& other) {
-    target_ = std::move(other.target_);
-    additional_node_features_storage_ =
-        std::move(other.additional_node_features_storage_);
-    additional_edge_features_storage_ =
-        std::move(other.additional_edge_features_storage_);
-    additional_dag_features_storage_ =
-        std::move(other.additional_dag_features_storage_);
-    additional_node_extra_features_storage_ =
-        std::move(other.additional_node_extra_features_storage_);
-    additional_edge_extra_features_storage_ =
-        std::move(other.additional_edge_extra_features_storage_);
-    return *this;
-  }
-
-  ExtendDAGStorage& operator=(ExtendDAGStorage&& other) = default;
 
   static ShortName Consume(Target&& target) {
     static_assert(Target::role == Role::Storage);

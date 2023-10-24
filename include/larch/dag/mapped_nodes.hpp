@@ -36,13 +36,6 @@ struct MappedNodesStorage
     : ExtendStorageType<MappedNodesStorage<DAG>, DAG, Extend::Nodes<MappedNodes>> {
   using ExtendStorageType<MappedNodesStorage<DAG>, DAG,
                           Extend::Nodes<MappedNodes>>::ExtendDAGStorage;
-  MappedNodesStorage(MappedNodesStorage&& other) = default;
-  MappedNodesStorage& operator=(MappedNodesStorage&& other) {
-    static_cast<
-        ExtendStorageType<MappedNodesStorage<DAG>, DAG, Extend::Nodes<MappedNodes>>&>(
-        *this) = std::move(other);
-    return *this;
-  }
 };
 
 template <typename DAG, typename = std::enable_if_t<DAG::role == Role::Storage>>

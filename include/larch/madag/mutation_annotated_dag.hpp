@@ -67,11 +67,6 @@ using MADAGStorageBase =
 
 struct MADAGStorage : MADAGStorageBase {
   using MADAGStorageBase::ExtendDAGStorage;
-  MADAGStorage(MADAGStorage&& other) = default;
-  MADAGStorage& operator=(MADAGStorage&& other) {
-    static_cast<MADAGStorageBase&>(*this) = std::move(other);
-    return *this;
-  }
 };
 
 using MADAG = DAGView<const MADAGStorage>;

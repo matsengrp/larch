@@ -102,16 +102,16 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   std::cout << "Larch-Usher callback Applying " << applied_moves_count_ << "\n"
             << std::flush;
   applied_moves_count_ = 0;
-  reassigned_states_storage_ =
-      AddMappedNodes(AddMATConversion(Storage::EmptyDefault()));
-  reassigned_states_storage_.View().BuildFromMAT(
-      tree, merge_.GetResult().GetReferenceSequence());
-  check_edge_mutations(reassigned_states_storage_.View().Const());
-  reassigned_states_storage_.View().RecomputeCompactGenomes();
+  reassigned_states_storage_ = std::make_unique<ReassignedStatesStorage>(
+      AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
+  auto reassigned_states = reassigned_states_storage_->View();
+  reassigned_states.BuildFromMAT(tree, merge_.GetResult().GetReferenceSequence());
+  check_edge_mutations(reassigned_states.Const());
+  reassigned_states.RecomputeCompactGenomes();
   {
     std::unique_lock lock{merge_mtx_};
     // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
-    for (auto leaf_node : reassigned_states_storage_.View().GetLeafs()) {
+    for (auto leaf_node : reassigned_states.GetLeafs()) {
       Assert(leaf_node.HaveSampleId());
       auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId().value()).Copy();
       leaf_node = std::move(new_cg);
@@ -121,7 +121,7 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
       batch_.clear();
       batch_storage_.clear();
     }
-    merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
+    merge_.AddDAGs(std::vector{reassigned_states});
     merge_.GetResult().GetRoot().Validate(true, true);
     merge_.ComputeResultEdgeMutations();
   }
@@ -135,20 +135,21 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   applied_moves_count_ = 0;
-  reassigned_states_storage_.View().BuildFromMAT(
-      tree, merge_.GetResult().GetReferenceSequence());
-  reassigned_states_storage_.View().RecomputeCompactGenomes();
+  Assert(reassigned_states_storage_);
+  auto reassigned_states = reassigned_states_storage_->View();
+  reassigned_states.BuildFromMAT(tree, merge_.GetResult().GetReferenceSequence());
+  reassigned_states.RecomputeCompactGenomes();
   // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
-  for (auto leaf_node : reassigned_states_storage_.View().GetLeafs()) {
+  for (auto leaf_node : reassigned_states.GetLeafs()) {
     auto this_cg = leaf_node.GetCompactGenome().ToString();
     auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId().value()).Copy();
     leaf_node = std::move(new_cg);
   }
-  check_edge_mutations(reassigned_states_storage_.View().Const());
-  reassigned_states_storage_.View().RecomputeCompactGenomes(false);
+  check_edge_mutations(reassigned_states.Const());
+  reassigned_states.RecomputeCompactGenomes(false);
   {
     std::unique_lock lock{merge_mtx_};
-    merge_.AddDAGs(std::vector{reassigned_states_storage_.View()});
+    merge_.AddDAGs(std::vector{reassigned_states});
     merge_.GetResult().GetRoot().Validate(true, true);
     merge_.ComputeResultEdgeMutations();
   }
@@ -170,7 +171,8 @@ ArbitraryInt BatchingCallback<CRTP, SampleDAG>::GetAppliedMovesCount() {
 
 template <typename CRTP, typename SampleDAG>
 auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
-  return reassigned_states_storage_.View();
+  Assert(reassigned_states_storage_);
+  return reassigned_states_storage_->View();
 }
 
 template <typename CRTP, typename SampleDAG>
