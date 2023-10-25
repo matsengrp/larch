@@ -214,7 +214,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
           dag_child_node.SetUncondensedMATNode(mat_child_node);
 
           auto child_edge = dag.AppendEdge(dag_parent_node, dag_child_node, clade_idx);
-          child_edge.SetEdgeMutations({mutations_view(mat_child_node)});
+          child_edge.SetEdgeMutations(EdgeMutations{mutations_view(mat_child_node)});
           ++clade_idx.value;
         }
       }
@@ -294,7 +294,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(MATNodePtr par_no
     auto child_node = dag.AppendNode();
     child_node.SetMATNode(mat_child);
     auto child_edge = dag.AppendEdge(node, child_node, clade_idx);
-    child_edge.SetEdgeMutations({mutations_view(mat_child)});
+    child_edge.SetEdgeMutations(EdgeMutations{mutations_view(mat_child)});
     BuildHelper(mat_child, child_node, dag);
   }
 }

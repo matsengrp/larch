@@ -66,7 +66,17 @@ using MADAGStorageBase =
                      Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
 struct MADAGStorage : MADAGStorageBase {
-  using MADAGStorageBase::ExtendDAGStorage;
+  static inline MADAGStorage Consume(DefaultDAGStorage&& target) {
+    return MADAGStorage{std::move(target)};
+  }
+
+  static inline MADAGStorage EmptyDefault() {
+    return MADAGStorage{DefaultDAGStorage{}};
+  }
+
+ private:
+  inline MADAGStorage(DefaultDAGStorage&& target)
+      : MADAGStorageBase{std::forward<DefaultDAGStorage>(target)} {}
 };
 
 using MADAG = DAGView<const MADAGStorage>;

@@ -27,15 +27,22 @@ template <typename K, typename V>
 using ConcurrentUnorderedMap =
     tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
-struct MergeDAGStorage
-    : ExtendStorageType<
-          MergeDAGStorage, DefaultDAGStorage,
-          Extend::Nodes<Deduplicate<CompactGenome>, Deduplicate<SampleId>>,
-          Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>> {
-  using ExtendStorageType<
-      MergeDAGStorage, DefaultDAGStorage,
-      Extend::Nodes<Deduplicate<CompactGenome>, Deduplicate<SampleId>>,
-      Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>::ExtendDAGStorage;
+struct MergeDAGStorage;
+
+using MergeDAGStorageBase =
+    ExtendStorageType<MergeDAGStorage, DefaultDAGStorage,
+                      Extend::Nodes<Deduplicate<CompactGenome>, Deduplicate<SampleId>>,
+                      Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+
+struct MergeDAGStorage : MergeDAGStorageBase {
+  static MergeDAGStorage Consume(DefaultDAGStorage&& target) {
+    return MergeDAGStorage{std::move(target)};
+  }
+
+ private:
+  friend MergeDAGStorageBase;
+  MergeDAGStorage(DefaultDAGStorage&& target)
+      : MergeDAGStorageBase{std::forward<DefaultDAGStorage>(target)} {}
 };
 
 using MergeDAG = DAGView<const MergeDAGStorage>;

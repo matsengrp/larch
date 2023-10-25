@@ -98,8 +98,7 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x(x&&) noexcept = default;            \
   x(const x&) = delete;                 \
   x& operator=(x&&) noexcept = default; \
-  x& operator=(const x&) = delete;      \
-  ~x() = default
+  x& operator=(const x&) = delete
 
 #define MOVE_ONLY_VIRT_DTOR(x)          \
   x(x&&) noexcept = default;            \
@@ -108,10 +107,9 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x& operator=(const x&) = delete;      \
   virtual ~x() = default
 
-#define NO_COPY(x)                 \
-  x(const x&) = delete;            \
-  x& operator=(const x&) = delete; \
-  ~x() = default
+#define NO_COPY(x)      \
+  x(const x&) = delete; \
+  x& operator=(const x&) = delete
 
 //////////////////////////////////////////////////////////////////////////////////////
 

@@ -32,10 +32,23 @@ struct ExtraFeatureMutableView<MappedNodes, CRTP> {
 };
 
 template <typename DAG>
-struct MappedNodesStorage
-    : ExtendStorageType<MappedNodesStorage<DAG>, DAG, Extend::Nodes<MappedNodes>> {
-  using ExtendStorageType<MappedNodesStorage<DAG>, DAG,
-                          Extend::Nodes<MappedNodes>>::ExtendDAGStorage;
+struct MappedNodesStorage;
+
+template <typename DAG>
+using MappedNodesStorageBase =
+    ExtendStorageType<MappedNodesStorage<DAG>, DAG, Extend::Nodes<MappedNodes>>;
+
+template <typename DAG>
+struct MappedNodesStorage : MappedNodesStorageBase<DAG> {
+  static MappedNodesStorage Consume(DAG&& target) {
+    static_assert(DAG::role == Role::Storage);
+    return MappedNodesStorage{std::move(target)};
+  }
+
+ private:
+  friend MappedNodesStorageBase<DAG>;
+  MappedNodesStorage(DAG&& target)
+      : MappedNodesStorageBase<DAG>{std::forward<DAG>(target)} {}
 };
 
 template <typename DAG, typename = std::enable_if_t<DAG::role == Role::Storage>>

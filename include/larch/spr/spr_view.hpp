@@ -181,24 +181,54 @@ struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
                                 nodes_with_major_allele_set_change);
 };
 
-template <typename DAG>
-struct SPRStorage
-    : ExtendStorageType<SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
-                        Extend::DAG<HypotheticalTree<DAG>>> {
-  using ExtendStorageType<SPRStorage<DAG>, DAG, Extend::Nodes<HypotheticalNode>,
-                          Extend::DAG<HypotheticalTree<DAG>>>::ExtendDAGStorage;
+template <typename Target>
+struct SPRStorageHelper;
+
+template <typename Target>
+using SPRStorageHelperBase =
+    ExtendStorageType<SPRStorageHelper<Target>, Target, Extend::Nodes<HypotheticalNode>,
+                      Extend::DAG<HypotheticalTree<Target>>>;
+
+template <typename Target>
+struct SPRStorage;
+
+template <typename Target>
+struct SPRStorageHelper : SPRStorageHelperBase<Target> {
+ private:
+  friend SPRStorage<Target>;
+  friend SPRStorageHelperBase<Target>;
+  SPRStorageHelper(Target&& target)
+      : SPRStorageHelperBase<Target>{std::forward<Target>(target)} {}
 };
 
-template <typename DAG, typename = std::enable_if_t<DAG::role == Role::Storage>>
-auto AddSPRStorage(DAG&& dag) {
-  SPRStorage<DAG> result = SPRStorage<DAG>::Consume(std::move(dag));
-  return AddOverlay(std::move(result));
+template <typename Target>
+using SPRStorageBase = OverlayStorageType<SPRStorage<Target>, SPRStorageHelper<Target>>;
+
+template <typename Target>
+struct SPRStorage : SPRStorageBase<Target> {
+  static SPRStorage<Target> Consume(Target&& target) {
+    static_assert(Target::role == Role::Storage);
+    return SPRStorage<Target>{std::move(target)};
+  }
+
+  static SPRStorage<Target> FromView(const Target& target) {
+    static_assert(Target::role == Role::View);
+    return SPRStorage<Target>{Target{target}};
+  }
+
+ private:
+  friend SPRStorageBase<Target>;
+  SPRStorage(Target&& target) : SPRStorageBase<Target>{std::forward<Target>(target)} {}
+};
+
+template <typename Target, typename = std::enable_if_t<Target::role == Role::Storage>>
+SPRStorage<Target> AddSPRStorage(Target&& dag) {
+  return SPRStorage<Target>::Consume(std::move(dag));
 }
 
-template <typename DAG, typename = std::enable_if_t<DAG::role == Role::View>>
-auto AddSPRStorage(const DAG& dag) {
-  SPRStorage<DAG> result = SPRStorage<DAG>::FromView(std::move(dag));
-  return AddOverlay(std::move(result));
+template <typename Target, typename = std::enable_if_t<Target::role == Role::View>>
+auto AddSPRStorage(const Target& dag) {
+  return SPRStorage<Target>::FromView(std::move(dag));
 }
 
 #include "larch/impl/spr/spr_view_impl.hpp"

@@ -97,10 +97,8 @@ struct ExtendDAGStorage {
   static_assert(not std::is_reference_v<Target>);
   static_assert(Target::component == Component::DAG);
 
-  using Self = std::conditional_t<std::is_same_v<ShortName, void>,
-                                  ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>,
-                                  ShortName>;
-  // using Self = ShortName;
+  using Self = ShortName;
+
   using TargetView = decltype(ViewOf(std::declval<Target>()));
   using OnNodes = select_argument_t<Extend::Nodes, Arg0, Arg1, Arg2>;
   using OnEdges = select_argument_t<Extend::Edges, Arg0, Arg1, Arg2>;
@@ -214,16 +212,6 @@ struct ExtendDAGStorage {
 
   MOVE_ONLY(ExtendDAGStorage);
 
-  ExtendDAGStorage(ShortName&& other)
-      : target_{other.target_},
-        additional_node_features_storage_{other.additional_node_features_storage_},
-        additional_edge_features_storage_{other.additional_edge_features_storage_},
-        additional_dag_features_storage_{other.additional_dag_features_storage_},
-        additional_node_extra_features_storage_{
-            other.additional_node_extra_features_storage_},
-        additional_edge_extra_features_storage_{
-            other.additional_edge_extra_features_storage_} {};
-
   static ShortName Consume(Target&& target) {
     static_assert(Target::role == Role::Storage);
     return ShortName{std::move(target)};
@@ -295,6 +283,7 @@ struct ExtendDAGStorage {
   auto& GetTargetStorage() const { return *this; }
 
  private:
+  friend ShortName;
   explicit ExtendDAGStorage(Target&& target);
 
   auto GetTarget();
