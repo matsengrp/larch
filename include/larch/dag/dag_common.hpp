@@ -202,7 +202,7 @@ struct CombineBases<std::tuple<Ts...>> : Ts... {
 template <typename T>
 auto ViewOf(T&& dag);
 
-template <typename, template <typename, typename> typename>
+template <typename, template <typename, typename> typename = DefaultViewBase>
 struct DAGView;
 
 template <typename...>
@@ -224,4 +224,3 @@ struct Endpoints;
 struct Connections;
 
 struct DefaultDAGStorage;
-

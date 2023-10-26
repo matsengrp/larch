@@ -228,7 +228,7 @@ SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(WeightOps&& weight_ops,
                                               Node below) {
   Assert(not below.IsLeaf());
   dag_.AssertUA();
-  SampledDAGStorage result = SampledDAGStorage::Consume(Storage::EmptyDefault());
+  SampledDAGStorage result = SampledDAGStorage::EmptyDefault();
   result.View().SetReferenceSequence(dag_.GetReferenceSequence());
   ExtractTree(
       below, result.View().AppendNode(), std::forward<WeightOps>(weight_ops),

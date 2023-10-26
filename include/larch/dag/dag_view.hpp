@@ -20,8 +20,7 @@
   ordered by id.
 
 */
-template <typename Storage,
-          template <typename, typename> typename Base = DefaultViewBase>
+template <typename Storage, template <typename, typename> typename Base>
 struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   static_assert(Storage::role == Role::Storage);
   static_assert(Storage::component == Component::DAG);

@@ -11,7 +11,7 @@
 
 static void test_protobuf(const std::string& correct_path,
                           const std::vector<std::string>& paths) {
-  std::vector<MADAGStorage> trees;
+  std::vector<MADAGStorage<>> trees;
   trees.reserve(paths.size());
   std::vector<MADAG> tree_views;
   for (auto& path : paths) {
@@ -26,7 +26,7 @@ static void test_protobuf(const std::string& correct_path,
     view.GetRoot().Validate(true);
   }
 
-  MADAGStorage correct_result = LoadDAGFromJson(correct_path);
+  MADAGStorage<> correct_result = LoadDAGFromJson(correct_path);
   correct_result.View().RecomputeEdgeMutations();
 
   Merge merge(correct_result.View().GetReferenceSequence());
@@ -82,9 +82,10 @@ static void test_case_20d() {
     }
   }
 
-  std::vector<std::unique_ptr<MADAGStorage>> trees;
+  std::vector<std::unique_ptr<MADAGStorage<>>> trees;
 
-  MADAGStorage correct_result = LoadDAGFromJson("data/20D_from_fasta/full_dag.json.gz");
+  MADAGStorage<> correct_result =
+      LoadDAGFromJson("data/20D_from_fasta/full_dag.json.gz");
   correct_result.View().RecomputeEdgeMutations();
 
   trees.reserve(paths.size());
@@ -94,7 +95,7 @@ static void test_case_20d() {
     paths_idx.push_back({i, paths.at(i)});
   }
   tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
-    trees.at(path_idx.first) = std::make_unique<MADAGStorage>(LoadTreeFromProtobuf(
+    trees.at(path_idx.first) = std::make_unique<MADAGStorage<>>(LoadTreeFromProtobuf(
         path_idx.second, correct_result.View().GetReferenceSequence()));
     for (auto node : trees.at(path_idx.first)->View().GetNodes()) {
       if (node.IsLeaf()) {
@@ -133,7 +134,7 @@ static void test_add_trees() {
                                      "data/test_5_trees/tree_3.pb.gz",
                                      "data/test_5_trees/tree_4.pb.gz"};
 
-  std::vector<MADAGStorage> trees1, trees2;
+  std::vector<MADAGStorage<>> trees1, trees2;
   for (auto& path : paths1) {
     trees1.push_back(LoadDAGFromProtobuf(path));
     trees1.back().View().RecomputeCompactGenomes(true);
@@ -145,7 +146,7 @@ static void test_add_trees() {
     trees2.back().View().SampleIdsFromCG();
   }
 
-  MADAGStorage correct_result = LoadDAGFromJson(correct_path);
+  MADAGStorage<> correct_result = LoadDAGFromJson(correct_path);
   correct_result.View().RecomputeEdgeMutations();
 
   Merge merge(correct_result.View().GetReferenceSequence());
@@ -176,11 +177,11 @@ static void test_subtree() {
       "data/test_5_trees/tree_2.pb.gz", "data/test_5_trees/tree_3.pb.gz",
       "data/test_5_trees/tree_4.pb.gz"};
 
-  MADAGStorage correct_result = LoadDAGFromJson(correct_path);
+  MADAGStorage<> correct_result = LoadDAGFromJson(correct_path);
   correct_result.View().RecomputeEdgeMutations();
   Merge merge(correct_result.View().GetReferenceSequence());
 
-  std::vector<MADAGStorage> trees;
+  std::vector<MADAGStorage<>> trees;
   for (auto& path : paths) {
     trees.push_back(LoadDAGFromProtobuf(path));
     trees.back().View().RecomputeCompactGenomes(true);

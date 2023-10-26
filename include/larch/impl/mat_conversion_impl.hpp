@@ -25,7 +25,8 @@ MATNodePtr FeatureMutableView<MATConversion, CRTP, Tag>::GetMutableMATNode() con
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<MATConversion, CRTP, Tag>::SetMATNode(MATNodePtr ptr) const {
-  GetFeatureStorage(this).mat_node_ptr_ = ptr;
+  auto& stor = GetFeatureStorage(this);
+  stor.mat_node_ptr_ = ptr;
   auto& node = static_cast<const CRTP&>(*this);
   node.GetDAG()
       .template GetFeatureExtraStorage<Component::Node, MATConversion>()

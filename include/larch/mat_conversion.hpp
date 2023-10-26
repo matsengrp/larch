@@ -92,6 +92,13 @@ using MATConversionStorageBase =
 
 template <typename DAG>
 struct MATConversionStorage : MATConversionStorageBase<DAG> {
+  static void EmptyDefault();
+
+  static MATConversionStorage FromView(const DAG& target) {
+    static_assert(DAG::role == Role::View);
+    return MATConversionStorage{DAG{target}};
+  }
+
   static MATConversionStorage Consume(DAG&& target) {
     static_assert(DAG::role == Role::Storage);
     return MATConversionStorage{std::move(target)};
@@ -110,7 +117,7 @@ MATConversionStorage<DAG> AddMATConversion(DAG&& dag) {
 
 template <typename DAG, typename = std::enable_if_t<DAG::role == Role::View>>
 MATConversionStorage<DAG> AddMATConversion(const DAG& dag) {
-  return MATConversionStorage<DAG>::FromView(std::move(dag));
+  return MATConversionStorage<DAG>::FromView(dag);
 }
 
 #include "larch/impl/mat_conversion_impl.hpp"

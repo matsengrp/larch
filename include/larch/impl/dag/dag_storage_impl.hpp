@@ -24,14 +24,15 @@ inline constexpr bool DAGStorage<NodesContainerT, EdgesContainerT,
 }();
 
 template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
-auto DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::View() {
-  return DAGView<DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>>{*this};
+DAGView<DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>>
+DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::View() {
+  return ViewType{*this};
 }
 
 template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
-auto DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::View() const {
-  return DAGView<const DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>>{
-      *this};
+DAGView<const DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>>
+DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::View() const {
+  return ConstViewType{*this};
 }
 
 template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>

@@ -40,6 +40,8 @@ using MappedNodesStorageBase =
 
 template <typename DAG>
 struct MappedNodesStorage : MappedNodesStorageBase<DAG> {
+  static void EmptyDefault();
+  static void FromView(const DAG&);
   static MappedNodesStorage Consume(DAG&& target) {
     static_assert(DAG::role == Role::Storage);
     return MappedNodesStorage{std::move(target)};

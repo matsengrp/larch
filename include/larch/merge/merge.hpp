@@ -35,8 +35,15 @@ using MergeDAGStorageBase =
                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
 struct MergeDAGStorage : MergeDAGStorageBase {
-  static MergeDAGStorage Consume(DefaultDAGStorage&& target) {
+  MOVE_ONLY(MergeDAGStorage);
+  static void FromView(const DefaultDAGStorage&);
+
+  static inline MergeDAGStorage Consume(DefaultDAGStorage&& target) {
     return MergeDAGStorage{std::move(target)};
+  }
+
+  static inline MergeDAGStorage EmptyDefault() {
+    return MergeDAGStorage{DefaultDAGStorage{}};
   }
 
  private:

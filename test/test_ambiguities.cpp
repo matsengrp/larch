@@ -2,7 +2,7 @@
 #include "sample_dag.hpp"
 #include "larch/dag_loader.hpp"
 
-[[maybe_unused]] static auto BuildNodeSequenceMap(MADAGStorage &dag_storage,
+[[maybe_unused]] static auto BuildNodeSequenceMap(MADAGStorage<> &dag_storage,
                                                   bool include_nonleaf_nodes = false) {
   NodeSeqMap node_seq_map;
   auto dag = dag_storage.View();
@@ -15,7 +15,7 @@
   return node_seq_map;
 }
 
-[[maybe_unused]] static auto DAGMutationsAreValid(MADAGStorage &dag_storage) {
+[[maybe_unused]] static auto DAGMutationsAreValid(MADAGStorage<> &dag_storage) {
   using Edge = MutableMADAG::EdgeView;
   auto dag = dag_storage.View();
 
@@ -37,7 +37,7 @@
 }
 
 [[maybe_unused]] static auto VerifyCompactGenomesCompatibleWithLeaves(
-    MADAGStorage &dag_storage, NodeSeqMap &truth_leaf_seq_map) {
+    MADAGStorage<> &dag_storage, NodeSeqMap &truth_leaf_seq_map) {
   auto dag = dag_storage.View();
   auto dag_leaf_seq_map = BuildNodeSequenceMap(dag_storage, false);
   for (auto node : dag.GetLeafs()) {
@@ -48,7 +48,7 @@
   return true;
 }
 
-[[maybe_unused]] static void WriteDAGToFile(MADAGStorage &dag_storage,
+[[maybe_unused]] static void WriteDAGToFile(MADAGStorage<> &dag_storage,
                                             const std::string &output_filename) {
   std::ofstream os;
   auto dag = dag_storage.View();

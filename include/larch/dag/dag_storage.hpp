@@ -49,6 +49,10 @@ struct DAGStorage {
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 
+  using ViewType = DAGView<DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>>;
+  using ConstViewType =
+      DAGView<const DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>>;
+
   using ExtraStorageType = ExtraStorageT;
   using FeatureTypes = typename ExtraStorageT::FeatureTypes;
   template <Component C>
@@ -95,8 +99,8 @@ struct DAGStorage {
              ExtraStorageT&& features_storage);
   MOVE_ONLY(DAGStorage);
 
-  auto View();
-  auto View() const;
+  ViewType View();
+  ConstViewType View() const;
 
   NodeId AppendNode();
   EdgeId AppendEdge();

@@ -59,13 +59,22 @@ struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
 
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"
 
+template <typename Target = DefaultDAGStorage>
 struct MADAGStorage;
+
+template <typename Target>
 using MADAGStorageBase =
-    ExtendDAGStorage<MADAGStorage, DefaultDAGStorage,
+    ExtendDAGStorage<MADAGStorage<Target>, Target,
                      Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
                      Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
 
-struct MADAGStorage : MADAGStorageBase {
+template <typename Target>
+struct MADAGStorage : MADAGStorageBase<Target> {
+  static inline MADAGStorage FromView(
+      const typename DefaultDAGStorage::ViewType& target) {
+    return MADAGStorage{target};
+  }
+
   static inline MADAGStorage Consume(DefaultDAGStorage&& target) {
     return MADAGStorage{std::move(target)};
   }
@@ -75,9 +84,19 @@ struct MADAGStorage : MADAGStorageBase {
   }
 
  private:
-  inline MADAGStorage(DefaultDAGStorage&& target)
-      : MADAGStorageBase{std::forward<DefaultDAGStorage>(target)} {}
+  inline MADAGStorage(Target&& target)
+      : MADAGStorageBase<Target>{std::forward<Target>(target)} {}
 };
 
-using MADAG = DAGView<const MADAGStorage>;
-using MutableMADAG = DAGView<MADAGStorage>;
+template <typename Target, typename = std::enable_if_t<Target::role == Role::Storage>>
+MADAGStorage<Target> AddMADAG(Target&& dag) {
+  return MADAGStorage<Target>::Consume(std::move(dag));
+}
+
+template <typename Target, typename = std::enable_if_t<Target::role == Role::View>>
+MADAGStorage<Target> AddMADAG(const Target& dag) {
+  return MADAGStorage<Target>::FromView(dag);
+}
+
+using MADAG = DAGView<const MADAGStorage<DefaultDAGStorage>>;
+using MutableMADAG = DAGView<MADAGStorage<DefaultDAGStorage>>;

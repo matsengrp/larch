@@ -44,9 +44,11 @@ using SampledDAGStorageBase =
 
 template <typename DAG>
 struct SampledDAGStorage : SampledDAGStorageBase<DAG> {
-  static SampledDAGStorage Consume(DAG&& target) {
+  static void Consume(DAG&&);
+  static void FromView(const DAG&);
+  static SampledDAGStorage EmptyDefault() {
     static_assert(DAG::role == Role::Storage);
-    return SampledDAGStorage{std::move(target)};
+    return SampledDAGStorage{DAG::EmptyDefault()};
   }
 
  private:

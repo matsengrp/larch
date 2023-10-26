@@ -227,8 +227,8 @@ struct ExtendDAGStorage {
     return ShortName{Target{}};
   }
 
-  auto View();
-  auto View() const;
+  DAGView<Self> View();
+  DAGView<const Self> View() const;
 
   NodeId AppendNode();
   EdgeId AppendEdge();

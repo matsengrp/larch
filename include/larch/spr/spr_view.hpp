@@ -206,6 +206,7 @@ using SPRStorageBase = OverlayStorageType<SPRStorage<Target>, SPRStorageHelper<T
 
 template <typename Target>
 struct SPRStorage : SPRStorageBase<Target> {
+  static void EmptyDefault();
   static SPRStorage<Target> Consume(Target&& target) {
     static_assert(Target::role == Role::Storage);
     return SPRStorage<Target>{std::move(target)};
