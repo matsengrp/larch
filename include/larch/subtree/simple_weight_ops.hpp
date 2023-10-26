@@ -27,14 +27,14 @@ struct SimpleWeightOps {
   using Weight = typename BinaryOperatorWeightOps::Weight;
 
   template <typename DAG>
-  Weight ComputeLeaf(DAG dag, NodeId node_id);
+  Weight ComputeLeaf(DAG dag, NodeId node_id) const;
 
   template <typename DAG>
-  Weight ComputeEdge(DAG dag, EdgeId edge_id);
+  Weight ComputeEdge(DAG dag, EdgeId edge_id) const;
   inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(
-      std::vector<Weight>);
-  inline Weight BetweenClades(std::vector<Weight>);
-  inline Weight AboveNode(Weight edgeweight, Weight childnodeweight);
+      std::vector<Weight>) const;
+  inline Weight BetweenClades(std::vector<Weight>) const;
+  inline Weight AboveNode(Weight edgeweight, Weight childnodeweight) const;
 
  private:
   BinaryOperatorWeightOps binary_operator_weight_ops_ = BinaryOperatorWeightOps();

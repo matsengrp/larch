@@ -46,9 +46,8 @@ template <typename WeightOps>
 class WeightCounter {
  public:
   WeightCounter(const WeightCounter<WeightOps>&) = default;
-  WeightCounter(WeightOps&& weight_ops);
+  WeightCounter(const WeightOps& weight_ops);
   WeightCounter(WeightCounter&&) noexcept = default;
-  WeightCounter(const WeightOps& weight_ops) : weight_ops_{weight_ops} {}
   WeightCounter(const std::vector<typename WeightOps::Weight>& weights,
                 const WeightOps& weight_ops);
   WeightCounter(std::map<typename WeightOps::Weight, Count>&& weights,
@@ -83,10 +82,10 @@ struct WeightAccumulator {
   WeightAccumulator(const WeightOps& ops);
 
   template <typename DAG>
-  Weight ComputeLeaf(DAG dag, NodeId node_id);
+  Weight ComputeLeaf(DAG dag, NodeId node_id) const;
 
   template <typename DAG>
-  Weight ComputeEdge(DAG dag, EdgeId edge_id);
+  Weight ComputeEdge(DAG dag, EdgeId edge_id) const;
 
   /*
    * Given a vector of weights for edges below a clade, compute the minimum
@@ -95,12 +94,12 @@ struct WeightAccumulator {
    * that minimum
    */
   inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(
-      const std::vector<Weight>&);
+      const std::vector<Weight>&) const;
   /*
    * Given a vector of weights, one for each child clade, aggregate them
    */
   inline Weight BetweenClades(const std::vector<Weight>&) const;
-  inline Weight AboveNode(Weight edgeweight, Weight childnodeweight);
+  inline Weight AboveNode(Weight edgeweight, Weight childnodeweight) const;
 
  private:
   WeightOps weight_ops_ = {};
