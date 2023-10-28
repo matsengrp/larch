@@ -87,7 +87,7 @@ static constexpr auto select_argument() {
 }
 
 template <typename T>
-auto ViewOf(T&& dag) {
+typename ViewTypeOf<T>::type ViewOf(T& dag) {
   if constexpr (std::remove_reference_t<T>::role == Role::View) {
     return dag;
   } else {

@@ -2,7 +2,7 @@
 #include "sample_dag.hpp"
 #include "larch/dag_loader.hpp"
 
-using Storage = MergeDAGStorage;
+using Storage = MergeDAGStorage<>;
 
 template <typename DAG>
 [[maybe_unused]] bool check_leaf_sample_ids(DAG dag, MAT::Tree& tree) {

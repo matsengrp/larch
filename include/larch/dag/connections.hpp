@@ -6,8 +6,7 @@
  * Basic per-DAG feature.
  */
 struct Connections {
-  MOVE_ONLY(Connections);
-  Connections() = default;
+  MOVE_ONLY_DEF_CTOR(Connections);
   NodeId root_;
   std::vector<NodeId> leafs_;
 };

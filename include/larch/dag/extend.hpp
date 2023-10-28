@@ -97,9 +97,12 @@ struct ExtendDAGStorage {
   static_assert(not std::is_reference_v<Target>);
   static_assert(Target::component == Component::DAG);
 
-  using Self = ShortName;
+  static_assert(IsNameCorrect<ShortName, ExtendDAGStorage>::value);
 
-  using TargetView = decltype(ViewOf(std::declval<Target>()));
+  using Self =
+      std::conditional_t<std::is_same_v<ShortName, void>, ExtendDAGStorage, ShortName>;
+
+  using TargetView = typename ViewTypeOf<Target>::type;
   using OnNodes = select_argument_t<Extend::Nodes, Arg0, Arg1, Arg2>;
   using OnEdges = select_argument_t<Extend::Edges, Arg0, Arg1, Arg2>;
   using OnDAG = select_argument_t<Extend::DAG, Arg0, Arg1, Arg2>;
@@ -212,19 +215,19 @@ struct ExtendDAGStorage {
 
   MOVE_ONLY(ExtendDAGStorage);
 
-  static ShortName Consume(Target&& target) {
+  static Self Consume(Target&& target) {
     static_assert(Target::role == Role::Storage);
-    return ShortName{std::move(target)};
+    return Self{std::move(target)};
   }
 
-  static ShortName FromView(const Target& target) {
+  static Self FromView(const Target& target) {
     static_assert(Target::role == Role::View);
-    return ShortName{Target{target}};
+    return Self{Target{target}};
   }
 
-  static ShortName EmptyDefault() {
+  static Self EmptyDefault() {
     static_assert(Target::role == Role::Storage);
-    return ShortName{Target{}};
+    return Self{Target{}};
   }
 
   DAGView<Self> View();
@@ -313,6 +316,5 @@ template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
           typename = std::enable_if_t<Target::role == Role::View>>
 ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2> AddExtend(const Target& target) {
-  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::FromView(
-      std::move(target));
+  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::FromView(target);
 }

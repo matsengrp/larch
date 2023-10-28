@@ -111,6 +111,10 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x(const x&) = delete; \
   x& operator=(const x&) = delete
 
+#define MOVE_ONLY_DEF_CTOR(x) \
+  MOVE_ONLY(x);               \
+  x() = default
+
 //////////////////////////////////////////////////////////////////////////////////////
 
 template <typename, template <typename...> typename>

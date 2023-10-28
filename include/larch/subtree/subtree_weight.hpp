@@ -35,26 +35,18 @@ WithinCladeAccumOptimum(std::vector<Weight>);
 
 using ArbitraryInt = boost::multiprecision::cpp_int;
 
-template <typename DAG>
+template <typename Target>
 struct SampledDAGStorage;
 
-template <typename DAG>
-using SampledDAGStorageBase =
-    ExtendStorageType<SampledDAGStorage<DAG>, DAG, Extend::Nodes<MappedNodes>>;
+template <typename Target>
+struct LongNameOf<SampledDAGStorage<Target>> {
+  using type =
+      ExtendStorageType<SampledDAGStorage<Target>, Target, Extend::Nodes<MappedNodes>>;
+};
 
-template <typename DAG>
-struct SampledDAGStorage : SampledDAGStorageBase<DAG> {
-  static void Consume(DAG&&);
-  static void FromView(const DAG&);
-  static SampledDAGStorage EmptyDefault() {
-    static_assert(DAG::role == Role::Storage);
-    return SampledDAGStorage{DAG::EmptyDefault()};
-  }
-
- private:
-  friend SampledDAGStorageBase<DAG>;
-  SampledDAGStorage(DAG&& target)
-      : SampledDAGStorageBase<DAG>{std::forward<DAG>(target)} {}
+template <typename Target>
+struct SampledDAGStorage : LongNameOf<SampledDAGStorage<Target>>::type {
+  SHORT_NAME(SampledDAGStorage);
 };
 
 template <typename WeightOps, typename DAG>

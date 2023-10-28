@@ -14,7 +14,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag, MergeT& merge)
       : sample_dag_{sample_dag}, merge_{merge} {};
 
-  using Storage = MergeDAGStorage;
+  using Storage = MergeDAGStorage<>;
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&

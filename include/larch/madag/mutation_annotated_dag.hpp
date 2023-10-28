@@ -30,6 +30,7 @@
 #include "larch/madag/sample_id.hpp"
 
 struct ReferenceSequence {
+  MOVE_ONLY_DEF_CTOR(ReferenceSequence);
   std::string reference_sequence_;
 };
 
@@ -63,29 +64,16 @@ template <typename Target = DefaultDAGStorage>
 struct MADAGStorage;
 
 template <typename Target>
-using MADAGStorageBase =
-    ExtendDAGStorage<MADAGStorage<Target>, Target,
-                     Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
-                     Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+struct LongNameOf<MADAGStorage<Target>> {
+  using type =
+      ExtendDAGStorage<MADAGStorage<Target>, Target,
+                       Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
+                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+};
 
 template <typename Target>
-struct MADAGStorage : MADAGStorageBase<Target> {
-  static inline MADAGStorage FromView(
-      const typename DefaultDAGStorage::ViewType& target) {
-    return MADAGStorage{target};
-  }
-
-  static inline MADAGStorage Consume(DefaultDAGStorage&& target) {
-    return MADAGStorage{std::move(target)};
-  }
-
-  static inline MADAGStorage EmptyDefault() {
-    return MADAGStorage{DefaultDAGStorage{}};
-  }
-
- private:
-  inline MADAGStorage(Target&& target)
-      : MADAGStorageBase<Target>{std::forward<Target>(target)} {}
+struct MADAGStorage : LongNameOf<MADAGStorage<Target>>::type {
+  SHORT_NAME(MADAGStorage);
 };
 
 template <typename Target, typename = std::enable_if_t<Target::role == Role::Storage>>

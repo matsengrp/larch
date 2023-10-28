@@ -173,7 +173,16 @@ const auto& DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>::GetCont
   }
 }
 
-struct DefaultDAGStorage
-    : DAGStorage<ElementsContainer<Component::Node, ElementStorage<Neighbors>>,
-                 ElementsContainer<Component::Edge, ElementStorage<Endpoints>>,
-                 ExtraStorage<Connections>> {};
+using DefaultDAGStorageBase =
+    DAGStorage<ElementsContainer<Component::Node, ElementStorage<Neighbors>>,
+               ElementsContainer<Component::Edge, ElementStorage<Endpoints>>,
+               ExtraStorage<Connections>>;
+
+struct DefaultDAGStorage : DefaultDAGStorageBase {
+  MOVE_ONLY(DefaultDAGStorage);
+
+  static inline DefaultDAGStorage EmptyDefault() { return DefaultDAGStorage{}; };
+
+ private:
+  DefaultDAGStorage() : DefaultDAGStorageBase{} {}
+};

@@ -4,6 +4,9 @@
 
 template <typename... Features>
 struct ExtraStorage {
+  MOVE_ONLY(ExtraStorage);
+  ExtraStorage() = default;
+
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 

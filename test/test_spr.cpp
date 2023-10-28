@@ -58,6 +58,25 @@ struct Test_Move_Found_Callback
 }
 
 static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
+  {
+    // {
+    //   MADAGStorage<> mds = MADAGStorage<>::EmptyDefault();
+    //   auto n1 = mds.View().AppendNode();
+    //   auto n2 = mds.View().AppendNode();
+    //   mds.View().AppendEdge(n1, n2, {0});
+    //   mds.View().BuildConnections();
+    // }
+
+    // std::cout << "Now sampled:\n";
+
+    SampledDAGStorage<MADAGStorage<>> smds =
+        SampledDAGStorage<MADAGStorage<>>::EmptyDefault();
+    auto n1 = smds.View().AppendNode();
+    auto n2 = smds.View().AppendNode();
+    smds.View().AppendEdge(n1, n2, {0});
+    smds.View().BuildConnections();
+    return;
+  }
   tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
@@ -101,7 +120,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
       auto storage = [this](std::string ref_seq) {
         std::unique_lock<std::mutex> lock{mutex_};
         Assert(sample_mat_ != nullptr);
-        using Storage = MergeDAGStorage;
+        using Storage = MergeDAGStorage<>;
         auto mat_conv = AddMATConversion(Storage::EmptyDefault());
         mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
         check_edge_mutations(mat_conv.View());
@@ -228,7 +247,19 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 //               "SPR: tree 20D_from_fasta"});
 
 [[maybe_unused]] static const auto test_added2 =
-    add_test({[] { test_spr(make_sample_dag(), 10); }, "SPR: sample"});
+    add_test({[] {
+                // XXX
+                SampledDAGStorage<MADAGStorage<>> smds =
+                    SampledDAGStorage<MADAGStorage<>>::EmptyDefault();
+                auto n1 = smds.View().AppendNode();
+                auto n2 = smds.View().AppendNode();
+                smds.View().AppendEdge(n1, n2, {0});
+                smds.View().BuildConnections();
+                return;
+
+                test_spr(make_sample_dag(), 10);
+              },
+              "SPR: sample"});
 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});

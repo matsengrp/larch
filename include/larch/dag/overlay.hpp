@@ -37,6 +37,7 @@ struct ToOverlayStorage<std::tuple<Features...>> {
   template <typename Id>
   using type = std::tuple<std::unordered_map<Id, Features>...>;
 };
+
 }  // namespace
 
 template <typename ShortName, typename Target>
@@ -47,10 +48,12 @@ struct OverlayDAGStorage {
   static_assert(not std::is_reference_v<Target>);
   static_assert(Target::component == Component::DAG);
 
+  static_assert(IsNameCorrect<ShortName, OverlayDAGStorage>::value);
+
   using Self =
       std::conditional_t<std::is_same_v<ShortName, void>, OverlayDAGStorage, ShortName>;
 
-  using TargetView = decltype(ViewOf(std::declval<Target>()));
+  using TargetView = typename ViewTypeOf<Target>::type;
 
   struct ExtraStorageType : TargetView::StorageType::ExtraStorageType {
     MOVE_ONLY(ExtraStorageType);

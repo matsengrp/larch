@@ -182,44 +182,39 @@ struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
 };
 
 template <typename Target>
-struct SPRStorageHelper;
-
-template <typename Target>
-using SPRStorageHelperBase =
-    ExtendStorageType<SPRStorageHelper<Target>, Target, Extend::Nodes<HypotheticalNode>,
-                      Extend::DAG<HypotheticalTree<Target>>>;
-
-template <typename Target>
 struct SPRStorage;
 
 template <typename Target>
-struct SPRStorageHelper : SPRStorageHelperBase<Target> {
- private:
-  friend SPRStorage<Target>;
-  friend SPRStorageHelperBase<Target>;
-  SPRStorageHelper(Target&& target)
-      : SPRStorageHelperBase<Target>{std::forward<Target>(target)} {}
+struct LongNameOf<SPRStorage<Target>> {
+  using type_helper = ExtendStorageType<void, Target, Extend::Nodes<HypotheticalNode>,
+                                        Extend::DAG<HypotheticalTree<Target>>>;
+  using type = OverlayStorageType<SPRStorage<Target>, type_helper>;
 };
 
 template <typename Target>
-using SPRStorageBase = OverlayStorageType<SPRStorage<Target>, SPRStorageHelper<Target>>;
+struct SPRStorage : LongNameOf<SPRStorage<Target>>::type {
+  MOVE_ONLY(SPRStorage);
 
-template <typename Target>
-struct SPRStorage : SPRStorageBase<Target> {
-  static void EmptyDefault();
-  static SPRStorage<Target> Consume(Target&& target) {
+  using LongNameType = typename LongNameOf<SPRStorage>::type;
+  using LongNameType::LongNameType;
+
+  static SPRStorage EmptyDefault() {
     static_assert(Target::role == Role::Storage);
-    return SPRStorage<Target>{std::move(target)};
+    using helper = typename LongNameOf<SPRStorage<Target>>::type_helper;
+    return SPRStorage{helper::EmptyDefault()};
   }
 
-  static SPRStorage<Target> FromView(const Target& target) {
+  static SPRStorage Consume(Target&& target) {
+    static_assert(Target::role == Role::Storage);
+    using helper = typename LongNameOf<SPRStorage<Target>>::type_helper;
+    return SPRStorage{helper::Consume(std::move(target))};
+  }
+
+  static SPRStorage FromView(const Target& target) {
     static_assert(Target::role == Role::View);
-    return SPRStorage<Target>{Target{target}};
+    using helper = typename LongNameOf<SPRStorage<Target>>::type_helper;
+    return SPRStorage{helper::FromView(target)};
   }
-
- private:
-  friend SPRStorageBase<Target>;
-  SPRStorage(Target&& target) : SPRStorageBase<Target>{std::forward<Target>(target)} {}
 };
 
 template <typename Target, typename = std::enable_if_t<Target::role == Role::Storage>>
@@ -228,8 +223,8 @@ SPRStorage<Target> AddSPRStorage(Target&& dag) {
 }
 
 template <typename Target, typename = std::enable_if_t<Target::role == Role::View>>
-auto AddSPRStorage(const Target& dag) {
-  return SPRStorage<Target>::FromView(std::move(dag));
+SPRStorage<Target> AddSPRStorage(const Target& dag) {
+  return SPRStorage<Target>::FromView(dag);
 }
 
 #include "larch/impl/spr/spr_view_impl.hpp"

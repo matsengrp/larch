@@ -83,31 +83,18 @@ struct ExtraFeatureMutableView<MATConversion, CRTP> {
   static void BuildHelper(MATNodePtr par_node, Node node, DAG dag);
 };
 
-template <typename DAG>
+template <typename Target>
 struct MATConversionStorage;
 
-template <typename DAG>
-using MATConversionStorageBase =
-    ExtendStorageType<MATConversionStorage<DAG>, DAG, Extend::Nodes<MATConversion>>;
+template <typename Target>
+struct LongNameOf<MATConversionStorage<Target>> {
+  using type = ExtendStorageType<MATConversionStorage<Target>, Target,
+                                 Extend::Nodes<MATConversion>>;
+};
 
-template <typename DAG>
-struct MATConversionStorage : MATConversionStorageBase<DAG> {
-  static void EmptyDefault();
-
-  static MATConversionStorage FromView(const DAG& target) {
-    static_assert(DAG::role == Role::View);
-    return MATConversionStorage{DAG{target}};
-  }
-
-  static MATConversionStorage Consume(DAG&& target) {
-    static_assert(DAG::role == Role::Storage);
-    return MATConversionStorage{std::move(target)};
-  }
-
- private:
-  friend MATConversionStorageBase<DAG>;
-  MATConversionStorage(DAG&& target)
-      : MATConversionStorageBase<DAG>{std::forward<DAG>(target)} {}
+template <typename Target>
+struct MATConversionStorage : LongNameOf<MATConversionStorage<Target>>::type {
+  SHORT_NAME(MATConversionStorage);
 };
 
 template <typename DAG, typename = std::enable_if_t<DAG::role == Role::Storage>>

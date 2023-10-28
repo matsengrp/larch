@@ -224,3 +224,50 @@ struct Endpoints;
 struct Connections;
 
 struct DefaultDAGStorage;
+
+template <typename T, typename = void>
+struct ViewTypeOf;
+
+template <typename T>
+struct ViewTypeOf<T, std::enable_if_t<T::role == Role::View>> {
+  static_assert(T::component == Component::DAG);
+  using type = T;
+};
+
+template <typename T>
+struct ViewTypeOf<T, std::enable_if_t<T::role == Role::Storage>> {
+  static_assert(T::component == Component::DAG);
+  using type = decltype(std::declval<T>().View());
+};
+
+template <typename>
+struct LongNameOf;
+
+#define SHORT_NAME(x)                                \
+  MOVE_ONLY(x);                                      \
+  static x EmptyDefault() {                          \
+    static_assert(Target::role == Role::Storage);    \
+    return x{Target::EmptyDefault()};                \
+  }                                                  \
+                                                     \
+  static x Consume(Target&& target) {                \
+    static_assert(Target::role == Role::Storage);    \
+    return x{std::move(target)};                     \
+  }                                                  \
+                                                     \
+  static x FromView(const Target& target) {          \
+    static_assert(Target::role == Role::View);       \
+    return x{Target{target}};                        \
+  }                                                  \
+  using LongNameType = typename LongNameOf<x>::type; \
+  using LongNameType::LongNameType
+
+template <typename Short, typename Long>
+struct IsNameCorrect {
+  static constexpr bool value = std::is_same_v<typename LongNameOf<Short>::type, Long>;
+};
+
+template <typename Long>
+struct IsNameCorrect<void, Long> {
+  static constexpr bool value = true;
+};
