@@ -247,19 +247,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 //               "SPR: tree 20D_from_fasta"});
 
 [[maybe_unused]] static const auto test_added2 =
-    add_test({[] {
-                // XXX
-                SampledDAGStorage<MADAGStorage<>> smds =
-                    SampledDAGStorage<MADAGStorage<>>::EmptyDefault();
-                auto n1 = smds.View().AppendNode();
-                auto n2 = smds.View().AppendNode();
-                smds.View().AppendEdge(n1, n2, {0});
-                smds.View().BuildConnections();
-                return;
-
-                test_spr(make_sample_dag(), 10);
-              },
-              "SPR: sample"});
+    add_test({[] { test_spr(make_sample_dag(), 10); }, "SPR: sample"});
 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});

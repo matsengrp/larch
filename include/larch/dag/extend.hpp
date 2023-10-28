@@ -108,10 +108,6 @@ struct ExtendDAGStorage {
   using OnDAG = select_argument_t<Extend::DAG, Arg0, Arg1, Arg2>;
 
   struct ExtraStorageType {
-    MOVE_ONLY(ExtraStorageType);
-
-    explicit ExtraStorageType(const TargetView& target) : target_{target} {}
-
     using FeatureTypes = decltype(std::tuple_cat(
         typename TargetView::StorageType::ExtraStorageType::FeatureTypes{},
         typename OnDAG::FeatureTypes{}));
@@ -128,28 +124,6 @@ struct ExtendDAGStorage {
     struct Base<FeatureMutableView, CRTP>
         : TargetView::StorageType::template MutableDAGViewBase<CRTP>,
           OnDAG::template MutableView<Self, CRTP> {};
-
-    template <typename Feature>
-    auto& GetFeatureStorage() {
-      if constexpr (tuple_contains_v<decltype(storage_), Feature>) {
-        return std::get<Feature>(storage_);
-      } else {
-        return target_.template GetFeatureStorage<Feature>();
-      }
-    }
-
-    template <typename Feature>
-    const auto& GetFeatureStorage() const {
-      if constexpr (tuple_contains_v<decltype(storage_), Feature>) {
-        return std::get<Feature>(storage_);
-      } else {
-        return target_.template GetFeatureStorage<Feature>();
-      }
-    }
-
-   private:
-    TargetView target_;
-    typename OnDAG::Storage storage_;
   };
 
   using FeatureTypes = typename TargetView::StorageType::FeatureTypes;
@@ -295,7 +269,7 @@ struct ExtendDAGStorage {
   Target target_;
   typename OnNodes::Storage additional_node_features_storage_;
   typename OnEdges::Storage additional_edge_features_storage_;
-  ExtraStorageType additional_dag_features_storage_;
+  typename OnDAG::Storage additional_dag_features_storage_;
   typename OnNodes::ExtraStorage additional_node_extra_features_storage_;
   typename OnEdges::ExtraStorage additional_edge_extra_features_storage_;
 };

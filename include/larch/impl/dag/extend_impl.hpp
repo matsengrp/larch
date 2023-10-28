@@ -125,17 +125,25 @@ void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::ClearEdges() {
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2>
-template <typename F>
+template <typename Feature>
 auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage() {
-  return additional_dag_features_storage_.template GetFeatureStorage<F>();
+  if constexpr (tuple_contains_v<decltype(additional_dag_features_storage_), Feature>) {
+    return std::get<Feature>(additional_dag_features_storage_);
+  } else {
+    return GetTarget().template GetFeatureStorage<Feature>();
+  }
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2>
-template <typename F>
+template <typename Feature>
 const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage()
     const {
-  return additional_dag_features_storage_.template GetFeatureStorage<F>();
+  if constexpr (tuple_contains_v<decltype(additional_dag_features_storage_), Feature>) {
+    return std::get<Feature>(additional_dag_features_storage_);
+  } else {
+    return GetTarget().template GetFeatureStorage<Feature>();
+  }
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
@@ -245,8 +253,7 @@ auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetContainer() const
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2>
 ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::ExtendDAGStorage(Target&& target)
-    : target_{std::forward<Target>(target)},
-      additional_dag_features_storage_{ViewOf(target_)} {
+    : target_{std::forward<Target>(target)} {
   additional_node_features_storage_.resize(GetTarget().GetNodesCount());
   additional_edge_features_storage_.resize(GetTarget().GetEdgesCount());
 }
