@@ -4,7 +4,9 @@ BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG samp
     : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {
   for (auto leaf_node : merge.GetResult().GetLeafs()) {
     std::string sid = leaf_node.GetSampleId().value();
-    sample_id_to_cg_map_[sid] = leaf_node.GetCompactGenome().Copy();
+    sample_id_to_cg_map_.Write([&sid, &leaf_node](auto& sample_id_to_cg_map) {
+      sample_id_to_cg_map[sid] = leaf_node.GetCompactGenome().Copy();
+    });
   }
 }
 template <typename CRTP, typename SampleDAG>
@@ -15,7 +17,9 @@ BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG samp
       collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {
   for (auto leaf_node : merge.GetResult().GetLeafs()) {
     std::string sid = leaf_node.GetSampleId().value();
-    sample_id_to_cg_map_[sid] = leaf_node.GetCompactGenome().Copy();
+    sample_id_to_cg_map_.Write([&sid, &leaf_node](auto& sample_id_to_cg_map) {
+      sample_id_to_cg_map[sid] = leaf_node.GetCompactGenome().Copy();
+    });
   }
 }
 
@@ -53,8 +57,11 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
       for (auto leaf_node : fragment.GetNodes()) {
         if (leaf_node.IsLeaf()) {
           Assert(leaf_node.GetOld().HaveSampleId());
-          auto new_cg =
-              sample_id_to_cg_map_.at(leaf_node.GetOld().GetSampleId().value()).Copy();
+          CompactGenome new_cg =
+              sample_id_to_cg_map_.Read([&leaf_node](auto& sample_id_to_cg_map) {
+                return sample_id_to_cg_map.at(leaf_node.GetOld().GetSampleId().value())
+                    .Copy();
+              });
           fragment.Get(leaf_node).template SetOverlay<Deduplicate<CompactGenome>>();
           fragment.Get(leaf_node) = std::move(new_cg);
         }
@@ -113,7 +120,10 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
     // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
     for (auto leaf_node : reassigned_states.GetLeafs()) {
       Assert(leaf_node.HaveSampleId());
-      auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId().value()).Copy();
+      CompactGenome new_cg =
+          sample_id_to_cg_map_.Read([&leaf_node](auto& sample_id_to_cg_map) {
+            return sample_id_to_cg_map.at(leaf_node.GetSampleId().value()).Copy();
+          });
       leaf_node = std::move(new_cg);
     }
     if (not batch_.empty()) {
@@ -142,7 +152,10 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
   for (auto leaf_node : reassigned_states.GetLeafs()) {
     auto this_cg = leaf_node.GetCompactGenome().ToString();
-    auto new_cg = sample_id_to_cg_map_.at(leaf_node.GetSampleId().value()).Copy();
+    CompactGenome new_cg =
+        sample_id_to_cg_map_.Read([&leaf_node](auto& sample_id_to_cg_map) {
+          return sample_id_to_cg_map.at(leaf_node.GetSampleId().value()).Copy();
+        });
     leaf_node = std::move(new_cg);
   }
   check_edge_mutations(reassigned_states.Const());

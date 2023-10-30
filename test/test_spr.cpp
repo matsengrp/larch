@@ -58,25 +58,6 @@ struct Test_Move_Found_Callback
 }
 
 static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
-  {
-    // {
-    //   MADAGStorage<> mds = MADAGStorage<>::EmptyDefault();
-    //   auto n1 = mds.View().AppendNode();
-    //   auto n2 = mds.View().AppendNode();
-    //   mds.View().AppendEdge(n1, n2, {0});
-    //   mds.View().BuildConnections();
-    // }
-
-    // std::cout << "Now sampled:\n";
-
-    SampledDAGStorage<MADAGStorage<>> smds =
-        SampledDAGStorage<MADAGStorage<>>::EmptyDefault();
-    auto n1 = smds.View().AppendNode();
-    auto n2 = smds.View().AppendNode();
-    smds.View().AppendEdge(n1, n2, {0});
-    smds.View().BuildConnections();
-    return;
-  }
   tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};

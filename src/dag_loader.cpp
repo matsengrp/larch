@@ -93,6 +93,13 @@ MADAGStorage<> LoadDAGFromProtobuf(std::string_view path) {
   }
   result.View().BuildConnections();
   result.View().AssertUA();
+
+  for (auto node : result.View().GetNodes()) {
+    if (node.IsLeaf()) {
+      node = SampleId{node.GetCompactGenome().ToString()};
+    }
+  }
+
   result.View().GetRoot().Validate(true, true);
   return result;
 }
@@ -297,6 +304,13 @@ MADAGStorage<> LoadDAGFromJson(std::string_view path) {
   }
   result.View().BuildConnections();
   result.View().AssertUA();
+
+  for (auto node : result.View().GetNodes()) {
+    if (node.IsLeaf()) {
+      node = SampleId{node.GetCompactGenome().ToString()};
+    }
+  }
+
   result.View().GetRoot().Validate(true, true);
   return result;
 }

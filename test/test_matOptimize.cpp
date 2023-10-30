@@ -91,16 +91,21 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
       NodeId dst_id = ToMergedNodeId(move.dst);
       NodeId lca_id = ToMergedNodeId(move.LCA);
 
-      const auto& src_clades =
-          merge_.GetResultNodeLabels().at(src_id).GetLeafSet()->GetClades();
-      const auto& dst_clades =
-          merge_.GetResultNodeLabels().at(dst_id).GetLeafSet()->GetClades();
+      const auto& [src_clades, dst_clades] =
+          merge_.GetResultNodeLabels().Read([src_id, dst_id](auto& result_node_labels) {
+            return std::make_tuple(
+                std::ref(result_node_labels.at(src_id).GetLeafSet()->GetClades()),
+                std::ref(result_node_labels.at(dst_id).GetLeafSet()->GetClades()));
+          });
 
       MAT::Node* curr_node = move.src;
       while (not(curr_node->node_id == lca_id.value)) {
         MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{0 /*FIXME*/});
-        const auto& clades =
-            merge_.GetResultNodeLabels().at(node.GetId()).GetLeafSet()->GetClades();
+        const auto& clades = merge_.GetResultNodeLabels().Read(
+            [](auto& result_node_labels, NodeId node_id) {
+              return result_node_labels.at(node_id).GetLeafSet()->GetClades();
+            },
+            node.GetId());
         if (not merge_.ContainsLeafset(clades_difference(clades, src_clades))) {
           ++node_id_map_count;
         }
@@ -113,8 +118,11 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
       curr_node = move.dst;
       while (not(curr_node->node_id == lca_id.value)) {
         MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{0 /*FIXME*/});
-        const auto& clades =
-            merge_.GetResultNodeLabels().at(node.GetId()).GetLeafSet()->GetClades();
+        const auto& clades = merge_.GetResultNodeLabels().Read(
+            [](auto& result_node_labels, NodeId node_id) {
+              return result_node_labels.at(node_id).GetLeafSet()->GetClades();
+            },
+            node.GetId());
         if (not merge_.ContainsLeafset(clades_union(clades, dst_clades))) {
           ++node_id_map_count;
         }

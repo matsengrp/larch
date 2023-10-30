@@ -2,14 +2,9 @@
 
 #include <mutex>
 #include <shared_mutex>
-#include <tbb/concurrent_unordered_map.h>
 
 #include "larch/spr/spr_view.hpp"
 #include "larch/merge/merge.hpp"
-
-template <typename K, typename V>
-using ConcurrentUnorderedMap =
-    tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
 template <typename CRTP, typename SampleDAG>
 class BatchingCallback : public Move_Found_Callback {

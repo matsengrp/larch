@@ -11,7 +11,6 @@
 #include <numeric>
 
 #include <tbb/concurrent_unordered_set.h>
-#include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for_each.h>
 
@@ -19,13 +18,14 @@
 #include "larch/merge/leaf_set.hpp"
 #include "larch/merge/node_label.hpp"
 #include "larch/merge/edge_label.hpp"
+#include "larch/parallel/parallel_common.hpp"
 
 template <typename T>
 using ConcurrentUnorderedSet =
     tbb::concurrent_unordered_set<T, std::hash<T>, std::equal_to<T>>;
+
 template <typename K, typename V>
-using ConcurrentUnorderedMap =
-    tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
+using ConcurrentUnorderedMap = SharedState<std::unordered_map<K, V>>;
 
 template <typename Target = DefaultDAGStorage>
 struct MergeDAGStorage;
@@ -130,7 +130,7 @@ class Merge {
           added_edges,
       std::atomic<size_t>& edge_id,
       const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-      const ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+      ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
       MutableMergeDAG result_dag);
 
   // Every unique node leaf set, found among all input DAGs.
