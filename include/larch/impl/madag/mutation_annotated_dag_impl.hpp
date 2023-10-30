@@ -163,10 +163,10 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
 }
 
 template <typename CRTP, typename Tag>
-void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG() const {
+void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG(bool coerce) const {
   auto dag = static_cast<const CRTP&>(*this);
   for (auto leaf : dag.GetLeafs()) {
-    if (not leaf.HaveSampleId()) {
+    if (not leaf.HaveSampleId() or coerce) {
       std::string id = leaf.GetCompactGenome().ToString();
       Assert(not id.empty());
       if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {

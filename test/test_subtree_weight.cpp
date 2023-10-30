@@ -20,7 +20,7 @@ static void test_subtree_weight(std::string_view path, size_t expected_score) {
   MADAGStorage dag = LoadDAGFromProtobuf(path);
   auto dag_view = dag.View();
   dag_view.RecomputeCompactGenomes(true);
-  dag_view.SampleIdsFromCG();
+  dag_view.SampleIdsFromCG(true);
   test_subtree_weight(dag_view, expected_score);
 }
 

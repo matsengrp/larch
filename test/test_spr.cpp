@@ -53,7 +53,7 @@ struct Test_Move_Found_Callback
 [[maybe_unused]] static MADAGStorage<> Load(std::string_view input_dag_path) {
   MADAGStorage<> input_dag_storage = LoadDAGFromProtobuf(input_dag_path);
   input_dag_storage.View().RecomputeCompactGenomes(true);
-  input_dag_storage.View().SampleIdsFromCG();
+  input_dag_storage.View().SampleIdsFromCG(true);
   return input_dag_storage;
 }
 

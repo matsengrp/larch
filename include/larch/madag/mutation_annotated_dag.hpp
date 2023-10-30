@@ -54,7 +54,7 @@ struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
           node_mutation_map) const;
   void AddUA(const EdgeMutations& mutations_at_root) const;
   void RecomputeCompactGenomes(bool recompute_leaves = true) const;
-  void SampleIdsFromCG() const;
+  void SampleIdsFromCG(bool coerce = false) const;
   void RecomputeEdgeMutations() const;
 };
 

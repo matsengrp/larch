@@ -17,8 +17,9 @@ static void test_protobuf(const std::string& correct_path,
   for (auto& path : paths) {
     trees.emplace_back(LoadDAGFromProtobuf(path));
     MutableMADAG view = trees.back().View();
+
     view.RecomputeCompactGenomes(true);
-    view.SampleIdsFromCG();
+    view.SampleIdsFromCG(true);
     for (auto leaf : view.GetLeafs()) {
       Assert(leaf.HaveSampleId());
     }
@@ -138,12 +139,12 @@ static void test_add_trees() {
   for (auto& path : paths1) {
     trees1.push_back(LoadDAGFromProtobuf(path));
     trees1.back().View().RecomputeCompactGenomes(true);
-    trees1.back().View().SampleIdsFromCG();
+    trees1.back().View().SampleIdsFromCG(true);
   }
   for (auto& path : paths2) {
     trees2.push_back(LoadDAGFromProtobuf(path));
     trees2.back().View().RecomputeCompactGenomes(true);
-    trees2.back().View().SampleIdsFromCG();
+    trees2.back().View().SampleIdsFromCG(true);
   }
 
   MADAGStorage<> correct_result = LoadDAGFromJson(correct_path);
@@ -185,7 +186,7 @@ static void test_subtree() {
   for (auto& path : paths) {
     trees.push_back(LoadDAGFromProtobuf(path));
     trees.back().View().RecomputeCompactGenomes(true);
-    trees.back().View().SampleIdsFromCG();
+    trees.back().View().SampleIdsFromCG(true);
   }
 
   for (auto& tree : trees) {
