@@ -23,25 +23,25 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   idxs.resize(dags.size());
   std::iota(idxs.begin(), idxs.end(), 0);
 
-  tbb::parallel_for_each(idxs, [&](size_t i) {
+  ParallelForEach(idxs, [&](size_t i) {
     dags.at(i).GetRoot().Validate(true, dags.at(i).IsTree());
   });
 
   std::vector<std::vector<NodeLabel>> dags_labels;
   dags_labels.resize(dags.size());
 
-  tbb::parallel_for_each(idxs, [&](size_t i) {
+  ParallelForEach(idxs, [&](size_t i) {
     MergeCompactGenomes(i, dags, below, dags_labels, ResultDAG());
   });
 
-  tbb::parallel_for_each(idxs, [&](size_t i) {
+  ParallelForEach(idxs, [&](size_t i) {
     ComputeLeafSets(i, dags, below, dags_labels, all_leaf_sets_);
   });
 
   std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
   tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>
       added_edges;
-  tbb::parallel_for_each(idxs, [&](size_t i) {
+  ParallelForEach(idxs, [&](size_t i) {
     MergeNodes(i, dags, below, dags_labels, result_nodes_, result_node_labels_,
                node_id);
   });
@@ -52,7 +52,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     }
   });
 
-  tbb::parallel_for_each(idxs, [&](size_t i) {
+  ParallelForEach(idxs, [&](size_t i) {
     MergeEdges(i, dags, below, dags_labels, result_nodes_, result_edges_, added_edges);
   });
 
@@ -65,7 +65,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   );
   idxs.resize(added_edges.size());
   std::iota(idxs.begin(), idxs.end(), 0);
-  tbb::parallel_for_each(idxs, [&](size_t i) {
+  ParallelForEach(idxs, [&](size_t i) {
     BuildResult(i, added_edges, edge_id, result_nodes_, result_edges_, ResultDAG());
   });
 

@@ -3,6 +3,8 @@
 #include <mutex>
 #include <shared_mutex>
 
+#include <tbb/parallel_for_each.h>
+
 #include "larch/common.hpp"
 
 template <typename M>
@@ -57,3 +59,9 @@ class SharedState {
   mutable M mutex_;
   T target_;
 };
+
+template <typename Range, typename F>
+void ParallelForEach(Range&& range, F&& func) {
+  tbb::parallel_for_each(std::forward<Range>(range), std::forward<F>(func));
+  // ranges::for_each(std::forward<Range>(range), std::forward<F>(func));
+}

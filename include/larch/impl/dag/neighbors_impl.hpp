@@ -120,17 +120,24 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   auto node = static_cast<const CRTP&>(*this);
   auto dag = node.GetDAG();
   auto& storage = GetFeatureStorage(this);
+  size_t children_count = 0;
+  for ([[maybe_unused]] auto child : node.GetChildren()) {
+    ++children_count;
+  }
+  Assert(children_count != 1);
   if (node.IsUA()) {
     Assert(dag.HaveUA());
     Assert(node.GetId() == dag.GetRoot());
   }
+  std::set<std::string> sample_ids;
   if (node.IsLeaf()) {
     Assert(storage.clades_.empty());
     if constexpr (std::remove_reference_t<decltype(node)>::template contains_feature<
                       SampleId> or
                   std::remove_reference_t<decltype(node)>::template contains_feature<
                       Deduplicate<SampleId>>) {
-      Assert(node.Const().HaveSampleId());
+      Assert(node.HaveSampleId());
+      Assert(sample_ids.insert(node.GetSampleId().value()).second);
     }
   }
   for (auto& i : storage.clades_) {

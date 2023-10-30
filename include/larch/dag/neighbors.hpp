@@ -30,7 +30,6 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
   size_t GetParentsCount() const;
   size_t GetCladesCount() const;
   auto GetChildren() const;
-  size_t GetChildrenCount() const;
   auto GetSingleParent() const;
   auto GetFirstParent() const;
   auto GetFirstChild() const;

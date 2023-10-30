@@ -12,7 +12,6 @@
 
 #include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_vector.h>
-#include <tbb/parallel_for_each.h>
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 #include "larch/merge/leaf_set.hpp"
