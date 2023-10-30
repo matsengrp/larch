@@ -124,7 +124,9 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   for ([[maybe_unused]] auto child : node.GetChildren()) {
     ++children_count;
   }
-  Assert(children_count != 1);
+  if (not node.IsUA()) {
+    Assert(children_count != 1);
+  }
   if (node.IsUA()) {
     Assert(dag.HaveUA());
     Assert(node.GetId() == dag.GetRoot());

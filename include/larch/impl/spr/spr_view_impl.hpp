@@ -394,7 +394,6 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
   auto oldest_changed = dag.GetOldestChangedNode().GetSingleParent().GetParent();
-  NodeId oldest_node = dag.GetOldestChangedNode().GetSingleParent().GetParent().GetId();
   if (oldest_changed.IsUA()) {
     // we need to add the UA node as the root anchor node of the fragment,
     // somehow
@@ -402,11 +401,11 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   } else {
     result_nodes.push_back(oldest_changed.GetSingleParent().GetParent());
     result_edges.push_back(oldest_changed.GetSingleParent());
-    oldest_node = oldest_changed.GetSingleParent().GetParent().GetId();
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
+  NodeId oldest_node = collapsed.first.front();
   return FragmentStorage(dag, std::move(collapsed.first), std::move(collapsed.second),
                          oldest_node);
 }
