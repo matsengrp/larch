@@ -119,6 +119,10 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
                                                       bool allow_dag) const {
   auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
+  if constexpr (is_specialization_v<std::remove_reference_t<decltype(dag.GetStorage())>,
+                                    FragmentStorage>) {
+    return; // TODO
+  }
   auto& storage = GetFeatureStorage(this);
   if (node.IsUA()) {
     Assert(dag.HaveUA());

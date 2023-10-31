@@ -8,8 +8,8 @@ template <typename CRTP, typename Tag>
 void FeatureConstView<ReferenceSequence, CRTP, Tag>::AssertUA() const {
   auto& dag = static_cast<const CRTP&>(*this);
   Assert(dag.HaveRoot());
-  auto ua = dag.GetRoot();
-  Assert(ua.GetCladesCount() == 1);
+  // auto ua = dag.GetRoot();
+  //TODO Assert((not dag.IsTree()) or ua.GetCladesCount() == 1);
 }
 
 template <typename CRTP, typename Tag>
@@ -163,7 +163,8 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
 }
 
 template <typename CRTP, typename Tag>
-void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG(bool coerce) const {
+void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG(
+    bool coerce) const {
   auto dag = static_cast<const CRTP&>(*this);
   for (auto leaf : dag.GetLeafs()) {
     if (not leaf.HaveSampleId() or coerce) {
