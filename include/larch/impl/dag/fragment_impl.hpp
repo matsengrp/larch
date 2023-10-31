@@ -12,13 +12,6 @@ size_t FragmentElementsContainer<Target, C>::GetCount() const {
   return ids_.size();
 }
 
-// template <typename Target, Component C>
-// Id<C> FragmentElementsContainer<Target, C>::Append() {}
-// template <typename Target, Component C>
-// void FragmentElementsContainer<Target, C>::Add(Id<C> id) {}
-// template <typename Target, Component C>
-// void FragmentElementsContainer<Target, C>::Initialize(size_t size) {}
-
 template <typename Target, Component C>
 template <typename Feature>
 auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id) {

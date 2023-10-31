@@ -190,7 +190,7 @@ static void test_subtree() {
   }
 
   for (auto& tree : trees) {
-    auto frag = FragmentStorage(
+    auto frag = AddFragmentStorage(
         tree.View(), tree.View().GetNodes() | Transform::GetId() | ranges::to_vector,
         tree.View().GetEdges() | Transform::GetId() | ranges::to_vector,
         tree.View().GetRoot());

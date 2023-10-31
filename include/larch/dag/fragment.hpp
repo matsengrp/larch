@@ -38,10 +38,6 @@ struct FragmentElementsContainer {
 
   size_t GetCount() const;
 
-  // Id<C> Append();
-  // void Add(Id<C> id);
-  // void Initialize(size_t size);
-
   template <typename Feature>
   auto& GetFeatureStorage(Id<C> id);
   template <typename Feature>
@@ -68,7 +64,8 @@ struct FragmentExtraStorage {
   static_assert(Target::role == Role::View);
   static_assert(Target::component == Component::DAG);
 
-  explicit FragmentExtraStorage(Target target) : target_{target} {}
+  FragmentExtraStorage(Target target, NodeId root_node_id)
+      : target_{target}, connections_{root_node_id} {}
   MOVE_ONLY(FragmentExtraStorage);
 
   using FeatureTypes = typename Target::StorageType::ExtraStorageType::FeatureTypes;
@@ -78,12 +75,20 @@ struct FragmentExtraStorage {
 
   template <typename Feature>
   auto& GetFeatureStorage() {
-    return target_.GetStorage().template GetFeatureStorage<Feature>();
+    if constexpr (std::is_same_v<Feature, Connections>) {
+      return connections_;
+    } else {
+      return target_.GetStorage().template GetFeatureStorage<Feature>();
+    }
   }
 
   template <typename Feature>
   const auto& GetFeatureStorage() const {
-    return target_.GetStorage().template GetFeatureStorage<Feature>();
+    if constexpr (std::is_same_v<Feature, Connections>) {
+      return connections_;
+    } else {
+      return target_.GetStorage().template GetFeatureStorage<Feature>();
+    }
   }
 
   template <typename Storage>
@@ -98,21 +103,42 @@ struct FragmentExtraStorage {
 
  private:
   Target target_;
+  Connections connections_;
 };
 
 template <typename Target>
-using FragmentStorageFor =
-    DAGStorage<FragmentElementsContainer<Target, Component::Node>,
-               FragmentElementsContainer<Target, Component::Edge>,
-               FragmentExtraStorage<Target>>;
+struct FragmentStorage;
 
 template <typename Target>
-FragmentStorageFor<Target> FragmentStorage(Target target, std::vector<NodeId>&& nodes,
+struct LongNameOf<FragmentStorage<Target>> {
+  using type = DAGStorage<FragmentElementsContainer<Target, Component::Node>,
+                          FragmentElementsContainer<Target, Component::Edge>,
+                          FragmentExtraStorage<Target>>;
+};
+
+template <typename Target>
+struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
+  MOVE_ONLY(FragmentStorage);
+
+  using LongNameType = typename LongNameOf<FragmentStorage>::type;
+  using LongNameType::LongNameType;
+
+  static FragmentStorage FromView(const Target& target, std::vector<NodeId>&& nodes,
+                                  std::vector<EdgeId>&& edges, NodeId root_node_id) {
+    static_assert(Target::role == Role::View);
+    return {FragmentElementsContainer<Target, Component::Node>{target, std::move(nodes),
+                                                               root_node_id},
+            FragmentElementsContainer<Target, Component::Edge>{target, std::move(edges),
+                                                               root_node_id},
+            FragmentExtraStorage<Target>{target, root_node_id}};
+  }
+};
+
+template <typename Target, typename = std::enable_if_t<Target::role == Role::View>>
+FragmentStorage<Target> AddFragmentStorage(const Target& target,
+                                           std::vector<NodeId>&& nodes,
                                            std::vector<EdgeId>&& edges,
                                            NodeId root_node_id) {
-  return {FragmentElementsContainer<Target, Component::Node>{target, std::move(nodes),
-                                                             root_node_id},
-          FragmentElementsContainer<Target, Component::Edge>{target, std::move(edges),
-                                                             root_node_id},
-          FragmentExtraStorage<Target>{target}};
+  return FragmentStorage<Target>::FromView(target, std::move(nodes), std::move(edges),
+                                           root_node_id);
 }

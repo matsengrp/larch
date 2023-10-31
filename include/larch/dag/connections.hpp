@@ -7,6 +7,7 @@
  */
 struct Connections {
   MOVE_ONLY_DEF_CTOR(Connections);
+  explicit Connections(NodeId root_node_id) : root_{root_node_id} {}
   NodeId root_;
   std::vector<NodeId> leafs_;
 };

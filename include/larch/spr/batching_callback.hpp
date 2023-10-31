@@ -51,7 +51,7 @@ class BatchingCallback : public Move_Found_Callback {
   std::unique_ptr<MATStorage> sample_mat_storage_;
   std::mutex merge_mtx_;
   tbb::concurrent_vector<SPRType> batch_storage_;
-  tbb::concurrent_vector<FragmentStorageFor<decltype(std::declval<SPRType>().View())>>
+  tbb::concurrent_vector<FragmentStorage<decltype(std::declval<SPRType>().View())>>
       batch_;
 };
 
