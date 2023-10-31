@@ -24,7 +24,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   std::iota(idxs.begin(), idxs.end(), 0);
 
   ParallelForEach(idxs, [&](size_t i) {
-    dags.at(i).GetRoot().Validate(true, dags.at(i).IsTree());
+    dags.at(i).GetRoot().Validate(true, not dags.at(i).IsTree());
   });
 
   std::vector<std::vector<NodeLabel>> dags_labels;

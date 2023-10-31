@@ -80,7 +80,9 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::AddLeaf(NodeId id) const {
   auto& storage = GetFeatureStorage(this);
-  if (std::find(storage.leafs_.begin(), storage.leafs_.end(), id) == storage.leafs_.end()) {
+  // TODO make leafs ContiguousSet ?
+  if (std::find(storage.leafs_.begin(), storage.leafs_.end(), id) ==
+      storage.leafs_.end()) {
     storage.leafs_.push_back(id);
   }
 }
