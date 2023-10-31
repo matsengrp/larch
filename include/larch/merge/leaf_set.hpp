@@ -26,6 +26,10 @@ class LeafSet {
   LeafSet(Node node, const std::vector<NodeLabel>& labels,
           std::vector<LeafSet>& computed_leafsets);
 
+  template <typename Node>
+  LeafSet(Node node, const ContiguousMap<NodeId, NodeLabel>& labels,
+          ContiguousMap<NodeId, LeafSet>& computed_leafsets);
+
   inline LeafSet(std::vector<std::vector<UniqueData>>&& clades);
 
   inline bool operator==(const LeafSet& rhs) const noexcept;
@@ -46,8 +50,8 @@ class LeafSet {
   inline std::string ToString() const;
 
   template <typename DAGType>
-  inline static std::vector<LeafSet> ComputeLeafSets(
-      DAGType dag, const std::vector<NodeLabel>& labels);
+  inline static ContiguousMap<NodeId, LeafSet> ComputeLeafSets(
+      DAGType dag, const ContiguousMap<NodeId, NodeLabel>& labels);
 
  private:
   inline static size_t ComputeHash(

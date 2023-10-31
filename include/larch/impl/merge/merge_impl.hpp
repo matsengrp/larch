@@ -27,7 +27,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     dags.at(i).GetRoot().Validate(true, not dags.at(i).IsTree());
   });
 
-  std::vector<std::vector<NodeLabel>> dags_labels;
+  std::vector<NodeLabelsContainer> dags_labels;
   dags_labels.resize(dags.size());
 
   ParallelForEach(idxs, [&](size_t i) {
@@ -151,43 +151,44 @@ bool Merge::ContainsLeafset(const LeafSet& leafset) const {
 
 template <typename DAGSRange>
 void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
-                                std::vector<std::vector<NodeLabel>>& dags_labels,
+                                std::vector<NodeLabelsContainer>& dags_labels,
                                 MutableMergeDAG result_dag) {
   auto dag = dags.at(i).GetRoot().GetDAG();
   dag.AssertUA();
   auto& labels = dags_labels.at(i);
-  labels.resize(dag.GetNodesCount());
+  // TODO labels.resize(dag.GetNodesCount());
   for (auto node : dag.Const().GetNodes()) {
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
+    labels.insert({node, {}});
     auto cg_iter =
         result_dag.template AsFeature<Deduplicate<CompactGenome>>().AddDeduplicated(
             node.GetCompactGenome());
-    labels.at(node.GetId().value).SetCompactGenome(cg_iter.first);
+    labels.at(node.GetId()).SetCompactGenome(cg_iter.first);
   }
   for (auto leaf : dag.GetLeafs()) {
     Assert(leaf.Const().HaveSampleId());
     auto id_iter =
         result_dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
             leaf.Const().GetSampleId());
-    labels.at(leaf.GetId().value).SetSampleId(id_iter.first);
+    labels.at(leaf.GetId()).SetSampleId(id_iter.first);
   }
 }
 
 template <typename DAGSRange>
 void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
-                            std::vector<std::vector<NodeLabel>>& dags_labels,
+                            std::vector<NodeLabelsContainer>& dags_labels,
                             ConcurrentUnorderedSet<LeafSet>& all_leaf_sets) {
   auto dag = dags.at(i).GetRoot().GetDAG();
-  std::vector<NodeLabel>& labels = dags_labels.at(i);
-  std::vector<LeafSet> computed_ls = LeafSet::ComputeLeafSets(dag, labels);
+  NodeLabelsContainer& labels = dags_labels.at(i);
+  ContiguousMap<NodeId, LeafSet> computed_ls = LeafSet::ComputeLeafSets(dag, labels);
   for (auto node : dag.GetNodes()) {
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
-    auto& ls = computed_ls.at(node.GetId().value);
-    auto& label = labels.at(node.GetId().value);
+    auto& ls = computed_ls.at(node.GetId());
+    auto& label = labels.at(node.GetId());
     auto ls_iter = all_leaf_sets.insert(std::move(ls));
     label.SetLeafSet(std::addressof(*ls_iter.first));
     Assert(not label.Empty());
@@ -196,14 +197,14 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
 
 template <typename DAGSRange>
 void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
-                       std::vector<std::vector<NodeLabel>>& dags_labels,
+                       std::vector<NodeLabelsContainer>& dags_labels,
                        ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
                        ConcurrentUnorderedMap<NodeId, NodeLabel>& result_node_labels,
                        std::atomic<size_t>& node_id) {
   auto&& dag = dags.at(i);
-  auto& labels = dags_labels.at(i);
+  auto& labels = dags_labels.at({i});
   for (auto node : dag.GetNodes()) {
-    auto& label = labels.at(node.GetId().value);
+    auto& label = labels.at(node.GetId());
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
@@ -236,19 +237,19 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
 template <typename DAGSRange>
 void Merge::MergeEdges(
     size_t i, const DAGSRange& dags, NodeId below,
-    std::vector<std::vector<NodeLabel>>& dags_labels,
+    std::vector<NodeLabelsContainer>& dags_labels,
     const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
     ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
     tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
         added_edges) {
   auto&& dag = dags.at(i);
-  const std::vector<NodeLabel>& labels = dags_labels.at(i);
+  const NodeLabelsContainer& labels = dags_labels.at(i);
   for (auto edge : dag.GetEdges()) {
     if (below.value != NoId and edge.IsUA()) {
       continue;
     }
-    const auto& parent_label = labels.at(edge.GetParentId().value);
-    const auto& child_label = labels.at(edge.GetChildId().value);
+    const auto& parent_label = labels.at(edge.GetParentId());
+    const auto& child_label = labels.at(edge.GetChildId());
     Assert(not parent_label.Empty());
     Assert(not child_label.Empty());
     result_nodes.Read([&parent_label, &child_label](auto& result_nodes_r) {

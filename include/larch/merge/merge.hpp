@@ -46,6 +46,8 @@ using MergeDAG = DAGView<const MergeDAGStorage<>>;
 using MutableMergeDAG = DAGView<MergeDAGStorage<>>;
 
 class Merge {
+  using NodeLabelsContainer = ContiguousMap<NodeId, NodeLabel>;
+
  public:
   /**
    * Construct a new Merge object, with the common reference sequence for all input
@@ -99,17 +101,17 @@ class Merge {
 
   template <typename DAGSRange>
   static void MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
-                                  std::vector<std::vector<NodeLabel>>& dags_labels,
+                                  std::vector<NodeLabelsContainer>& dags_labels,
                                   MutableMergeDAG result_dag);
 
   template <typename DAGSRange>
   static void ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
-                              std::vector<std::vector<NodeLabel>>& dags_labels,
+                              std::vector<NodeLabelsContainer>& dags_labels,
                               ConcurrentUnorderedSet<LeafSet>& all_leaf_sets);
 
   template <typename DAGSRange>
   static void MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
-                         std::vector<std::vector<NodeLabel>>& dags_labels,
+                         std::vector<NodeLabelsContainer>& dags_labels,
                          ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
                          ConcurrentUnorderedMap<NodeId, NodeLabel>& result_node_labels,
                          std::atomic<size_t>& node_id);
@@ -117,7 +119,7 @@ class Merge {
   template <typename DAGSRange>
   static void MergeEdges(
       size_t i, const DAGSRange& dags, NodeId below,
-      std::vector<std::vector<NodeLabel>>& dags_labels,
+      std::vector<NodeLabelsContainer>& dags_labels,
       const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
       ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
       tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
