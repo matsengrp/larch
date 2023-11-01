@@ -127,6 +127,7 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
   static FragmentStorage FromView(const Target& target, std::vector<NodeId>&& nodes,
                                   std::vector<EdgeId>&& edges, NodeId root_node_id) {
     static_assert(Target::role == Role::View);
+
     FragmentStorage result{
         FragmentElementsContainer<Target, Component::Node>{target, std::move(nodes)},
         FragmentElementsContainer<Target, Component::Edge>{target, std::move(edges)},

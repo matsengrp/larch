@@ -406,6 +406,10 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
 
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
   NodeId oldest_node = collapsed.first.front();
+  collapsed.first |= ranges::actions::sort(std::less<NodeId>{}) |
+                     ranges::actions::unique(std::equal_to<NodeId>{});
+  collapsed.second |= ranges::actions::sort(std::less<EdgeId>{}) |
+                      ranges::actions::unique(std::equal_to<EdgeId>{});
   return AddFragmentStorage(dag, std::move(collapsed.first),
                             std::move(collapsed.second), oldest_node);
 }
