@@ -32,8 +32,7 @@ struct FragmentElementsContainer {
   struct ExtraMutableElementViewBase
       : TargetContainer::ExtraMutableElementViewBase<CRTP> {};
 
-  FragmentElementsContainer(Target target, std::vector<Id<C>>&& ids,
-                            NodeId root_node_id);
+  FragmentElementsContainer(Target target, std::vector<Id<C>>&& ids);
   MOVE_ONLY(FragmentElementsContainer);
 
   size_t GetCount() const;
@@ -53,7 +52,9 @@ struct FragmentElementsContainer {
  private:
   Target target_;
   const std::vector<Id<C>> ids_;
-  const NodeId root_node_id_;
+  std::conditional_t<C == Component::Node, ContiguousMap<NodeId, Neighbors>,
+                     std::tuple<>>
+      fragment_element_features_;
 };
 
 template <typename Target>
@@ -126,11 +127,15 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
   static FragmentStorage FromView(const Target& target, std::vector<NodeId>&& nodes,
                                   std::vector<EdgeId>&& edges, NodeId root_node_id) {
     static_assert(Target::role == Role::View);
-    return {FragmentElementsContainer<Target, Component::Node>{target, std::move(nodes),
-                                                               root_node_id},
-            FragmentElementsContainer<Target, Component::Edge>{target, std::move(edges),
-                                                               root_node_id},
-            FragmentExtraStorage<Target>{target, root_node_id}};
+    FragmentStorage result{
+        FragmentElementsContainer<Target, Component::Node>{target, std::move(nodes)},
+        FragmentElementsContainer<Target, Component::Edge>{target, std::move(edges)},
+        FragmentExtraStorage<Target>{target, root_node_id}};
+
+    auto view = result.View();
+    view.BuildConnections();
+    Assert(view.GetRoot().GetId() == root_node_id);
+    return result;
   }
 };
 
