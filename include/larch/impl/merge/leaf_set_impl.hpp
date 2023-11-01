@@ -41,6 +41,7 @@ LeafSet::LeafSet(Node node, const ContiguousMap<NodeId, NodeLabel>& labels,
         std::vector<std::vector<UniqueData>> clades;
         clades.reserve(node.GetCladesCount());
         for (auto clade : node.GetClades()) {
+          Assert(not clade.empty());
           std::vector<UniqueData> clade_leafs;
           clade_leafs.reserve(clade.size());
           for (Node child : clade | Transform::GetChild()) {
@@ -49,7 +50,10 @@ LeafSet::LeafSet(Node node, const ContiguousMap<NodeId, NodeLabel>& labels,
               UniqueData id = labels.at(child.GetId()).GetSampleId();
               clade_leafs.push_back(id);
             } else {
-              for (auto& child_leafs : computed_leafsets.at(child.GetId()).clades_) {
+              auto& computed_clades = computed_leafsets.at(child.GetId()).clades_;
+              Assert(not computed_clades.empty());
+              for (auto& child_leafs : computed_clades) {
+                Assert(not child_leafs.empty());
                 clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
                                    child_leafs.end());
               }
@@ -118,14 +122,13 @@ ContiguousMap<NodeId, LeafSet> LeafSet::ComputeLeafSets(
     DAGType dag, const ContiguousMap<NodeId, NodeLabel>& labels) {
   ContiguousMap<NodeId, LeafSet> result;
   auto ComputeLS = [&](auto& self, auto for_node) {
-    LeafSet& leaf_set = result[for_node.GetId()];
-    if (not leaf_set.empty()) {
+    if (not result[for_node].empty()) {
       return;
     }
     for (auto child : for_node.GetChildren() | Transform::GetChild()) {
       self(self, child);
     }
-    leaf_set = LeafSet{for_node, labels, result};
+    result.at(for_node) = LeafSet{for_node, labels, result};
   };
   for (auto node : dag.GetNodes()) {
     ComputeLS(ComputeLS, node);
