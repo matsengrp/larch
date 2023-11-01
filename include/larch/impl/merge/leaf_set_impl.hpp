@@ -118,14 +118,14 @@ ContiguousMap<NodeId, LeafSet> LeafSet::ComputeLeafSets(
     DAGType dag, const ContiguousMap<NodeId, NodeLabel>& labels) {
   ContiguousMap<NodeId, LeafSet> result;
   auto ComputeLS = [&](auto& self, auto for_node) {
-    const LeafSet& leaf_set = result[for_node.GetId()];
+    LeafSet& leaf_set = result[for_node.GetId()];
     if (not leaf_set.empty()) {
       return;
     }
     for (auto child : for_node.GetChildren() | Transform::GetChild()) {
       self(self, child);
     }
-    result.insert({for_node, LeafSet{for_node, labels, result}});
+    leaf_set = LeafSet{for_node, labels, result};
   };
   for (auto node : dag.GetNodes()) {
     ComputeLS(ComputeLS, node);
