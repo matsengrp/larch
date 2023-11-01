@@ -56,6 +56,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
       // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
       for (auto leaf_node : fragment.GetNodes()) {
         if (leaf_node.IsLeaf()) {
+          Assert(leaf_node.GetOld().IsLeaf());
           Assert(leaf_node.GetOld().HaveSampleId());
           CompactGenome new_cg =
               sample_id_to_cg_map_.Read([&leaf_node](auto& sample_id_to_cg_map) {
