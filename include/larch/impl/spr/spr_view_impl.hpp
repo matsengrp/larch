@@ -404,23 +404,6 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
-for (auto node_id: result_nodes) {
-  auto node = dag.Get(node_id);
-  if (not node.IsUA() and not node.IsMoveNew()) {
-    if (not node.GetOld().HaveSampleId()) {
-      Assert(node.GetCladesCount() > 0);
-      for (auto clade: node.GetClades()) {
-        Assert(not clade.empty());
-      }
-    }
-  }
-}
-/*
-  NodeId oldest_node = result_nodes.front();
-  return AddFragmentStorage(dag, std::move(result_nodes), std::move(result_edges),
-                            oldest_node);
-*/
-
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
   NodeId oldest_node = collapsed.first.front();
   collapsed.first |= ranges::actions::sort(std::less<NodeId>{}) |
@@ -428,6 +411,17 @@ for (auto node_id: result_nodes) {
   collapsed.second |= ranges::actions::sort(std::less<EdgeId>{}) |
                       ranges::actions::unique(std::equal_to<EdgeId>{});
 
+  for (auto node_id: collapsed.first) {
+    auto node = dag.Get(node_id);
+    if (not node.IsUA() and not node.IsMoveNew()) {
+      if (not node.GetOld().HaveSampleId()) {
+        Assert(node.GetCladesCount() > 0);
+        for (auto clade: node.GetClades()) {
+          Assert(not clade.empty());
+        }
+      }
+    }
+  }
   for (auto node_id: collapsed.first) {
     if (dag.Get(node_id).IsUA()) {
       oldest_node = node_id;
