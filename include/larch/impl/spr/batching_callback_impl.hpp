@@ -69,9 +69,9 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         }
       }
       for (auto node : fragment.GetNodes()) {
-        if (not node.IsUA()) {
+        if (not (node.IsUA() or node.IsMoveNew())) {
           Assert(node.GetId().value != NoId);
-          if (node.IsLeaf()) {
+          if (node.GetOld().IsLeaf()) {
             Assert(node.GetOld().HaveSampleId());
             Assert(not node.GetOld().GetSampleId().value().empty());
           }

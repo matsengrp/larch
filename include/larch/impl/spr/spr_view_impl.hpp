@@ -390,7 +390,6 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
-  return MakeUncollapsedFragment();
   auto& dag = static_cast<const CRTP&>(*this);
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
@@ -405,14 +404,45 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
 
+for (auto node_id: result_nodes) {
+  auto node = dag.Get(node_id);
+  if (not node.IsUA() and not node.IsMoveNew()) {
+    if (not node.GetOld().HaveSampleId()) {
+      Assert(node.GetCladesCount() > 0);
+      for (auto clade: node.GetClades()) {
+        Assert(not clade.empty());
+      }
+    }
+  }
+}
+/*
+  NodeId oldest_node = result_nodes.front();
+  return AddFragmentStorage(dag, std::move(result_nodes), std::move(result_edges),
+                            oldest_node);
+*/
+
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
   NodeId oldest_node = collapsed.first.front();
   collapsed.first |= ranges::actions::sort(std::less<NodeId>{}) |
                      ranges::actions::unique(std::equal_to<NodeId>{});
   collapsed.second |= ranges::actions::sort(std::less<EdgeId>{}) |
                       ranges::actions::unique(std::equal_to<EdgeId>{});
+
+  for (auto node_id: collapsed.first) {
+    if (dag.Get(node_id).IsUA()) {
+      oldest_node = node_id;
+    } else {
+      auto parent_edge = dag.Get(node_id).GetSingleParent().GetId();
+      if (std::find(collapsed.second.begin(), collapsed.second.end(), parent_edge) == collapsed.second.end()) {
+        oldest_node = node_id;
+        break;
+      }
+    }
+  }
+
   return AddFragmentStorage(dag, std::move(collapsed.first),
                             std::move(collapsed.second), oldest_node);
+
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -445,7 +475,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   auto& dag = static_cast<const CRTP&>(*this);
 
   // fragment_nodes is computed in a preorder traversal
-  auto fragment_root = fragment_nodes.front();
+  //auto fragment_root = fragment_nodes.front();
 
   // keep track of edges/nodes that are collapsible
   std::unordered_map<NodeId, bool> is_parent_of_collapsible_edge;
@@ -485,11 +515,10 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     if (this_node.IsNonrootAnchorNode() or this_node.IsLeaf() or
         (not is_child_of_collapsible_edge[node_id])) {
       current_nodes.push_back(node_id);
-      if (is_parent_of_collapsible_edge[node_id] and node_id == fragment_root) {
+      if (is_parent_of_collapsible_edge[node_id] and not parent_is_in_fragment[node_id]) {
         auto grandparent_edge = this_node.GetSingleParent();
-        current_nodes.insert(current_nodes.begin(),
-                             grandparent_edge.GetParent().GetId());
-        current_edges.insert(current_edges.begin(), grandparent_edge.GetId());
+        current_nodes.push_back(grandparent_edge.GetParent().GetId());
+        current_edges.push_back(grandparent_edge.GetId());
       }
       if (parent_is_in_fragment[node_id]) {
         if (not this_node.template IsOverlaid<HypotheticalNode>()) {
@@ -522,7 +551,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
             }
             gp_edge.Set(gp_edge.GetParent(), parent_node, {gp_edge.GetClade().value});
             parent_node.SetSingleParent(gp_edge);
-            current_nodes.insert(current_nodes.begin(), gp_edge.GetParent());
+            current_nodes.push_back(gp_edge.GetParent());
             current_edges.push_back(gp_edge);
           }
         }
@@ -902,3 +931,4 @@ HypotheticalTree<DAG>::Data::Data(Profitable_Moves move, NodeId new_node,
     }
   }
 }
+
