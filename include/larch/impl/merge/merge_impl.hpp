@@ -149,11 +149,27 @@ bool Merge::ContainsLeafset(const LeafSet& leafset) const {
   return all_leaf_sets_.find(leafset) != all_leaf_sets_.end();
 }
 
+namespace {
+
+template <typename DAG>
+auto GetFullDAG(DAG dag) {
+  static_assert(DAG::role == Role::View);
+  static_assert(DAG::component == Component::DAG);
+  return dag;
+}
+
+template <typename DAG, template <typename, typename> typename Base>
+auto GetFullDAG(DAGView<FragmentStorage<DAG>, Base> dag) {
+  return dag.GetStorage().GetTargetStorage().View();
+}
+
+}  // namespace
+
 template <typename DAGSRange>
 void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
                                 std::vector<NodeLabelsContainer>& dags_labels,
                                 MutableMergeDAG result_dag) {
-  auto dag = dags.at(i).GetRoot().GetDAG();
+  auto dag = GetFullDAG(dags.at(i));
   dag.AssertUA();
   auto& labels = dags_labels.at(i);
   // TODO labels.resize(dag.GetNodesCount());
@@ -180,7 +196,7 @@ template <typename DAGSRange>
 void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
                             std::vector<NodeLabelsContainer>& dags_labels,
                             ConcurrentUnorderedSet<LeafSet>& all_leaf_sets) {
-  auto dag = dags.at(i).GetRoot().GetDAG();
+  auto dag = GetFullDAG(dags.at(i));
   NodeLabelsContainer& labels = dags_labels.at(i);
   ContiguousMap<NodeId, LeafSet> computed_ls = LeafSet::ComputeLeafSets(dag, labels);
   for (auto node : dag.GetNodes()) {

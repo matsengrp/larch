@@ -46,6 +46,7 @@ using MergeDAG = DAGView<const MergeDAGStorage<>>;
 using MutableMergeDAG = DAGView<MergeDAGStorage<>>;
 
 class Merge {
+  // TODO be a vector for normal DAGs and map for fragments
   using NodeLabelsContainer = ContiguousMap<NodeId, NodeLabel>;
 
  public:

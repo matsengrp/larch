@@ -390,6 +390,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
+  return MakeUncollapsedFragment();
   auto& dag = static_cast<const CRTP&>(*this);
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
