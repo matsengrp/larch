@@ -95,8 +95,9 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetLeafsBelow() const {
 namespace {
 
 template <typename Edge>
-void CheckCycle(Edge edge, std::vector<std::pair<bool, bool>>& visited_finished) {
-  auto& [visited, finished] = visited_finished.at(edge.GetId().value);
+void CheckCycle(Edge edge,
+                ContiguousMap<EdgeId, std::pair<bool, bool>>& visited_finished) {
+  auto& [visited, finished] = visited_finished[edge.GetId()];
   if (finished) {
     return;
   }
@@ -194,8 +195,8 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   }
 
   if (recursive and node.IsUA()) {
-    std::vector<std::pair<bool, bool>> visited_finished;
-    visited_finished.resize(dag.GetEdgesCount());
+    ContiguousMap<EdgeId, std::pair<bool, bool>> visited_finished;
+    // TODO vector/map: visited_finished.resize(dag.GetEdgesCount());
     for (auto i : node.GetChildren()) {
       CheckCycle(i, visited_finished);
     }
