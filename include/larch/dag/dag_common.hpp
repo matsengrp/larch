@@ -208,7 +208,7 @@ struct DAGView;
 template <typename...>
 struct ExtraStorage;
 
-template <typename, typename, typename>
+template <typename, typename, typename, typename>
 struct DAGStorage;
 
 template <Component, typename, typename...>

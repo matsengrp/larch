@@ -112,9 +112,9 @@ struct FragmentStorage;
 
 template <typename Target>
 struct LongNameOf<FragmentStorage<Target>> {
-  using type = DAGStorage<FragmentElementsContainer<Target, Component::Node>,
-                          FragmentElementsContainer<Target, Component::Edge>,
-                          FragmentExtraStorage<Target>>;
+  using type = DAGStorage<
+      FragmentStorage<Target>, FragmentElementsContainer<Target, Component::Node>,
+      FragmentElementsContainer<Target, Component::Edge>, FragmentExtraStorage<Target>>;
 };
 
 template <typename Target>

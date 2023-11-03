@@ -44,7 +44,8 @@ struct ExtraStorage {
  * internally pointing to an instance of DAGStorage or classes providing
  * the same interface, like ExtendDAGStorage.
  */
-template <typename NodesContainerT, typename EdgesContainerT, typename ExtraStorageT>
+template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
+          typename ExtraStorageT>
 struct DAGStorage {
   static_assert(ExtraStorageT::role == Role::Storage);
   static_assert(ExtraStorageT::component == Component::DAG);
@@ -52,9 +53,10 @@ struct DAGStorage {
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 
-  using ViewType = DAGView<DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>>;
-  using ConstViewType =
-      DAGView<const DAGStorage<NodesContainerT, EdgesContainerT, ExtraStorageT>>;
+  using Self = ShortName;
+
+  using ViewType = DAGView<Self>;
+  using ConstViewType = DAGView<const Self>;
 
   using ExtraStorageType = ExtraStorageT;
   using FeatureTypes = typename ExtraStorageT::FeatureTypes;

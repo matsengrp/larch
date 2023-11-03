@@ -163,6 +163,11 @@ auto GetFullDAG(DAGView<FragmentStorage<DAG>, Base> dag) {
   return dag.GetStorage().GetTargetStorage().View();
 }
 
+template <typename DAG, template <typename, typename> typename Base>
+auto GetFullDAG(DAGView<const FragmentStorage<DAG>, Base> dag) {
+  return dag.GetStorage().GetTargetStorage().View();
+}
+
 }  // namespace
 
 template <typename DAGSRange>

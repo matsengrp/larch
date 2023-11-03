@@ -133,12 +133,15 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   std::set<std::string> sample_ids;
   if (node.IsLeaf()) {
     Assert(storage.clades_.empty());
-    if constexpr (std::remove_reference_t<decltype(node)>::template contains_feature<
-                      SampleId> or
-                  std::remove_reference_t<decltype(node)>::template contains_feature<
-                      Deduplicate<SampleId>>) {
-      Assert(node.HaveSampleId());
-      Assert(sample_ids.insert(node.GetSampleId().value()).second);
+    using NodeT = std::remove_reference_t<decltype(node)>;
+    if constexpr (NodeT::template contains_feature<SampleId> or
+                  NodeT::template contains_feature<Deduplicate<SampleId>>) {
+      if constexpr (not is_specialization_v<std::remove_const_t<std::remove_reference_t<
+                                                decltype(dag.GetStorage())>>,
+                                            FragmentStorage>) {
+        Assert(node.HaveSampleId());
+        Assert(sample_ids.insert(node.GetSampleId().value()).second);
+      }
     }
   }
   for (auto& i : storage.clades_) {
