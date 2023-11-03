@@ -195,8 +195,9 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   }
 
   if (recursive and node.IsUA()) {
+    // TODO vector/map
     ContiguousMap<EdgeId, std::pair<bool, bool>> visited_finished;
-    // TODO vector/map: visited_finished.resize(dag.GetEdgesCount());
+    visited_finished.reserve(dag.GetEdgesCount());
     for (auto i : node.GetChildren()) {
       CheckCycle(i, visited_finished);
     }
