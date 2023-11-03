@@ -31,11 +31,23 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   dags_labels.resize(dags.size());
 
   ParallelForEach(idxs, [&](size_t i) {
+    for (auto node : dags.at(i).GetNodes()) {
+      dags_labels.at(i).insert({node, {}});
+    }
+  });
+
+  ParallelForEach(idxs, [&](size_t i) {
     MergeCompactGenomes(i, dags, below, dags_labels, ResultDAG());
   });
 
   ParallelForEach(idxs, [&](size_t i) {
     ComputeLeafSets(i, dags, below, dags_labels, all_leaf_sets_);
+  });
+
+  ParallelForEach(idxs, [&](size_t i) {
+    for (auto node : dags.at(i).GetNodes()) {
+      Assert(not dags_labels.at(i).at(node).Empty());
+    }
   });
 
   std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
@@ -177,23 +189,21 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
   auto dag = GetFullDAG(dags.at(i));
   dag.AssertUA();
   auto& labels = dags_labels.at(i);
-  // TODO labels.resize(dag.GetNodesCount());
   for (auto node : dag.Const().GetNodes()) {
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
-    labels.insert({node, {}});
     auto cg_iter =
         result_dag.template AsFeature<Deduplicate<CompactGenome>>().AddDeduplicated(
             node.GetCompactGenome());
-    labels.at(node.GetId()).SetCompactGenome(cg_iter.first);
+    labels.at(node).SetCompactGenome(cg_iter.first);
   }
   for (auto leaf : dag.GetLeafs()) {
     Assert(leaf.Const().HaveSampleId());
     auto id_iter =
         result_dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
             leaf.Const().GetSampleId());
-    labels.at(leaf.GetId()).SetSampleId(id_iter.first);
+    labels.at(leaf).SetSampleId(id_iter.first);
   }
 }
 
@@ -208,8 +218,8 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
-    auto& ls = computed_ls.at(node.GetId());
-    auto& label = labels.at(node.GetId());
+    auto& ls = computed_ls.at(node);
+    auto& label = labels.at(node);
     auto ls_iter = all_leaf_sets.insert(std::move(ls));
     label.SetLeafSet(std::addressof(*ls_iter.first));
     Assert(not label.Empty());
@@ -225,10 +235,10 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
   auto&& dag = dags.at(i);
   auto& labels = dags_labels.at({i});
   for (auto node : dag.GetNodes()) {
-    auto& label = labels.at(node.GetId());
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
+    auto& label = labels.at(node);
     Assert(not label.Empty());
 
     NodeId orig_id = result_nodes.Write(
@@ -250,7 +260,7 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
 
     if constexpr (std::remove_reference_t<decltype(dag)>::
                       template contains_element_feature<Component::Node, MappedNodes>) {
-      dag.Get(node.GetId()).SetOriginalId(orig_id);
+      dag.Get(node).SetOriginalId(orig_id);
     }
   }
 }
