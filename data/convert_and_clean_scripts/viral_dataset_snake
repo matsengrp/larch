@@ -1,3 +1,27 @@
+"""
+Requirements:
+- conda install of usher (https://usher-wiki.readthedocs.io/en/latest/Installation.html)
+- faToVcf (this script assumes linux. If mac OS, then change the URL in the rule 
+  create_vcf_from_fasta to the one specified in the usher install for mac os)
+  
+
+This snakemake file takes a sequence alignment in fasta format
+(possibly containing ambiguities) and outputs the following set of 
+files, compatible with a larch-usher run: 
+
+- [output.txt] a txt file containing a disambiguated reference sequence.
+  (a consensus sequence on the input fasta pruned to only contain non-ambiguous characters)
+
+- [output.fasta] a fasta with the consensus disambiguated reference sequence added in, and 
+  where all sequence have been pruned to the same set of characters as the reference sequence (i.e. 
+  every column in the alignment that is completely ambiguous is removed).
+  All remaining ambiguous IUPAC characters and gap characters are converted to 'N'.
+
+- [output.vcf] a vcf file containing the same data as output.fasta.
+
+- [output.pb] a MAT protobuf output corresponding to an usher reconstruction on output.fasta.
+"""
+
 from Bio import AlignIO
 from Bio.Align import AlignInfo
 from collections import Counter
@@ -5,6 +29,17 @@ from collections import Counter
 input_fasta_file="input.fasta"
 base_filename="output"
 
+
+ambiguity_lookups = {"R" : ["A", "G"],
+                     "Y" : ["C", "T"],
+                     "S" : ["G", "C"],
+                     "W" : ["A", "T"],
+                     "K" : ["G", "T"],
+                     "M" : ["A", "C"],
+                     "B" : ["C", "G", "T"],
+                     "D" : ["A", "G", "T"],
+                     "H" : ["A", "C", "T"],
+                     "V" : ["A", "C", "G"]}
 
 rule all:
     input:
@@ -27,6 +62,10 @@ rule create_reference_sequence_file:
 
         def get_most_common_value(idx):
             vals = Counter(algmnt[:,idx])
+            for v in vals:
+                if v in ambiguity_lookups:
+                    for dv in ambiguity_lookups[v]:
+                        vals[dv] += 1
             to_ret = ("N",0)
             for k in "ACGT":
                 if vals[k] > to_ret[1]:
