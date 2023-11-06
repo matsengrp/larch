@@ -1,0 +1,102 @@
+from Bio import AlignIO
+from Bio.Align import AlignInfo
+from collections import Counter
+
+input_fasta_file="input.fasta"
+base_filename="output"
+
+
+rule all:
+    input:
+        base_filename+".vcf",
+        base_filename+".fasta",
+        base_filename+".pb",
+        base_filename+".txt"
+
+
+rule create_reference_sequence_file:
+    input:
+        input_file=input_fasta_file
+    output:
+        refseq_file=base_filename+".txt",
+        fasta_with_ignored_sites=temp(base_filename+"_ommitted_sites.txt")
+    run:
+        with open(input_fasta_file, "r") as f:
+            algmnt = next(AlignIO.parse(f, "fasta"))
+        consensus_ref_seq = AlignInfo.SummaryInfo(algmnt).gap_consensus(ambiguous='N', threshold=0)
+
+        def get_most_common_value(idx):
+            vals = Counter(algmnt[:,idx])
+            to_ret = ("N",0)
+            for k in "ACGT":
+                if vals[k] > to_ret[1]:
+                    to_ret = (k, vals[k])
+            return to_ret[0]
+
+        # replace any remaining ambiguities in the consensus sequence with the (manually found)
+        # most commonly occurring disambiguated base at that site
+        sites_to_remove = []
+        if "N" in consensus_ref_seq or "-" in consensus_ref_seq:
+            disambiguated_ref_seq = "".join([x for x in consensus_ref_seq])
+            for i, N in enumerate(consensus_ref_seq):
+                if N == "N" or N == "-":
+                    val = get_most_common_value(i)
+                    disambiguated_ref_seq = disambiguated_ref_seq[:i] + val + disambiguated_ref_seq[i+1:]
+                    if val not in "ACGT":
+                        sites_to_remove.append(i)
+
+        # the only remaining sites that have "N" in the consensus_ref_seq are sites that have no values across all sequences. Remove those sites and write the skipped sites to a file
+        with open(base_filename+".txt", "w") as f:
+            f.write(str(disambiguated_ref_seq).replace("N", ""))
+
+        for s in sites_to_remove[::-1]:
+            algmnt = algmnt[:, :s] + algmnt[:, s+1:]
+        fn = base_filename+"_ommitted_sites.txt"
+        AlignIO.write(algmnt, fn, "fasta-2line")
+
+
+rule create_fasta_with_cleaned_names:
+    input:
+        fasta_file=input_fasta_file,
+        refseq_file=rules.create_reference_sequence_file.output.refseq_file,
+        fasta_with_ignored_sites=rules.create_reference_sequence_file.output.fasta_with_ignored_sites
+    output:
+        fasta_file=base_filename+".fasta",
+        nh_file=temp(base_filename+".nh")
+    shell:
+        """
+        sed "s/\-/N/g; s/\?/N/g; s/|/\_/g" {input.fasta_file} > {output.fasta_file}
+        rootseq=$(head -1 {input.refseq_file})
+        sed -i "1s/^/>\ unambiguous_root_seq\\n$rootseq\\n/g" {output.fasta_file}
+        seq1=$(awk 'NR == 1' {output.fasta_file})
+        seq2=$(awk 'NR == 3' {output.fasta_file})
+        initialstring="(${{seq1:2}},${{seq2:2}})1;"
+        echo $initialstring > {base_filename}.nh
+        """
+
+
+rule create_vcf_from_fasta:
+    input:
+        input_file=rules.create_fasta_with_cleaned_names.output.fasta_file
+    output:
+        vcf_file=base_filename+".vcf"
+    shell:
+        """
+        if [ ! -f faToVcf ]; then
+          rsync -aP rsync://hgdownload.soe.ucsc.edu/genome/admin/exe/linux.x86_64/faToVcf .
+        fi
+        chmod +x faToVcf
+        ./faToVcf {input.input_file} {base_filename}.vcf -ambiguousToN
+        """
+
+
+rule create_mat_protobuf:
+    input:
+        nh_file=rules.create_fasta_with_cleaned_names.output.nh_file,
+        vcf_file=rules.create_vcf_from_fasta.output.vcf_file
+    output:
+        protobuf_name=base_filename+".pb"
+    shell:
+        """
+        usher -t {input.nh_file} -v {input.vcf_file} -o {base_filename}.pb
+        """
