@@ -128,6 +128,17 @@ struct OverlayDAGStorage {
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
 
+  template <Component C>
+  Id<C> GetNextAvailableId() const {
+    if constexpr (C == Component::Node) {
+      return {GetTarget().template GetNextAvailableId<C>().value +
+              added_node_storage_.size()};
+    } else {
+      return {GetTarget().template GetNextAvailableId<C>().value +
+              added_edge_storage_.size()};
+    }
+  }
+
   auto GetNodes() const;
   auto GetEdges() const;
 

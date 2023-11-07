@@ -135,6 +135,7 @@ const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* featur
 /** @} */
 
 struct NodeId {
+  constexpr static const Component component = Component::Node;
   size_t value = NoId;
 };
 
@@ -142,6 +143,9 @@ inline std::ostream& operator<<(std::ostream& os, NodeId node_id);
 inline bool operator==(NodeId lhs, NodeId rhs);
 inline bool operator!=(NodeId lhs, NodeId rhs);
 inline bool operator<(NodeId lhs, NodeId rhs);
+inline bool operator<=(NodeId lhs, NodeId rhs);
+inline bool operator>(NodeId lhs, NodeId rhs);
+inline bool operator>=(NodeId lhs, NodeId rhs);
 
 template <>
 struct std::hash<NodeId> {
@@ -149,6 +153,7 @@ struct std::hash<NodeId> {
 };
 
 struct EdgeId {
+  constexpr static const Component component = Component::Edge;
   size_t value = NoId;
 };
 
@@ -156,6 +161,9 @@ inline std::ostream& operator<<(std::ostream& os, EdgeId edge_id);
 inline bool operator==(EdgeId lhs, EdgeId rhs);
 inline bool operator!=(EdgeId lhs, EdgeId rhs);
 inline bool operator<(EdgeId lhs, EdgeId rhs);
+inline bool operator<=(EdgeId lhs, EdgeId rhs);
+inline bool operator>(EdgeId lhs, EdgeId rhs);
+inline bool operator>=(EdgeId lhs, EdgeId rhs);
 
 template <>
 struct std::hash<EdgeId> {
@@ -169,6 +177,9 @@ inline std::ostream& operator<<(std::ostream& os, CladeIdx clade_id);
 inline bool operator==(CladeIdx lhs, CladeIdx rhs);
 inline bool operator!=(CladeIdx lhs, CladeIdx rhs);
 inline bool operator<(CladeIdx lhs, CladeIdx rhs);
+inline bool operator<=(CladeIdx lhs, CladeIdx rhs);
+inline bool operator>(CladeIdx lhs, CladeIdx rhs);
+inline bool operator>=(CladeIdx lhs, CladeIdx rhs);
 
 namespace Transform {
 

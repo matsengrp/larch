@@ -116,6 +116,11 @@ struct DAGStorage {
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
 
+  template <Component C>
+  Id<C> GetNextAvailableId() const {
+    return GetContainer<C>().GetNextAvailableId();
+  }
+
   void InitializeNodes(size_t size);
   void InitializeEdges(size_t size);
 

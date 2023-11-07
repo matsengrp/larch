@@ -78,6 +78,19 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   }
   bool IsEmpty() const;
 
+  template <Component C>
+  Id<C> GetNextAvailableId() const {
+    return dag_storage_.template GetNextAvailableId<C>();
+  }
+
+  NodeId GetNextAvailableNodeId() const {
+    return GetNextAvailableId<Component::Node>();
+  }
+
+  EdgeId GetNextAvailableEdgeId() const {
+    return GetNextAvailableId<Component::Edge>();
+  }
+
   /**
    * Return a range containing Node views for each node in the DAG
    */

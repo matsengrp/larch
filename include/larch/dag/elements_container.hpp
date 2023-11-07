@@ -41,6 +41,8 @@ struct ElementsContainer {
 
   size_t GetCount() const;
 
+  Id<C> GetNextAvailableId() const { return {GetCount()}; }
+
   Id<C> Append();
 
   void Add(Id<C> id);

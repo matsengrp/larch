@@ -50,7 +50,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     }
   });
 
-  std::atomic<size_t> node_id{ResultDAG().GetNodesCount()};
+  std::atomic<size_t> node_id{ResultDAG().GetNextAvailableNodeId().value};
   tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>
       added_edges;
   ParallelForEach(idxs, [&](size_t i) {
@@ -70,7 +70,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
 
   ResultDAG().InitializeNodes(
       result_nodes_.Read([](auto& result_nodes) { return result_nodes.size(); }));
-  std::atomic<size_t> edge_id{ResultDAG().GetEdgesCount()};
+  std::atomic<size_t> edge_id{ResultDAG().GetNextAvailableEdgeId().value};
   ResultDAG().InitializeEdges(
       result_edges_.Read([](auto& result_edges) { return result_edges.size(); })
 
@@ -320,8 +320,8 @@ void Merge::BuildResult(
   if (result_dag.Get(result_child_id).IsLeaf()) {
     Assert(not result_child_label.GetSampleId()->IsEmpty());
   }
-  Assert(result_parent_id.value < result_dag.GetNodesCount());
-  Assert(result_child_id.value < result_dag.GetNodesCount());
+  Assert(result_parent_id < result_dag.GetNextAvailableNodeId());
+  Assert(result_child_id < result_dag.GetNextAvailableNodeId());
   parent_id = result_parent_id;
   child_id = result_child_id;
   clade = edge.ComputeCladeIdx();

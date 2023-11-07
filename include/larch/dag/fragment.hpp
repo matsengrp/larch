@@ -37,6 +37,8 @@ struct FragmentElementsContainer {
 
   size_t GetCount() const;
 
+  Id<C> GetNextAvailableId() const { return target_.template GetNextAvailableId<C>(); }
+
   template <typename Feature>
   auto& GetFeatureStorage(Id<C> id);
   template <typename Feature>

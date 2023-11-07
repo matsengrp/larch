@@ -9,7 +9,7 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsOverlaid() const {
   auto id = element_view.GetId();
   auto& storage = element_view.GetDAG().GetStorage();
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
-    if (id.value < storage.GetTarget().GetNodesCount()) {
+    if (id < storage.GetTarget().GetNextAvailableNodeId()) {
       auto it = std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_)
                     .find(id);
       return it !=
@@ -19,7 +19,7 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsOverlaid() const {
       return true;
     }
   } else {
-    if (id.value < storage.GetTarget().GetEdgesCount()) {
+    if (id < storage.GetTarget().GetNextAvailableEdgeId()) {
       auto it = std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_)
                     .find(id);
       return it !=
@@ -36,10 +36,10 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsAppended() const {
   auto& element_view = static_cast<const CRTP&>(*this);
   auto id = element_view.GetId();
   auto target_dag = element_view.GetDAG().GetStorage().GetTarget();
-  if constexpr (std::is_same_v<decltype(id), NodeId>) {
-    return id.value >= target_dag.GetNodesCount();
+  if constexpr (id.component == Component::Node) {
+    return id >= target_dag.GetNextAvailableNodeId();
   } else {
-    return id.value >= target_dag.GetEdgesCount();
+    return id >= target_dag.GetNextAvailableEdgeId();
   }
 }
 
@@ -53,7 +53,7 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
       CRTP::template contains_feature<F>,
       "Attempted to SetOverlay on a Feature not supported by given DAG Element.");
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
-    Assert(id.value < storage.GetTarget().GetNodesCount());
+    Assert(id < storage.GetTarget().GetNextAvailableNodeId());
     auto& replaced_node_storage =
         std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_);
     Assert(replaced_node_storage.find(id) == replaced_node_storage.end());
@@ -64,7 +64,7 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
           storage.GetTarget().template GetFeatureStorage<F>(id).Copy();
     }
   } else {
-    Assert(id.value < storage.GetTarget().GetEdgesCount());
+    Assert(id < storage.GetTarget().GetNextAvailableEdgeId());
     auto& replaced_edge_storage =
         std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_);
     Assert(replaced_edge_storage.find(id) == replaced_edge_storage.end());
@@ -110,14 +110,16 @@ auto OverlayDAGStorage<ShortName, Target>::View() const {
 
 template <typename ShortName, typename Target>
 NodeId OverlayDAGStorage<ShortName, Target>::AppendNode() {
+  auto result = GetNextAvailableId<Component::Node>();
   added_node_storage_.push_back({});
-  return {GetNodesCount() - 1};
+  return result;
 }
 
 template <typename ShortName, typename Target>
 EdgeId OverlayDAGStorage<ShortName, Target>::AppendEdge() {
+  auto result = GetNextAvailableId<Component::Edge>();
   added_edge_storage_.push_back({});
-  return {GetEdgesCount() - 1};
+  return result;
 }
 
 template <typename ShortName, typename Target>
@@ -142,18 +144,28 @@ size_t OverlayDAGStorage<ShortName, Target>::GetEdgesCount() const {
 
 template <typename ShortName, typename Target>
 auto OverlayDAGStorage<ShortName, Target>::GetNodes() const {
-  return ranges::views::indices(GetNodesCount()) |
-         ranges::views::transform([this](size_t i) {
-           return ElementView{this->View(), NodeId{i}};
-         });
+  auto target_nodes = GetTarget().GetNodes();
+  auto first_added = GetTarget().GetNextAvailableNodeId();
+  auto added_nodes =
+      ranges::views::indices(first_added.value,
+                             first_added.value + added_node_storage_.size()) |
+      ranges::views::transform([this](size_t i) {
+        return ElementView{this->View(), {i}};
+      });
+  return ranges::views::concat(target_nodes, added_nodes);
 }
 
 template <typename ShortName, typename Target>
 auto OverlayDAGStorage<ShortName, Target>::GetEdges() const {
-  return ranges::views::indices(GetEdgesCount()) |
-         ranges::views::transform([this](size_t i) {
-           return ElementView{this->View(), EdgeId{i}};
-         });
+  auto target_edges = GetTarget().GetNodes();
+  auto first_added = GetTarget().GetNextAvailableEdgeId();
+  auto added_edges =
+      ranges::views::indices(first_added.value,
+                             first_added.value + added_edge_storage_.size()) |
+      ranges::views::transform([this](size_t i) {
+        return ElementView{this->View(), {i}};
+      });
+  return ranges::views::concat(target_edges, added_edges);
 }
 
 template <typename ShortName, typename Target>
@@ -241,8 +253,8 @@ auto OverlayDAGStorage<ShortName, Target>::GetFeatureStorageImpl(
     -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
                               OverlayStorageType::TargetView::is_mutable,
                           F&, const F&> {
-  Assert(id.value < self.GetNodesCount());
-  if (id.value < self.GetTarget().GetNodesCount()) {
+  Assert(id < self.template GetNextAvailableId<id.component>());
+  if (id < self.GetTarget().GetNextAvailableNodeId()) {
     auto it =
         std::get<std::unordered_map<NodeId, F>>(self.replaced_node_storage_).find(id);
     if (it ==
@@ -256,8 +268,8 @@ auto OverlayDAGStorage<ShortName, Target>::GetFeatureStorageImpl(
       return it->second;
     }
   } else {
-    return std::get<F>(
-        self.added_node_storage_.at(id.value - self.GetTarget().GetNodesCount()));
+    return std::get<F>(self.added_node_storage_.at(
+        id.value - self.GetTarget().GetNextAvailableNodeId().value));
   }
 }
 
@@ -268,7 +280,8 @@ auto OverlayDAGStorage<ShortName, Target>::GetFeatureStorageImpl(
     -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
                               OverlayStorageType::TargetView::is_mutable,
                           F&, const F&> {
-  if (id.value < self.GetTarget().GetEdgesCount()) {
+  Assert(id < self.template GetNextAvailableId<id.component>());
+  if (id < self.GetTarget().GetNextAvailableEdgeId()) {
     auto it =
         std::get<std::unordered_map<EdgeId, F>>(self.replaced_edge_storage_).find(id);
     if (it ==
@@ -282,7 +295,7 @@ auto OverlayDAGStorage<ShortName, Target>::GetFeatureStorageImpl(
       return it->second;
     }
   } else {
-    return std::get<F>(
-        self.added_edge_storage_.at(id.value - self.GetTarget().GetEdgesCount()));
+    return std::get<F>(self.added_edge_storage_.at(
+        id.value - self.GetTarget().GetNextAvailableEdgeId().value));
   }
 }

@@ -195,6 +195,16 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   }
 
   if (recursive and node.IsUA()) {
+    size_t node_count = 0;
+    for ([[maybe_unused]] auto i : dag.GetNodes()) {
+      ++node_count;
+    }
+    Assert(node_count == dag.GetNodesCount());
+    size_t edge_count = 0;
+    for ([[maybe_unused]] auto i : dag.GetEdges()) {
+      ++edge_count;
+    }
+    Assert(edge_count == dag.GetEdgesCount());
     // TODO vector/map
     ContiguousMap<EdgeId, std::pair<bool, bool>> visited_finished;
     visited_finished.reserve(dag.GetEdgesCount());

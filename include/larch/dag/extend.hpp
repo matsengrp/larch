@@ -216,6 +216,11 @@ struct ExtendDAGStorage {
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
 
+  template <Component C>
+  Id<C> GetNextAvailableId() const {
+    return GetTarget().template GetNextAvailableId<C>();
+  }
+
   auto GetNodes() const;
   auto GetEdges() const;
 

@@ -78,18 +78,16 @@ size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetEdgesCount() co
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2>
 auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetNodes() const {
-  return ranges::views::indices(GetNodesCount()) |
-         ranges::views::transform([this](size_t i) {
-           return ElementView{this->View(), NodeId{i}};
+  return GetTarget().GetNodes() | ranges::views::transform([this](auto i) {
+           return ElementView{this->View(), i};
          });
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2>
 auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetEdges() const {
-  return ranges::views::indices(GetEdgesCount()) |
-         ranges::views::transform([this](size_t i) {
-           return ElementView{this->View(), EdgeId{i}};
+  return GetTarget().GetEdges() | ranges::views::transform([this](auto i) {
+           return ElementView{this->View(), i};
          });
 }
 
