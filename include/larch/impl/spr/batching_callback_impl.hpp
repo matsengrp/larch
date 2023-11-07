@@ -3,6 +3,7 @@ template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag)
     : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {
   for (auto leaf_node : merge.GetResult().GetLeafs()) {
+    Assert(leaf_node.HaveSampleId());
     std::string sid = leaf_node.GetSampleId().value();
     sample_id_to_cg_map_.Write([&sid, &leaf_node](auto& sample_id_to_cg_map) {
       sample_id_to_cg_map[sid] = leaf_node.GetCompactGenome().Copy();
@@ -16,6 +17,7 @@ BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG samp
       sample_dag_{sample_dag},
       collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {
   for (auto leaf_node : merge.GetResult().GetLeafs()) {
+    Assert(leaf_node.HaveSampleId());
     std::string sid = leaf_node.GetSampleId().value();
     sample_id_to_cg_map_.Write([&sid, &leaf_node](auto& sample_id_to_cg_map) {
       sample_id_to_cg_map[sid] = leaf_node.GetCompactGenome().Copy();
@@ -69,7 +71,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         }
       }
       for (auto node : fragment.GetNodes()) {
-        if (not (node.IsUA() or node.IsMoveNew())) {
+        if (not(node.IsUA() or node.IsMoveNew())) {
           Assert(node.GetId().value != NoId);
           if (node.GetOld().IsLeaf()) {
             Assert(node.GetOld().HaveSampleId());
