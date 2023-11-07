@@ -78,17 +78,13 @@ size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetEdgesCount() co
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2>
 auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetNodes() const {
-  return GetTarget().GetNodes() | ranges::views::transform([this](auto i) {
-           return ElementView{this->View(), i};
-         });
+  return GetTarget().GetStorage().GetNodes();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2>
 auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetEdges() const {
-  return GetTarget().GetEdges() | ranges::views::transform([this](auto i) {
-           return ElementView{this->View(), i};
-         });
+  return GetTarget().GetStorage().GetEdges();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
@@ -230,22 +226,6 @@ ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() 
       return std::get<ExtraFeatureStorage<F>>(additional_edge_extra_features_storage_);
     }
   }
-}
-
-template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-template <Component C>
-auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetContainer() ->
-    typename TargetView::StorageType::template Container<C>& {
-  return GetTarget().GetStorage().template GetContainer<C>();
-}
-
-template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-template <Component C>
-auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetContainer() const
-    -> const typename TargetView::StorageType::template Container<C>& {
-  return GetTarget().GetStorage().template GetContainer<C>();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,

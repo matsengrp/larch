@@ -135,7 +135,6 @@ const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* featur
 /** @} */
 
 struct NodeId {
-  constexpr static const Component component = Component::Node;
   size_t value = NoId;
 };
 
@@ -153,7 +152,6 @@ struct std::hash<NodeId> {
 };
 
 struct EdgeId {
-  constexpr static const Component component = Component::Edge;
   size_t value = NoId;
 };
 
@@ -192,6 +190,8 @@ template <typename DAG>
 auto ToEdges(DAG dag);
 inline auto ToConst();
 inline auto ToView();
+template <Component C>
+auto ToId();
 
 }  // namespace Transform
 

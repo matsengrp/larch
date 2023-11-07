@@ -113,12 +113,19 @@ struct DAGStorage {
   void AddNode(NodeId id);
   void AddEdge(EdgeId id);
 
+  auto GetNodes() const { return nodes_container_.All(); }
+  auto GetEdges() const { return edges_container_.All(); }
+
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
 
   template <Component C>
   Id<C> GetNextAvailableId() const {
-    return GetContainer<C>().GetNextAvailableId();
+    if constexpr (C == Component::Node) {
+      return nodes_container_.GetNextAvailableId();
+    } else {
+      return edges_container_.GetNextAvailableId();
+    }
   }
 
   void InitializeNodes(size_t size);
@@ -150,12 +157,6 @@ struct DAGStorage {
 
   template <typename Feature>
   const auto& GetFeatureStorage() const;
-
-  template <Component C>
-  auto& GetContainer();
-
-  template <Component C>
-  const auto& GetContainer() const;
 
   auto& GetTargetStorage() { return features_storage_.GetTargetStorage(*this); }
   auto& GetTargetStorage() const { return features_storage_.GetTargetStorage(*this); }

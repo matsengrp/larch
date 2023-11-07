@@ -62,12 +62,14 @@ auto GetId() {
 }
 template <typename DAG>
 auto ToNodes(DAG dag) {
+  static_assert(DAG::role == Role::View);
   return ranges::views::transform([dag](auto&& i) {
     return typename DAG::NodeView{dag, i};
   });
 }
 template <typename DAG>
 auto ToEdges(DAG dag) {
+  static_assert(DAG::role == Role::View);
   return ranges::views::transform([dag](auto&& i) {
     return typename DAG::EdgeView{dag, i};
   });
@@ -78,6 +80,11 @@ auto ToConst() {
 
 auto ToView() {
   return ranges::views::transform([](auto&& i) { return i.View(); });
+}
+
+template <Component C>
+auto ToId() {
+  return ranges::views::transform([](size_t i) { return Id<C>{i}; });
 }
 
 }  // namespace Transform

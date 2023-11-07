@@ -254,13 +254,6 @@ struct ExtendDAGStorage {
   template <Component C, typename F>
   const auto& GetFeatureExtraStorage() const;
 
-  template <Component C>
-  auto GetContainer() -> typename TargetView::StorageType::template Container<C>&;
-
-  template <Component C>
-  auto GetContainer() const -> const
-      typename TargetView::StorageType::template Container<C>&;
-
   auto& GetTargetStorage() { return *this; }
   auto& GetTargetStorage() const { return *this; }
 

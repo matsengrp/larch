@@ -169,16 +169,6 @@ struct OverlayDAGStorage {
   template <Component C, typename F>
   const auto& GetFeatureExtraStorage() const;
 
-  template <Component C>
-  auto& GetContainer() {
-    return GetTarget().GetStorage().template GetContainer<C>();
-  }
-
-  template <Component C>
-  const auto& GetContainer() const {
-    return GetTarget().GetStorage().template GetContainer<C>();
-  }
-
   auto& GetTargetStorage() { return *this; }
   auto& GetTargetStorage() const { return *this; }
 
