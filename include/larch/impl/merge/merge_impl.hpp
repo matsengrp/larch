@@ -31,12 +31,6 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   dags_labels.resize(dags.size());
 
   ParallelForEach(idxs, [&](size_t i) {
-    for (auto node : dags.at(i).GetNodes()) {
-      dags_labels.at(i).insert({node, {}});
-    }
-  });
-
-  ParallelForEach(idxs, [&](size_t i) {
     MergeCompactGenomes(i, dags, below, dags_labels, ResultDAG());
   });
 
@@ -190,13 +184,19 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
   dag.AssertUA();
   auto& labels = dags_labels.at(i);
   for (auto node : dag.Const().GetNodes()) {
+    labels.insert({node, {}});
+  }
+
+  for (auto node : dag.Const().GetNodes()) {
     if (below.value != NoId and node.IsUA()) {
       continue;
     }
+    if (not node.IsLeaf()) {
     auto cg_iter =
         result_dag.template AsFeature<Deduplicate<CompactGenome>>().AddDeduplicated(
             node.GetCompactGenome());
-    labels.at(node).SetCompactGenome(cg_iter.first);
+      labels.at(node).SetCompactGenome(cg_iter.first);
+    }
   }
   for (auto leaf : dag.GetLeafs()) {
     Assert(leaf.Const().HaveSampleId());

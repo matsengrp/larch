@@ -9,27 +9,32 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
     : clades_{[&] {
         std::vector<std::vector<UniqueData>> clades;
         clades.reserve(node.GetCladesCount());
-        for (auto clade : node.GetClades()) {
-          std::vector<UniqueData> clade_leafs;
-          clade_leafs.reserve(clade.size());
-          for (Node child : clade | Transform::GetChild()) {
-            if (child.IsLeaf()) {
-              Assert(child.Const().HaveSampleId());
-              UniqueData id = labels.at(child.GetId().value).GetSampleId();
-              clade_leafs.push_back(id);
-            } else {
-              for (auto& child_leafs :
-                   computed_leafsets.at(child.GetId().value).clades_) {
-                clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
-                                   child_leafs.end());
+        if (node.IsLeaf()) {
+          UniqueData id = labels.at(node.GetId().value).GetSampleId();
+          clades.push_back({id});
+        } else {
+          for (auto clade : node.GetClades()) {
+            std::vector<UniqueData> clade_leafs;
+            clade_leafs.reserve(clade.size());
+            for (Node child : clade | Transform::GetChild()) {
+              if (child.IsLeaf()) {
+                Assert(child.Const().HaveSampleId());
+                UniqueData id = labels.at(child.GetId().value).GetSampleId();
+                clade_leafs.push_back(id);
+              } else {
+                for (auto& child_leafs :
+                     computed_leafsets.at(child.GetId().value).clades_) {
+                  clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
+                                     child_leafs.end());
+                }
               }
             }
+            clade_leafs |= ranges::actions::sort | ranges::actions::unique;
+            Assert(not clade_leafs.empty());
+            clades.emplace_back(std::move(clade_leafs));
           }
-          clade_leafs |= ranges::actions::sort | ranges::actions::unique;
-          Assert(not clade_leafs.empty());
-          clades.emplace_back(std::move(clade_leafs));
+          clades |= ranges::actions::sort;
         }
-        clades |= ranges::actions::sort;
         return clades;
       }()},
       hash_{ComputeHash(clades_)} {}
@@ -40,30 +45,35 @@ LeafSet::LeafSet(Node node, const ContiguousMap<NodeId, NodeLabel>& labels,
     : clades_{[&] {
         std::vector<std::vector<UniqueData>> clades;
         clades.reserve(node.GetCladesCount());
-        for (auto clade : node.GetClades()) {
-          Assert(not clade.empty());
-          std::vector<UniqueData> clade_leafs;
-          clade_leafs.reserve(clade.size());
-          for (Node child : clade | Transform::GetChild()) {
-            if (child.IsLeaf()) {
-              Assert(child.Const().HaveSampleId());
-              UniqueData id = labels.at(child.GetId()).GetSampleId();
-              clade_leafs.push_back(id);
-            } else {
-              auto& computed_clades = computed_leafsets.at(child.GetId()).clades_;
-              Assert(not computed_clades.empty());
-              for (auto& child_leafs : computed_clades) {
-                Assert(not child_leafs.empty());
-                clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
-                                   child_leafs.end());
+        if (node.IsLeaf()) {
+          UniqueData id = labels.at(node.GetId()).GetSampleId();
+          clades.push_back({id});
+        } else {
+          for (auto clade : node.GetClades()) {
+            Assert(not clade.empty());
+            std::vector<UniqueData> clade_leafs;
+            clade_leafs.reserve(clade.size());
+            for (Node child : clade | Transform::GetChild()) {
+              if (child.IsLeaf()) {
+                Assert(child.Const().HaveSampleId());
+                UniqueData id = labels.at(child.GetId()).GetSampleId();
+                clade_leafs.push_back(id);
+              } else {
+                auto& computed_clades = computed_leafsets.at(child.GetId()).clades_;
+                Assert(not computed_clades.empty());
+                for (auto& child_leafs : computed_clades) {
+                  Assert(not child_leafs.empty());
+                  clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
+                                     child_leafs.end());
+                }
               }
             }
+            clade_leafs |= ranges::actions::sort | ranges::actions::unique;
+            Assert(not clade_leafs.empty());
+            clades.emplace_back(std::move(clade_leafs));
           }
-          clade_leafs |= ranges::actions::sort | ranges::actions::unique;
-          Assert(not clade_leafs.empty());
-          clades.emplace_back(std::move(clade_leafs));
+          clades |= ranges::actions::sort;
         }
-        clades |= ranges::actions::sort;
         return clades;
       }()},
       hash_{ComputeHash(clades_)} {}
