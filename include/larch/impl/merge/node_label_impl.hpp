@@ -45,14 +45,21 @@ void NodeLabel::SetSampleId(const SampleId* id) {
 }
 
 bool NodeLabel::operator==(const NodeLabel& rhs) const noexcept {
-  return compact_genome_ == rhs.compact_genome_ && leaf_set_ == rhs.leaf_set_ &&
-         sample_id_ == rhs.sample_id_;
+  if (leaf_set_ != rhs.leaf_set_) {
+    return false;
+  }
+  if (sample_id_->IsEmpty()) {
+    return compact_genome_ == rhs.compact_genome_;
+  } else {
+    return sample_id_ == rhs.sample_id_;
+  }
 }
 
 size_t NodeLabel::Hash() const noexcept {
-  size_t hash = HashCombine(reinterpret_cast<std::uintptr_t>(compact_genome_),
-                            reinterpret_cast<std::uintptr_t>(leaf_set_));
-  return HashCombine(hash, reinterpret_cast<std::uintptr_t>(sample_id_));
+  std::uintptr_t unique = sample_id_->IsEmpty()
+                              ? reinterpret_cast<std::uintptr_t>(compact_genome_)
+                              : reinterpret_cast<std::uintptr_t>(sample_id_);
+  return HashCombine(unique, reinterpret_cast<std::uintptr_t>(leaf_set_));
 }
 
 std::size_t std::hash<NodeLabel>::operator()(const NodeLabel& nl) const noexcept {
