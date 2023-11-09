@@ -94,20 +94,55 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetLeafsBelow() const {
 
 namespace {
 
+template <typename DAG>
+void MADAGToDOTCycle(DAG dag, std::ostream& out, const std::deque<EdgeId>& path1,
+                     const std::deque<EdgeId>& path2) {
+  out << "digraph G {\n";
+  out << "  forcelabels=true\n";
+  out << "  nodesep=1.0\n";
+  out << "  ranksep=2.0\n";
+  out << "  ratio=1.0\n";
+  out << "  node [color=azure4,fontcolor=black,penwidth=4]\n";
+  out << "  edge [color=azure3,fontcolor=black,penwidth=4]\n";
+  for (auto edge : dag.Const().GetEdges()) {
+    const bool in_path1 = std::find(path1.begin(), path1.end(), edge) != path1.end();
+    const bool in_path2 = std::find(path2.begin(), path2.end(), edge) != path2.end();
+    out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
+        << CompactGenomeToString(edge.GetChild()) << "\"";
+    out << "[ headlabel=\"";
+    out << EdgeMutationsToString(edge);
+    out << "\"";
+    if (in_path1) {
+      out << "color=red,penwidth=40,arrowsize=2";
+    }
+    if (in_path2) {
+      out << "color=blue,penwidth=40,arrowsize=2";
+    }
+    out << "]\n";
+  }
+  out << "}\n";
+}
+
 template <typename Edge>
-void CheckCycle(Edge edge,
-                ContiguousMap<EdgeId, std::pair<bool, bool>>& visited_finished) {
-  auto& [visited, finished] = visited_finished[edge.GetId()];
+void CheckCycle(
+    Edge edge,
+    ContiguousMap<EdgeId, std::tuple<bool, bool, std::deque<EdgeId>>>& visited_finished,
+    std::deque<EdgeId>& path) {
+  auto& [visited, finished, first_path] = visited_finished[edge.GetId()];
   if (finished) {
     return;
   }
+  path.push_back(edge);
   if (visited) {
+    MADAGToDOTCycle(edge.GetDAG(), std::cout, path, first_path);
     Assert(false && "Cycle detected");
   }
+  first_path = path;
   visited = true;
   for (auto child : edge.GetChild().GetChildren()) {
-    CheckCycle(child, visited_finished);
+    CheckCycle(child, visited_finished, path);
   }
+  path.pop_back();
   finished = true;
 }
 
@@ -195,6 +230,9 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   }
 
   if (recursive and node.IsUA()) {
+    if (not allow_dag) {
+      Assert(dag.IsTree());
+    }
     size_t node_count = 0;
     for ([[maybe_unused]] auto i : dag.GetNodes()) {
       ++node_count;
@@ -205,11 +243,15 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
       ++edge_count;
     }
     Assert(edge_count == dag.GetEdgesCount());
-    // TODO vector/map
-    ContiguousMap<EdgeId, std::pair<bool, bool>> visited_finished;
-    visited_finished.reserve(dag.GetEdgesCount());
-    for (auto i : node.GetChildren()) {
-      CheckCycle(i, visited_finished);
+    if (not allow_dag) {
+      // TODO vector/map
+      ContiguousMap<EdgeId, std::tuple<bool, bool, std::deque<EdgeId>>>
+          visited_finished;
+      visited_finished.reserve(dag.GetEdgesCount());
+      std::deque<EdgeId> path;
+      for (auto i : node.GetChildren()) {
+        CheckCycle(i, visited_finished, path);
+      }
     }
 
     for (auto i : dag.GetEdges()) {
