@@ -192,9 +192,9 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
       continue;
     }
     if (not node.IsLeaf()) {
-    auto cg_iter =
-        result_dag.template AsFeature<Deduplicate<CompactGenome>>().AddDeduplicated(
-            node.GetCompactGenome());
+      auto cg_iter =
+          result_dag.template AsFeature<Deduplicate<CompactGenome>>().AddDeduplicated(
+              node.GetCompactGenome());
       labels.at(node).SetCompactGenome(cg_iter.first);
     }
   }
@@ -317,6 +317,7 @@ void Merge::BuildResult(
       });
   Assert(result_parent_id.value != NoId);
   Assert(result_child_id.value != NoId);
+  Assert(result_parent_id != result_child_id);
   if (result_dag.Get(result_child_id).IsLeaf()) {
     Assert(not result_child_label.GetSampleId()->IsEmpty());
   }

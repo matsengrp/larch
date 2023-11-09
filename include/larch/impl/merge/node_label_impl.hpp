@@ -56,10 +56,9 @@ bool NodeLabel::operator==(const NodeLabel& rhs) const noexcept {
 }
 
 size_t NodeLabel::Hash() const noexcept {
-  std::uintptr_t unique = sample_id_->IsEmpty()
-                              ? reinterpret_cast<std::uintptr_t>(compact_genome_)
-                              : reinterpret_cast<std::uintptr_t>(sample_id_);
-  return HashCombine(unique, reinterpret_cast<std::uintptr_t>(leaf_set_));
+  size_t hash = HashCombine(reinterpret_cast<std::uintptr_t>(compact_genome_),
+                            reinterpret_cast<std::uintptr_t>(leaf_set_));
+  return HashCombine(hash, reinterpret_cast<std::uintptr_t>(sample_id_));
 }
 
 std::size_t std::hash<NodeLabel>::operator()(const NodeLabel& nl) const noexcept {
