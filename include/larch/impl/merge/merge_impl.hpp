@@ -31,7 +31,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   dags_labels.resize(dags.size());
 
   ParallelForEach(idxs, [&](size_t i) {
-    MergeCompactGenomes(i, dags, below, dags_labels, ResultDAG());
+    MergeCompactGenomes(i, dags, below, dags_labels, sample_id_to_cg_map_, ResultDAG());
   });
 
   ParallelForEach(idxs, [&](size_t i) {
@@ -135,19 +135,27 @@ const ConcurrentUnorderedMap<NodeId, NodeLabel>& Merge::GetResultNodeLabels() co
   return result_node_labels_;
 }
 
+const ConcurrentUnorderedMap<std::string, CompactGenome>& Merge::SampleIdToCGMap() const {
+  return sample_id_to_cg_map_;
+}
+
 void Merge::ComputeResultEdgeMutations() {
   // TODO parallel
   result_edges_.Read(
-      [](auto& result_edges, auto result_dag) {
+      [](auto& result_edges, auto& result_nodes, auto& sample_id_to_cg_map, auto result_dag) {
         for (auto& [label, edge_id] : result_edges) {
           Assert(label.GetParent().GetCompactGenome());
-          Assert(label.GetChild().GetCompactGenome());
           const CompactGenome& parent = *label.GetParent().GetCompactGenome();
-          const CompactGenome& child = *label.GetChild().GetCompactGenome();
+
+          const CompactGenome& child = result_dag.Get(result_nodes.at(label.GetChild())).IsLeaf()
+                                     ? sample_id_to_cg_map.at(label.GetChild().GetSampleId()->ToString()).Copy()
+                                     : *label.GetChild().GetCompactGenome();
           result_dag.Get(edge_id).SetEdgeMutations(CompactGenome::ToEdgeMutations(
               result_dag.GetReferenceSequence(), parent, child));
         }
       },
+      GetResultNodes(),
+      SampleIdToCGMap(),
       ResultDAG());
 }
 
@@ -179,6 +187,7 @@ auto GetFullDAG(DAGView<const FragmentStorage<DAG>, Base> dag) {
 template <typename DAGSRange>
 void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
                                 std::vector<NodeLabelsContainer>& dags_labels,
+                                ConcurrentUnorderedMap<std::string, CompactGenome>& sample_id_to_cg_map,
                                 MutableMergeDAG result_dag) {
   auto dag = GetFullDAG(dags.at(i));
   dag.AssertUA();
@@ -205,6 +214,13 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
         labels.at(node).SetCompactGenome(cg_iter.first);
       }
     }
+  }
+  for (auto leaf_node : dag.Const().GetLeafs()) {
+    Assert(leaf_node.HaveSampleId());
+    std::string sid = leaf_node.GetSampleId().value();
+    sample_id_to_cg_map.Write([&sid, &leaf_node](auto& sample_id_to_cg_map_w) {
+      sample_id_to_cg_map_w.insert({sid, leaf_node.GetCompactGenome().Copy()});
+    });
   }
 }
 
