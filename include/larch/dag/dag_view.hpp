@@ -76,7 +76,7 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
       return GetEdgesCount();
     }
   }
-  bool IsEmpty() const;
+  bool empty() const;
 
   template <Component C>
   Id<C> GetNextAvailableId() const {

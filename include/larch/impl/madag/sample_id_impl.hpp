@@ -1,5 +1,5 @@
 
-const SampleId *SampleId::Empty() {
+const SampleId *SampleId::GetEmpty() {
   static const SampleId empty = {};
   return &empty;
 }

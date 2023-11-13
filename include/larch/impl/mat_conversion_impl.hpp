@@ -178,7 +178,7 @@ template <typename CRTP>
 void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
     MAT::Tree& mat, std::string_view reference_sequence) const {
   auto& dag = static_cast<const CRTP&>(*this);
-  Assert(dag.IsEmpty());
+  Assert(dag.empty());
   dag.template GetFeatureExtraStorage<Component::Node, MATConversion>().mat_tree_ =
       std::addressof(mat);
   dag.SetReferenceSequence(reference_sequence);

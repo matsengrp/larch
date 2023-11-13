@@ -27,14 +27,11 @@ class NodeLabel {
 
   [[nodiscard]] inline size_t Hash() const noexcept;
 
-  inline bool Empty() const {
+  inline bool empty() const {
     Assert(compact_genome_);
     Assert(leaf_set_);
     Assert(sample_id_);
-    if (compact_genome_ == CompactGenome::Empty() and sample_id_ == SampleId::Empty()) {
-      return true;
-    }
-    if (leaf_set_ == LeafSet::Empty()) {
+    if (compact_genome_->empty() and sample_id_->empty() and leaf_set_->empty()) {
       return true;
     }
     return false;

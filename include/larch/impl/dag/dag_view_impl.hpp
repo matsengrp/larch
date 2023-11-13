@@ -93,7 +93,7 @@ size_t DAGView<Storage, Base>::GetEdgesCount() const {
 }
 
 template <typename Storage, template <typename, typename> typename Base>
-bool DAGView<Storage, Base>::IsEmpty() const {
+bool DAGView<Storage, Base>::empty() const {
   return GetNodesCount() == 0 and GetEdgesCount() == 0;
 }
 

@@ -1,4 +1,4 @@
-const LeafSet* LeafSet::Empty() {
+const LeafSet* LeafSet::GetEmpty() {
   static const LeafSet empty = {};
   return &empty;
 }

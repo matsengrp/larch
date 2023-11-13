@@ -112,7 +112,7 @@ class Merge {
 
   template <typename DAGSRange>
   static void MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
-                         std::vector<NodeLabelsContainer>& dags_labels,
+                         const std::vector<NodeLabelsContainer>& dags_labels,
                          ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
                          ConcurrentUnorderedMap<NodeId, NodeLabel>& result_node_labels,
                          std::atomic<size_t>& node_id);
@@ -120,7 +120,7 @@ class Merge {
   template <typename DAGSRange>
   static void MergeEdges(
       size_t i, const DAGSRange& dags, NodeId below,
-      std::vector<NodeLabelsContainer>& dags_labels,
+      const std::vector<NodeLabelsContainer>& dags_labels,
       const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
       ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
       tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&

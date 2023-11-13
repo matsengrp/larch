@@ -1,4 +1,4 @@
-const CompactGenome* CompactGenome::Empty() {
+const CompactGenome* CompactGenome::GetEmpty() {
   static const CompactGenome empty = {};
   return &empty;
 }

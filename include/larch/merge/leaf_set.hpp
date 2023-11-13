@@ -18,7 +18,7 @@ class LeafSet {
   size_t hash_ = {};
 
  public:
-  inline static const LeafSet* Empty();
+  inline static const LeafSet* GetEmpty();
   LeafSet() = default;
   MOVE_ONLY(LeafSet);
 

@@ -20,8 +20,12 @@ static void test_protobuf(const std::string& correct_path,
 
     view.RecomputeCompactGenomes(true);
     view.SampleIdsFromCG(true);
-    for (auto leaf : view.GetLeafs()) {
-      Assert(leaf.HaveSampleId());
+    for (auto node : view.GetNodes()) {
+      if (node.IsLeaf()) {
+        Assert(node.HaveSampleId());
+      } else {
+        Assert(not node.HaveSampleId());
+      }
     }
     tree_views.push_back(view);
     view.GetRoot().Validate(true);
