@@ -1,21 +1,13 @@
 
 template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag)
-    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {
-  for (auto leaf_node : merge.GetResult().GetLeafs()) {
-    Assert(leaf_node.HaveSampleId());
-  }
-}
+    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {}
 template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag,
                                                     bool collapse_empty_fragment_edges)
     : merge_{merge},
       sample_dag_{sample_dag},
-      collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {
-  for (auto leaf_node : merge.GetResult().GetLeafs()) {
-    Assert(leaf_node.HaveSampleId());
-  }
-}
+      collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {}
 
 template <typename CRTP, typename SampleDAG>
 bool BatchingCallback<CRTP, SampleDAG>::operator()(
@@ -96,7 +88,7 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   auto reassigned_states = reassigned_states_storage_->View();
   reassigned_states.BuildFromMAT(tree, merge_.GetResult().GetReferenceSequence());
   check_edge_mutations(reassigned_states.Const());
-  reassigned_states.RecomputeCompactGenomes();
+  reassigned_states.RecomputeCompactGenomes(true);
   {
     std::unique_lock lock{merge_mtx_};
     if (not batch_.empty()) {

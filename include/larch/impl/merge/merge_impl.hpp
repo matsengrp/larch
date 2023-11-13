@@ -147,11 +147,22 @@ void Merge::ComputeResultEdgeMutations() {
           Assert(label.GetParent().GetCompactGenome());
           const CompactGenome& parent = *label.GetParent().GetCompactGenome();
 
-          const CompactGenome& child = result_dag.Get(result_nodes.at(label.GetChild())).IsLeaf()
-                                     ? sample_id_to_cg_map.at(label.GetChild().GetSampleId()->ToString()).Copy()
-                                     : *label.GetChild().GetCompactGenome();
-          result_dag.Get(edge_id).SetEdgeMutations(CompactGenome::ToEdgeMutations(
-              result_dag.GetReferenceSequence(), parent, child));
+          auto child_node = result_nodes.Read([](auto& result_nodes_r, auto child_label){
+            return result_nodes_r.at(child_label);
+          }, label.GetChild());
+
+          if (result_dag.Get(child_node).IsLeaf()) {
+            const CompactGenome& child = sample_id_to_cg_map.Read([](auto& sample_id_to_cg_map_r, auto node_label){
+              return sample_id_to_cg_map_r.at(node_label.GetSampleId()->ToString()).Copy();
+              }, label.GetChild());
+
+            result_dag.Get(edge_id).SetEdgeMutations(CompactGenome::ToEdgeMutations(
+                result_dag.GetReferenceSequence(), parent, child));
+          } else {
+            const CompactGenome& child = *label.GetChild().GetCompactGenome();
+            result_dag.Get(edge_id).SetEdgeMutations(CompactGenome::ToEdgeMutations(
+                result_dag.GetReferenceSequence(), parent, child));
+          }
         }
       },
       GetResultNodes(),
