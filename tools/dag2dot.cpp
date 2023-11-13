@@ -24,12 +24,12 @@
 
 enum class InputType { TreePB, DagPB, DagJson };
 
-static MADAGStorage Load(InputType type, std::string_view path) {
+static MADAGStorage<> Load(InputType type, std::string_view path) {
   switch (type) {
     case InputType::TreePB:
       return LoadTreeFromProtobuf(path, "");
     case InputType::DagPB: {
-      MADAGStorage dag = LoadDAGFromProtobuf(path);
+      MADAGStorage<> dag = LoadDAGFromProtobuf(path);
       dag.View().RecomputeCompactGenomes();
       return dag;
     }
@@ -82,7 +82,7 @@ int main(int argc, char** argv) try {
     Fail();
   }
 
-  MADAGStorage dag = Load(type, path);
+  MADAGStorage<> dag = Load(type, path);
 
   MADAGToDOT(dag.View(), std::cout);
 

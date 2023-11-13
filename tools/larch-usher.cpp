@@ -115,8 +115,8 @@ std::vector<std::vector<const SampleId*>> clades_difference(
   return result;
 }
 
-using Storage = MergeDAGStorage;
-using ReassignedStatesStorage = decltype(AddMappedNodes(AddMATConversion(Storage{{}})));
+using Storage = MergeDAGStorage<>;
+using ReassignedStatesStorage = decltype(AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
 
 template <typename SampleDAG>
 struct Treebased_Move_Found_Callback
@@ -576,7 +576,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
              "tParsimony\tSecondsElapsed";
 
   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
-  MADAGStorage input_dag =
+  MADAGStorage<> input_dag =
       refseq_path.empty()
           ? LoadDAGFromProtobuf(input_dag_path)
           : LoadTreeFromProtobuf(input_dag_path, LoadReferenceSequence(refseq_path));
@@ -590,7 +590,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   }
   Merge merge{input_dag_view.GetReferenceSequence()};
   merge.AddDAG(input_dag_view);
-  std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{{}})), MAT::Tree>>
+  std::vector<std::pair<decltype(AddMATConversion(MADAGStorage<>::EmptyDefault())), MAT::Tree>>
       optimized_dags;
   merge.ComputeResultEdgeMutations();
 

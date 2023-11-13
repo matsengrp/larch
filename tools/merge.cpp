@@ -29,14 +29,14 @@
 static int MergeTrees(const std::vector<std::string_view>& paths,
                       std::string_view refseq_json_path, std::string_view out_path,
                       bool dags) {
-  std::vector<MADAGStorage> trees;
+  std::vector<MADAGStorage<>> trees;
   std::string reference_sequence =
       std::string{LoadDAGFromJson(refseq_json_path).View().GetReferenceSequence()};
 
   trees.reserve(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;
   for (size_t i = 0; i < paths.size(); ++i) {
-    trees.push_back(MADAGStorage{{}});
+    trees.push_back(MADAGStorage<>::EmptyDefault());
     paths_idx.emplace_back(i, paths.at(i));
   }
   std::cout << "Loading trees ";
