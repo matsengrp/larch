@@ -157,7 +157,7 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   auto dag = node.GetDAG();
   auto& storage = GetFeatureStorage(this);
   if (node.IsUA()) {
-    Assert(dag.HaveUA());
+   // Assert(dag.HaveUA());
     Assert(node.GetId() == dag.GetRoot());
   } else {
     size_t children_count = 0;

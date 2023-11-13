@@ -406,10 +406,6 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
 
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
   NodeId oldest_node = collapsed.first.front();
-  collapsed.first |= ranges::actions::sort(std::less<NodeId>{}) |
-                     ranges::actions::unique(std::equal_to<NodeId>{});
-  collapsed.second |= ranges::actions::sort(std::less<EdgeId>{}) |
-                      ranges::actions::unique(std::equal_to<EdgeId>{});
 
   for (auto node_id: collapsed.first) {
     auto node = dag.Get(node_id);
@@ -433,6 +429,16 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
       }
     }
   }
+  // make sure that all children of the most ancestral node are included,
+  // not just the child that is the fragment's root.
+  for (auto child: dag.Get(oldest_node).GetChildren()) {
+    collapsed.first.push_back(child.GetChild());
+    collapsed.second.push_back(child);
+  }
+  collapsed.first |= ranges::actions::sort(std::less<NodeId>{}) |
+                     ranges::actions::unique(std::equal_to<NodeId>{});
+  collapsed.second |= ranges::actions::sort(std::less<EdgeId>{}) |
+                      ranges::actions::unique(std::equal_to<EdgeId>{});
 
   return AddFragmentStorage(dag, std::move(collapsed.first),
                             std::move(collapsed.second), oldest_node);
@@ -457,6 +463,16 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeUncollapsedFragment
     oldest_node = oldest_changed.GetSingleParent().GetParent().GetId();
   }
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
+  // make sure that all children of the most ancestral node are included,
+  // not just the child that is the fragment's root.
+  for (auto child: dag.Get(oldest_node).GetChildren()) {
+    result_nodes.push_back(child.GetChild());
+    result_edges.push_back(child);
+  }
+  result_nodes |= ranges::actions::sort(std::less<NodeId>{}) |
+                  ranges::actions::unique(std::equal_to<NodeId>{});
+  result_edges |= ranges::actions::sort(std::less<EdgeId>{}) |
+                  ranges::actions::unique(std::equal_to<EdgeId>{});
   return AddFragmentStorage(dag, std::move(result_nodes), std::move(result_edges),
                             oldest_node);
 }
@@ -778,10 +794,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
       new_node.AddEdge({clade_ctr++}, e, true);
     }
   } else {
-    src_parent_node.template SetOverlay<Neighbors>();
-    dst_parent_node.template SetOverlay<Neighbors>();
     auto src_grandparent_edge = src_parent_node.GetSingleParent();
     auto dst_grandparent_edge = dst_parent_node.GetSingleParent();
+    src_parent_node.template SetOverlay<Neighbors>();
+    dst_parent_node.template SetOverlay<Neighbors>();
     src_parent_node.ClearConnections();
     dst_parent_node.ClearConnections();
     src_parent_node.SetSingleParent(src_grandparent_edge);
@@ -824,7 +840,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
     dst_parent_node.AddEdge({dst_parent_clade_ctr}, new_edge, true);
     new_node.SetSingleParent(new_edge);
   }
-
   Assert(dag.GetNodesCount() ==
          (has_unifurcation_after_move ? old_num_nodes : old_num_nodes + 1));
   Assert(dag.GetEdgesCount() ==
