@@ -90,6 +90,8 @@ class Merge {
 
   inline const ConcurrentUnorderedMap<NodeId, NodeLabel>& GetResultNodeLabels() const;
 
+  inline const ConcurrentUnorderedMap<std::string, CompactGenome>& SampleIdToCGMap() const;
+
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
    */
@@ -103,6 +105,7 @@ class Merge {
   template <typename DAGSRange>
   static void MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
                                   std::vector<NodeLabelsContainer>& dags_labels,
+                                  ConcurrentUnorderedMap<std::string, CompactGenome>& sample_id_to_cg_map,
                                   MutableMergeDAG result_dag);
 
   template <typename DAGSRange>
@@ -147,6 +150,9 @@ class Merge {
 
   // Resulting DAG from merging the input DAGs.
   MergeDAGStorage<> result_dag_storage_;
+
+  // Leaf nodes have a compact genome that is stored externally to the NodeLabels for merge purposes.
+  ConcurrentUnorderedMap<std::string, CompactGenome> sample_id_to_cg_map_;
 
   std::mutex add_dags_mtx_;
 };
