@@ -167,19 +167,19 @@ struct Treebased_Move_Found_Callback
             ++node_id_map_count;
           }
         } else if (hypothetical_node.HasChangedTopology() and
-                   hypothetical_node.GetOld().HaveMATNode() and
-                   not(hypothetical_node.IsMoveSource() or
-                       hypothetical_node.IsMoveTarget() or
-                       hypothetical_node.IsMATRoot())) {
-          const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().Read([](auto& result_node_labels_r, auto node_inst){
-                return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
-              }, this->GetMappedStorage().GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode()).GetOriginalId());
-
-          if (not(this->GetMerge().ContainsLeafset(
-                      clades_difference(current_leaf_sets, src_leaf_set)) and
-                  this->GetMerge().ContainsLeafset(
-                      clades_difference(current_leaf_sets, dst_leaf_set)))) {
-            ++node_id_map_count;
+                   hypothetical_node.GetOld().HaveMATNode()) {
+          if (not(hypothetical_node.GetOld().GetMATNode()->node_id == move.src->node_id or
+                  hypothetical_node.GetOld().GetMATNode()->node_id == move.dst->node_id or
+                  hypothetical_node.GetOld().GetMATNode()->is_root())) {
+            const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().Read([](auto& result_node_labels_r, auto node_inst){
+                  return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
+                }, this->GetMappedStorage().GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode()).GetOriginalId());
+            if (not(this->GetMerge().ContainsLeafset(
+                        clades_difference(current_leaf_sets, src_leaf_set)) and
+                    this->GetMerge().ContainsLeafset(
+                        clades_difference(current_leaf_sets, dst_leaf_set)))) {
+              ++node_id_map_count;
+            }
           }
         }
       }
@@ -278,18 +278,19 @@ struct Merge_All_Profitable_Moves_Found_Callback
             ++node_id_map_count;
           }
         } else if (hypothetical_node.HasChangedTopology() and
-                   hypothetical_node.GetOld().HaveMATNode() and
-                   not(hypothetical_node.IsMoveSource() or
-                       hypothetical_node.IsMoveTarget() or
-                       hypothetical_node.IsMATRoot())) {
-          const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().Read([](auto& result_node_labels_r, auto node_inst){
-                return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
-              }, this->GetMappedStorage().GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode()).GetOriginalId());
-          if (not(this->GetMerge().ContainsLeafset(
-                      clades_difference(current_leaf_sets, src_leaf_set)) and
-                  this->GetMerge().ContainsLeafset(
-                      clades_difference(current_leaf_sets, dst_leaf_set)))) {
-            ++node_id_map_count;
+                   hypothetical_node.GetOld().HaveMATNode()) {
+          if (not(hypothetical_node.GetOld().GetMATNode()->node_id == move.src->node_id or
+                  hypothetical_node.GetOld().GetMATNode()->node_id == move.dst->node_id or
+                  hypothetical_node.GetOld().GetMATNode()->is_root())) {
+            const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().Read([](auto& result_node_labels_r, auto node_inst){
+                  return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
+                }, this->GetMappedStorage().GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode()).GetOriginalId());
+            if (not(this->GetMerge().ContainsLeafset(
+                        clades_difference(current_leaf_sets, src_leaf_set)) and
+                    this->GetMerge().ContainsLeafset(
+                        clades_difference(current_leaf_sets, dst_leaf_set)))) {
+              ++node_id_map_count;
+            }
           }
         }
       }
@@ -373,18 +374,19 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
             ++node_id_map_count;
           }
         } else if (hypothetical_node.HasChangedTopology() and
-                   hypothetical_node.GetOld().HaveMATNode() and
-                   not(hypothetical_node.IsMoveSource() or
-                       hypothetical_node.IsMoveTarget() or
-                       hypothetical_node.IsMATRoot())) {
-          const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().Read([](auto& result_node_labels_r, auto node_inst){
-                return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
-              }, this->GetMappedStorage().GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode()).GetOriginalId());
-          if (not(this->GetMerge().ContainsLeafset(
-                      clades_difference(current_leaf_sets, src_leaf_set)) and
-                  this->GetMerge().ContainsLeafset(
-                      clades_difference(current_leaf_sets, dst_leaf_set)))) {
-            ++node_id_map_count;
+                   hypothetical_node.GetOld().HaveMATNode()) {
+          if (not(hypothetical_node.GetOld().GetMATNode()->node_id == move.src->node_id or
+                  hypothetical_node.GetOld().GetMATNode()->node_id == move.dst->node_id or
+                  hypothetical_node.GetOld().GetMATNode()->is_root())) {
+            const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().Read([](auto& result_node_labels_r, auto node_inst){
+                  return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
+                }, this->GetMappedStorage().GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode()).GetOriginalId());
+            if (not(this->GetMerge().ContainsLeafset(
+                        clades_difference(current_leaf_sets, src_leaf_set)) and
+                    this->GetMerge().ContainsLeafset(
+                        clades_difference(current_leaf_sets, dst_leaf_set)))) {
+              ++node_id_map_count;
+            }
           }
         }
       }
