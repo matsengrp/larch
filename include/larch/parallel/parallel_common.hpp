@@ -2,6 +2,7 @@
 
 #include <mutex>
 #include <shared_mutex>
+#include <execution>
 
 #include <tbb/parallel_for_each.h>
 
@@ -62,23 +63,7 @@ class SharedState {
 
 template <typename Range, typename F>
 void ParallelForEach(Range&& range, F&& func) {
-  // tbb::parallel_for_each(std::forward<Range>(range), std::forward<F>(func));
   // ranges::for_each(std::forward<Range>(range), std::forward<F>(func));
-  std::atomic<size_t> iter{0};
-  const size_t count = size_t{range.size()};
-  std::vector<std::thread> workers;
-  for (size_t i = 0; i < 32; ++i) {
-    workers.emplace_back(std::thread([&] {
-      while (true) {
-        const size_t it = iter.fetch_add(1);
-        if (it >= count) {
-          break;
-        }
-        func(range.at(it));
-      }
-    }));
-  }
-  for (auto& i : workers) {
-    i.join();
-  }
+  std::for_each(std::execution::par_unseq, std::begin(range), std::end(range),
+                std::forward<F>(func));
 }
