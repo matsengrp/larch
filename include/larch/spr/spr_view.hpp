@@ -20,7 +20,7 @@ struct FitchSet {
     }
     Fail("Unreachable");
   }
-  char at(size_t pos) const {
+  char at([[maybe_unused]] size_t pos) const {
     Assert(pos == 0);
     if ((value_ & 1) != 0) {
       return 'A';

@@ -23,9 +23,11 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
   }();
 
   storage.View().GetRoot().Validate(true);
+#ifndef NDEBUG
   for (auto i : storage.View().Const().GetLeafs()) {
     Assert(i.HaveSampleId());
   }
+#endif
 
   if (storage.View().InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
     storage.View().GetRoot().Validate(true);

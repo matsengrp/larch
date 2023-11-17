@@ -11,7 +11,7 @@ static void test_overlay(std::string_view input_dag_path,
   auto overlay_dag_storage = AddOverlay<void>(input_dag);
   auto overlay_dag = overlay_dag_storage.View();
 
-  auto input_node = input_dag.Get(NodeId{10});
+  [[maybe_unused]] auto input_node = input_dag.Get(NodeId{10});
   auto overlay_node = overlay_dag.Get(NodeId{10});
 
   Assert(not input_node.GetCompactGenome().empty());

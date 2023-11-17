@@ -407,23 +407,24 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
   NodeId oldest_node = collapsed.first.front();
 
-  for (auto node_id: collapsed.first) {
+  for (auto node_id : collapsed.first) {
     auto node = dag.Get(node_id);
     if (not node.IsUA() and not node.IsMoveNew()) {
       if (not node.GetOld().HaveSampleId()) {
         Assert(node.GetCladesCount() > 0);
-        for (auto clade: node.GetClades()) {
+        for (auto clade : node.GetClades()) {
           Assert(not clade.empty());
         }
       }
     }
   }
-  for (auto node_id: collapsed.first) {
+  for (auto node_id : collapsed.first) {
     if (dag.Get(node_id).IsUA()) {
       oldest_node = node_id;
     } else {
       auto parent_edge = dag.Get(node_id).GetSingleParent().GetId();
-      if (std::find(collapsed.second.begin(), collapsed.second.end(), parent_edge) == collapsed.second.end()) {
+      if (std::find(collapsed.second.begin(), collapsed.second.end(), parent_edge) ==
+          collapsed.second.end()) {
         oldest_node = node_id;
         break;
       }
@@ -431,7 +432,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   }
   // make sure that all children of the most ancestral node are included,
   // not just the child that is the fragment's root.
-  for (auto child: dag.Get(oldest_node).GetChildren()) {
+  for (auto child : dag.Get(oldest_node).GetChildren()) {
     collapsed.first.push_back(child.GetChild());
     collapsed.second.push_back(child);
   }
@@ -464,7 +465,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeUncollapsedFragment
   oldest_changed.PreorderComputeCompactGenome(result_nodes, result_edges);
   // make sure that all children of the most ancestral node are included,
   // not just the child that is the fragment's root.
-  for (auto child: dag.Get(oldest_node).GetChildren()) {
+  for (auto child : dag.Get(oldest_node).GetChildren()) {
     result_nodes.push_back(child.GetChild());
     result_edges.push_back(child);
   }
@@ -522,16 +523,17 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   for (auto node_id : fragment_nodes) {
     auto this_node = dag.Get(node_id);
     if ((this_node.IsNonrootAnchorNode() or this_node.IsLeaf() or
-        (not is_child_of_collapsible_edge[node_id])) and
+         (not is_child_of_collapsible_edge[node_id])) and
         (not node_already_added[node_id])) {
       node_already_added.insert_or_assign(node_id, true);
-      if (is_parent_of_collapsible_edge[node_id] and not parent_is_in_fragment[node_id]) {
+      if (is_parent_of_collapsible_edge[node_id] and
+          not parent_is_in_fragment[node_id]) {
         auto grandparent_edge = this_node.GetSingleParent();
 
         node_already_added.insert_or_assign(grandparent_edge.GetParent(), true);
         edge_already_added.insert_or_assign(grandparent_edge, true);
 
-        for (auto child_edge: grandparent_edge.GetParent().GetChildren()) {
+        for (auto child_edge : grandparent_edge.GetParent().GetChildren()) {
           if (child_edge != grandparent_edge) {
             if (not node_already_added[child_edge.GetChild().GetId()]) {
               node_already_added.insert_or_assign(child_edge.GetChild(), true);
@@ -564,12 +566,13 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
         auto clade_ins = clades_count.insert({parent_node, 0});
         size_t clade = clade_ins.first->second;
         if (clade_ins.second) {
-          [[maybe_unused]] auto gp_edge_id =
+          auto gp_edge_id =
               parent_node.IsUA() ? EdgeId{NoId} : parent_node.GetSingleParent();
 
           std::vector<EdgeId> sibling_edges;
           for (auto sib_edge : parent_node.GetChildren()) {
-            if (not (is_child_of_collapsible_edge[sib_edge.GetChild()] or sib_edge.GetChild() == this_node)) {
+            if (not(is_child_of_collapsible_edge[sib_edge.GetChild()] or
+                    sib_edge.GetChild() == this_node)) {
               sibling_edges.push_back(sib_edge);
             }
           }
@@ -595,7 +598,8 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
             }
             auto sib_node = dag.Get(sib_edge).GetChild();
 
-            if (not (node_already_added[sib_node.GetId()] or edge_already_added[sib_edge])) {
+            if (not(node_already_added[sib_node.GetId()] or
+                    edge_already_added[sib_edge])) {
               node_already_added.insert({sib_node, true});
             }
             if (not edge_already_added[sib_edge]) {
@@ -620,7 +624,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   for (const auto& nodeadded : node_already_added) {
     current_nodes.push_back(nodeadded.first);
   }
-  for (const auto& edgeadded: edge_already_added) {
+  for (const auto& edgeadded : edge_already_added) {
     current_edges.push_back(edgeadded.first);
   }
   for (auto node_id : current_nodes) {
@@ -632,7 +636,9 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   }
   for (auto edge_id : current_edges) {
     auto parent = dag.Get(edge_id).GetParent();
+#ifndef NDEBUG
     auto child = dag.Get(edge_id).GetChild();
+#endif
     Assert(child.GetParentsCount() == 1);
     Assert(edge_id.value != NoId);
     if (parent != dag.GetRoot()) {
@@ -699,8 +705,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
     return {};
   }
 
+#ifndef NDEBUG
   const size_t old_num_nodes = dag.GetNodesCount();
   const size_t old_num_edges = dag.GetEdgesCount();
+#endif
 
   auto new_node = has_unifurcation_after_move ? src_parent_node : dag.AppendNode();
   auto new_edge = has_unifurcation_after_move ? src_parent_node.GetSingleParent()
@@ -846,11 +854,11 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
     }
   } else {
     auto src_grandparent_edge = src_parent_node.GetParentsCount() > 0
-                              ? src_parent_node.GetSingleParent()
-                              : EdgeId{NoId};
+                                    ? src_parent_node.GetSingleParent()
+                                    : EdgeId{NoId};
     auto dst_grandparent_edge = dst_parent_node.GetParentsCount() > 0
-                              ? dst_parent_node.GetSingleParent()
-                              : EdgeId{NoId};
+                                    ? dst_parent_node.GetSingleParent()
+                                    : EdgeId{NoId};
     src_parent_node.template SetOverlay<Neighbors>();
     dst_parent_node.template SetOverlay<Neighbors>();
     src_parent_node.ClearConnections();
@@ -999,4 +1007,3 @@ HypotheticalTree<DAG>::Data::Data(Profitable_Moves move, NodeId new_node,
     }
   }
 }
-

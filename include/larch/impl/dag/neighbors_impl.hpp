@@ -2,6 +2,7 @@
 #error "Don't include this header"
 #endif
 
+#include <iostream>
 #include <set>
 #include "larch/contiguous_set.hpp"
 
@@ -151,13 +152,14 @@ void CheckCycle(
 struct SampleId;
 
 template <typename CRTP, typename Tag>
-void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
-                                                      bool allow_dag) const {
+void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
+    [[maybe_unused]] bool recursive, [[maybe_unused]] bool allow_dag) const {
+#ifndef NDEBUG
   auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
   auto& storage = GetFeatureStorage(this);
   if (node.IsUA()) {
-   // Assert(dag.HaveUA());
+    // Assert(dag.HaveUA());
     Assert(node.GetId() == dag.GetRoot());
   } else {
     size_t children_count = 0;
@@ -267,6 +269,7 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
                                     }));
     Assert(ranges::equal(leafs1, leafs2));
   }
+#endif
 }
 
 template <typename CRTP, typename Tag>

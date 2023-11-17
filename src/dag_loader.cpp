@@ -53,11 +53,11 @@ void Parse(T& data, std::string_view path) {
         open(std::string{path}.c_str(), O_RDONLY)};
     in_compressed.SetCloseOnDelete(true);
     google::protobuf::io::GzipInputStream in{&in_compressed};
-    bool parsed = data.ParseFromZeroCopyStream(&in);
+    [[maybe_unused]] bool parsed = data.ParseFromZeroCopyStream(&in);
     Assert(parsed);
   } else {
     std::ifstream in{std::string{path}};
-    bool parsed = data.ParseFromIstream(&in);
+    [[maybe_unused]] bool parsed = data.ParseFromIstream(&in);
     Assert(parsed);
   }
 }
