@@ -175,8 +175,8 @@ SubtreeWeight<WeightOps, DAG>::MinWeightUniformSampleTree(const WeightOps& weigh
         ArbitraryInt sum = 0;
         for (EdgeId child_edge : clade) {
           if (min_weight_edges.count(child_edge)) {
-            ArbitraryInt child_count = MinWeightCount(
-                dag_.Get(child_edge).GetChild(), std::forward<WeightOps>(weight_ops));
+            ArbitraryInt child_count =
+                MinWeightCount(dag_.Get(child_edge).GetChild(), weight_ops);
             sum += child_count;
             min_weight_counts.push_back(child_count);
           } else {
