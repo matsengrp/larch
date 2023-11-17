@@ -3,7 +3,6 @@
 #endif
 
 #include <atomic>
-#include <tbb/parallel_for_each.h>
 #include <tbb/concurrent_vector.h>
 #include <iostream>
 
@@ -44,7 +43,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
   BuildConnectionsRaw();
   std::atomic<size_t> root_id{NoId};
   tbb::concurrent_vector<NodeId> leafs;
-  tbb::parallel_for_each(dag.GetNodes(), [&](auto node) {
+  ParallelForEach(dag.GetNodes(), [&](auto node) {
     for (auto clade : node.GetClades()) {
       Assert(not clade.empty() && "Empty clade");
     }
@@ -67,7 +66,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  tbb::parallel_for_each(dag.GetNodes(), [](auto node) { node.ClearConnections(); });
+  ParallelForEach(dag.GetNodes(), [](auto node) { node.ClearConnections(); });
   for (auto edge : dag.GetEdges()) {
     Assert(edge.GetParentId().value != NoId && "Edge has no parent");
     Assert(edge.GetChildId().value != NoId && "Edge has no child");
@@ -81,7 +80,11 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::AddLeaf(NodeId id) const {
   auto& storage = GetFeatureStorage(this);
-  storage.leafs_.push_back(id);
+  // TODO make leafs ContiguousSet ?
+  if (std::find(storage.leafs_.begin(), storage.leafs_.end(), id) ==
+      storage.leafs_.end()) {
+    storage.leafs_.push_back(id);
+  }
 }
 
 template <typename CRTP, typename Tag>
@@ -90,7 +93,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::ClearConnections() const {
   for (auto node : dag.GetNodes()) {
     node.ClearConnections();
   }
-  dag.ClearEdges();
+  dag.GetStorage().ClearEdges();
 }
 
 template <typename CRTP, typename Tag>

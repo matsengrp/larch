@@ -2,6 +2,10 @@
 #error "Don't include this header"
 #endif
 
+#include <iostream>
+#include <set>
+#include "larch/contiguous_set.hpp"
+
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetParents() const {
   auto dag = static_cast<const CRTP&>(*this).GetDAG();
@@ -91,30 +95,96 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetLeafsBelow() const {
 
 namespace {
 
+template <typename DAG>
+void MADAGToDOTCycle(DAG dag, std::ostream& out, const std::deque<EdgeId>& path1,
+                     const std::deque<EdgeId>& path2) {
+  out << "digraph G {\n";
+  out << "  forcelabels=true\n";
+  out << "  nodesep=1.0\n";
+  out << "  ranksep=2.0\n";
+  out << "  ratio=1.0\n";
+  out << "  node [color=azure4,fontcolor=black,penwidth=4]\n";
+  out << "  edge [color=azure3,fontcolor=black,penwidth=4]\n";
+  for (auto edge : dag.Const().GetEdges()) {
+    const bool in_path1 = std::find(path1.begin(), path1.end(), edge) != path1.end();
+    const bool in_path2 = std::find(path2.begin(), path2.end(), edge) != path2.end();
+    out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
+        << CompactGenomeToString(edge.GetChild()) << "\"";
+    out << "[ headlabel=\"";
+    out << EdgeMutationsToString(edge);
+    out << "\"";
+    if (in_path1) {
+      out << "color=red,penwidth=40,arrowsize=2";
+    }
+    if (in_path2) {
+      out << "color=blue,penwidth=40,arrowsize=2";
+    }
+    out << "]\n";
+  }
+  out << "}\n";
+}
+
 template <typename Edge>
-void CheckCycle(Edge edge, std::vector<std::pair<bool, bool>>& visited_finished) {
-  auto& [visited, finished] = visited_finished.at(edge.GetId().value);
+void CheckCycle(
+    Edge edge,
+    ContiguousMap<EdgeId, std::tuple<bool, bool, std::deque<EdgeId>>>& visited_finished,
+    std::deque<EdgeId>& path) {
+  auto& [visited, finished, first_path] = visited_finished[edge.GetId()];
   if (finished) {
     return;
   }
+  path.push_back(edge);
   if (visited) {
+    MADAGToDOTCycle(edge.GetDAG(), std::cout, path, first_path);
     Assert(false && "Cycle detected");
   }
+  first_path = path;
   visited = true;
   for (auto child : edge.GetChild().GetChildren()) {
-    CheckCycle(child, visited_finished);
+    CheckCycle(child, visited_finished, path);
   }
+  path.pop_back();
   finished = true;
 }
 
 }  // namespace
 
+struct SampleId;
+
 template <typename CRTP, typename Tag>
-void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
-                                                      bool allow_dag) const {
-  auto node = static_cast<const CRTP&>(*this);
+void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
+    [[maybe_unused]] bool recursive, [[maybe_unused]] bool allow_dag) const {
+#ifndef NDEBUG
+  auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
   auto& storage = GetFeatureStorage(this);
+  if (node.IsUA()) {
+    // Assert(dag.HaveUA());
+    Assert(node.GetId() == dag.GetRoot());
+  } else {
+    size_t children_count = 0;
+    for ([[maybe_unused]] auto child : node.GetChildren()) {
+      ++children_count;
+    }
+    Assert(children_count != 1);
+  }
+  std::set<std::string> sample_ids;
+  if (node.IsLeaf()) {
+    Assert(storage.clades_.empty());
+    using NodeT = std::remove_reference_t<decltype(node)>;
+    if constexpr (NodeT::template contains_feature<SampleId> or
+                  NodeT::template contains_feature<Deduplicate<SampleId>>) {
+      if constexpr (not is_specialization_v<std::remove_const_t<std::remove_reference_t<
+                                                decltype(dag.GetStorage())>>,
+                                            FragmentStorage>) {
+        Assert(node.HaveSampleId());
+        Assert(sample_ids.insert(node.GetSampleId().value()).second);
+      }
+    }
+  }
+  for (auto& i : storage.clades_) {
+    Assert(not i.empty());
+  }
   if (not allow_dag) {
     if (storage.parents_.size() > 1) {
       throw std::runtime_error{std::string{"Mulptiple parents at node "} +
@@ -162,12 +232,44 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
   }
 
   if (recursive and node.IsUA()) {
-    std::vector<std::pair<bool, bool>> visited_finished;
-    visited_finished.resize(dag.GetEdgesCount());
-    for (auto i : node.GetChildren()) {
-      CheckCycle(i, visited_finished);
+    if (not allow_dag) {
+      Assert(dag.IsTree());
     }
+    size_t node_count = 0;
+    for ([[maybe_unused]] auto i : dag.GetNodes()) {
+      ++node_count;
+    }
+    Assert(node_count == dag.GetNodesCount());
+    size_t edge_count = 0;
+    for ([[maybe_unused]] auto i : dag.GetEdges()) {
+      ++edge_count;
+    }
+    Assert(edge_count == dag.GetEdgesCount());
+    if (not allow_dag) {
+      // TODO vector/map
+      ContiguousMap<EdgeId, std::tuple<bool, bool, std::deque<EdgeId>>>
+          visited_finished;
+      visited_finished.reserve(dag.GetEdgesCount());
+      std::deque<EdgeId> path;
+      for (auto i : node.GetChildren()) {
+        CheckCycle(i, visited_finished, path);
+      }
+    }
+
+    for (auto i : dag.GetEdges()) {
+      Assert(i.GetChild().ContainsParent(i.GetParent()));
+      Assert(i.GetParent().ContainsChild(i.GetChild()));
+    }
+
+    ContiguousSet<NodeId> leafs1;
+    ContiguousSet<NodeId> leafs2;
+    ranges::actions::insert(leafs1, dag.GetLeafs());
+    ranges::actions::insert(leafs2, dag.GetNodes() | ranges::view::filter([](auto i) {
+                                      return i.IsLeaf();
+                                    }));
+    Assert(ranges::equal(leafs1, leafs2));
   }
+#endif
 }
 
 template <typename CRTP, typename Tag>

@@ -83,9 +83,28 @@ struct ExtraFeatureMutableView<MATConversion, CRTP> {
   static void BuildHelper(MATNodePtr par_node, Node node, DAG dag);
 };
 
-template <typename DAG>
-auto AddMATConversion(DAG&& dag) {
-  return ExtendStorage(std::forward<DAG>(dag), Extend::Nodes<MATConversion>{});
+template <typename Target>
+struct MATConversionStorage;
+
+template <typename Target>
+struct LongNameOf<MATConversionStorage<Target>> {
+  using type = ExtendStorageType<MATConversionStorage<Target>, Target,
+                                 Extend::Nodes<MATConversion>>;
+};
+
+template <typename Target>
+struct MATConversionStorage : LongNameOf<MATConversionStorage<Target>>::type {
+  SHORT_NAME(MATConversionStorage);
+};
+
+template <typename DAG, typename = std::enable_if_t<DAG::role == Role::Storage>>
+MATConversionStorage<DAG> AddMATConversion(DAG&& dag) {
+  return MATConversionStorage<DAG>::Consume(std::move(dag));
+}
+
+template <typename DAG, typename = std::enable_if_t<DAG::role == Role::View>>
+MATConversionStorage<DAG> AddMATConversion(const DAG& dag) {
+  return MATConversionStorage<DAG>::FromView(dag);
 }
 
 #include "larch/impl/mat_conversion_impl.hpp"

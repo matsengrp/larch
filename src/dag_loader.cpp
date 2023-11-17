@@ -53,22 +53,22 @@ void Parse(T& data, std::string_view path) {
         open(std::string{path}.c_str(), O_RDONLY)};
     in_compressed.SetCloseOnDelete(true);
     google::protobuf::io::GzipInputStream in{&in_compressed};
-    bool parsed = data.ParseFromZeroCopyStream(&in);
+    [[maybe_unused]] bool parsed = data.ParseFromZeroCopyStream(&in);
     Assert(parsed);
   } else {
     std::ifstream in{std::string{path}};
-    bool parsed = data.ParseFromIstream(&in);
+    [[maybe_unused]] bool parsed = data.ParseFromIstream(&in);
     Assert(parsed);
   }
 }
 
 }  // namespace
 
-MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
+MADAGStorage<> LoadDAGFromProtobuf(std::string_view path) {
   ProtoDAG::data data;
   Parse(data, path);
 
-  MADAGStorage result{{}};
+  MADAGStorage<> result = MADAGStorage<>::EmptyDefault();
   result.View().SetReferenceSequence(data.reference_seq());
 
   for (const auto& i : data.node_names()) {
@@ -93,6 +93,13 @@ MADAGStorage LoadDAGFromProtobuf(std::string_view path) {
   }
   result.View().BuildConnections();
   result.View().AssertUA();
+
+  for (auto node : result.View().GetNodes()) {
+    if (node.IsLeaf()) {
+      node = SampleId{node.GetCompactGenome().ToString()};
+    }
+  }
+
   result.View().GetRoot().Validate(true, true);
   return result;
 }
@@ -107,12 +114,12 @@ static const auto DecodeMutation =
            decode.at(static_cast<size_t>(mut.mut_nuc().Get(0)))}};
 };
 
-MADAGStorage LoadTreeFromProtobuf(std::string_view path,
-                                  std::string_view reference_sequence) {
+MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
+                                    std::string_view reference_sequence) {
   Parsimony::data data;
   Parse(data, path);
 
-  MADAGStorage result{{}};
+  MADAGStorage<> result = MADAGStorage<>::EmptyDefault();
   result.View().SetReferenceSequence(reference_sequence);
 
   std::unordered_map<size_t, size_t> num_children;
@@ -138,8 +145,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
 
   Assert(static_cast<size_t>(data.node_mutations_size()) ==
          result.View().GetNodesCount() - 1);
-  using Edge = MutableMADAG::EdgeView;
-  auto apply_mutations = [](auto& self, Edge edge, const auto& node_mutations,
+  auto apply_mutations = [](auto& self, auto edge, const auto& node_mutations,
                             size_t& idx) -> void {
     const auto& pb_muts = node_mutations.Get(static_cast<int>(idx++)).mutation();
     EdgeMutations muts;
@@ -147,7 +153,7 @@ MADAGStorage LoadTreeFromProtobuf(std::string_view path,
       muts.insert(i);
     }
     edge.SetEdgeMutations(std::move(muts));
-    for (Edge child : edge.GetChild().GetChildren()) {
+    for (auto child : edge.GetChild().GetChildren()) {
       self(self, child, node_mutations, idx);
     }
   };
@@ -281,9 +287,9 @@ the clade in the parent node's clade_list from which this edge descends.
 
 */
 
-MADAGStorage LoadDAGFromJson(std::string_view path) {
+MADAGStorage<> LoadDAGFromJson(std::string_view path) {
   nlohmann::json json = LoadJson(path);
-  MADAGStorage result{{}};
+  MADAGStorage<> result = MADAGStorage<>::EmptyDefault();
   result.View().SetReferenceSequence(std::string(json["refseq"][1]));
 
   size_t id = 0;
@@ -298,6 +304,13 @@ MADAGStorage LoadDAGFromJson(std::string_view path) {
   }
   result.View().BuildConnections();
   result.View().AssertUA();
+
+  for (auto node : result.View().GetNodes()) {
+    if (node.IsLeaf()) {
+      node = SampleId{node.GetCompactGenome().ToString()};
+    }
+  }
+
   result.View().GetRoot().Validate(true, true);
   return result;
 }
@@ -494,7 +507,7 @@ std::unordered_map<std::string, CompactGenomeData> LoadCompactGenomeDataFromVCF(
 }
 
 void MADAGApplyCompactGenomeData(
-    MADAGStorage& dag_storage,
+    MADAGStorage<>& dag_storage,
     const std::unordered_map<std::string, CompactGenomeData>& mut_map,
     bool silence_warnings) {
   auto dag = dag_storage.View();
@@ -526,7 +539,7 @@ void MADAGApplyCompactGenomeData(
   dag.RecomputeEdgeMutations();
 }
 
-void LoadVCFData(MADAGStorage& dag_storage, std::string& vcf_path,
+void LoadVCFData(MADAGStorage<>& dag_storage, std::string& vcf_path,
                  bool silence_warnings) {
   if (not vcf_path.empty()) {
     auto ref_seq = dag_storage.View().GetReferenceSequence();

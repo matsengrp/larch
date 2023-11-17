@@ -6,10 +6,10 @@ FeatureConstView<ReferenceSequence, CRTP, Tag>::GetReferenceSequence() const {
 
 template <typename CRTP, typename Tag>
 void FeatureConstView<ReferenceSequence, CRTP, Tag>::AssertUA() const {
-  auto& dag = static_cast<const CRTP&>(*this);
+  [[maybe_unused]] auto& dag = static_cast<const CRTP&>(*this);
   Assert(dag.HaveRoot());
-  auto ua = dag.GetRoot();
-  Assert(ua.GetCladesCount() == 1);
+  // auto ua = dag.GetRoot();
+  // TODO Assert((not dag.IsTree()) or ua.GetCladesCount() == 1);
 }
 
 template <typename CRTP, typename Tag>
@@ -163,10 +163,11 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
 }
 
 template <typename CRTP, typename Tag>
-void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG() const {
+void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG(
+    bool coerce) const {
   auto dag = static_cast<const CRTP&>(*this);
   for (auto leaf : dag.GetLeafs()) {
-    if (not leaf.HaveSampleId()) {
+    if (not leaf.HaveSampleId() or coerce) {
       std::string id = leaf.GetCompactGenome().ToString();
       Assert(not id.empty());
       if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {

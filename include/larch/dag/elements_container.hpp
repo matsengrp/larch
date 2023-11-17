@@ -41,6 +41,8 @@ struct ElementsContainer {
 
   size_t GetCount() const;
 
+  Id<C> GetNextAvailableId() const { return {GetCount()}; }
+
   Id<C> Append();
 
   void Add(Id<C> id);
@@ -58,6 +60,11 @@ struct ElementsContainer {
   auto& GetFeatureExtraStorage();
   template <typename Feature>
   const auto& GetFeatureExtraStorage() const;
+
+  auto All() const {
+    return ranges::views::iota(size_t{0}, GetCount()) |
+           ranges::views::transform([](size_t i) -> Id<C> { return {i}; });
+  }
 
  private:
   std::vector<ElementStorageT> elements_storage_;

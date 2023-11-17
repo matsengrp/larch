@@ -26,8 +26,7 @@ struct FeatureConstView<OverlayDAG, CRTP, Tag> {
 };
 
 template <typename CRTP, typename Tag>
-struct FeatureMutableView<OverlayDAG, CRTP, Tag>
-    : FeatureConstView<OverlayDAG, CRTP, Tag> {};
+struct FeatureMutableView<OverlayDAG, CRTP, Tag> {};
 
 namespace {
 template <typename>
@@ -38,17 +37,48 @@ struct ToOverlayStorage<std::tuple<Features...>> {
   template <typename Id>
   using type = std::tuple<std::unordered_map<Id, Features>...>;
 };
+
 }  // namespace
 
-template <typename Target>
+template <typename ShortName, typename Target>
 struct OverlayDAGStorage {
- public:
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 
-  using TargetView = decltype(ViewOf(std::declval<Target>()));
+  static_assert(not std::is_reference_v<Target>);
+  static_assert(Target::component == Component::DAG);
 
-  using FeatureTypes = typename TargetView::StorageType::FeatureTypes;
+  static_assert(IsNameCorrect<ShortName, OverlayDAGStorage>::value);
+
+  using Self =
+      std::conditional_t<std::is_same_v<ShortName, void>, OverlayDAGStorage, ShortName>;
+
+  using TargetView = typename ViewTypeOf<Target>::type;
+
+  struct ExtraStorageType : TargetView::StorageType::ExtraStorageType {
+    MOVE_ONLY(ExtraStorageType);
+
+    using FeatureTypes = decltype(std::tuple_cat(
+        typename TargetView::StorageType::ExtraStorageType::FeatureTypes{},
+        std::tuple<OverlayDAG>{}));
+
+    template <template <typename, typename> typename T, typename CRTP>
+    struct Base : TargetView::StorageType::ExtraStorageType::template Base<T, CRTP> {};
+
+    template <typename CRTP>
+    struct Base<FeatureConstView, CRTP>
+        : TargetView::StorageType::template ConstDAGViewBase<CRTP>,
+          FeatureConstView<OverlayDAG, CRTP> {};
+
+    template <typename CRTP>
+    struct Base<FeatureMutableView, CRTP>
+        : TargetView::StorageType::template MutableDAGViewBase<CRTP>,
+          FeatureMutableView<OverlayDAG, CRTP> {};
+  };
+
+  using FeatureTypes = typename ExtraStorageType::FeatureTypes;
+  template <Component C>
+  using Container = typename TargetView::StorageType::template Container<C>;
   using AllNodeFeatures = typename TargetView::StorageType::AllNodeFeatures;
   using AllEdgeFeatures = typename TargetView::StorageType::AllEdgeFeatures;
 
@@ -59,8 +89,7 @@ struct OverlayDAGStorage {
 
   template <Component C, typename CRTP>
   struct MutableElementViewBase
-      : FeatureConstView<Overlay, CRTP>,
-        FeatureMutableView<Overlay, CRTP>,
+      : FeatureMutableView<Overlay, CRTP>,
         TargetView::StorageType::template MutableElementViewBase<C, CRTP> {
     using TargetView::StorageType::template MutableElementViewBase<C, CRTP>::operator=;
   };
@@ -69,17 +98,23 @@ struct OverlayDAGStorage {
   static const bool contains_element_feature;
 
   template <typename CRTP>
-  struct ConstDAGViewBase : FeatureConstView<OverlayDAG, CRTP>,
-                            TargetView::StorageType::template ConstDAGViewBase<CRTP> {};
+  struct ConstDAGViewBase : ExtraStorageType::template Base<FeatureConstView, CRTP> {};
 
   template <typename CRTP>
   struct MutableDAGViewBase
-      : FeatureMutableView<OverlayDAG, CRTP>,
-        TargetView::StorageType::template MutableDAGViewBase<CRTP> {};
+      : ExtraStorageType::template Base<FeatureMutableView, CRTP> {};
 
   MOVE_ONLY(OverlayDAGStorage);
 
-  explicit OverlayDAGStorage(Target&& target);
+  static Self Consume(Target&& target) {
+    static_assert(Target::role == Role::Storage);
+    return Self{std::move(target)};
+  }
+
+  static Self FromView(const Target& target) {
+    static_assert(Target::role == Role::View);
+    return Self{Target{target}};
+  }
 
   auto View();
   auto View() const;
@@ -92,6 +127,17 @@ struct OverlayDAGStorage {
 
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
+
+  template <Component C>
+  Id<C> GetNextAvailableId() const {
+    if constexpr (C == Component::Node) {
+      return {GetTarget().template GetNextAvailableId<C>().value +
+              added_node_storage_.size()};
+    } else {
+      return {GetTarget().template GetNextAvailableId<C>().value +
+              added_edge_storage_.size()};
+    }
+  }
 
   auto GetNodes() const;
   auto GetEdges() const;
@@ -123,7 +169,13 @@ struct OverlayDAGStorage {
   template <Component C, typename F>
   const auto& GetFeatureExtraStorage() const;
 
+  auto& GetTargetStorage() { return *this; }
+  auto& GetTargetStorage() const { return *this; }
+
  private:
+  friend ShortName;
+  explicit OverlayDAGStorage(Target&& target);
+
   auto GetTarget();
   auto GetTarget() const;
 
@@ -145,7 +197,7 @@ struct OverlayDAGStorage {
   template <typename, typename, typename>
   friend struct FeatureMutableView;
 
-  std::decay_t<Target> target_ = {};
+  Target target_;
   typename ToOverlayStorage<AllNodeFeatures>::template type<NodeId>
       replaced_node_storage_;
   typename ToOverlayStorage<AllEdgeFeatures>::template type<EdgeId>
@@ -154,7 +206,17 @@ struct OverlayDAGStorage {
   std::vector<AllEdgeFeatures> added_edge_storage_;
 };
 
-template <typename DAG>
-auto AddOverlay(DAG&& dag) {
-  return OverlayDAGStorage<DAG>{std::forward<DAG>(dag)};
+template <typename ShortName, typename DAG>
+using OverlayStorageType = OverlayDAGStorage<ShortName, DAG>;
+
+template <typename ShortName, typename DAG,
+          typename = std::enable_if_t<DAG::role == Role::Storage>>
+OverlayDAGStorage<ShortName, DAG> AddOverlay(DAG&& dag) {
+  return OverlayDAGStorage<ShortName, DAG>::Consume(std::move(dag));
+}
+
+template <typename ShortName, typename DAG,
+          typename = std::enable_if_t<DAG::role == Role::View>>
+typename OverlayDAGStorage<ShortName, DAG>::Self AddOverlay(const DAG& dag) {
+  return OverlayDAGStorage<ShortName, DAG>::FromView(dag);
 }

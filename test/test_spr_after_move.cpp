@@ -14,10 +14,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   Test_Move_Found_Callback(DAG sample_dag, MergeT& merge)
       : sample_dag_{sample_dag}, merge_{merge} {};
 
-  using Storage =
-      ExtendDAGStorage<DefaultDAGStorage,
-                       Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
-                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+  using Storage = MergeDAGStorage<>;
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
@@ -83,10 +80,10 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   std::mutex merge_mtx_;
 };
 
-[[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path,
-                                          std::string_view refseq_path) {
+[[maybe_unused]] static MADAGStorage<> Load(std::string_view input_dag_path,
+                                            std::string_view refseq_path) {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
-  MADAGStorage input_dag_storage =
+  MADAGStorage<> input_dag_storage =
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
   input_dag_storage.View().RecomputeCompactGenomes(true);
   return input_dag_storage;
@@ -274,6 +271,7 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
   auto dag = dag_storage.View();
   MAT::Tree tree;
   dag.BuildMAT(tree);
+  dag.GetRoot().Validate(true);
   auto child_counts = get_child_counts(dag);
 
   if (write_dot_files) {
@@ -292,7 +290,7 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
       }
 
       // Apply SPR
-      auto spr_storage = SPRStorage(dag);
+      auto spr_storage = AddSPRStorage(dag);
       auto spr = spr_storage.View();
       spr.GetRoot().Validate(true);
       LCA lca = FindLCA(src_node, dest_node);

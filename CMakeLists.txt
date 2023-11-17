@@ -96,7 +96,7 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
 endif()
 
 function(larch_compile_opts PRODUCT)
-  target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -fno-omit-frame-pointer -pipe)
+  target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -fno-omit-frame-pointer -fno-stack-protector -pipe)
 
   if(${USE_ASAN})
     target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
@@ -230,6 +230,7 @@ larch_executable(larch-test
   test/test_dag_trimming.cpp
   test/test_larch_usher.cpp
   test/test_loading.cpp
+  test/test_mat_conversion.cpp
   test/test_matOptimize.cpp
   test/test_merge.cpp
   test/test_overlay.cpp

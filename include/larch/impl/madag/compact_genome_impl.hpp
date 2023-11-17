@@ -1,9 +1,9 @@
-const CompactGenome* CompactGenome::Empty() {
+const CompactGenome* CompactGenome::GetEmpty() {
   static const CompactGenome empty = {};
   return &empty;
 }
 
-static inline void AssertMut(MutationPosition, MutationBase mut) {
+static inline void AssertMut(MutationPosition, [[maybe_unused]] MutationBase mut) {
   Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T' or mut == 'N');
 }
 

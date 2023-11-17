@@ -41,28 +41,29 @@ struct Test_Move_Found_Callback
   void OnRadius() {}
 };
 
-[[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path,
-                                          std::string_view refseq_path) {
+[[maybe_unused]] static MADAGStorage<> Load(std::string_view input_dag_path,
+                                            std::string_view refseq_path) {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
-  MADAGStorage input_dag_storage =
+  MADAGStorage<> input_dag_storage =
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
   input_dag_storage.View().RecomputeCompactGenomes(true);
   return input_dag_storage;
 }
 
-[[maybe_unused]] static MADAGStorage Load(std::string_view input_dag_path) {
-  MADAGStorage input_dag_storage = LoadDAGFromProtobuf(input_dag_path);
+[[maybe_unused]] static MADAGStorage<> Load(std::string_view input_dag_path) {
+  MADAGStorage<> input_dag_storage = LoadDAGFromProtobuf(input_dag_path);
   input_dag_storage.View().RecomputeCompactGenomes(true);
-  input_dag_storage.View().SampleIdsFromCG();
+  input_dag_storage.View().SampleIdsFromCG(true);
   return input_dag_storage;
 }
 
-static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
-  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{input_dag});
-  std::vector<std::pair<decltype(AddMATConversion(MADAGStorage{{}})), MAT::Tree>>
+  std::vector<
+      std::pair<decltype(AddMATConversion(MADAGStorage<>::EmptyDefault())), MAT::Tree>>
       optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
@@ -72,6 +73,7 @@ static void test_spr(const MADAGStorage& input_dag_storage, size_t count) {
     auto chosen_node = weight.GetDAG().GetRoot();
     auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
     MAT::Tree mat;
+    sample.View().GetRoot().Validate(true);
     sample.View().BuildMAT(mat);
     sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View().Const());
@@ -99,14 +101,12 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
       auto storage = [this](std::string ref_seq) {
         std::unique_lock<std::mutex> lock{mutex_};
         Assert(sample_mat_ != nullptr);
-        using Storage = ExtendDAGStorage<
-            DefaultDAGStorage, Extend::Nodes<Deduplicate<CompactGenome>, SampleId>,
-            Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
-        auto mat_conv = AddMATConversion(Storage{{}});
+        using Storage = MergeDAGStorage<>;
+        auto mat_conv = AddMATConversion(Storage::EmptyDefault());
         mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
         check_edge_mutations(mat_conv.View());
         mat_conv.View().RecomputeCompactGenomes(true);
-        return SPRStorage(std::move(mat_conv));
+        return AddSPRStorage(std::move(mat_conv));
       }(sample_.GetReferenceSequence());
       auto spr = storage.View();
 
@@ -156,7 +156,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 };
 
 [[maybe_unused]] static void test_optimizing_with_hypothetical_tree(
-    const MADAGStorage& tree_shaped_dag) {
+    const MADAGStorage<>& tree_shaped_dag) {
   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   // this test takes a tree and uses matOptimize to apply a single move.
 
@@ -194,7 +194,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 [[maybe_unused]] static void test_sample() {
   auto input_storage = make_sample_dag();
   auto dag = input_storage.View();
-  auto spr_storage = SPRStorage(dag);
+  auto spr_storage = AddSPRStorage(dag);
   auto spr = spr_storage.View();
 
   spr.GetRoot().Validate(true);

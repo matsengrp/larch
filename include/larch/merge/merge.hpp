@@ -5,36 +5,50 @@
 #include <unordered_map>
 #include <algorithm>
 #include <shared_mutex>
+#include <mutex>
 #include <thread>
 #include <atomic>
 #include <numeric>
 
 #include <tbb/concurrent_unordered_set.h>
-#include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_vector.h>
-#include <tbb/parallel_for_each.h>
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 #include "larch/merge/leaf_set.hpp"
 #include "larch/merge/node_label.hpp"
 #include "larch/merge/edge_label.hpp"
+#include "larch/parallel/parallel_common.hpp"
 
 template <typename T>
 using ConcurrentUnorderedSet =
     tbb::concurrent_unordered_set<T, std::hash<T>, std::equal_to<T>>;
+
 template <typename K, typename V>
-using ConcurrentUnorderedMap =
-    tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
+using ConcurrentUnorderedMap = SharedState<std::unordered_map<K, V>>;
 
-using MergeDAGStorage =
-    ExtendDAGStorage<DefaultDAGStorage,
-                     Extend::Nodes<Deduplicate<CompactGenome>, Deduplicate<SampleId>>,
-                     Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+template <typename Target = DefaultDAGStorage>
+struct MergeDAGStorage;
 
-using MergeDAG = DAGView<const MergeDAGStorage>;
-using MutableMergeDAG = DAGView<MergeDAGStorage>;
+template <typename Target>
+struct LongNameOf<MergeDAGStorage<Target>> {
+  using type = ExtendStorageType<
+      MergeDAGStorage<Target>, DefaultDAGStorage,
+      Extend::Nodes<Deduplicate<CompactGenome>, Deduplicate<SampleId>>,
+      Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+};
+
+template <typename Target>
+struct MergeDAGStorage : LongNameOf<MergeDAGStorage<Target>>::type {
+  SHORT_NAME(MergeDAGStorage);
+};
+
+using MergeDAG = DAGView<const MergeDAGStorage<>>;
+using MutableMergeDAG = DAGView<MergeDAGStorage<>>;
 
 class Merge {
+  // TODO be a vector for normal DAGs and map for fragments
+  using NodeLabelsContainer = ContiguousMap<NodeId, NodeLabel>;
+
  public:
   /**
    * Construct a new Merge object, with the common reference sequence for all input
@@ -60,7 +74,7 @@ class Merge {
   inline void AddDAGs(const DAGSRange& dags, NodeId below = {});
 
   template <typename DAG>
-  inline void AddDAG(DAG& dag, NodeId below = {});
+  inline void AddDAG(DAG dag, NodeId below = {});
 
   /**
    * Get the DAG resulting from merge
@@ -76,6 +90,8 @@ class Merge {
 
   inline const ConcurrentUnorderedMap<NodeId, NodeLabel>& GetResultNodeLabels() const;
 
+  inline const ConcurrentUnorderedMap<std::string, CompactGenome>& SampleIdToCGMap() const;
+
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
    */
@@ -88,17 +104,18 @@ class Merge {
 
   template <typename DAGSRange>
   static void MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
-                                  std::vector<std::vector<NodeLabel>>& dags_labels,
+                                  std::vector<NodeLabelsContainer>& dags_labels,
+                                  ConcurrentUnorderedMap<std::string, CompactGenome>& sample_id_to_cg_map,
                                   MutableMergeDAG result_dag);
 
   template <typename DAGSRange>
   static void ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
-                              std::vector<std::vector<NodeLabel>>& dags_labels,
+                              std::vector<NodeLabelsContainer>& dags_labels,
                               ConcurrentUnorderedSet<LeafSet>& all_leaf_sets);
 
   template <typename DAGSRange>
   static void MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
-                         std::vector<std::vector<NodeLabel>>& dags_labels,
+                         const std::vector<NodeLabelsContainer>& dags_labels,
                          ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
                          ConcurrentUnorderedMap<NodeId, NodeLabel>& result_node_labels,
                          std::atomic<size_t>& node_id);
@@ -106,7 +123,8 @@ class Merge {
   template <typename DAGSRange>
   static void MergeEdges(
       size_t i, const DAGSRange& dags, NodeId below,
-      std::vector<std::vector<NodeLabel>>& dags_labels,
+      const std::vector<NodeLabelsContainer>& dags_labels,
+      const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
       ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
       tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
           added_edges);
@@ -117,7 +135,7 @@ class Merge {
           added_edges,
       std::atomic<size_t>& edge_id,
       const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-      const ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+      ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
       MutableMergeDAG result_dag);
 
   // Every unique node leaf set, found among all input DAGs.
@@ -131,7 +149,12 @@ class Merge {
   ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;
 
   // Resulting DAG from merging the input DAGs.
-  MergeDAGStorage result_dag_storage_;
+  MergeDAGStorage<> result_dag_storage_;
+
+  // Leaf nodes have a compact genome that is stored externally to the NodeLabels for merge purposes.
+  ConcurrentUnorderedMap<std::string, CompactGenome> sample_id_to_cg_map_;
+
+  std::mutex add_dags_mtx_;
 };
 
 #include "larch/impl/merge/merge_impl.hpp"

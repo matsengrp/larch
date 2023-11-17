@@ -20,9 +20,11 @@
   ordered by id.
 
 */
-template <typename Storage,
-          template <typename, typename> typename Base = DefaultViewBase>
+template <typename Storage, template <typename, typename> typename Base>
 struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
+  static_assert(Storage::role == Role::Storage);
+  static_assert(Storage::component == Component::DAG);
+
  public:
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::View;
@@ -51,9 +53,6 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   ElementView<Component::Edge, DAGView<Storage, Base>> Get(EdgeId id) const;
   /** @} */
 
-  std::optional<ElementView<Component::Edge, DAGView<Storage, Base>>> FindEdge(
-      NodeId parent_id, NodeId child_id) const;
-
   ElementView<Component::Node, DAGView<Storage, Base>> AppendNode() const;
   ElementView<Component::Edge, DAGView<Storage, Base>> AppendEdge() const;
 
@@ -69,7 +68,28 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
-  bool IsEmpty() const;
+  template <Component C>
+  size_t GetElementsCount() const {
+    if constexpr (C == Component::Node) {
+      return GetNodesCount();
+    } else {
+      return GetEdgesCount();
+    }
+  }
+  bool empty() const;
+
+  template <Component C>
+  Id<C> GetNextAvailableId() const {
+    return dag_storage_.template GetNextAvailableId<C>();
+  }
+
+  NodeId GetNextAvailableNodeId() const {
+    return GetNextAvailableId<Component::Node>();
+  }
+
+  EdgeId GetNextAvailableEdgeId() const {
+    return GetNextAvailableId<Component::Edge>();
+  }
 
   /**
    * Return a range containing Node views for each node in the DAG
@@ -84,9 +104,6 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   void InitializeNodes(size_t size) const;
   void InitializeEdges(size_t size) const;
 
-  void ClearNodes() const;
-  void ClearEdges() const;
-
   template <typename Feature>
   auto& GetFeatureStorage() const;
   template <typename Feature>
@@ -96,8 +113,7 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   template <Component C, typename Feature>
   auto& GetFeatureExtraStorage() const;
 
-  const Storage& GetStorage() const;
-  Storage& GetStorage();
+  Storage& GetStorage() const;
 
  private:
   Storage& dag_storage_;

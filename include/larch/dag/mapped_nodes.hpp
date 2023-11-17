@@ -18,6 +18,7 @@ struct FeatureMutableView<MappedNodes, CRTP, Tag> {
 
 template <>
 struct ExtraFeatureStorage<MappedNodes> {
+  MOVE_ONLY_DEF_CTOR(ExtraFeatureStorage);
   ContiguousMap<NodeId, NodeId> reverse_map_;
 };
 
@@ -31,7 +32,26 @@ struct ExtraFeatureMutableView<MappedNodes, CRTP> {
   auto GetMutableMappedNode(NodeId original_id) const;
 };
 
-template <typename DAG>
-auto AddMappedNodes(DAG&& dag) {
-  return ExtendStorage(std::forward<DAG>(dag), Extend::Nodes<MappedNodes>{});
+template <typename Target>
+struct MappedNodesStorage;
+
+template <typename Target>
+struct LongNameOf<MappedNodesStorage<Target>> {
+  using type =
+      ExtendStorageType<MappedNodesStorage<Target>, Target, Extend::Nodes<MappedNodes>>;
+};
+
+template <typename Target>
+struct MappedNodesStorage : LongNameOf<MappedNodesStorage<Target>>::type {
+  SHORT_NAME(MappedNodesStorage);
+};
+
+template <typename DAG, typename = std::enable_if_t<DAG::role == Role::Storage>>
+MappedNodesStorage<DAG> AddMappedNodes(DAG&& dag) {
+  return MappedNodesStorage<DAG>::Consume(std::move(dag));
+}
+
+template <typename DAG, typename = std::enable_if_t<DAG::role == Role::View>>
+MappedNodesStorage<DAG> AddMappedNodes(const DAG& dag) {
+  return MappedNodesStorage<DAG>::FromView(dag);
 }

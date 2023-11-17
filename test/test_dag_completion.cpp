@@ -5,7 +5,7 @@
 using Node = MutableMADAG::NodeView;
 using Edge = MutableMADAG::EdgeView;
 
-[[maybe_unused]] static void dag_info(MADAGStorage& dag_storage) {
+[[maybe_unused]] static void dag_info(MADAGStorage<>& dag_storage) {
   auto dag = dag_storage.View();
   std::cout << "=== DAG_INFO [begin] ===" << std::endl;
   std::cout << "=== NODES: " << dag.GetNodesCount() << " ===" << std::endl;
@@ -24,7 +24,7 @@ using Edge = MutableMADAG::EdgeView;
 }
 
 [[maybe_unused]] std::set<std::tuple<NodeId, NodeId, CladeIdx>> dag_make_node_pair_map(
-    MADAGStorage& dag_storage) {
+    MADAGStorage<>& dag_storage) {
   auto dag = dag_storage.View();
   std::set<std::tuple<NodeId, NodeId, CladeIdx>> node_pairs;
   for (auto edge : dag.GetEdges()) {
@@ -33,15 +33,15 @@ using Edge = MutableMADAG::EdgeView;
   return node_pairs;
 }
 
-[[maybe_unused]] bool dag_compare_topologies(MADAGStorage& lhs_storage,
-                                             MADAGStorage& rhs_storage) {
+[[maybe_unused]] bool dag_compare_topologies(MADAGStorage<>& lhs_storage,
+                                             MADAGStorage<>& rhs_storage) {
   auto lhs_node_map = dag_make_node_pair_map(lhs_storage);
   auto rhs_node_map = dag_make_node_pair_map(rhs_storage);
   bool compare_node_maps = (lhs_node_map == rhs_node_map);
   return compare_node_maps;
 }
 
-[[maybe_unused]] void dag_make_complete_rootsplits(MADAGStorage& dag_storage) {
+[[maybe_unused]] void dag_make_complete_rootsplits(MADAGStorage<>& dag_storage) {
   auto dag = dag_storage.View();
   auto clade_union_map = dag.BuildCladeUnionMap();
   size_t leaf_count = 0;
@@ -57,8 +57,8 @@ using Edge = MutableMADAG::EdgeView;
   }
 }
 
-[[maybe_unused]] void test_dag_completion_single(MADAGStorage& dag_storage,
-                                                 MADAGStorage& dag_storage_truth) {
+[[maybe_unused]] void test_dag_completion_single(MADAGStorage<>& dag_storage,
+                                                 MADAGStorage<>& dag_storage_truth) {
   auto dag = dag_storage.View();
   dag.GetRoot().CalculateLeafsBelow();
   // dag_info(dag_storage);

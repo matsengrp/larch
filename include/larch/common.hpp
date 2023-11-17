@@ -65,31 +65,24 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #define TOSTRING(x) STRINGIFY(x)
 
 #ifndef NDEBUG
-#include <csignal>
 #include <iostream>
 #define Assert(x)                                                       \
   {                                                                     \
     if (not(x)) {                                                       \
       std::cerr << "Assert failed: \"" #x "\" in " __FILE__             \
                    ":" TOSTRING(__LINE__) "\n";                         \
-      /*std::raise(SIGTRAP);*/                                          \
       throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
                                ":" TOSTRING(__LINE__));                 \
     }                                                                   \
   }
 #else
-#define Assert(x)                                                       \
-  {                                                                     \
-    if (not(x))                                                         \
-      throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
-                               ":" TOSTRING(__LINE__));                 \
-  }
+#define Assert(x) \
+  {}
 #endif
 
 [[noreturn]] inline void Fail(const char* msg) {
 #ifndef NDEBUG
   std::cerr << msg << "\n";
-  std::raise(SIGTRAP);
 #endif
   throw std::runtime_error(msg);
 }
@@ -98,8 +91,7 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x(x&&) noexcept = default;            \
   x(const x&) = delete;                 \
   x& operator=(x&&) noexcept = default; \
-  x& operator=(const x&) = delete;      \
-  ~x() = default
+  x& operator=(const x&) = delete
 
 #define MOVE_ONLY_VIRT_DTOR(x)          \
   x(x&&) noexcept = default;            \
@@ -107,6 +99,14 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x& operator=(x&&) noexcept = default; \
   x& operator=(const x&) = delete;      \
   virtual ~x() = default
+
+#define NO_COPY(x)      \
+  x(const x&) = delete; \
+  x& operator=(const x&) = delete
+
+#define MOVE_ONLY_DEF_CTOR(x) \
+  MOVE_ONLY(x);               \
+  x() = default
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -128,6 +128,10 @@ template <typename... Types, typename Type>
 struct tuple_contains<std::tuple<Types...>, Type>
     : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
 
+template <typename... Types, typename Type>
+struct tuple_contains<const std::tuple<Types...>, Type>
+    : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
+
 template <typename Tuple, typename Type>
 inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
 
@@ -138,8 +142,8 @@ inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wc++20-extensions"
 template <typename T>
-inline const auto tuple_to_string_impl = [
-]<std::size_t... I>(std::index_sequence<I...>) {
+inline const auto tuple_to_string_impl =
+    []<std::size_t... I>(std::index_sequence<I...>) {
   std::string result = "std::tuple<";
   result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
                     std::string{", "}));
