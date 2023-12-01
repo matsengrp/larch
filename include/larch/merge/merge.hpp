@@ -4,13 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
-#include <shared_mutex>
-#include <mutex>
-#include <thread>
-#include <atomic>
 #include <numeric>
-
-#include <tbb/concurrent_vector.h>
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 #include "larch/merge/leaf_set.hpp"
@@ -43,6 +37,8 @@ using MergeDAG = DAGView<const MergeDAGStorage<>>;
 using MutableMergeDAG = DAGView<MergeDAGStorage<>>;
 
 class Merge {
+  using AddedEdge = std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>;
+
  public:
   /**
    * Construct a new Merge object, with the common reference sequence for all input
@@ -117,19 +113,14 @@ class Merge {
                          std::atomic<size_t>& node_id);
 
   template <typename DAGSRange, typename NodeLabelsContainer>
-  static void MergeEdges(
-      size_t i, const DAGSRange& dags, NodeId below,
-      const std::vector<NodeLabelsContainer>& dags_labels,
-      const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-      ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
-      tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
-          added_edges);
+  static void MergeEdges(size_t i, const DAGSRange& dags, NodeId below,
+                         const std::vector<NodeLabelsContainer>& dags_labels,
+                         const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
+                         ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+                         Reduction<std::vector<AddedEdge>>& added_edges);
 
   static inline void BuildResult(
-      size_t i,
-      tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
-          added_edges,
-      std::atomic<size_t>& edge_id,
+      size_t i, std::vector<AddedEdge>& added_edges, std::atomic<size_t>& edge_id,
       const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
       ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
       MutableMergeDAG result_dag);

@@ -3,8 +3,9 @@
 #endif
 
 #include <atomic>
-#include <tbb/concurrent_vector.h>
 #include <iostream>
+
+#include "larch/parallel/reduction.hpp"
 
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Connections, CRTP, Tag>::IsTree() const {
@@ -42,7 +43,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
   storage.leafs_ = {};
   BuildConnectionsRaw();
   std::atomic<size_t> root_id{NoId};
-  tbb::concurrent_vector<NodeId> leafs;
+  Reduction<std::vector<NodeId>> leafs;
   ParallelForEach(dag.GetNodes(), [&](auto node) {
     for (auto clade : node.GetClades()) {
       Assert(not clade.empty() && "Empty clade");
@@ -56,11 +57,17 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
       Assert(previous == NoId);
     }
     if (node.IsLeaf()) {
-      leafs.push_back(node);
+      leafs.Add([](std::vector<NodeId>& ls, NodeId id) { ls.push_back(id); }, node);
     }
   });
   storage.root_.value = root_id.load();
-  storage.leafs_.insert(storage.leafs_.end(), leafs.begin(), leafs.end());
+  leafs.Gather(
+      [](auto& ls_threads, auto& stor) {
+        for (auto& ls : ls_threads) {
+          stor.leafs_.insert(stor.leafs_.end(), ls.second.begin(), ls.second.end());
+        }
+      },
+      storage);
 }
 
 template <typename CRTP, typename Tag>

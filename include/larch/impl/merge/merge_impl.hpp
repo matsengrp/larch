@@ -50,8 +50,6 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
 #endif
 
   std::atomic<size_t> node_id{ResultDAG().GetNextAvailableNodeId().value};
-  tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>
-      added_edges;
   ParallelForEach(idxs, [&](size_t i) {
     MergeNodes(i, dags, below, dags_labels, result_nodes_, result_node_labels_,
                node_id);
@@ -65,9 +63,20 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   });
 #endif
 
+  Reduction<std::vector<AddedEdge>> added_edges_reduction;
   ParallelForEach(idxs, [&](size_t i) {
-    MergeEdges(i, dags, below, dags_labels, result_nodes_, result_edges_, added_edges);
+    MergeEdges(i, dags, below, dags_labels, result_nodes_, result_edges_,
+               added_edges_reduction);
   });
+  std::vector<AddedEdge> added_edges;
+  added_edges_reduction.Gather(
+      [](auto& ae_threads, auto& result) {
+        for (auto& ae : ae_threads) {
+          result.insert(result.end(), ae.second.begin(), ae.second.end());
+        }
+      },
+      added_edges);
+  added_edges_reduction.clear();
 
   ResultDAG().InitializeNodes(
       result_nodes_.Read([](auto& result_nodes) { return result_nodes.size(); }));
@@ -322,8 +331,7 @@ void Merge::MergeEdges(
     const std::vector<NodeLabelsContainer>& dags_labels,
     [[maybe_unused]] const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
     ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
-    tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
-        added_edges) {
+    Reduction<std::vector<Merge::AddedEdge>>& added_edges) {
   auto&& dag = dags.at(i);
   const NodeLabelsContainer& labels = dags_labels.at(i);
   for (auto edge : dag.GetEdges()) {
@@ -344,19 +352,20 @@ void Merge::MergeEdges(
       return result_edges_w.insert({{parent_label, child_label}, {}}).second;
     });
     if (ins) {
-      added_edges.push_back({{parent_label, child_label}, {}, {}, {}, {}});
+      added_edges.Add(
+          [](auto& ae, auto& par_lbl, auto& ch_lbl) {
+            ae.push_back({{par_lbl, ch_lbl}, {}, {}, {}, {}});
+          },
+          parent_label, child_label);
     }
   }
 }
 
-void Merge::BuildResult(
-    size_t i,
-    tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
-        added_edges,
-    std::atomic<size_t>& edge_id,
-    const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-    ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
-    MutableMergeDAG result_dag) {
+void Merge::BuildResult(size_t i, std::vector<Merge::AddedEdge>& added_edges,
+                        std::atomic<size_t>& edge_id,
+                        const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
+                        ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+                        MutableMergeDAG result_dag) {
   auto& [edge, id, parent_id, child_id, clade] = added_edges.at(i);
   id = {edge_id.fetch_add(1)};
   auto [result_parent_label, result_parent_id, result_child_label, result_child_id] =
