@@ -485,12 +485,17 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   auto& dag = static_cast<const CRTP&>(*this);
 
   // keep track of edges/nodes that are collapsible
-  std::unordered_map<NodeId, bool> is_parent_of_collapsible_edge;
-  std::unordered_map<NodeId, bool> is_child_of_collapsible_edge;
-  std::unordered_map<NodeId, bool> parent_is_in_fragment;
-  std::unordered_map<NodeId, size_t> clades_count;
-  std::unordered_map<NodeId, bool> node_already_added;
-  std::unordered_map<EdgeId, bool> edge_already_added;
+  IdContainer<NodeId, bool, IdContinuity::Sparse, Ordering::Unordered>
+      is_parent_of_collapsible_edge;
+  IdContainer<NodeId, bool, IdContinuity::Sparse, Ordering::Unordered>
+      is_child_of_collapsible_edge;
+  IdContainer<NodeId, bool, IdContinuity::Sparse, Ordering::Unordered>
+      parent_is_in_fragment;
+  IdContainer<NodeId, size_t, IdContinuity::Sparse, Ordering::Unordered> clades_count;
+  IdContainer<NodeId, bool, IdContinuity::Sparse, Ordering::Unordered>
+      node_already_added;
+  IdContainer<EdgeId, bool, IdContinuity::Sparse, Ordering::Unordered>
+      edge_already_added;
   for (auto edge_id : fragment_edges) {
     auto edge = dag.Get(edge_id);
     auto parent = edge.GetParent();

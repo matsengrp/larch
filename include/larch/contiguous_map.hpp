@@ -2,12 +2,17 @@
 
 #include <vector>
 #include <algorithm>
+#include <initializer_list>
+
+#include "larch/tc_vector.hpp"
 
 template <typename K, typename V>
 class ContiguousMap {
  public:
   using value_type = std::pair<K, V>;
-  using storage_type = std::vector<value_type>;
+  using storage_type =
+      std::conditional_t<std::is_trivially_copyable_v<value_type>, TCVector<value_type>,
+                         std::vector<value_type>>;
   using iterator = typename storage_type::iterator;
   using const_iterator = typename storage_type::const_iterator;
 
@@ -16,6 +21,10 @@ class ContiguousMap {
   ContiguousMap& operator=(ContiguousMap&&) noexcept = default;
   ContiguousMap& operator=(const ContiguousMap&) = delete;
   ~ContiguousMap() = default;
+
+  ContiguousMap(std::initializer_list<value_type> init) : data_{init} {
+    data_ |= ranges::actions::sort | ranges::actions::unique;
+  }
 
   ContiguousMap Copy() const { return ContiguousMap{*this}; }
 
@@ -73,23 +82,14 @@ class ContiguousMap {
     }
   }
 
-  iterator insert_or_assign(value_type&& value) {
-    auto it = find(value.first);
-    if (it != end() and it->first == value.first) {
-      it->second = std::forward<V>(value.second);
-      return it;
+  template <typename Mapped>
+  std::pair<iterator, bool> insert_or_assign(const K& key, Mapped&& value) {
+    auto it = find(key);
+    if (it != end() and it->first == key) {
+      it->second = std::forward<Mapped>(value);
+      return {it, false};
     } else {
-      return Insert(it, value);
-    }
-  }
-
-  iterator insert_or_assign(const value_type& value) {
-    auto it = find(value.first);
-    if (it != end() and it->first == value.first) {
-      it->second = value.second;
-      return it;
-    } else {
-      return Insert(it, value);
+      return {Insert(it, {key, std::forward<Mapped>(value)}), true};
     }
   }
 

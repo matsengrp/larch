@@ -28,8 +28,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SetReferenceSequence(
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
-    SetCompactGenomesFromNodeSequenceMap(
-        const std::unordered_map<NodeId, std::string>& node_sequence_map) const {
+    SetCompactGenomesFromNodeSequenceMap(const NodeSeqMap& node_sequence_map) const {
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
 
@@ -49,9 +48,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
-    SetCompactGenomesFromNodeMutationMap(
-        std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>&&
-            node_mutation_map) const {
+    SetCompactGenomesFromNodeMutationMap(NodeMutMap&& node_mutation_map) const {
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
 
@@ -71,9 +68,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
-    UpdateCompactGenomesFromNodeMutationMap(
-        std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>&&
-            node_mutation_map) const {
+    UpdateCompactGenomesFromNodeMutationMap(NodeMutMap&& node_mutation_map) const {
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
 

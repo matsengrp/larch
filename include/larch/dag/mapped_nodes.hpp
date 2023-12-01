@@ -19,7 +19,7 @@ struct FeatureMutableView<MappedNodes, CRTP, Tag> {
 template <>
 struct ExtraFeatureStorage<MappedNodes> {
   MOVE_ONLY_DEF_CTOR(ExtraFeatureStorage);
-  ContiguousMap<NodeId, NodeId> reverse_map_;
+  IdContainer<NodeId, NodeId, IdContinuity::Sparse, Ordering::Ordered> reverse_map_;
 };
 
 template <typename CRTP>

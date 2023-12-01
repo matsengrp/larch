@@ -24,8 +24,8 @@ Id<C> ElementsContainer<C, ElementStorageT, Features...>::Append() {
 
 template <Component C, typename ElementStorageT, typename... Features>
 void ElementsContainer<C, ElementStorageT, Features...>::Add(Id<C> id) {
-  std::ignore = GetOrInsert(elements_storage_, id);
-  std::ignore = GetOrInsert(features_storage_, id);
+  elements_storage_[id];
+  features_storage_[id];
 }
 
 template <Component C, typename ElementStorageT, typename... Features>
@@ -44,9 +44,9 @@ template <Component C, typename ElementStorageT, typename... Features>
 template <typename Feature>
 auto& ElementsContainer<C, ElementStorageT, Features...>::GetFeatureStorage(Id<C> id) {
   if constexpr (tuple_contains_v<std::tuple<Features...>, Feature>) {
-    return std::get<Feature>(features_storage_.at(id.value));
+    return std::get<Feature>(features_storage_.at(id));
   } else {
-    return elements_storage_.at(id.value).template GetFeatureStorage<Feature>();
+    return elements_storage_.at(id).template GetFeatureStorage<Feature>();
   }
 }
 
@@ -55,9 +55,9 @@ template <typename Feature>
 const auto& ElementsContainer<C, ElementStorageT, Features...>::GetFeatureStorage(
     Id<C> id) const {
   if constexpr (tuple_contains_v<std::tuple<Features...>, Feature>) {
-    return std::get<Feature>(features_storage_.at(id.value));
+    return std::get<Feature>(features_storage_.at(id));
   } else {
-    return elements_storage_.at(id.value).template GetFeatureStorage<Feature>();
+    return elements_storage_.at(id).template GetFeatureStorage<Feature>();
   }
 }
 

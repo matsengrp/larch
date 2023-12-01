@@ -5,6 +5,7 @@
 #include <iostream>
 #include <set>
 #include "larch/contiguous_set.hpp"
+#include "larch/id_container.hpp"
 
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetParents() const {
@@ -124,11 +125,8 @@ void MADAGToDOTCycle(DAG dag, std::ostream& out, const std::deque<EdgeId>& path1
   out << "}\n";
 }
 
-template <typename Edge>
-void CheckCycle(
-    Edge edge,
-    ContiguousMap<EdgeId, std::tuple<bool, bool, std::deque<EdgeId>>>& visited_finished,
-    std::deque<EdgeId>& path) {
+template <typename Edge, typename VisitedType>
+void CheckCycle(Edge edge, VisitedType& visited_finished, std::deque<EdgeId>& path) {
   auto& [visited, finished, first_path] = visited_finished[edge.GetId()];
   if (finished) {
     return;
@@ -246,8 +244,10 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
     }
     Assert(edge_count == dag.GetEdgesCount());
     if (not allow_dag) {
-      // TODO vector/map
-      ContiguousMap<EdgeId, std::tuple<bool, bool, std::deque<EdgeId>>>
+      constexpr IdContinuity id_continuity =
+          decltype(dag)::template id_continuity<Component::Node>;
+      IdContainer<EdgeId, std::tuple<bool, bool, std::deque<EdgeId>>, id_continuity,
+                  Ordering::Ordered>
           visited_finished;
       visited_finished.reserve(dag.GetEdgesCount());
       std::deque<EdgeId> path;

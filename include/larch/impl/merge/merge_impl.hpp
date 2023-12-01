@@ -27,7 +27,10 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     dags.at(i).GetRoot().Validate(true, not dags.at(i).IsTree());
   });
 
-  std::vector<NodeLabelsContainer> dags_labels;
+  constexpr IdContinuity id_continuity = std::remove_reference_t<decltype(dags.at(
+      0))>::template id_continuity<Component::Node>;
+  std::vector<IdContainer<NodeId, NodeLabel, id_continuity, Ordering::Ordered>>
+      dags_labels;
   dags_labels.resize(dags.size());
 
   ParallelForEach(idxs, [&](size_t i) {
@@ -204,7 +207,7 @@ auto GetFullDAG(DAGView<const FragmentStorage<DAG>, Base> dag) {
 
 }  // namespace
 
-template <typename DAGSRange>
+template <typename DAGSRange, typename NodeLabelsContainer>
 void Merge::MergeCompactGenomes(
     size_t i, const DAGSRange& dags, NodeId below,
     std::vector<NodeLabelsContainer>& dags_labels,
@@ -214,7 +217,7 @@ void Merge::MergeCompactGenomes(
   dag.AssertUA();
   auto& labels = dags_labels.at(i);
   for (auto node : dag.Const().GetNodes()) {
-    labels.insert({node, {}});
+    labels.insert({node, {}});  // TODO Initialize
   }
 
   for (auto node : dag.Const().GetNodes()) {
@@ -245,13 +248,15 @@ void Merge::MergeCompactGenomes(
   }
 }
 
-template <typename DAGSRange>
+template <typename DAGSRange, typename NodeLabelsContainer>
 void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
                             std::vector<NodeLabelsContainer>& dags_labels,
                             ConcurrentUnorderedSet<LeafSet>& all_leaf_sets) {
   auto dag = GetFullDAG(dags.at(i));
   NodeLabelsContainer& labels = dags_labels.at(i);
-  ContiguousMap<NodeId, LeafSet> computed_ls = LeafSet::ComputeLeafSets(dag, labels);
+  using ComputedLSType =
+      IdContainer<NodeId, LeafSet, IdContinuity::Sparse, Ordering::Ordered>;
+  ComputedLSType computed_ls = LeafSet::ComputeLeafSets<ComputedLSType>(dag, labels);
   for (auto node : dag.GetNodes()) {
     if (below.value != NoId and node.IsUA()) {
       continue;
@@ -266,7 +271,7 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
   }
 }
 
-template <typename DAGSRange>
+template <typename DAGSRange, typename NodeLabelsContainer>
 void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
                        const std::vector<NodeLabelsContainer>& dags_labels,
                        ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
@@ -305,7 +310,7 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
   }
 }
 
-template <typename DAGSRange>
+template <typename DAGSRange, typename NodeLabelsContainer>
 void Merge::MergeEdges(
     size_t i, const DAGSRange& dags, NodeId below,
     const std::vector<NodeLabelsContainer>& dags_labels,

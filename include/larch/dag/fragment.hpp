@@ -14,6 +14,8 @@ struct FragmentElementsContainer {
       std::conditional_t<C == Component::Node, typename TargetStorage::AllNodeFeatures,
                          typename TargetStorage::AllEdgeFeatures>;
 
+  static constexpr IdContinuity id_continuity = IdContinuity::Sparse;
+
   template <typename Feature>
   static const bool contains_element_feature =
       TargetStorage::template contains_element_feature<C, Feature>;
@@ -54,8 +56,10 @@ struct FragmentElementsContainer {
  private:
   Target target_;
   const std::vector<Id<C>> ids_;
-  std::conditional_t<C == Component::Node, ContiguousMap<NodeId, Neighbors>,
-                     std::tuple<>>
+  std::conditional_t<
+      C == Component::Node,
+      IdContainer<NodeId, Neighbors, IdContinuity::Sparse, Ordering::Ordered>,
+      std::tuple<>>
       fragment_element_features_;
 };
 

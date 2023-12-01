@@ -513,7 +513,7 @@ void MADAGApplyCompactGenomeData(
   auto dag = dag_storage.View();
   // Convert node names to ids.
   std::unordered_map<std::string, bool> visited_ids;
-  std::unordered_map<NodeId, CompactGenomeData> tmp_mut_map;
+  NodeMutMap tmp_mut_map;
   for (auto node : dag.GetNodes()) {
     if (node.GetSampleId().has_value() and
         mut_map.find(node.GetSampleId().value()) != mut_map.end()) {

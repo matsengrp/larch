@@ -10,21 +10,23 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsOverlaid() const {
   auto& storage = element_view.GetDAG().GetStorage();
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     if (id < storage.GetTarget().GetNextAvailableNodeId()) {
-      auto it = std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_)
-                    .find(id);
-      return it !=
-             std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_)
-                 .end();
+      auto it =
+          std::get<OverlayFeatureStorageType<NodeId, F>>(storage.replaced_node_storage_)
+              .find(id);
+      return it != std::get<OverlayFeatureStorageType<NodeId, F>>(
+                       storage.replaced_node_storage_)
+                       .end();
     } else {
       return true;
     }
   } else {
     if (id < storage.GetTarget().GetNextAvailableEdgeId()) {
-      auto it = std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_)
-                    .find(id);
-      return it !=
-             std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_)
-                 .end();
+      auto it =
+          std::get<OverlayFeatureStorageType<EdgeId, F>>(storage.replaced_edge_storage_)
+              .find(id);
+      return it != std::get<OverlayFeatureStorageType<EdgeId, F>>(
+                       storage.replaced_edge_storage_)
+                       .end();
     } else {
       return true;
     }
@@ -55,7 +57,7 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     Assert(id < storage.GetTarget().GetNextAvailableNodeId());
     auto& replaced_node_storage =
-        std::get<std::unordered_map<NodeId, F>>(storage.replaced_node_storage_);
+        std::get<OverlayFeatureStorageType<NodeId, F>>(storage.replaced_node_storage_);
     Assert(replaced_node_storage.find(id) == replaced_node_storage.end());
     if constexpr (std::is_copy_assignable_v<F>) {
       replaced_node_storage[id] = storage.GetTarget().template GetFeatureStorage<F>(id);
@@ -66,7 +68,7 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   } else {
     Assert(id < storage.GetTarget().GetNextAvailableEdgeId());
     auto& replaced_edge_storage =
-        std::get<std::unordered_map<EdgeId, F>>(storage.replaced_edge_storage_);
+        std::get<OverlayFeatureStorageType<EdgeId, F>>(storage.replaced_edge_storage_);
     Assert(replaced_edge_storage.find(id) == replaced_edge_storage.end());
     if constexpr (std::is_copy_assignable_v<F>) {
       replaced_edge_storage[id] = storage.GetTarget().template GetFeatureStorage<F>(id);
@@ -252,9 +254,11 @@ auto OverlayDAGStorage<ShortName, Target>::GetFeatureStorageImpl(
   Assert(id < self.template GetNextAvailableId<Component::Node>());
   if (id < self.GetTarget().GetNextAvailableNodeId()) {
     auto it =
-        std::get<std::unordered_map<NodeId, F>>(self.replaced_node_storage_).find(id);
+        std::get<OverlayFeatureStorageType<NodeId, F>>(self.replaced_node_storage_)
+            .find(id);
     if (it ==
-        std::get<std::unordered_map<NodeId, F>>(self.replaced_node_storage_).end()) {
+        std::get<OverlayFeatureStorageType<NodeId, F>>(self.replaced_node_storage_)
+            .end()) {
       if constexpr (not std::is_const_v<OverlayStorageType> and
                     OverlayStorageType::TargetView::is_mutable) {
         Fail("Can't modify non-overlaid node");
@@ -279,9 +283,11 @@ auto OverlayDAGStorage<ShortName, Target>::GetFeatureStorageImpl(
   Assert(id < self.template GetNextAvailableId<Component::Edge>());
   if (id < self.GetTarget().GetNextAvailableEdgeId()) {
     auto it =
-        std::get<std::unordered_map<EdgeId, F>>(self.replaced_edge_storage_).find(id);
+        std::get<OverlayFeatureStorageType<EdgeId, F>>(self.replaced_edge_storage_)
+            .find(id);
     if (it ==
-        std::get<std::unordered_map<EdgeId, F>>(self.replaced_edge_storage_).end()) {
+        std::get<OverlayFeatureStorageType<EdgeId, F>>(self.replaced_edge_storage_)
+            .end()) {
       if constexpr (not std::is_const_v<OverlayStorageType> and
                     OverlayStorageType::TargetView::is_mutable) {
         Fail("Can't modify non-overlaid edge");

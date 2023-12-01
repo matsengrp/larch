@@ -2,8 +2,6 @@
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 
-using NodeSeqMap = std::unordered_map<NodeId, std::string>;
-
 [[maybe_unused]] static auto make_sample_dag() {
   MADAGStorage<> input_storage = MADAGStorage<>::EmptyDefault();
   auto dag = input_storage.View();

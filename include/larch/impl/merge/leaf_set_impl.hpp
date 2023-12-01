@@ -39,9 +39,8 @@ LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
       }()},
       hash_{ComputeHash(clades_)} {}
 
-template <typename Node>
-LeafSet::LeafSet(Node node, const ContiguousMap<NodeId, NodeLabel>& labels,
-                 ContiguousMap<NodeId, LeafSet>& computed_leafsets)
+template <typename Node, typename LabelsType, typename ComputedLSType>
+LeafSet::LeafSet(Node node, const LabelsType& labels, ComputedLSType& computed_leafsets)
     : clades_{[&] {
         std::vector<std::vector<UniqueData>> clades;
         clades.reserve(node.GetCladesCount());
@@ -127,10 +126,9 @@ std::string LeafSet::ToString() const {
   return result + "}";
 }
 
-template <typename DAGType>
-ContiguousMap<NodeId, LeafSet> LeafSet::ComputeLeafSets(
-    DAGType dag, const ContiguousMap<NodeId, NodeLabel>& labels) {
-  ContiguousMap<NodeId, LeafSet> result;
+template <typename ResultType, typename DAGType, typename LabelsType>
+ResultType LeafSet::ComputeLeafSets(DAGType dag, const LabelsType& labels) {
+  ResultType result;
   auto ComputeLS = [&](auto& self, auto for_node) {
     if (not result[for_node].empty()) {
       return;

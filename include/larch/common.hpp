@@ -17,6 +17,11 @@
 #include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
 
+template <typename T>
+struct type_identity {
+  using type = T;
+};
+
 struct NodeId;
 struct EdgeId;
 struct CladeIdx;
