@@ -2,9 +2,10 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+#include "larch/parallel/shared_state.hpp"
+
 template <typename T>
-using ConcurrentUnorderedSet =
-    tbb::concurrent_unordered_set<T, std::hash<T>, std::equal_to<T>>;
+using ConcurrentUnorderedSet = SharedState<std::unordered_set<T>>;
 
 /**
  * Used with any per-element feature to ensure that a single unique copy of

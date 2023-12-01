@@ -99,7 +99,7 @@ static void test_case_20d() {
     trees.push_back({});
     paths_idx.push_back({i, paths.at(i)});
   }
-  tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
+  ParallelForEach(paths_idx, [&](auto path_idx) {
     trees.at(path_idx.first) = std::make_unique<MADAGStorage<>>(LoadTreeFromProtobuf(
         path_idx.second, correct_result.View().GetReferenceSequence()));
     for (auto node : trees.at(path_idx.first)->View().GetNodes()) {

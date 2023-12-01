@@ -25,8 +25,11 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
   auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<Deduplicate<Feature>>()
                            .deduplicated_;
-  const Feature* result =
-      std::addressof(*deduplicated.insert(std::forward<Feature>(feature)).first);
+  const Feature* result = deduplicated.Write(
+      [](auto& write, Feature&& feat) {
+        return std::addressof(*write.insert(std::forward<Feature>(feat)).first);
+      },
+      std::forward<Feature>(feature));
   static_cast<const CRTP&>(*this)
       .template GetFeatureStorage<Deduplicate<Feature>>()
       .feature_ = result;
@@ -53,11 +56,15 @@ const Feature* ExtraFeatureConstView<Deduplicate<Feature>, CRTP>::FindDeduplicat
   auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<C, Deduplicate<Feature>>()
                            .deduplicated_;
-  auto result = deduplicated.find(feature);  // TODO Lock?
-  if (result == deduplicated.end()) {
-    return nullptr;
-  }
-  return std::addressof(*result);
+  return deduplicated.Read(
+      [](auto& read, const Feature& feat) {
+        auto result = read.find(feat);
+        if (result == read.end()) {
+          return nullptr;
+        }
+        return std::addressof(*result);
+      },
+      feature);
 }
 
 template <typename Feature, typename CRTP>
@@ -71,10 +78,22 @@ ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>::AddDeduplicated(
   auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<C, Deduplicate<Feature>>()
                            .deduplicated_;
-  auto existing = deduplicated.find(feature);
-  if (existing != deduplicated.end()) {
-    return {std::addressof(*existing), false};
+  auto* existing = deduplicated.Read(
+      [](auto& read, const Feature& feat) -> const Feature* {
+        auto result = read.find(feat);
+        if (result == read.end()) {
+          return nullptr;
+        }
+        return std::addressof(*result);
+      },
+      feature);
+  if (existing != nullptr) {
+    return {existing, false};
   }
-  auto [iter, success] = deduplicated.insert(feature.Copy());
-  return {std::addressof(*iter), success};
+  return deduplicated.Write(
+      [](auto& write, const Feature& feat) -> std::pair<const Feature*, bool> {
+        auto [iter, success] = write.insert(feat.Copy());
+        return {std::addressof(*iter), success};
+      },
+      feature);
 }

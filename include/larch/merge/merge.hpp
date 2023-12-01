@@ -10,20 +10,15 @@
 #include <atomic>
 #include <numeric>
 
-#include <tbb/concurrent_unordered_set.h>
 #include <tbb/concurrent_vector.h>
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 #include "larch/merge/leaf_set.hpp"
 #include "larch/merge/node_label.hpp"
 #include "larch/merge/edge_label.hpp"
-#include "larch/parallel/parallel_common.hpp"
+#include "larch/parallel/shared_state.hpp"
 
 #include "larch/id_container.hpp"
-
-template <typename T>
-using ConcurrentUnorderedSet =
-    tbb::concurrent_unordered_set<T, std::hash<T>, std::equal_to<T>>;
 
 template <typename K, typename V>
 using ConcurrentUnorderedMap = SharedState<std::unordered_map<K, V>>;

@@ -183,7 +183,9 @@ void Merge::ComputeResultEdgeMutations() {
 }
 
 bool Merge::ContainsLeafset(const LeafSet& leafset) const {
-  return all_leaf_sets_.find(leafset) != all_leaf_sets_.end();
+  return all_leaf_sets_.Read(
+      [](auto& read, const LeafSet& ls) { return read.find(ls) != read.end(); },
+      leafset);
 }
 
 namespace {
@@ -264,8 +266,12 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
     auto& label = labels.at(node);
     auto& ls = computed_ls.at(node);
     if (not ls.empty()) {
-      auto ls_iter = all_leaf_sets.insert(std::move(ls));
-      label.SetLeafSet(std::addressof(*ls_iter.first));
+      all_leaf_sets.Write(
+          [](auto& write, auto& lset, auto& lbl) {
+            auto ls_iter = write.insert(std::move(lset));
+            lbl.SetLeafSet(std::addressof(*ls_iter.first));
+          },
+          ls, label);
     }
     Assert(not label.empty());
   }
