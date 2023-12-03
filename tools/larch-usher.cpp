@@ -155,20 +155,24 @@ struct Treebased_Move_Found_Callback
                                /*nodes_with_major_allele_set_change*/) {
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
-      auto src_leaf_set = this->GetMerge().GetResultNodeLabels().ReadShared(
-          [](auto& result_node_labels_r, auto node_inst) {
-            return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
-          },
-          this->GetMappedStorage()
-              .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
-              .GetOriginalId());
-      auto dst_leaf_set = this->GetMerge().GetResultNodeLabels().ReadShared(
-          [](auto& result_node_labels_r, auto node_inst) {
-            return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
-          },
-          this->GetMappedStorage()
-              .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
-              .GetOriginalId());
+      auto src_leaf_set =
+          this->GetMerge()
+              .GetResultNodeLabels()
+              .at(this->GetMappedStorage()
+                      .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                      .GetOriginalId())
+              .GetLeafSet()
+              ->GetClades();
+
+      auto dst_leaf_set =
+          this->GetMerge()
+              .GetResultNodeLabels()
+              .at(this->GetMappedStorage()
+                      .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                      .GetOriginalId())
+              .GetLeafSet()
+              ->GetClades();
+
       for (auto hypothetical_node : fragment.GetNodes()) {
         if (hypothetical_node.IsMoveNew()) {
           if (not(this->GetMerge().ContainsLeafset(
@@ -183,15 +187,14 @@ struct Treebased_Move_Found_Callback
                       move.dst->node_id or
                   hypothetical_node.GetOld().GetMATNode()->is_root())) {
             const auto& current_leaf_sets =
-                this->GetMerge().GetResultNodeLabels().ReadShared(
-                    [](auto& result_node_labels_r, auto node_inst) {
-                      return result_node_labels_r.at(node_inst)
-                          .GetLeafSet()
-                          ->GetClades();
-                    },
-                    this->GetMappedStorage()
-                        .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
-                        .GetOriginalId());
+                this->GetMerge()
+                    .GetResultNodeLabels()
+                    .at(this->GetMappedStorage()
+                            .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                            .GetOriginalId())
+                    .GetLeafSet()
+                    ->GetClades();
+
             if (not(this->GetMerge().ContainsLeafset(
                         clades_difference(current_leaf_sets, src_leaf_set)) and
                     this->GetMerge().ContainsLeafset(
@@ -283,20 +286,24 @@ struct Merge_All_Profitable_Moves_Found_Callback
                                /*nodes_with_major_allele_set_change*/) {
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
-      auto src_leaf_set = this->GetMerge().GetResultNodeLabels().ReadShared(
-          [](auto& result_node_labels_r, auto node_inst) {
-            return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
-          },
-          this->GetMappedStorage()
-              .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
-              .GetOriginalId());
-      auto dst_leaf_set = this->GetMerge().GetResultNodeLabels().ReadShared(
-          [](auto& result_node_labels_r, auto node_inst) {
-            return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
-          },
-          this->GetMappedStorage()
-              .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
-              .GetOriginalId());
+      auto src_leaf_set =
+          this->GetMerge()
+              .GetResultNodeLabels()
+              .at(this->GetMappedStorage()
+                      .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                      .GetOriginalId())
+              .GetLeafSet()
+              ->GetClades();
+
+      auto dst_leaf_set =
+          this->GetMerge()
+              .GetResultNodeLabels()
+              .at(this->GetMappedStorage()
+                      .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                      .GetOriginalId())
+              .GetLeafSet()
+              ->GetClades();
+
       for (auto hypothetical_node : fragment.GetNodes()) {
         if (hypothetical_node.IsMoveNew()) {
           if (not(this->GetMerge().ContainsLeafset(
@@ -311,15 +318,14 @@ struct Merge_All_Profitable_Moves_Found_Callback
                       move.dst->node_id or
                   hypothetical_node.GetOld().GetMATNode()->is_root())) {
             const auto& current_leaf_sets =
-                this->GetMerge().GetResultNodeLabels().ReadShared(
-                    [](auto& result_node_labels_r, auto node_inst) {
-                      return result_node_labels_r.at(node_inst)
-                          .GetLeafSet()
-                          ->GetClades();
-                    },
-                    this->GetMappedStorage()
-                        .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
-                        .GetOriginalId());
+                this->GetMerge()
+                    .GetResultNodeLabels()
+                    .at(this->GetMappedStorage()
+                            .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                            .GetOriginalId())
+                    .GetLeafSet()
+                    ->GetClades();
+
             if (not(this->GetMerge().ContainsLeafset(
                         clades_difference(current_leaf_sets, src_leaf_set)) and
                     this->GetMerge().ContainsLeafset(
@@ -396,20 +402,24 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
                                /*nodes_with_major_allele_set_change*/) {
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
-      auto src_leaf_set = this->GetMerge().GetResultNodeLabels().ReadShared(
-          [](auto& result_node_labels_r, auto node_inst) {
-            return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
-          },
-          this->GetMappedStorage()
-              .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
-              .GetOriginalId());
-      auto dst_leaf_set = this->GetMerge().GetResultNodeLabels().ReadShared(
-          [](auto& result_node_labels_r, auto node_inst) {
-            return result_node_labels_r.at(node_inst).GetLeafSet()->GetClades();
-          },
-          this->GetMappedStorage()
-              .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
-              .GetOriginalId());
+      auto src_leaf_set =
+          this->GetMerge()
+              .GetResultNodeLabels()
+              .at(this->GetMappedStorage()
+                      .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                      .GetOriginalId())
+              .GetLeafSet()
+              ->GetClades();
+
+      auto dst_leaf_set =
+          this->GetMerge()
+              .GetResultNodeLabels()
+              .at(this->GetMappedStorage()
+                      .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                      .GetOriginalId())
+              .GetLeafSet()
+              ->GetClades();
+
       for (auto hypothetical_node : fragment.GetNodes()) {
         if (hypothetical_node.IsMoveNew()) {
           if (not(this->GetMerge().ContainsLeafset(
@@ -424,15 +434,14 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
                       move.dst->node_id or
                   hypothetical_node.GetOld().GetMATNode()->is_root())) {
             const auto& current_leaf_sets =
-                this->GetMerge().GetResultNodeLabels().ReadShared(
-                    [](auto& result_node_labels_r, auto node_inst) {
-                      return result_node_labels_r.at(node_inst)
-                          .GetLeafSet()
-                          ->GetClades();
-                    },
-                    this->GetMappedStorage()
-                        .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
-                        .GetOriginalId());
+                this->GetMerge()
+                    .GetResultNodeLabels()
+                    .at(this->GetMappedStorage()
+                            .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                            .GetOriginalId())
+                    .GetLeafSet()
+                    ->GetClades();
+
             if (not(this->GetMerge().ContainsLeafset(
                         clades_difference(current_leaf_sets, src_leaf_set)) and
                     this->GetMerge().ContainsLeafset(

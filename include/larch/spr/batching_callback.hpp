@@ -29,7 +29,7 @@ class BatchingCallback : public Move_Found_Callback {
   void operator()(MAT::Tree& tree);
 
   void OnReassignedStates(MAT::Tree& tree);
-  const ConcurrentUnorderedMap<std::string, CompactGenome>& GetSampleIdToCGMap() const;
+  const GrowableHashMap<std::string, CompactGenome>& GetSampleIdToCGMap() const;
 
  protected:
   Merge& GetMerge();

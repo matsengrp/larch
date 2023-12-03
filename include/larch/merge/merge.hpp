@@ -15,9 +15,6 @@
 
 #include "larch/id_container.hpp"
 
-template <typename K, typename V>
-using ConcurrentUnorderedMap = SharedState<std::unordered_map<K, V>>;
-
 template <typename Target = DefaultDAGStorage>
 struct MergeDAGStorage;
 
@@ -81,8 +78,7 @@ class Merge {
 
   inline const GrowableHashMap<NodeId, NodeLabel>& GetResultNodeLabels() const;
 
-  inline const ConcurrentUnorderedMap<std::string, CompactGenome>& SampleIdToCGMap()
-      const;
+  inline const GrowableHashMap<std::string, CompactGenome>& SampleIdToCGMap() const;
 
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
@@ -98,7 +94,7 @@ class Merge {
   static void MergeCompactGenomes(
       size_t i, const DAGSRange& dags, NodeId below,
       std::vector<NodeLabelsContainer>& dags_labels,
-      ConcurrentUnorderedMap<std::string, CompactGenome>& sample_id_to_cg_map,
+      GrowableHashMap<std::string, CompactGenome>& sample_id_to_cg_map,
       MutableMergeDAG result_dag);
 
   template <typename DAGSRange, typename NodeLabelsContainer>
@@ -141,7 +137,7 @@ class Merge {
 
   // Leaf nodes have a compact genome that is stored externally to the NodeLabels for
   // merge purposes.
-  ConcurrentUnorderedMap<std::string, CompactGenome> sample_id_to_cg_map_;
+  GrowableHashMap<std::string, CompactGenome> sample_id_to_cg_map_{32};
 
   std::mutex add_dags_mtx_;
 };

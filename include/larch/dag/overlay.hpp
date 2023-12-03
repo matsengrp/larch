@@ -30,7 +30,7 @@ struct FeatureMutableView<OverlayDAG, CRTP, Tag> {};
 
 template <typename Id, typename Feature>
 using OverlayFeatureStorageType =
-    IdContainer<Id, Feature, IdContinuity::Sparse, Ordering::Ordered>;
+    IdContainer<Id, Feature, IdContinuity::Sparse, Ordering::Unordered>;
 
 namespace {
 template <typename>
