@@ -1,46 +1,48 @@
 #pragma once
 
-#include <unordered_map>
-
 #include "larch/parallel/parallel_common.hpp"
 
 template <typename Container>
 class Reduction {
-  using DataType = std::unordered_map<std::thread::id, Container>;
-
  public:
+  explicit Reduction(size_t buckets) : buckets_{buckets} {}
+
   template <typename F, typename... Args>
-  void Add(F&& func, Args&&... args) {
-    auto rlock = ReadLock(mutex_);
-    auto it = data_.find(std::this_thread::get_id());
-    if (it == data_.end()) {
-      rlock.unlock();
-      auto wlock = WriteLock(mutex_);
-      Container& container = data_[std::this_thread::get_id()];
-      wlock.unlock();
-      std::invoke(std::forward<F>(func), static_cast<Container&>(container),
-                  std::forward<Args>(args)...);
-    } else {
-      Container& container = it->second;
-      rlock.unlock();
-      std::invoke(std::forward<F>(func), static_cast<Container&>(container),
-                  std::forward<Args>(args)...);
+  void AddElement(F&& func, Args&&... args) {
+    auto& [mutex, data] = [this]() -> auto& {
+      while (true) {
+        for (auto& i : buckets_) {
+          if (i.mutex_.try_lock()) {
+            return i;
+          }
+        }
+      }
+    }
+    ();
+    std::invoke(std::forward<F>(func), static_cast<Container&>(data),
+                std::forward<Args>(args)...);
+    mutex.unlock();
+  }
+
+  template <typename F, typename... Args>
+  void GatherAndClear(F&& func, Args&&... args) {
+    for (auto& i : buckets_) {
+      i.mutex_.lock();
+    }
+    auto data = buckets_ | ranges::views::transform(
+                               [](const auto& i) -> const auto& { return i.data_; });
+    std::invoke(std::forward<F>(func), data, std::forward<Args>(args)...);
+    buckets_ = FixedArray<Bucket>{buckets_.size()};
+    for (auto& i : buckets_) {
+      i.mutex_.unlock();
     }
   }
 
-  template <typename F, typename... Args>
-  void Gather(F&& func, Args&&... args) const {
-    auto lock = WriteLock(mutex_);
-    std::invoke(std::forward<F>(func), static_cast<const DataType&>(data_),
-                std::forward<Args>(args)...);
-  }
-
-  void clear() {
-    auto lock = WriteLock(mutex_);
-    data_.clear();
-  }
-
  private:
-  mutable std::shared_mutex mutex_;
-  DataType data_;
+  struct Bucket {
+    std::mutex mutex_;
+    Container data_;
+  };
+
+  FixedArray<Bucket> buckets_;
 };

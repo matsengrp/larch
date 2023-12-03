@@ -1,6 +1,6 @@
 #pragma once
 
-#include "larch/parallel/parallel_common.hpp"
+#include "larch/parallel/rw_lock.hpp"
 
 template <typename T, typename M = std::shared_mutex>
 class SharedState {
@@ -22,7 +22,7 @@ class SharedState {
   };
 
   template <typename F, typename... Args>
-  decltype(auto) Read(F&& func, Args&&... args) const {
+  decltype(auto) ReadShared(F&& func, Args&&... args) const {
     auto lock = ReadLock(mutex_);
     if constexpr (std::is_void_v<decltype(std::invoke(std::forward<F>(func),
                                                       static_cast<const T&>(target_),
@@ -36,7 +36,7 @@ class SharedState {
   }
 
   template <typename F, typename... Args>
-  decltype(auto) Write(F&& func, Args&&... args) {
+  decltype(auto) WriteShared(F&& func, Args&&... args) {
     auto lock = WriteLock(mutex_);
     if constexpr (std::is_void_v<decltype(std::invoke(std::forward<F>(func),
                                                       static_cast<T&>(target_),

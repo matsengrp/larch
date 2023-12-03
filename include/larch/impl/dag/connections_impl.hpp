@@ -43,7 +43,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
   storage.leafs_ = {};
   BuildConnectionsRaw();
   std::atomic<size_t> root_id{NoId};
-  Reduction<std::vector<NodeId>> leafs;
+  Reduction<std::vector<NodeId>> leafs{32};
   ParallelForEach(dag.GetNodes(), [&](auto node) {
     for (auto clade : node.GetClades()) {
       Assert(not clade.empty() && "Empty clade");
@@ -57,14 +57,16 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
       Assert(previous == NoId);
     }
     if (node.IsLeaf()) {
-      leafs.Add([](std::vector<NodeId>& ls, NodeId id) { ls.push_back(id); }, node);
+      leafs.AddElement([](std::vector<NodeId>& ls, NodeId id) { ls.push_back(id); },
+                       node);
     }
   });
   storage.root_.value = root_id.load();
-  leafs.Gather(
-      [](auto& ls_threads, auto& stor) {
-        for (auto& ls : ls_threads) {
-          stor.leafs_.insert(stor.leafs_.end(), ls.second.begin(), ls.second.end());
+  leafs.GatherAndClear(
+      [](auto buckets, auto& stor) {
+        for (auto& bucket : buckets) {
+          // TODO reserve
+          stor.leafs_.insert(stor.leafs_.end(), bucket.begin(), bucket.end());
         }
       },
       storage);

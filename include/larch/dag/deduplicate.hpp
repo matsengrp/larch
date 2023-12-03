@@ -3,6 +3,7 @@
 #endif
 
 #include "larch/parallel/shared_state.hpp"
+#include "larch/parallel/growable_hash_map.hpp"
 
 template <typename T>
 using ConcurrentUnorderedSet = SharedState<std::unordered_set<T>>;
@@ -32,7 +33,8 @@ struct ExtraFeatureStorage<Deduplicate<Feature>> {
 
   template <typename, typename>
   friend struct ExtraFeatureMutableView;
-  ConcurrentUnorderedSet<Feature> deduplicated_;
+  // ConcurrentUnorderedSet<Feature> deduplicated_;
+  GrowableHashSet<Feature> deduplicated_{32};
   static const Feature empty_;
 };
 

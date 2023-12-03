@@ -56,35 +56,31 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   });
 
 #ifndef NDEBUG
-  result_nodes_.Read([](auto& result_nodes) {
+  result_nodes_.ReadAll([](auto result_nodes) {
     for (auto& i : result_nodes) {
       Assert(i.second.value != NoId);
     }
   });
 #endif
 
-  Reduction<std::vector<AddedEdge>> added_edges_reduction;
+  Reduction<std::vector<AddedEdge>> added_edges_reduction{32};
   ParallelForEach(idxs, [&](size_t i) {
     MergeEdges(i, dags, below, dags_labels, result_nodes_, result_edges_,
                added_edges_reduction);
   });
   std::vector<AddedEdge> added_edges;
-  added_edges_reduction.Gather(
-      [](auto& ae_threads, auto& result) {
-        for (auto& ae : ae_threads) {
-          result.insert(result.end(), ae.second.begin(), ae.second.end());
+  added_edges_reduction.GatherAndClear(
+      [](auto buckets, auto& result) {
+        for (auto& bucket : buckets) {
+          // TODO reserve
+          result.insert(result.end(), bucket.begin(), bucket.end());
         }
       },
       added_edges);
-  added_edges_reduction.clear();
 
-  ResultDAG().InitializeNodes(
-      result_nodes_.Read([](auto& result_nodes) { return result_nodes.size(); }));
+  ResultDAG().InitializeNodes(result_nodes_.size());
   std::atomic<size_t> edge_id{ResultDAG().GetNextAvailableEdgeId().value};
-  ResultDAG().InitializeEdges(
-      result_edges_.Read([](auto& result_edges) { return result_edges.size(); })
-
-  );
+  ResultDAG().InitializeEdges(result_edges_.size());
   idxs.resize(added_edges.size());
   std::iota(idxs.begin(), idxs.end(), 0);
   ParallelForEach(idxs, [&](size_t i) {
@@ -104,14 +100,11 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
       }
     }
   }
-
-  Assert(result_nodes_.Read([](auto& result_nodes) { return result_nodes.size(); }) ==
-         ResultDAG().GetNodesCount());
-  Assert(result_node_labels_.Read([](auto& result_node_labels) {
-    return result_node_labels.size();
-  }) == ResultDAG().GetNodesCount());
-  Assert(result_edges_.Read([](auto& result_edges) { return result_edges.size(); }) ==
-         ResultDAG().GetEdgesCount());
+  // TODO #ifndef NDEBUG
+  Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
+  Assert(result_node_labels_.size() == ResultDAG().GetNodesCount());
+  Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
+  // #endif
   GetResult().GetRoot().Validate(true, true);
 }
 
@@ -143,11 +136,11 @@ MergeDAG Merge::GetResult() const { return result_dag_storage_.View().Const(); }
 
 MutableMergeDAG Merge::ResultDAG() { return result_dag_storage_.View(); }
 
-const ConcurrentUnorderedMap<NodeLabel, NodeId>& Merge::GetResultNodes() const {
+const GrowableHashMap<NodeLabel, NodeId>& Merge::GetResultNodes() const {
   return result_nodes_;
 }
 
-const ConcurrentUnorderedMap<NodeId, NodeLabel>& Merge::GetResultNodeLabels() const {
+const GrowableHashMap<NodeId, NodeLabel>& Merge::GetResultNodeLabels() const {
   return result_node_labels_;
 }
 
@@ -158,21 +151,17 @@ const ConcurrentUnorderedMap<std::string, CompactGenome>& Merge::SampleIdToCGMap
 
 void Merge::ComputeResultEdgeMutations() {
   // TODO parallel
-  result_edges_.Read(
-      [](auto& result_edges, auto& result_nodes, auto& sample_id_to_cg_map,
+  result_edges_.ReadAll(
+      [](auto result_edges, auto& result_nodes, auto& sample_id_to_cg_map,
          auto result_dag) {
         for (auto& [label, edge_id] : result_edges) {
           Assert(label.GetParent().GetCompactGenome());
           const CompactGenome& parent = *label.GetParent().GetCompactGenome();
 
-          auto child_node = result_nodes.Read(
-              [](auto& result_nodes_r, auto child_label) {
-                return result_nodes_r.at(child_label);
-              },
-              label.GetChild());
+          auto child_node = result_nodes.at(label.GetChild());
 
           if (result_dag.Get(child_node).IsLeaf()) {
-            const CompactGenome& child = sample_id_to_cg_map.Read(
+            const CompactGenome& child = sample_id_to_cg_map.ReadShared(
                 [](auto& sample_id_to_cg_map_r, auto node_label) {
                   return sample_id_to_cg_map_r.at(node_label.GetSampleId()->ToString())
                       .Copy();
@@ -192,9 +181,7 @@ void Merge::ComputeResultEdgeMutations() {
 }
 
 bool Merge::ContainsLeafset(const LeafSet& leafset) const {
-  return all_leaf_sets_.Read(
-      [](auto& read, const LeafSet& ls) { return read.find(ls) != read.end(); },
-      leafset);
+  return all_leaf_sets_.find(leafset) != nullptr;
 }
 
 namespace {
@@ -253,7 +240,7 @@ void Merge::MergeCompactGenomes(
   for (auto leaf_node : dag.Const().GetLeafs()) {
     Assert(leaf_node.HaveSampleId());
     std::string sid = leaf_node.GetSampleId().value();
-    sample_id_to_cg_map.Write([&sid, &leaf_node](auto& sample_id_to_cg_map_w) {
+    sample_id_to_cg_map.WriteShared([&sid, &leaf_node](auto& sample_id_to_cg_map_w) {
       sample_id_to_cg_map_w.insert({sid, leaf_node.GetCompactGenome().Copy()});
     });
   }
@@ -262,7 +249,7 @@ void Merge::MergeCompactGenomes(
 template <typename DAGSRange, typename NodeLabelsContainer>
 void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
                             std::vector<NodeLabelsContainer>& dags_labels,
-                            ConcurrentUnorderedSet<LeafSet>& all_leaf_sets) {
+                            GrowableHashSet<LeafSet>& all_leaf_sets) {
   auto dag = GetFullDAG(dags.at(i));
   NodeLabelsContainer& labels = dags_labels.at(i);
   using ComputedLSType =
@@ -275,12 +262,8 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
     auto& label = labels.at(node);
     auto& ls = computed_ls.at(node);
     if (not ls.empty()) {
-      all_leaf_sets.Write(
-          [](auto& write, auto& lset, auto& lbl) {
-            auto ls_iter = write.insert(std::move(lset));
-            lbl.SetLeafSet(std::addressof(*ls_iter.first));
-          },
-          ls, label);
+      auto ls_iter = all_leaf_sets.insert(std::move(ls));
+      label.SetLeafSet(std::addressof(ls_iter.first));
     }
     Assert(not label.empty());
   }
@@ -289,8 +272,8 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
 template <typename DAGSRange, typename NodeLabelsContainer>
 void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
                        const std::vector<NodeLabelsContainer>& dags_labels,
-                       ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-                       ConcurrentUnorderedMap<NodeId, NodeLabel>& result_node_labels,
+                       GrowableHashMap<NodeLabel, NodeId>& result_nodes,
+                       GrowableHashMap<NodeId, NodeLabel>& result_node_labels,
                        std::atomic<size_t>& node_id) {
   auto&& dag = dags.at(i);
   auto& labels = dags_labels.at({i});
@@ -301,22 +284,19 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
     auto& label = labels.at(node);
     Assert(not label.empty());
 
-    NodeId orig_id = result_nodes.Write(
-        [&node_id, &result_node_labels, &label](auto& result_nodes_w) {
-          NodeId new_id;
-          auto ins_pair = result_nodes_w.insert({label, new_id});
-          if (ins_pair.second) {
-            new_id.value = node_id.fetch_add(1);
-            ins_pair.first->second = new_id;
-            result_node_labels.Write([&new_id, &label](auto& result_node_labels_w) {
-              result_node_labels_w[new_id] = label;
-            });
-          } else {
-            new_id.value = ins_pair.first->second.value;
-          }
-          Assert(new_id.value != NoId);
-          return new_id;
-        });
+    NodeId orig_id = [&result_nodes, &node_id, &result_node_labels, &label]() {
+      NodeId new_id;
+      auto ins_pair = result_nodes.insert({label, new_id});
+      if (ins_pair.second) {
+        new_id.value = node_id.fetch_add(1);
+        ins_pair.first = new_id;
+        result_node_labels.insert_or_assign(new_id, label);
+      } else {
+        new_id.value = ins_pair.first.value;
+      }
+      Assert(new_id.value != NoId);
+      return new_id;
+    }();
 
     if constexpr (std::remove_reference_t<decltype(dag)>::
                       template contains_element_feature<Component::Node, MappedNodes>) {
@@ -329,8 +309,8 @@ template <typename DAGSRange, typename NodeLabelsContainer>
 void Merge::MergeEdges(
     size_t i, const DAGSRange& dags, NodeId below,
     const std::vector<NodeLabelsContainer>& dags_labels,
-    [[maybe_unused]] const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-    ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+    [[maybe_unused]] const GrowableHashMap<NodeLabel, NodeId>& result_nodes,
+    GrowableHashMap<EdgeLabel, EdgeId>& result_edges,
     Reduction<std::vector<Merge::AddedEdge>>& added_edges) {
   auto&& dag = dags.at(i);
   const NodeLabelsContainer& labels = dags_labels.at(i);
@@ -343,16 +323,12 @@ void Merge::MergeEdges(
     Assert(not parent_label.empty());
     Assert(not child_label.empty());
 #ifndef NDEBUG
-    result_nodes.Read([&parent_label, &child_label](auto& result_nodes_r) {
-      Assert(result_nodes_r.find(parent_label) != result_nodes_r.end());
-      Assert(result_nodes_r.find(child_label) != result_nodes_r.end());
-    });
+    Assert(result_nodes.find(parent_label) != nullptr);
+    Assert(result_nodes.find(child_label) != nullptr);
 #endif
-    bool ins = result_edges.Write([&parent_label, &child_label](auto& result_edges_w) {
-      return result_edges_w.insert({{parent_label, child_label}, {}}).second;
-    });
+    bool ins = result_edges.insert({{parent_label, child_label}, {}}).second;
     if (ins) {
-      added_edges.Add(
+      added_edges.AddElement(
           [](auto& ae, auto& par_lbl, auto& ch_lbl) {
             ae.push_back({{par_lbl, ch_lbl}, {}, {}, {}, {}});
           },
@@ -363,20 +339,15 @@ void Merge::MergeEdges(
 
 void Merge::BuildResult(size_t i, std::vector<Merge::AddedEdge>& added_edges,
                         std::atomic<size_t>& edge_id,
-                        const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-                        ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+                        const GrowableHashMap<NodeLabel, NodeId>& result_nodes,
+                        GrowableHashMap<EdgeLabel, EdgeId>& result_edges,
                         MutableMergeDAG result_dag) {
   auto& [edge, id, parent_id, child_id, clade] = added_edges.at(i);
   id = {edge_id.fetch_add(1)};
-  auto [result_parent_label, result_parent_id, result_child_label, result_child_id] =
-      result_nodes.Read([&edge](auto& result_nodes_r) {
-        auto parent = result_nodes_r.find(edge.GetParent());
-        auto child = result_nodes_r.find(edge.GetChild());
-        Assert(parent != result_nodes_r.end());
-        Assert(child != result_nodes_r.end());
-        return std::make_tuple(std::ref(parent->first), parent->second,
-                               std::ref(child->first), child->second);
-      });
+  NodeLabel result_parent_label = edge.GetParent();
+  NodeLabel result_child_label = edge.GetChild();
+  NodeId result_parent_id = result_nodes.at(result_parent_label);
+  NodeId result_child_id = result_nodes.at(result_child_label);
   Assert(result_parent_id.value != NoId);
   Assert(result_child_id.value != NoId);
   Assert(result_parent_id != result_child_id);
@@ -391,9 +362,5 @@ void Merge::BuildResult(size_t i, std::vector<Merge::AddedEdge>& added_edges,
   result_dag.Get(result_child_id) = result_child_label.GetCompactGenome();
   result_dag.Get(result_parent_id) = result_parent_label.GetSampleId();
   result_dag.Get(result_child_id) = result_child_label.GetSampleId();
-  result_edges.Write([&edge, &id](auto& result_edges_w) {
-    auto result_edge_it = result_edges_w.find(edge);
-    Assert(result_edge_it != result_edges_w.end());
-    result_edge_it->second = id;
-  });
+  result_edges.at(edge) = id;
 }
