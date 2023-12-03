@@ -138,12 +138,13 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
       node = std::move(new_cgs.at(node.GetId().value));
     }
   }
+#ifndef NDEBUG
   // TODO extract validation to separate function to not hurt performance
-  std::unordered_map<CompactGenome, NodeId> leaf_cgs;
+  ContiguousMap<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {
     if (node.IsLeaf()) {
       bool success =
-          leaf_cgs.emplace(node.GetCompactGenome().Copy(), node.GetId()).second;
+          leaf_cgs.insert({node.GetCompactGenome().Copy(), node.GetId()}).second;
       if (not success) {
         // std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
         //           << node.GetId().value << " also seen at "
@@ -155,6 +156,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
       }
     }
   }
+#endif
 }
 
 template <typename CRTP, typename Tag>

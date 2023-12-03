@@ -30,7 +30,7 @@ static void test_weight_accum(std::string_view path, Weight expected_score) {
   auto dag_view = dag.View();
   dag_view.RecomputeCompactGenomes(true);
   dag_view.SampleIdsFromCG(true);
-  test_weight_accum(dag_view, expected_score);
+  test_weight_accum(dag_view, std::move(expected_score));
 }
 
 [[maybe_unused]] static const auto test_added0 =

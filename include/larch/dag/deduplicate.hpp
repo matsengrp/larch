@@ -5,9 +5,6 @@
 #include "larch/parallel/shared_state.hpp"
 #include "larch/parallel/growable_hash_map.hpp"
 
-template <typename T>
-using ConcurrentUnorderedSet = SharedState<std::unordered_set<T>>;
-
 /**
  * Used with any per-element feature to ensure that a single unique copy of
  * the undrlying feature is stored, and elements only store a pointer to it.
@@ -33,7 +30,6 @@ struct ExtraFeatureStorage<Deduplicate<Feature>> {
 
   template <typename, typename>
   friend struct ExtraFeatureMutableView;
-  // ConcurrentUnorderedSet<Feature> deduplicated_;
   GrowableHashSet<Feature> deduplicated_{32};
   static const Feature empty_;
 };

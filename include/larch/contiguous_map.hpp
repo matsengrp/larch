@@ -98,7 +98,16 @@ class ContiguousMap {
     if (it != end() and it->first == key) {
       return it->second;
     } else {
-      return Insert(it, {key, V{}})->second;
+      return Insert(it, value_type{key, V{}})->second;
+    }
+  }
+
+  V& operator[](K&& key) {
+    auto it = find(key);
+    if (it != end() and it->first == key) {
+      return it->second;
+    } else {
+      return Insert(it, value_type{std::forward<K>(key), V{}})->second;
     }
   }
 

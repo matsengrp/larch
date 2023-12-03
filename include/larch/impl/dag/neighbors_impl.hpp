@@ -166,7 +166,9 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
     }
     Assert(children_count != 1);
   }
-  std::set<std::string> sample_ids;
+#ifndef NDEBUG
+  ContiguousSet<std::string> sample_ids;
+#endif
   if (node.IsLeaf()) {
     Assert(storage.clades_.empty());
     using NodeT = std::remove_reference_t<decltype(node)>;
@@ -176,7 +178,9 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
                                                 decltype(dag.GetStorage())>>,
                                             FragmentStorage>) {
         Assert(node.HaveSampleId());
+#ifndef NDEBUG
         Assert(sample_ids.insert(node.GetSampleId().value()).second);
+#endif
       }
     }
   }

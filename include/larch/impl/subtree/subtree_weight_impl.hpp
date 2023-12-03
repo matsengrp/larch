@@ -24,12 +24,16 @@ typename WeightOps::Weight SubtreeWeight<WeightOps, DAG>::ComputeWeightBelow(
     Node node, const WeightOps& weight_ops) {
   NodeId node_id = node.GetId();
   auto& cached = cached_weights_.at(node_id.value);
-  if (cached) {
-    return *cached;
+  if (cached.has_value()) {
+    if constexpr (std::is_copy_constructible_v<typename WeightOps::Weight>) {
+      return cached.value();
+    } else {
+      return cached.value().Copy();
+    }
   }
   if (node.IsLeaf()) {
     cached = weight_ops.ComputeLeaf(dag_, node_id);
-    return *cached;
+    return cached.value();
   }
   std::vector<typename WeightOps::Weight> cladeweights;
   for (auto clade : node.GetClades()) {
@@ -37,7 +41,7 @@ typename WeightOps::Weight SubtreeWeight<WeightOps, DAG>::ComputeWeightBelow(
   }
 
   cached = weight_ops.BetweenClades(cladeweights);
-  return *cached;
+  return cached.value();
 }
 
 template <typename WeightOps, typename DAG>
@@ -45,12 +49,12 @@ ArbitraryInt SubtreeWeight<WeightOps, DAG>::MinWeightCount(
     Node node, const WeightOps& weight_ops) {
   NodeId node_id = node.GetId();
   auto& cached = cached_subtree_counts_.at(node_id.value);
-  if (cached) {
-    return *cached;
+  if (cached.has_value()) {
+    return cached.value();
   }
   if (node.IsLeaf()) {
     cached = 1;
-    return *cached;
+    return cached.value();
   }
   ArbitraryInt nodecount = 1;
   ArbitraryInt cladecount = 0;
@@ -65,7 +69,7 @@ ArbitraryInt SubtreeWeight<WeightOps, DAG>::MinWeightCount(
     nodecount *= cladecount;
   }
   cached = nodecount;
-  return *cached;
+  return cached.value();
 }
 
 template <typename WeightOps, typename DAG>
@@ -141,10 +145,11 @@ SubtreeWeight<WeightOps, DAG>::MinWeightSampleTree(const WeightOps& weight_ops,
         Edge first_edge = dag_.Get(clade.at(0));
         auto cached_clade = cached_min_weight_edges_.at(first_edge.GetParentId().value)
                                 .at(first_edge.GetClade().value);
-        std::set<EdgeId> min_weight_edges(cached_clade.begin(), cached_clade.end());
+        ContiguousSet<EdgeId> min_weight_edges(cached_clade.begin(),
+                                               cached_clade.end());
         std::vector<double> probabilities;
         for (EdgeId child_edge : clade) {
-          if (min_weight_edges.count(child_edge)) {
+          if (min_weight_edges.Contains(child_edge)) {
             probabilities.push_back(1);
           } else {
             probabilities.push_back(0);
@@ -170,11 +175,12 @@ SubtreeWeight<WeightOps, DAG>::MinWeightUniformSampleTree(const WeightOps& weigh
         Edge first_edge = dag_.Get(clade.at(0));
         auto& cached_clade = cached_min_weight_edges_.at(first_edge.GetParentId().value)
                                  .at(first_edge.GetClade().value);
-        std::set<EdgeId> min_weight_edges(cached_clade.begin(), cached_clade.end());
+        ContiguousSet<EdgeId> min_weight_edges(cached_clade.begin(),
+                                               cached_clade.end());
         std::vector<ArbitraryInt> min_weight_counts;
         ArbitraryInt sum = 0;
         for (EdgeId child_edge : clade) {
-          if (min_weight_edges.count(child_edge)) {
+          if (min_weight_edges.Contains(child_edge)) {
             ArbitraryInt child_count =
                 MinWeightCount(dag_.Get(child_edge).GetChild(), weight_ops);
             sum += child_count;

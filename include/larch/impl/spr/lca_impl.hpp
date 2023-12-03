@@ -5,8 +5,8 @@ LCA FindLCA(Node n0, Node n1) {
   Assert(n0.GetId() != n1.GetId());
 
   LCA result;
-  std::set<NodeId> path0;
-  std::set<NodeId> path1;
+  ContiguousSet<NodeId> path0;
+  ContiguousSet<NodeId> path1;
   NodeId current_node_id0 = n0;
   NodeId current_node_id1 = n1;
   path0.insert(current_node_id0);
