@@ -264,7 +264,7 @@ CompactGenome GetCompactGenome(const nlohmann::json& json,
     Assert(mut_nuc.size() == 1);
     result.insert({position, mut_nuc.at(0)});
   }
-  return result;
+  return CompactGenome{std::move(result)};
 }
 
 }  // namespace
