@@ -22,10 +22,6 @@ class LeafSet {
   LeafSet() = default;
   MOVE_ONLY(LeafSet);
 
-  template <typename Node>
-  LeafSet(Node node, const std::vector<NodeLabel>& labels,
-          std::vector<LeafSet>& computed_leafsets);
-
   template <typename Node, typename LabelsType, typename ComputedLSType>
   LeafSet(Node node, const LabelsType& labels, ComputedLSType& computed_leafsets);
 

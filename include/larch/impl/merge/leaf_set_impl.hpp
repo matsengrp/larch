@@ -3,42 +3,6 @@ const LeafSet* LeafSet::GetEmpty() {
   return &empty;
 }
 
-template <typename Node>
-LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
-                 std::vector<LeafSet>& computed_leafsets)
-    : clades_{[&] {
-        std::vector<std::vector<UniqueData>> clades;
-        clades.reserve(node.GetCladesCount());
-        if (node.IsLeaf()) {
-          UniqueData id = labels.at(node.GetId().value).GetSampleId();
-          clades.push_back({id});
-        } else {
-          for (auto clade : node.GetClades()) {
-            std::vector<UniqueData> clade_leafs;
-            clade_leafs.reserve(clade.size());
-            for (Node child : clade | Transform::GetChild()) {
-              if (child.IsLeaf()) {
-                Assert(child.Const().HaveSampleId());
-                UniqueData id = labels.at(child.GetId().value).GetSampleId();
-                clade_leafs.push_back(id);
-              } else {
-                for (auto& child_leafs :
-                     computed_leafsets.at(child.GetId().value).clades_) {
-                  clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
-                                     child_leafs.end());
-                }
-              }
-            }
-            clade_leafs |= ranges::actions::sort | ranges::actions::unique;
-            Assert(not clade_leafs.empty());
-            clades.emplace_back(std::move(clade_leafs));
-          }
-          clades |= ranges::actions::sort;
-        }
-        return clades;
-      }()},
-      hash_{ComputeHash(clades_)} {}
-
 template <typename Node, typename LabelsType, typename ComputedLSType>
 LeafSet::LeafSet(Node node, const LabelsType& labels, ComputedLSType& computed_leafsets)
     : clades_{[&] {
