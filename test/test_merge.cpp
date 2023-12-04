@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <fstream>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <vector>
 
 #include "test_common.hpp"
@@ -79,8 +79,8 @@ static void test_case_ref() {
 
 static void test_case_20d() {
   std::vector<std::string> paths;
-  const std::experimental::filesystem::path dir{"data/20D_from_fasta"};
-  for (auto& file : std::experimental::filesystem::directory_iterator{dir}) {
+  const std::filesystem::path dir{"data/20D_from_fasta"};
+  for (auto& file : std::filesystem::directory_iterator{dir}) {
     std::string name = file.path().filename().string();
     if (name.find("1final-tree-") == 0) {
       paths.push_back(file.path().string());

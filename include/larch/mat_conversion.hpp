@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef USE_USHER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -16,13 +17,17 @@
 #include "src/matOptimize/Profitable_Moves_Enumerators/Profitable_Moves_Enumerators.hpp"
 #pragma GCC diagnostic pop
 
-#include "larch/madag/mutation_annotated_dag.hpp"
-
 namespace Mutation_Annotated_Tree {
 class Tree;
 class Node;
 }  // namespace Mutation_Annotated_Tree
 namespace MAT = Mutation_Annotated_Tree;
+
+#else
+#include "larch/optimize.hpp"
+#endif
+
+#include "larch/madag/mutation_annotated_dag.hpp"
 
 using MATNodePtr = MAT::Node*;
 

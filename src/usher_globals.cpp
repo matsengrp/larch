@@ -1,3 +1,5 @@
+#ifdef USE_USHER
+
 #include "larch/usher_glue.hpp"
 #include <tbb/task_scheduler_init.h>
 
@@ -9,3 +11,5 @@ uint32_t num_threads =
 FILE* movalbe_src_log;
 bool changing_radius = false;
 bool use_bound = true;
+
+#endif

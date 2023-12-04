@@ -6,7 +6,7 @@
 #include "sample_dag.hpp"
 #include "benchmark.hpp"
 
-#include <tbb/global_control.h>
+// #include <tbb/global_control.h>
 
 struct Empty_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
