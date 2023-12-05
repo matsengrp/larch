@@ -1,60 +1,48 @@
 template <typename Node>
 LCA FindLCA(Node n0, Node n1) {
+  static_assert(Node::role == Role::View);
+  static_assert(Node::component == Component::Node);
+  Assert(std::addressof(n0.GetDAG().GetStorage()) ==
+         std::addressof(n1.GetDAG().GetStorage()));
   auto dag = n0.GetDAG();
   Assert(dag.IsTree());
   Assert(n0.GetId() != n1.GetId());
 
+  ContiguousSet<NodeId> visited;
   LCA result;
-  ContiguousSet<NodeId> path0;
-  ContiguousSet<NodeId> path1;
-  NodeId current_node_id0 = n0;
-  NodeId current_node_id1 = n1;
-  path0.insert(current_node_id0);
-  path1.insert(current_node_id1);
 
-  while (true) {
-    if (path1.find(current_node_id0) != path1.end()) {
-      result.lca = current_node_id0;
-      while (dag.Get(result.path1.back()).GetParentId() != current_node_id0) {
-        result.path1.pop_back();
-        if (result.path1.empty()) {
-          break;
-        }
+  auto visit = [dag, &visited, &result](EdgeId edge,
+                                        std::vector<EdgeId>& path) -> EdgeId {
+    path.push_back(edge);
+    auto parent = dag.Get(edge).GetParent();
+    if (visited.insert(parent).second) {
+      if (not parent.IsUA()) {
+        return parent.GetSingleParent();
+      } else {
+        return {NoId};
       }
-      break;
+    } else {
+      result.lca = parent;
+      return {NoId};
     }
+  };
 
-    if (path0.find(current_node_id1) != path0.end()) {
-      result.lca = current_node_id1;
-      while (dag.Get(result.path0.back()).GetParentId() != current_node_id1) {
-        result.path0.pop_back();
-        if (result.path0.empty()) {
-          break;
-        }
-      }
-      break;
+  EdgeId e0 = n0.IsUA() ? EdgeId{NoId} : n0.GetSingleParent();
+  EdgeId e1 = n1.IsUA() ? EdgeId{NoId} : n1.GetSingleParent();
+
+  visited.insert(n0);
+  visited.insert(n1);
+
+  while (e0.value != NoId or e1.value != NoId) {
+    if (e0.value != NoId) {
+      e0 = visit(e0, result.path0);
     }
-
-    Node current_node0 = dag.Get(current_node_id0);
-    Node current_node1 = dag.Get(current_node_id1);
-    if (current_node0.IsUA() and current_node1.IsUA()) {
-      break;
-    }
-
-    if (not current_node0.IsUA()) {
-      auto parent_edge = current_node0.GetSingleParent();
-      result.path0.push_back(parent_edge);
-      current_node_id0 = parent_edge.GetParent();
-      path0.insert(current_node_id0);
-    }
-
-    if (not current_node1.IsUA()) {
-      auto parent_edge = current_node1.GetSingleParent();
-      result.path1.push_back(parent_edge);
-      current_node_id1 = parent_edge.GetParent();
-      path1.insert(current_node_id1);
+    if (e1.value != NoId) {
+      e1 = visit(e1, result.path1);
     }
   }
+
+  Assert(result.lca.value != NoId);
 
   return result;
 }
