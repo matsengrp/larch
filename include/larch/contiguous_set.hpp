@@ -45,6 +45,8 @@ class ContiguousSet {
     return std::lower_bound(data_.begin(), data_.end(), value);
   }
 
+  bool Contains(const T& value) const { return find(value) != end(); }
+
   bool operator==(const ContiguousSet& other) const { return data_ == other.data_; }
 
   bool operator!=(const ContiguousSet& other) const { return data_ != other.data_; }

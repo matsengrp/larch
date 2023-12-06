@@ -1,7 +1,6 @@
 #pragma once
 
 #include "larch/usher_glue.hpp"
-#include "larch/spr/lca.hpp"
 #include "larch/contiguous_set.hpp"
 
 struct FitchSet {

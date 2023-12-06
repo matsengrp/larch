@@ -27,24 +27,9 @@ class NodeLabel {
 
   [[nodiscard]] inline size_t Hash() const noexcept;
 
-  inline bool empty() const {
-    Assert(compact_genome_);
-    Assert(leaf_set_);
-    Assert(sample_id_);
-    if (compact_genome_->empty() and sample_id_->empty() and leaf_set_->empty()) {
-      return true;
-    }
-    return false;
-  }
+  inline bool empty() const;
 
-  inline std::string ToString() const {
-    std::string result = "[";
-    result += compact_genome_->ToString();
-    result += "(";
-    result += leaf_set_->ToString();
-    result += ")";
-    return result;
-  }
+  inline std::string ToString() const;
 
  private:
   const CompactGenome* compact_genome_;
@@ -62,4 +47,3 @@ struct std::equal_to<NodeLabel> {
   inline bool operator()(const NodeLabel& lhs, const NodeLabel& rhs) const noexcept;
 };
 
-#include "larch/impl/merge/node_label_impl.hpp"

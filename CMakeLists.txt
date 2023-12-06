@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(larch)
 
+option(USE_USHER "Use matOptimize" yes)
+
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
@@ -10,17 +12,30 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
 include(FetchContent)
-FetchContent_Declare(oneTBB-src
-  GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-  GIT_TAG 2019_U9
-)
-FetchContent_MakeAvailable(oneTBB-src)
 
-include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
-tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
-find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
-find_package(MPI REQUIRED)
-include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+if (USE_USHER)
+  FetchContent_Declare(oneTBB-src
+    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
+    GIT_TAG 2019_U9
+  )
+  FetchContent_MakeAvailable(oneTBB-src)
+
+  include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
+  tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
+  find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
+  find_package(MPI REQUIRED)
+  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+else()
+  FetchContent_Declare(oneTBB
+    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
+    GIT_TAG v2021.11.0
+    GIT_SHALLOW true
+    GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DTBB_TEST=OFF -DTBB_FIND_PACKAGE=OFF
+  )
+  FetchContent_MakeAvailable(oneTBB)
+endif()
 
 include(protobuf.cmake)
 
@@ -96,7 +111,14 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
 endif()
 
 function(larch_compile_opts PRODUCT)
-  target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -fno-omit-frame-pointer -fno-stack-protector -pipe)
+  target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -pipe)
+  if (CMAKE_BUILD_TYPE EQUAL "DEBUG")
+    target_compile_options(${PRODUCT} PUBLIC -fno-omit-frame-pointer -fno-stack-protector)
+  endif()
+
+  if(${USE_USHER})
+    target_compile_options(${PRODUCT} PUBLIC -DUSE_USHER)
+  endif()
 
   if(${USE_ASAN})
     target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
@@ -119,6 +141,7 @@ endfunction()
 
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
 
+if(${USE_USHER})
 include_directories(deps/usher/)
 file(GLOB MATOPTIMIZE_SRC
   "deps/usher/src/matOptimize/apply_move/*.cpp"
@@ -138,6 +161,7 @@ file(GLOB MATOPTIMIZE_SRC
   "deps/usher/src/matOptimize/priority_conflict_resolver.cpp"
   "deps/usher/src/matOptimize/check_samples.cpp"
 )
+endif()
 
 function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
@@ -152,7 +176,11 @@ function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
   target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
-  target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
+  if(${USE_USHER})
+    target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
+  else()
+    target_link_libraries(${PRODUCT} PUBLIC TBB::tbb)
+  endif()
 
   if(${USE_HTSLIB})
     target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/lib)
@@ -181,10 +209,11 @@ endif()
 
 larch_link_opts(larch)
 
+if(${USE_USHER})
 add_library(usher
   ${MATOPTIMIZE_SRC}
   src/usher_globals.cpp)
-target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer)
+target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer  -DUSE_USHER)
 
 if(${USE_ASAN})
   target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
@@ -219,6 +248,7 @@ add_dependencies(larch-usher-glue larch usher)
 set_target_properties(larch-usher-glue
   PROPERTIES CXX_CLANG_TIDY ""
 )
+endif()
 
 larch_executable(larch-test
   test/main.cpp
@@ -229,6 +259,7 @@ larch_executable(larch-test
   test/test_dag_completion.cpp
   test/test_dag_trimming.cpp
   test/test_larch_usher.cpp
+  test/test_lca.cpp
   test/test_loading.cpp
   test/test_mat_conversion.cpp
   test/test_matOptimize.cpp
@@ -244,11 +275,13 @@ larch_executable(larch-test
   test/test_write_parsimony.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
+if(${USE_USHER})
 target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
 add_dependencies(larch-test larch-usher-glue)
 set_target_properties(larch-test
   PROPERTIES CXX_CLANG_TIDY ""
 )
+endif()
 
 larch_executable(merge
   tools/merge.cpp)
@@ -256,9 +289,11 @@ larch_executable(merge
 larch_executable(dag2dot
   tools/dag2dot.cpp)
 
+if(${USE_USHER})
 larch_executable(larch-usher
   tools/larch-usher.cpp
 )
 target_compile_options(larch-usher PRIVATE ${STRICT_WARNINGS})
 target_link_libraries(larch-usher PRIVATE larch-usher-glue)
 add_dependencies(larch-usher larch-usher-glue)
+endif()

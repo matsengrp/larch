@@ -28,6 +28,10 @@ struct FeatureConstView<OverlayDAG, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<OverlayDAG, CRTP, Tag> {};
 
+template <typename Id, typename Feature>
+using OverlayFeatureStorageType =
+    IdContainer<Id, Feature, IdContinuity::Sparse, Ordering::Unordered>;
+
 namespace {
 template <typename>
 struct ToOverlayStorage;
@@ -35,7 +39,7 @@ struct ToOverlayStorage;
 template <typename... Features>
 struct ToOverlayStorage<std::tuple<Features...>> {
   template <typename Id>
-  using type = std::tuple<std::unordered_map<Id, Features>...>;
+  using type = std::tuple<OverlayFeatureStorageType<Id, Features>...>;
 };
 
 }  // namespace

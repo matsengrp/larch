@@ -2,9 +2,8 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
-template <typename T>
-using ConcurrentUnorderedSet =
-    tbb::concurrent_unordered_set<T, std::hash<T>, std::equal_to<T>>;
+#include "larch/parallel/shared_state.hpp"
+#include "larch/parallel/growable_hash_map.hpp"
 
 /**
  * Used with any per-element feature to ensure that a single unique copy of
@@ -31,7 +30,7 @@ struct ExtraFeatureStorage<Deduplicate<Feature>> {
 
   template <typename, typename>
   friend struct ExtraFeatureMutableView;
-  ConcurrentUnorderedSet<Feature> deduplicated_;
+  GrowableHashSet<Feature> deduplicated_{32};
   static const Feature empty_;
 };
 

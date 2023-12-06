@@ -264,7 +264,7 @@ CompactGenome GetCompactGenome(const nlohmann::json& json,
     Assert(mut_nuc.size() == 1);
     result.insert({position, mut_nuc.at(0)});
   }
-  return result;
+  return CompactGenome{std::move(result)};
 }
 
 }  // namespace
@@ -513,7 +513,7 @@ void MADAGApplyCompactGenomeData(
   auto dag = dag_storage.View();
   // Convert node names to ids.
   std::unordered_map<std::string, bool> visited_ids;
-  std::unordered_map<NodeId, CompactGenomeData> tmp_mut_map;
+  NodeMutMap tmp_mut_map;
   for (auto node : dag.GetNodes()) {
     if (node.GetSampleId().has_value() and
         mut_map.find(node.GetSampleId().value()) != mut_map.end()) {

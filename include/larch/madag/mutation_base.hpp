@@ -8,7 +8,8 @@
 
 #include <string_view>
 #include <vector>
-#include <map>
+
+#include "larch/contiguous_map.hpp"
 
 struct MutationBase {
   static constexpr size_t BitCount = 4;
@@ -52,12 +53,14 @@ struct MutationBase {
     static const MutationBase A, C, G, T, N;
     static const char ambiguous_char;
     static const std::array<MutationBase, DNACount> bases;
-    static const std::map<MutationBase, char> mut_to_char_map;
-    static const std::map<MutationBase, MutationBase> complement_map;
+    static const ContiguousMap<MutationBase, char> mut_to_char_map;
+    static const ContiguousMap<MutationBase, MutationBase> complement_map;
   };
 
   BitArray value = {false, false, false, false};
 };
+
+static_assert(std::is_trivially_copyable_v<MutationBase>);
 
 namespace std {
 template <>

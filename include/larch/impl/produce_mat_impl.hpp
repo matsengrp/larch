@@ -13,7 +13,6 @@
 #include "larch/subtree/parsimony_score.hpp"
 
 #include "larch/usher_glue.hpp"
-#include <tbb/task_scheduler_init.h>
 
 template <typename Node1, typename Node2>
 void compareDAG(Node1 dag1, Node2 dag2) {

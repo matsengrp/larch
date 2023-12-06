@@ -1,8 +1,11 @@
 #include <iostream>
 #include <vector>
 #include <regex>
+#include <fstream>
 
+#ifdef USE_USHER
 #include <mpi.h>
+#endif
 
 #include "test_common.hpp"
 
@@ -16,9 +19,22 @@ bool add_test(const Test& test) noexcept {
   return true;
 }
 
+static void print_peak_mem() {
+  std::ifstream str{"/proc/self/status"};
+  std::string line;
+  while (std::getline(str, line)) {
+    if (line.find("VmPeak:") == 0) {
+      std::cout << line << "\n";
+      break;
+    }
+  }
+}
+
 int main(int argc, char* argv[]) {
+#ifdef USE_USHER
   int ignored{};
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
+#endif
   bool no_catch = false;
   bool opt_list_names = false;
   bool opt_test_range = false;
@@ -89,9 +105,11 @@ int main(int argc, char* argv[]) {
     for (auto& test : failed) {
       std::cerr << "  " << test.name << "\n";
     }
+    print_peak_mem();
     return EXIT_FAILURE;
   }
 
   std::cout << "ALL TESTS PASSED." << std::endl;
+  print_peak_mem();
   return EXIT_SUCCESS;
 }

@@ -45,12 +45,13 @@ using Count = boost::multiprecision::cpp_int;
 template <typename WeightOps>
 class WeightCounter {
  public:
-  WeightCounter(const WeightCounter<WeightOps>&) = default;
+  WeightCounter(const WeightCounter<WeightOps>& other)
+      : weights_{other.weights_.Copy()}, weight_ops_{other.weight_ops_} {}
   WeightCounter(const WeightOps& weight_ops);
   WeightCounter(WeightCounter&&) noexcept = default;
   WeightCounter(const std::vector<typename WeightOps::Weight>& weights,
                 const WeightOps& weight_ops);
-  WeightCounter(std::map<typename WeightOps::Weight, Count>&& weights,
+  WeightCounter(ContiguousMap<typename WeightOps::Weight, Count>&& weights,
                 const WeightOps& weight_ops);
   ~WeightCounter() = default;
 
@@ -63,11 +64,11 @@ class WeightCounter {
   WeightCounter<WeightOps>& operator=(WeightCounter<WeightOps>&& rhs) noexcept;
   bool operator==(const WeightCounter<WeightOps>& rhs);
   bool operator!=(const WeightCounter<WeightOps>& rhs);
-  const std::map<typename WeightOps::Weight, Count>& GetWeights() const;
+  const ContiguousMap<typename WeightOps::Weight, Count>& GetWeights() const;
   const WeightOps& GetWeightOps() const;
 
  private:
-  std::map<typename WeightOps::Weight, Count> weights_;
+  ContiguousMap<typename WeightOps::Weight, Count> weights_;
   WeightOps weight_ops_;
 };
 

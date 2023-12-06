@@ -35,6 +35,10 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   using StorageType = Storage;
   using MutableType = DAGView<std::remove_const_t<Storage>>;
 
+  template <Component C>
+  static constexpr IdContinuity id_continuity =
+      StorageType::template Container<C>::id_continuity;
+
   static const bool is_mutable;
   template <Component C, typename Feature>
   static const bool contains_element_feature;
