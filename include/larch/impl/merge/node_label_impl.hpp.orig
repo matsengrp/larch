@@ -65,6 +65,28 @@ size_t NodeLabel::Hash() const noexcept {
                               ? reinterpret_cast<std::uintptr_t>(compact_genome_)
                               : reinterpret_cast<std::uintptr_t>(sample_id_);
   return HashCombine(unique, reinterpret_cast<std::uintptr_t>(leaf_set_));
+<<<<<<< HEAD
+}
+
+bool NodeLabel::empty() const {
+  Assert(compact_genome_);
+  Assert(leaf_set_);
+  Assert(sample_id_);
+  if (compact_genome_->empty() and sample_id_->empty() and leaf_set_->empty()) {
+    return true;
+  }
+  return false;
+}
+
+std::string NodeLabel::ToString() const {
+  std::string result = "[";
+  result += compact_genome_->ToString();
+  result += "(";
+  result += leaf_set_->ToString();
+  result += ")";
+  return result;
+=======
+>>>>>>> origin/main
 }
 
    bool NodeLabel::empty() const {

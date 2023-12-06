@@ -46,4 +46,7 @@ template <>
 struct std::equal_to<NodeLabel> {
   inline bool operator()(const NodeLabel& lhs, const NodeLabel& rhs) const noexcept;
 };
+<<<<<<< HEAD
+=======
 
+>>>>>>> origin/main
