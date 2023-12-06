@@ -20,15 +20,15 @@ static void test_sample_tree(MADAG dag) {
   SubtreeWeight<ParsimonyScore, MADAG> weight(dag);
 
   auto result = weight.SampleTree({});
-  assert_true(result.View().IsTree(), "Tree");
+  TestAssert(result.View().IsTree());
 
   SubtreeWeight<TreeCount, MADAG> tree_count{dag};
   auto result2 = tree_count.UniformSampleTree({});
-  assert_true(result2.View().IsTree(), "Tree");
+  TestAssert(result2.View().IsTree());
 
   SubtreeWeight<BinaryParsimonyScore, MADAG> binary_weight{dag};
   auto result3 = binary_weight.SampleTree({});
-  assert_true(result3.View().IsTree(), "Tree");
+  TestAssert(result3.View().IsTree());
 
   Merge merge{dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{dag});
@@ -37,7 +37,7 @@ static void test_sample_tree(MADAG dag) {
 
   SubtreeWeight<BinaryParsimonyScore, MergeDAG> binary_merge_weight{merge.GetResult()};
   auto result4 = binary_merge_weight.SampleTree({});
-  assert_true(result4.View().IsTree(), "Tree");
+  TestAssert(result4.View().IsTree());
 }
 
 static void test_sample_tree(std::string_view path) {

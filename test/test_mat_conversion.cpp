@@ -10,7 +10,7 @@ template <typename DAG>
   std::set<std::string> mat_leaf_node_names;
 
   for (auto dag_leaf : dag.GetLeafs()) {
-    Assert(dag_leaf.HaveSampleId());
+    TestAssert(dag_leaf.HaveSampleId());
     dag_leaf_sample_ids.insert(dag_leaf.GetSampleId().value_or("NA"));
   }
   for (auto mat_leaf : tree.get_leaves()) {
@@ -36,7 +36,7 @@ template <typename DAG>
     dag.SampleIdsFromCG();
   }
 
-  Assert(dag.IsTree());
+  TestAssert(dag.IsTree());
   auto mat_conv = AddMATConversion(dag);
   MAT::Tree mat;
   mat_conv.View().BuildMAT(mat);
@@ -44,14 +44,14 @@ template <typename DAG>
 
   // check BuildMAT
   check_MAT_MADAG_Eq(mat, dag);
-  Assert(check_leaf_sample_ids(dag, mat));
+  TestAssert(check_leaf_sample_ids(dag, mat));
 
   // check BuildFromMAT
   auto dag_from_mat = AddMATConversion(Storage::EmptyDefault());
   dag_from_mat.View().BuildFromMAT(mat, dag.GetReferenceSequence());
   dag_from_mat.View().GetRoot().Validate(true);
   check_MAT_MADAG_Eq(mat, dag_from_mat.View());
-  Assert(check_leaf_sample_ids(dag_from_mat.View(), mat));
+  TestAssert(check_leaf_sample_ids(dag_from_mat.View(), mat));
 }
 
 [[maybe_unused]] static const auto test_added1 =
@@ -59,7 +59,8 @@ template <typename DAG>
                 test_sample_id_conversion("data/startmat/startmat_no_ancestral.pb.gz",
                                           "data/startmat/refseq.txt.gz", "");
               },
-              "Check SampleIds on startmat"});
+              "Check SampleIds on startmat",
+              {"slow"}});
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[]() {

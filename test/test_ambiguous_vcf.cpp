@@ -88,7 +88,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
 [[maybe_unused]] static auto convert_madag_to_mat(const MADAGStorage<> &dag_storage) {
   MAT::Tree mat;
   auto dag = dag_storage.View();
-  Assert(dag.IsTree());
+  TestAssert(dag.IsTree());
   auto mat_conv = AddMATConversion(dag);
   mat_conv.View().BuildMAT(mat);
   return mat;
@@ -176,7 +176,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
       node->mutations.clear();
       node->mutations.reserve(muts.size());
       for (const auto &[pos, base] : muts) {
-        Assert(pos.value != NoId);
+        TestAssert(pos.value != NoId);
         MAT::Mutation mat_mut(
             "ref", static_cast<int>(pos.value), EncodeBaseMAT(base.ToChar()),
             EncodeBaseMAT(base.ToChar()), EncodeBaseMAT(base.ToChar()));
@@ -244,18 +244,18 @@ static bool silence_warnings = false;
   // Create DAG with differing leaf sequences and apply VCFs that match truth DAGs.
   auto amb_dag_storage = make_unambiguous_sample_dag_2();
   madag_label_nodes(amb_dag_storage, false);
-  assert_false(amb_dag_storage == amb_dag_truth_storage,
-               "Ambiguous DAGs found incorrectly equal before applying VCF.");
+  TestAssert(not(amb_dag_storage == amb_dag_truth_storage) &&
+             "Ambiguous DAGs found incorrectly equal before applying VCF.");
   LoadVCFData(amb_dag_storage, amb_vcf_path, silence_warnings);
-  assert_true(amb_dag_storage == amb_dag_truth_storage,
-              "Ambiguous DAGs not equal after applying VCF.");
+  TestAssert((amb_dag_storage == amb_dag_truth_storage) &&
+             "Ambiguous DAGs not equal after applying VCF.");
   auto unamb_dag_storage = make_unambiguous_sample_dag_2();
   madag_label_nodes(unamb_dag_storage, false);
-  assert_false(unamb_dag_storage == unamb_dag_truth_storage,
-               "Unambiguous DAGs found incorrectly equal before applying VCF.");
+  TestAssert(not(unamb_dag_storage == unamb_dag_truth_storage) &&
+             "Unambiguous DAGs found incorrectly equal before applying VCF.");
   LoadVCFData(unamb_dag_storage, unamb_vcf_path, silence_warnings);
-  assert_true(unamb_dag_storage == unamb_dag_truth_storage,
-              "Unambiguous DAGs not equal after applying VCF.");
+  TestAssert((unamb_dag_storage == unamb_dag_truth_storage) &&
+             "Unambiguous DAGs not equal after applying VCF.");
 }
 
 void test_vcf_compatible() {
@@ -269,7 +269,8 @@ void test_vcf_compatible() {
   // make sure that each of the leaves in dag match exactly one key of id_to_cg_map
   for (auto leaf_id : dag.GetLeafs()) {
     if (leaf_id.GetSampleId().has_value()) {
-      Assert(id_to_cg_map.find(leaf_id.GetSampleId().value()) != id_to_cg_map.end());
+      TestAssert(id_to_cg_map.find(leaf_id.GetSampleId().value()) !=
+                 id_to_cg_map.end());
     }
   }
 
@@ -286,7 +287,7 @@ void test_vcf_compatible() {
         current_edge_mutations[posval.first] = posval.second.second;
       }
       parent_cg.ApplyChanges(current_edge_mutations);
-      Assert(leaf_cg.IsCompatible(parent_cg, ref_seq));
+      TestAssert(leaf_cg.IsCompatible(parent_cg, ref_seq));
     }
   }
 }
@@ -319,7 +320,7 @@ void test_vcf_reading() {
       "test_larch_usher_output.pb -c 2 -v "
       "data/test_ambiguous_vcf/SampleDAG_unique_ambiguous_leafs.vcf ";
 
-  assert_equal(0, std::system(command.c_str()), "Child process failed");
+  TestAssert(0 == std::system(command.c_str()));
 }
 
 [[maybe_unused]] static const auto test_added0 =

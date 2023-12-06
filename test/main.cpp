@@ -1,5 +1,5 @@
 #include <iostream>
-#include <vector>
+#include <set>
 #include <regex>
 #include <fstream>
 
@@ -40,6 +40,8 @@ int main(int argc, char* argv[]) {
   bool opt_test_range = false;
   std::pair<size_t, size_t> range;
   std::regex regex{".*"};
+  std::set<std::string> include_tags;
+  std::set<std::string> exclude_tags;
   for (int i = 1; i < argc; ++i) {
     if (std::string("nocatch") == argv[i]) {
       no_catch = true;
@@ -49,6 +51,10 @@ int main(int argc, char* argv[]) {
       opt_test_range = true;
       range.first = static_cast<size_t>(atoi(argv[++i]));
       range.second = static_cast<size_t>(atoi(argv[++i]));
+    } else if (std::string("+tag") == argv[i]) {
+      include_tags.insert(argv[++i]);
+    } else if (std::string("-tag") == argv[i]) {
+      exclude_tags.insert(argv[++i]);
     } else {
       regex = argv[i];
     }
@@ -58,12 +64,35 @@ int main(int argc, char* argv[]) {
   std::vector<Test> tests;
   size_t test_counter = 1;
   for (auto& test : get_all_tests()) {
+    bool included = false;
+    bool excluded = false;
+    for (auto& tag : test.tags) {
+      if (include_tags.find(tag) != include_tags.end()) {
+        included = true;
+      }
+      if (exclude_tags.find(tag) != exclude_tags.end()) {
+        excluded = true;
+      }
+    }
+    if (excluded or (not include_tags.empty() and not included)) {
+      continue;
+    }
     std::smatch match;
     if (std::regex_match(test.name, match, regex)) {
       if ((!opt_test_range) ||
           ((test_counter >= range.first) && (test_counter <= range.second))) {
         tests.push_back(test);
-        std::cout << "  [" << test_counter << "] " << test.name << std::endl;
+        std::cout << "  [" << test_counter << "] " << test.name;
+        if (not test.tags.empty()) {
+          std::cout << " Tags: ";
+          for (size_t i = 0; i < test.tags.size(); ++i) {
+            std::cout << test.tags.at(i);
+            if (i + 1 < test.tags.size()) {
+              std::cout << ", ";
+            }
+          }
+        }
+        std::cout << std::endl;
       }
     }
     test_counter++;

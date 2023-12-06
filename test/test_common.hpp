@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 #include <stdexcept>
 #include <iostream>
 
@@ -9,35 +10,20 @@
 #include "larch/spr/spr_view.hpp"
 
 struct Test {
+  Test(std::function<void()> e, std::string n, std::vector<std::string> ts)
+      : entry{e}, name{n}, tags{ts} {}
+  Test(std::function<void()> e, std::string n) : entry{e}, name{n} {}
   std::function<void()> entry;
   std::string name;
+  std::vector<std::string> tags;
 };
 
 bool add_test(const Test& test) noexcept;
 
-inline void assert_true(bool expr, const std::string& what) {
-  if (!expr) throw std::runtime_error(what);
-}
-
-inline void assert_false(bool expr, const std::string& what) {
-  if (expr) throw std::runtime_error(what);
-}
-
-template <typename L, typename R>
-inline void assert_equal(L&& l, R&& r, const std::string& what) {
-  if (not(l == r)) throw std::runtime_error(what);
-}
-
-inline bool test_true(bool expr, const std::string& what) {
-  if (!expr) {
-    std::cout << "TEST_FAILURE: " << what << std::endl;
+#define TestAssert(x)                                                       \
+  {                                                                         \
+    if (not(x)) {                                                           \
+      throw std::runtime_error("TestAssert failed: \"" #x "\" in " __FILE__ \
+                               ":" TOSTRING(__LINE__));                     \
+    }                                                                       \
   }
-  return expr;
-}
-
-inline bool test_false(bool expr, const std::string& what) {
-  if (expr) {
-    std::cout << "TEST_FAILURE: " << what << std::endl;
-  }
-  return !expr;
-}

@@ -100,7 +100,7 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
       auto storage = [this](std::string ref_seq) {
         std::unique_lock<std::mutex> lock{mutex_};
-        Assert(sample_mat_ != nullptr);
+        TestAssert(sample_mat_ != nullptr);
         using Storage = MergeDAGStorage<>;
         auto mat_conv = AddMATConversion(Storage::EmptyDefault());
         mat_conv.View().BuildFromMAT(*sample_mat_, ref_seq);
@@ -185,10 +185,10 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
   two_tree_dag.AddDAGs(std::vector{optimized_dag.View()});
 
   // check topologies of the two DAGs match in feature count
-  Assert(two_tree_dag.GetResult().GetNodesCount() ==
-         dag_altered_in_callback.GetResult().GetNodesCount());
-  Assert(two_tree_dag.GetResult().GetEdgesCount() ==
-         dag_altered_in_callback.GetResult().GetEdgesCount());
+  TestAssert(two_tree_dag.GetResult().GetNodesCount() ==
+             dag_altered_in_callback.GetResult().GetNodesCount());
+  TestAssert(two_tree_dag.GetResult().GetEdgesCount() ==
+             dag_altered_in_callback.GetResult().GetEdgesCount());
 }
 
 [[maybe_unused]] static void test_sample() {
@@ -229,7 +229,8 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
                 bench.stop();
                 std::cout << "Time: " << bench.durationMs() << " ms ";
               },
-              "SPR: seedtree"});
+              "SPR: seedtree",
+              {"slow"}});
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[] { test_spr(make_sample_dag(), 10); }, "SPR: sample"});
