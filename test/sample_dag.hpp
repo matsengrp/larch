@@ -2,10 +2,8 @@
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 
-using NodeSeqMap = std::unordered_map<NodeId, std::string>;
-
 [[maybe_unused]] static auto make_sample_dag() {
-  MADAGStorage input_storage{{}};
+  MADAGStorage<> input_storage = MADAGStorage<>::EmptyDefault();
   auto dag = input_storage.View();
 
   dag.SetReferenceSequence("GAA");
@@ -52,7 +50,7 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 }
 
 [[maybe_unused]] static auto make_sample_dag_topology() {
-  MADAGStorage dag_storage{{}};
+  MADAGStorage<> dag_storage = MADAGStorage<>::EmptyDefault();
   auto dag = dag_storage.View();
 
   dag.SetReferenceSequence("GAA");
@@ -143,7 +141,7 @@ using NodeSeqMap = std::unordered_map<NodeId, std::string>;
 // missing_edges determines whether to build a complete or incomplete DAG. Complete DAG
 // by default.
 [[maybe_unused]] static auto make_big_sample_dag_topology(bool missing_edges = false) {
-  MADAGStorage dag_storage{{}};
+  MADAGStorage<> dag_storage = MADAGStorage<>::EmptyDefault();
   auto dag = dag_storage.View();
 
   dag.SetReferenceSequence("GAA");

@@ -13,7 +13,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
                   std::vector<Node_With_Major_Allele_Set_Change>&) override {
     return move.score_change < best_score_change;
   }
-  auto GetMATNodeToCGMap() {return std::map<MAT::Node*, CompactGenome>{};}
+  auto GetMATNodeToCGMap() { return std::map<MAT::Node*, CompactGenome>{}; }
 };
 
 [[maybe_unused]] static auto choose_root = [](const auto& subtree_weight) {
@@ -100,7 +100,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
       while (not(curr_node->node_id == lca_id.value)) {
         MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{0 /*FIXME*/});
         const auto& clades =
-            merge_.GetResultNodeLabels().at(node.GetId()).GetLeafSet()->GetClades();
+            merge_.GetResultNodeLabels().at(node).GetLeafSet()->GetClades();
         if (not merge_.ContainsLeafset(clades_difference(clades, src_clades))) {
           ++node_id_map_count;
         }
@@ -114,7 +114,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
       while (not(curr_node->node_id == lca_id.value)) {
         MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{0 /*FIXME*/});
         const auto& clades =
-            merge_.GetResultNodeLabels().at(node.GetId()).GetLeafSet()->GetClades();
+            merge_.GetResultNodeLabels().at(node).GetLeafSet()->GetClades();
         if (not merge_.ContainsLeafset(clades_union(clades, dst_clades))) {
           ++node_id_map_count;
         }
@@ -135,13 +135,13 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
   }
 
   void OnReassignedStates(const MAT::Tree& tree) {
-    for (auto leaf_node: tree.get_leaves()) {
+    for (auto leaf_node : tree.get_leaves()) {
       auto new_cg = sample_.GetNodeFromMAT(leaf_node).GetCompactGenome().Copy();
       mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
     }
   }
 
-  auto GetMATNodeToCGMap() {return std::map<MAT::Node*, CompactGenome>{};}
+  auto GetMATNodeToCGMap() { return std::map<MAT::Node*, CompactGenome>{}; }
 
   std::map<MAT::Node*, CompactGenome> mat_node_to_cg_map_;
 
@@ -165,13 +165,14 @@ static void test_matOptimize(std::string_view input_dag_path,
                              std::string_view refseq_path, size_t count,
                              ChooseNode& choose_node) {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
-  MADAGStorage input_dag_storage =
+  MADAGStorage<> input_dag_storage =
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
   input_dag_storage.View().RecomputeCompactGenomes(true);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{input_dag});
-  std::vector<decltype(AddMappedNodes(AddMATConversion(MADAGStorage{{}})))>
+  std::vector<decltype(AddMappedNodes(
+      AddMATConversion(MADAGStorage<>::EmptyDefault())))>
       optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
@@ -191,7 +192,8 @@ static void test_matOptimize(std::string_view input_dag_path,
         merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}};
     /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
     auto radius_callback = [&](MAT::Tree& tree) -> void {
-      auto temp_result = AddMappedNodes(AddMATConversion(MADAGStorage{{}}));
+      auto temp_result =
+          AddMappedNodes(AddMATConversion(MADAGStorage<>::EmptyDefault()));
       temp_result.View().BuildFromMAT(tree, merge.GetResult().GetReferenceSequence());
       temp_result.View().RecomputeCompactGenomes(true);
       optimized_dags.push_back(std::move(temp_result));

@@ -17,6 +17,20 @@
 #include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
 
+template <typename T>
+struct type_identity {
+  using type = T;
+};
+
+template <typename Fn>
+struct finally {
+  finally(Fn&& fn) : fn_{std::forward<Fn>(fn)} {}
+  ~finally() { std::invoke(fn_); }
+
+ private:
+  Fn fn_;
+};
+
 struct NodeId;
 struct EdgeId;
 struct CladeIdx;
@@ -65,31 +79,24 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #define TOSTRING(x) STRINGIFY(x)
 
 #ifndef NDEBUG
-#include <csignal>
 #include <iostream>
 #define Assert(x)                                                       \
   {                                                                     \
     if (not(x)) {                                                       \
       std::cerr << "Assert failed: \"" #x "\" in " __FILE__             \
                    ":" TOSTRING(__LINE__) "\n";                         \
-      /*std::raise(SIGTRAP);*/                                          \
       throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
                                ":" TOSTRING(__LINE__));                 \
     }                                                                   \
   }
 #else
-#define Assert(x)                                                       \
-  {                                                                     \
-    if (not(x))                                                         \
-      throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
-                               ":" TOSTRING(__LINE__));                 \
-  }
+#define Assert(x) \
+  {}
 #endif
 
 [[noreturn]] inline void Fail(const char* msg) {
 #ifndef NDEBUG
   std::cerr << msg << "\n";
-  std::raise(SIGTRAP);
 #endif
   throw std::runtime_error(msg);
 }
@@ -98,8 +105,7 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x(x&&) noexcept = default;            \
   x(const x&) = delete;                 \
   x& operator=(x&&) noexcept = default; \
-  x& operator=(const x&) = delete;      \
-  ~x() = default
+  x& operator=(const x&) = delete
 
 #define MOVE_ONLY_VIRT_DTOR(x)          \
   x(x&&) noexcept = default;            \
@@ -107,6 +113,14 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   x& operator=(x&&) noexcept = default; \
   x& operator=(const x&) = delete;      \
   virtual ~x() = default
+
+#define NO_COPY(x)      \
+  x(const x&) = delete; \
+  x& operator=(const x&) = delete
+
+#define MOVE_ONLY_DEF_CTOR(x) \
+  MOVE_ONLY(x);               \
+  x() = default
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -126,6 +140,10 @@ struct tuple_contains {};
 
 template <typename... Types, typename Type>
 struct tuple_contains<std::tuple<Types...>, Type>
+    : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
+
+template <typename... Types, typename Type>
+struct tuple_contains<const std::tuple<Types...>, Type>
     : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
 
 template <typename Tuple, typename Type>

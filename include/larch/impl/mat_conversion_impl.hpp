@@ -25,7 +25,8 @@ MATNodePtr FeatureMutableView<MATConversion, CRTP, Tag>::GetMutableMATNode() con
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<MATConversion, CRTP, Tag>::SetMATNode(MATNodePtr ptr) const {
-  GetFeatureStorage(this).mat_node_ptr_ = ptr;
+  auto& stor = GetFeatureStorage(this);
+  stor.mat_node_ptr_ = ptr;
   auto& node = static_cast<const CRTP&>(*this);
   node.GetDAG()
       .template GetFeatureExtraStorage<Component::Node, MATConversion>()
@@ -170,13 +171,14 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildMAT(MAT::Tree& tree) con
   tree.root = mat_root_node;
   tree.register_node_serial(mat_root_node);
   BuildHelper(root_node, mat_root_node, tree);
+  tree.fix_node_idx();
 }
 
 template <typename CRTP>
 void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
     MAT::Tree& mat, std::string_view reference_sequence) const {
   auto& dag = static_cast<const CRTP&>(*this);
-  Assert(dag.IsEmpty());
+  Assert(dag.empty());
   dag.template GetFeatureExtraStorage<Component::Node, MATConversion>().mat_tree_ =
       std::addressof(mat);
   dag.SetReferenceSequence(reference_sequence);
@@ -213,7 +215,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
           dag_child_node.SetUncondensedMATNode(mat_child_node);
 
           auto child_edge = dag.AppendEdge(dag_parent_node, dag_child_node, clade_idx);
-          child_edge.SetEdgeMutations({mutations_view(mat_child_node)});
+          child_edge.SetEdgeMutations(EdgeMutations{mutations_view(mat_child_node)});
           ++clade_idx.value;
         }
       }
@@ -221,15 +223,23 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
     dag.BuildConnections();
   }
   for (auto leaf : dag.GetLeafs()) {
+    std::string sample_id = mat.get_node_name(leaf.GetMATNode()->node_id);
+    Assert(not sample_id.empty());
     if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
       auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-          SampleId{std::to_string(leaf.GetMATNode()->node_id)});
+          SampleId{sample_id});
       leaf = id_iter.first;
     } else {
-      leaf.SetSampleId(std::to_string(leaf.GetMATNode()->node_id));
+      leaf.SetSampleId(sample_id);
     }
   }
   dag.AddUA(EdgeMutations{mutations_view(mat.root)});
+#ifndef NDEBUG
+  for (auto leaf : dag.GetLeafs()) {
+    Assert(leaf.HaveSampleId());
+  }
+#endif
+  dag.GetRoot().Validate(true, false);
 }
 
 template <typename CRTP>
@@ -287,7 +297,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(MATNodePtr par_no
     auto child_node = dag.AppendNode();
     child_node.SetMATNode(mat_child);
     auto child_edge = dag.AppendEdge(node, child_node, clade_idx);
-    child_edge.SetEdgeMutations({mutations_view(mat_child)});
+    child_edge.SetEdgeMutations(EdgeMutations{mutations_view(mat_child)});
     BuildHelper(mat_child, child_node, dag);
   }
 }

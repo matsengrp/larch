@@ -35,48 +35,64 @@ WithinCladeAccumOptimum(std::vector<Weight>);
 
 using ArbitraryInt = boost::multiprecision::cpp_int;
 
+template <typename Target>
+struct SampledDAGStorage;
+
+template <typename Target>
+struct LongNameOf<SampledDAGStorage<Target>> {
+  using type =
+      ExtendStorageType<SampledDAGStorage<Target>, Target, Extend::Nodes<MappedNodes>>;
+};
+
+template <typename Target>
+struct SampledDAGStorage : LongNameOf<SampledDAGStorage<Target>>::type {
+  SHORT_NAME(SampledDAGStorage);
+};
+
 template <typename WeightOps, typename DAG>
 class SubtreeWeight {
  public:
   using Storage = std::remove_const_t<typename DAG::StorageType>;
+  using SampledDAGStorage = ::SampledDAGStorage<Storage>;
   using MutableDAG = typename DAG::MutableType;
   using Node = typename DAG::NodeView;
   using Edge = typename DAG::EdgeView;
-  using SampledDAGStorage = ExtendDAGStorage<Storage, Extend::Nodes<MappedNodes>>;
   explicit SubtreeWeight(DAG dag);
 
   DAG GetDAG() const;
 
-  typename WeightOps::Weight ComputeWeightBelow(Node node, WeightOps&& weight_ops);
+  typename WeightOps::Weight ComputeWeightBelow(Node node, const WeightOps& weight_ops);
 
-  ArbitraryInt MinWeightCount(Node node, WeightOps&& weight_ops);
+  ArbitraryInt MinWeightCount(Node node, const WeightOps& weight_ops);
 
-  [[nodiscard]] Storage TrimToMinWeight(WeightOps&& weight_ops);
+  [[nodiscard]] Storage TrimToMinWeight(const WeightOps& weight_ops);
 
   [[nodiscard]] SampledDAGStorage SampleTree(
-      WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
+      const WeightOps& weight_ops, std::optional<NodeId> below = std::nullopt);
 
   [[nodiscard]] SampledDAGStorage UniformSampleTree(
-      WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
+      const WeightOps& weight_ops, std::optional<NodeId> below = std::nullopt);
 
   [[nodiscard]] SampledDAGStorage MinWeightSampleTree(
-      WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
+      const WeightOps& weight_ops, std::optional<NodeId> below = std::nullopt);
 
   [[nodiscard]] SampledDAGStorage MinWeightUniformSampleTree(
-      WeightOps&& weight_ops, std::optional<NodeId> below = std::nullopt);
+      const WeightOps& weight_ops, std::optional<NodeId> below = std::nullopt);
 
  private:
   template <typename CladeRange>
-  typename WeightOps::Weight CladeWeight(CladeRange&& clade, WeightOps&& weight_ops);
+  typename WeightOps::Weight CladeWeight(CladeRange&& clade,
+                                         const WeightOps& weight_ops);
 
   template <typename DistributionMaker>
-  [[nodiscard]] SampledDAGStorage SampleTreeImpl(WeightOps&& weight_ops,
+  [[nodiscard]] SampledDAGStorage SampleTreeImpl(const WeightOps& weight_ops,
                                                  DistributionMaker&& distribution_maker,
                                                  Node below);
 
   template <typename NodeType, typename EdgeSelector, typename MutableDAGType>
-  void ExtractTree(NodeType input_node, NodeId result_node_id, WeightOps&& weight_ops,
-                   EdgeSelector&& edge_selector, MutableDAGType result);
+  void ExtractTree(NodeType input_node, NodeId result_node_id,
+                   const WeightOps& weight_ops, const EdgeSelector& edge_selector,
+                   MutableDAGType result);
 
   DAG dag_;
 

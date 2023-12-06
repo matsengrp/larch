@@ -48,14 +48,15 @@ static void test_rf_on_two_identical_topologies() {
 
   Merge merge1(dag1.GetReferenceSequence());
   merge1.AddDAGs(std::vector{dag1});
-  Merge merge2(merge1);
+  Merge merge2(dag1.GetReferenceSequence());
+  merge2.AddDAGs(std::vector{dag1});
   merge2.AddDAGs(std::vector{dag2});
 
   Assert(GetRFDistance(merge1, merge2) == 0);
 }
 
-static MADAGStorage MakeNonintersectingSampleDAG() {
-  MADAGStorage input_storage{{}};
+static MADAGStorage<> MakeNonintersectingSampleDAG() {
+  MADAGStorage<> input_storage = MADAGStorage<>::EmptyDefault();
   auto dag = input_storage.View();
   dag.SetReferenceSequence("GAA");
   dag.InitializeNodes(11);
@@ -109,7 +110,8 @@ static void test_rf_distance_hand_computed_example() {
 
   Merge merge1(dag1.GetReferenceSequence());
   merge1.AddDAGs(std::vector{dag1});
-  Merge merge2(merge1);
+  Merge merge2(dag1.GetReferenceSequence());
+  merge2.AddDAGs(std::vector{dag1});
   merge2.AddDAGs(std::vector{dag2});
   Assert(GetRFDistance(merge1, merge2) ==
          (dag1.GetEdgesCount() + dag2.GetEdgesCount() - dag1.GetLeafs().size() -
@@ -118,7 +120,6 @@ static void test_rf_distance_hand_computed_example() {
   Merge merge(dag1.GetReferenceSequence());
   merge.AddDAGs(std::vector{dag1, dag2});
   Assert(GetRFDistance(merge1, merge2) == GetRFDistance(merge, merge));
-         
 }
 
 [[maybe_unused]] static const auto test_added0 =

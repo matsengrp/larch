@@ -1,9 +1,9 @@
-const CompactGenome* CompactGenome::Empty() {
+const CompactGenome* CompactGenome::GetEmpty() {
   static const CompactGenome empty = {};
   return &empty;
 }
 
-static inline void AssertMut(MutationPosition, MutationBase mut) {
+static inline void AssertMut(MutationPosition, [[maybe_unused]] MutationBase mut) {
   Assert(mut == 'A' or mut == 'C' or mut == 'G' or mut == 'T' or mut == 'N');
 }
 
@@ -31,9 +31,21 @@ static void ComputeMutations(const EdgeMutations& edge_mutations,
 
 CompactGenome::CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mutations)
     : mutations_{std::move(mutations)}, hash_{ComputeHash(mutations_)} {
+#ifndef NDEBUG
   for (auto [pos, mut] : mutations_) {
     AssertMut(pos, mut);
   }
+#endif
+}
+
+CompactGenome::CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mutations,
+                             size_t hash)
+    : mutations_{std::move(mutations)}, hash_{hash} {
+#ifndef NDEBUG
+  for (auto [pos, mut] : mutations_) {
+    AssertMut(pos, mut);
+  }
+#endif
 }
 
 CompactGenome::CompactGenome(const std::string& sequence,
@@ -45,7 +57,7 @@ CompactGenome::CompactGenome(const std::string& sequence,
       mutations_.insert({{i + 1}, {sequence[i]}});
     }
   }
-  ComputeHash(mutations_);
+  hash_ = ComputeHash(mutations_);
 }
 
 void CompactGenome::AddParentEdge(const EdgeMutations& mutations,
@@ -60,7 +72,7 @@ void CompactGenome::ApplyChanges(
     const ContiguousMap<MutationPosition, MutationBase>& changes) {
   for (auto change : changes) {
     AssertMut(change.first, change.second);
-    mutations_.insert_or_assign(change);
+    mutations_.insert_or_assign(change.first, change.second);
   }
 }
 
@@ -162,8 +174,7 @@ auto CompactGenome::end() const -> decltype(mutations_.end()) {
 bool CompactGenome::empty() const { return mutations_.empty(); }
 
 CompactGenome CompactGenome::Copy() const {
-  CompactGenome result{mutations_.Copy()};
-  result.hash_ = hash_;
+  CompactGenome result{mutations_.Copy(), hash_};
   return result;
 }
 

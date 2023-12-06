@@ -2,49 +2,56 @@
 #error "Don't include this header"
 #endif
 
-template <typename DAG>
-Fragment<DAG>::Fragment(DAG dag, std::vector<NodeId>&& nodes,
-                        std::vector<EdgeId>&& edges)
-    : dag_{dag},
-      nodes_{std::forward<std::vector<NodeId>>(nodes)},
-      edges_{std::forward<std::vector<EdgeId>>(edges)} {}
-
-template <typename DAG>
-void Fragment<DAG>::AssertUA() const {
-  dag_.AssertUA();
+template <typename Target, Component C>
+FragmentElementsContainer<Target, C>::FragmentElementsContainer(
+    Target target, std::vector<Id<C>>&& ids)
+    : target_{target}, ids_{std::move(ids)} {
+  std::vector<Id<C>> unique{ids_};
+  unique |= ranges::actions::sort(std::less<Id<C>>{}) |
+            ranges::actions::unique(std::equal_to<Id<C>>{});
+  Assert(unique.size() == ids_.size());
+  if constexpr (C == Component::Node) {
+    for (auto i : ids_) {
+      fragment_element_features_.insert({i, Neighbors{}});
+    }
+  }
 }
 
-template <typename DAG>
-size_t Fragment<DAG>::GetNodesCount() const {
-  return nodes_.size();
+template <typename Target, Component C>
+size_t FragmentElementsContainer<Target, C>::GetCount() const {
+  return ids_.size();
 }
 
-template <typename DAG>
-size_t Fragment<DAG>::GetEdgesCount() const {
-  return edges_.size();
+template <typename Target, Component C>
+template <typename Feature>
+auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id) {
+  Assert(ranges::contains(ids_, id));
+  if constexpr (std::is_same_v<Feature, Neighbors>) {
+    return fragment_element_features_.at(id);
+  } else {
+    return target_.GetStorage().template GetFeatureStorage<Feature>(id);
+  }
 }
 
-template <typename DAG>
-auto Fragment<DAG>::Get(NodeId id) const {
-  return dag_.Get(id);
+template <typename Target, Component C>
+template <typename Feature>
+const auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id) const {
+  Assert(ranges::contains(ids_, id));
+  if constexpr (std::is_same_v<Feature, Neighbors>) {
+    return fragment_element_features_.at(id);
+  } else {
+    return target_.Const().GetStorage().template GetFeatureStorage<Feature>(id);
+  }
 }
 
-template <typename DAG>
-auto Fragment<DAG>::Get(EdgeId id) const {
-  return dag_.Get(id);
+template <typename Target, Component C>
+template <typename Feature>
+auto& FragmentElementsContainer<Target, C>::GetFeatureExtraStorage() {
+  return target_.GetStorage().template GetFeatureExtraStorage<C, Feature>();
 }
 
-template <typename DAG>
-auto Fragment<DAG>::GetNodes() const {
-  return ranges::views::all(nodes_) | Transform::ToNodes(dag_);
-}
-
-template <typename DAG>
-auto Fragment<DAG>::GetEdges() const {
-  return ranges::views::all(edges_) | Transform::ToEdges(dag_);
-}
-
-template <typename DAG>
-auto Fragment<DAG>::GetRoot() const {
-  return dag_.GetRoot();
+template <typename Target, Component C>
+template <typename Feature>
+const auto& FragmentElementsContainer<Target, C>::GetFeatureExtraStorage() const {
+  return target_.Const().GetStorage().template GetFeatureExtraStorage<C, Feature>();
 }

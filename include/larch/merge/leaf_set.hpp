@@ -18,13 +18,12 @@ class LeafSet {
   size_t hash_ = {};
 
  public:
-  inline static const LeafSet* Empty();
+  inline static const LeafSet* GetEmpty();
   LeafSet() = default;
   MOVE_ONLY(LeafSet);
 
-  template <typename Node>
-  LeafSet(Node node, const std::vector<NodeLabel>& labels,
-          std::vector<LeafSet>& computed_leafsets);
+  template <typename Node, typename LabelsType, typename ComputedLSType>
+  LeafSet(Node node, const LabelsType& labels, ComputedLSType& computed_leafsets);
 
   inline LeafSet(std::vector<std::vector<UniqueData>>&& clades);
 
@@ -46,9 +45,8 @@ class LeafSet {
 
   inline std::string ToString() const;
 
-  template <typename DAGType>
-  inline static std::vector<LeafSet> ComputeLeafSets(
-      DAGType dag, const std::vector<NodeLabel>& labels);
+  template <typename ResultType, typename DAGType, typename LabelsType>
+  static ResultType ComputeLeafSets(DAGType dag, const LabelsType& labels);
 
  private:
   inline static size_t ComputeHash(
@@ -65,4 +63,6 @@ struct std::equal_to<LeafSet> {
   inline bool operator()(const LeafSet& lhs, const LeafSet& rhs) const noexcept;
 };
 
+#include "larch/merge/node_label.hpp"
+#include "larch/impl/merge/node_label_impl.hpp"
 #include "larch/impl/merge/leaf_set_impl.hpp"

@@ -11,7 +11,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   return os;
 }
 
-[[maybe_unused]] static std::string madag_info(const MADAGStorage &dag_storage) {
+[[maybe_unused]] static std::string madag_info(const MADAGStorage<> &dag_storage) {
   std::stringstream os;
   auto dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
@@ -85,7 +85,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   return os.str();
 }
 
-[[maybe_unused]] static auto convert_madag_to_mat(const MADAGStorage &dag_storage) {
+[[maybe_unused]] static auto convert_madag_to_mat(const MADAGStorage<> &dag_storage) {
   MAT::Tree mat;
   auto dag = dag_storage.View();
   Assert(dag.IsTree());
@@ -100,7 +100,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   return mat;
 }
 
-[[maybe_unused]] static void madag_label_nodes(MADAGStorage &dag_storage,
+[[maybe_unused]] static void madag_label_nodes(MADAGStorage<> &dag_storage,
                                                bool leaves_only = true) {
   auto dag = dag_storage.View();
   for (auto node : dag.GetNodes()) {
@@ -119,7 +119,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   }
 }
 
-[[maybe_unused]] static std::string madag_to_fasta(const MADAGStorage &dag_storage,
+[[maybe_unused]] static std::string madag_to_fasta(const MADAGStorage<> &dag_storage,
                                                    bool use_ids, bool leaves_only,
                                                    bool include_reference) {
   std::stringstream os;
@@ -140,7 +140,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   return os.str();
 }
 
-[[maybe_unused]] static void madag_to_fasta(const MADAGStorage &dag_storage,
+[[maybe_unused]] static void madag_to_fasta(const MADAGStorage<> &dag_storage,
                                             const std::string &out_path, bool use_ids,
                                             bool leaves_only, bool include_reference) {
   std::ofstream file_out;
@@ -189,8 +189,8 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   }
 }
 
-[[maybe_unused]] static bool madag_compare(const MADAGStorage &lhs_storage,
-                                           const MADAGStorage &rhs_storage) {
+[[maybe_unused]] static bool madag_compare(const MADAGStorage<> &lhs_storage,
+                                           const MADAGStorage<> &rhs_storage) {
   auto lhs = lhs_storage.View();
   auto rhs = rhs_storage.View();
   if (lhs.GetNodesCount() != rhs.GetNodesCount()) return false;
@@ -206,7 +206,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   return true;
 }
 
-bool operator==(const MADAGStorage &lhs_storage, const MADAGStorage &rhs_storage) {
+bool operator==(const MADAGStorage<> &lhs_storage, const MADAGStorage<> &rhs_storage) {
   return madag_compare(lhs_storage, rhs_storage);
 }
 

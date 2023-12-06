@@ -13,7 +13,6 @@
 #include "larch/subtree/parsimony_score.hpp"
 
 #include "larch/usher_glue.hpp"
-#include <tbb/task_scheduler_init.h>
 
 template <typename Node1, typename Node2>
 void compareDAG(Node1 dag1, Node2 dag2) {
@@ -35,7 +34,7 @@ void compareDAG(Node1 dag1, Node2 dag2) {
 
 template <typename DAG>
 void check_MAT_MADAG_Eq(MAT::Tree& tree, DAG init) {
-  auto converted_dag = AddMATConversion(MADAGStorage{{}});
+  auto converted_dag = AddMATConversion(MADAGStorage<>::EmptyDefault());
   converted_dag.View().BuildFromMAT(tree, init.GetReferenceSequence());
   compareDAG(converted_dag.View().GetRoot(), init.GetRoot());
 }
@@ -66,7 +65,7 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   for (; static_cast<size_t>(1) << rad_exp <= ddepth; rad_exp++) {
     auto all_nodes = tree.depth_first_expansion();
     std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
-
+    tree.fix_node_idx();
     optimize_inner_loop(all_nodes,     // nodes to search
                         tree,          // tree
                         1 << rad_exp,  // radius
@@ -86,16 +85,10 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
     radius_callback(tree);
   }
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
-  auto result = std::make_pair(AddMATConversion(MADAGStorage{{}}), std::move(tree));
+  auto result =
+      std::make_pair(AddMATConversion(MADAGStorage<>::EmptyDefault()), std::move(tree));
   result.first.View().BuildFromMAT(result.second, dag.GetReferenceSequence());
 
-  // UPDATE LEAF CG's WITH AMBIGUOUS CG MAP
-  if (not reassign_callback.GetMATNodeToCGMap().empty()) {
-    for (auto leaf: tree.get_leaves()) {
-      auto new_cg = reassign_callback.GetMATNodeToCGMap().at(leaf).Copy();
-      result.first.View().GetNodeFromMAT(leaf) = std::move(new_cg);
-    }
-  }
   // TODO tree.delete_nodes();
   result.first.View().RecomputeCompactGenomes();
   return result;

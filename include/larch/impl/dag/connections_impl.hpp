@@ -3,9 +3,9 @@
 #endif
 
 #include <atomic>
-#include <tbb/parallel_for_each.h>
-#include <tbb/concurrent_vector.h>
 #include <iostream>
+
+#include "larch/parallel/reduction.hpp"
 
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Connections, CRTP, Tag>::IsTree() const {
@@ -43,8 +43,8 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
   storage.leafs_ = {};
   BuildConnectionsRaw();
   std::atomic<size_t> root_id{NoId};
-  tbb::concurrent_vector<NodeId> leafs;
-  tbb::parallel_for_each(dag.GetNodes(), [&](auto node) {
+  Reduction<std::vector<NodeId>> leafs{32};
+  ParallelForEach(dag.GetNodes(), [&](auto node) {
     for (auto clade : node.GetClades()) {
       Assert(not clade.empty() && "Empty clade");
     }
@@ -57,17 +57,25 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
       Assert(previous == NoId);
     }
     if (node.IsLeaf()) {
-      leafs.push_back(node);
+      leafs.AddElement([](std::vector<NodeId>& ls, NodeId id) { ls.push_back(id); },
+                       node);
     }
   });
   storage.root_.value = root_id.load();
-  storage.leafs_.insert(storage.leafs_.end(), leafs.begin(), leafs.end());
+  leafs.GatherAndClear(
+      [](auto buckets, auto& stor) {
+        for (auto& bucket : buckets) {
+          // TODO reserve
+          stor.leafs_.insert(stor.leafs_.end(), bucket.begin(), bucket.end());
+        }
+      },
+      storage);
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  tbb::parallel_for_each(dag.GetNodes(), [](auto node) { node.ClearConnections(); });
+  ParallelForEach(dag.GetNodes(), [](auto node) { node.ClearConnections(); });
   for (auto edge : dag.GetEdges()) {
     Assert(edge.GetParentId().value != NoId && "Edge has no parent");
     Assert(edge.GetChildId().value != NoId && "Edge has no child");
@@ -81,7 +89,11 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::AddLeaf(NodeId id) const {
   auto& storage = GetFeatureStorage(this);
-  storage.leafs_.push_back(id);
+  // TODO make leafs ContiguousSet ?
+  if (std::find(storage.leafs_.begin(), storage.leafs_.end(), id) ==
+      storage.leafs_.end()) {
+    storage.leafs_.push_back(id);
+  }
 }
 
 template <typename CRTP, typename Tag>
@@ -90,17 +102,17 @@ void FeatureMutableView<Connections, CRTP, Tag>::ClearConnections() const {
   for (auto node : dag.GetNodes()) {
     node.ClearConnections();
   }
-  dag.ClearEdges();
+  dag.GetStorage().ClearEdges();
 }
 
 template <typename CRTP, typename Tag>
-std::map<std::set<NodeId>, std::set<NodeId>>
+ContiguousMap<ContiguousSet<NodeId>, ContiguousSet<NodeId>>
 FeatureMutableView<Connections, CRTP, Tag>::BuildCladeUnionMap() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  std::map<std::set<NodeId>, std::set<NodeId>> clade_union_map;
+  ContiguousMap<ContiguousSet<NodeId>, ContiguousSet<NodeId>> clade_union_map;
   dag.GetRoot().CalculateLeafsBelow();
   for (auto node : dag.GetNodes()) {
-    std::set<NodeId> full_leafset;
+    ContiguousSet<NodeId> full_leafset;
     if (node.GetLeafsBelow().size() > 0) {
       for (const auto clade_leafset : node.GetLeafsBelow()) {
         full_leafset.insert(clade_leafset.begin(), clade_leafset.end());
@@ -109,9 +121,10 @@ FeatureMutableView<Connections, CRTP, Tag>::BuildCladeUnionMap() const {
       full_leafset.insert(node.GetId());
     }
     if (clade_union_map.find(full_leafset) == clade_union_map.end()) {
-      clade_union_map[full_leafset] = std::set<NodeId>();
+      // TODO Copy()
+      clade_union_map[full_leafset.Copy()] = ContiguousSet<NodeId>();
     }
-    clade_union_map[full_leafset].insert(node.GetId());
+    clade_union_map[std::move(full_leafset)].insert(node.GetId());
   }
   return clade_union_map;
 }
@@ -123,7 +136,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::MakeComplete() const {
   size_t taxon_count = dag.GetLeafsCount();
   dag.ClearConnections();
   // Connect rootsplit nodes.
-  std::set<NodeId>* rootsplits = nullptr;
+  ContiguousSet<NodeId>* rootsplits = nullptr;
   for (auto& [clade_union, node_ids] : clade_union_map) {
     if (clade_union.size() == taxon_count) {
       rootsplits = &node_ids;
@@ -139,7 +152,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::MakeComplete() const {
     auto leaf_sets = parent_node.GetLeafsBelow();
     for (size_t clade_idx = 0; clade_idx < leaf_sets.size(); clade_idx++) {
       auto leaf_clade = leaf_sets[clade_idx];
-      std::set<NodeId> clade_set(leaf_clade.begin(), leaf_clade.end());
+      ContiguousSet<NodeId> clade_set(leaf_clade.begin(), leaf_clade.end());
       auto possible_children = clade_union_map.find(clade_set);
       if (possible_children != clade_union_map.end()) {
         for (auto child_node_id : possible_children->second) {

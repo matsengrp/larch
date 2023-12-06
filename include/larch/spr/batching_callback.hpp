@@ -2,14 +2,9 @@
 
 #include <mutex>
 #include <shared_mutex>
-#include <tbb/concurrent_unordered_map.h>
 
 #include "larch/spr/spr_view.hpp"
 #include "larch/merge/merge.hpp"
-
-template <typename K, typename V>
-using ConcurrentUnorderedMap =
-    tbb::concurrent_unordered_map<K, V, std::hash<K>, std::equal_to<K>>;
 
 template <typename CRTP, typename SampleDAG>
 class BatchingCallback : public Move_Found_Callback {
@@ -20,11 +15,12 @@ class BatchingCallback : public Move_Found_Callback {
 
   virtual ~BatchingCallback() {}
 
-  using Storage = MergeDAGStorage;
-  using MATStorage = decltype(AddMATConversion(Storage{{}}));
-  using SPRType = decltype(SPRStorage(AddMATConversion(Storage{{}}).View()));
+  using Storage = MergeDAGStorage<>;
+  using MATStorage = decltype(AddMATConversion(Storage::EmptyDefault()));
+  using SPRType =
+      decltype(AddSPRStorage(AddMATConversion(Storage::EmptyDefault()).View()));
   using ReassignedStatesStorage =
-      decltype(AddMappedNodes(AddMATConversion(Storage{{}})));
+      decltype(AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&
@@ -33,7 +29,7 @@ class BatchingCallback : public Move_Found_Callback {
   void operator()(MAT::Tree& tree);
 
   void OnReassignedStates(MAT::Tree& tree);
-  const ConcurrentUnorderedMap<MAT::Node*, CompactGenome>& GetMATNodeToCGMap() const;
+  const GrowableHashMap<std::string, CompactGenome>& GetSampleIdToCGMap() const;
 
  protected:
   Merge& GetMerge();
@@ -44,17 +40,18 @@ class BatchingCallback : public Move_Found_Callback {
   void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq);
 
   Merge& merge_;
-  std::decay_t<SampleDAG> sample_dag_;
+  SampleDAG sample_dag_;
   bool collapse_empty_fragment_edges_;
   ArbitraryInt applied_moves_count_;
-  ConcurrentUnorderedMap<MAT::Node*, CompactGenome> mat_node_to_cg_map_;
-  ReassignedStatesStorage reassigned_states_storage_ =
-      AddMappedNodes(AddMATConversion(Storage{{}}));
+  std::unique_ptr<ReassignedStatesStorage> reassigned_states_storage_ =
+      std::make_unique<ReassignedStatesStorage>(
+          AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
   std::shared_mutex mat_mtx_;
   std::unique_ptr<MATStorage> sample_mat_storage_;
   std::mutex merge_mtx_;
-  tbb::concurrent_vector<SPRType> batch_storage_;
-  tbb::concurrent_vector<Fragment<decltype(std::declval<SPRType>().View())>> batch_;
+  Reduction<std::deque<SPRType>> batch_storage_{32};
+  Reduction<std::deque<FragmentStorage<decltype(std::declval<SPRType>().View())>>>
+      batch_{32};
 };
 
 #include "larch/impl/spr/batching_callback_impl.hpp"

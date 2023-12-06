@@ -6,7 +6,10 @@ cmake_policy(SET CMP0026 OLD)
 FetchContent_Declare(
   protocolbuffers_protobuf
   GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-  GIT_TAG v23.4
+  GIT_TAG v25.1
+  GIT_SHALLOW true
+  GIT_PROGRESS true
+  UPDATE_DISCONNECTED true
   OVERRIDE_FIND_PACKAGE
 )
 FetchContent_MakeAvailable(protocolbuffers_protobuf)

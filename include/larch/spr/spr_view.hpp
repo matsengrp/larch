@@ -1,7 +1,6 @@
 #pragma once
 
 #include "larch/usher_glue.hpp"
-#include "larch/spr/lca.hpp"
 #include "larch/contiguous_set.hpp"
 
 struct FitchSet {
@@ -20,7 +19,7 @@ struct FitchSet {
     }
     Fail("Unreachable");
   }
-  char at(size_t pos) const {
+  char at([[maybe_unused]] size_t pos) const {
     Assert(pos == 0);
     if ((value_ & 1) != 0) {
       return 'A';
@@ -181,11 +180,50 @@ struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
                                 nodes_with_major_allele_set_change);
 };
 
-template <typename DAG>
-auto SPRStorage(DAG&& dag) {
-  auto extend = ExtendStorage(std::forward<DAG>(dag), Extend::Nodes<HypotheticalNode>{},
-                              Extend::DAG<HypotheticalTree<std::decay_t<DAG>>>{});
-  return OverlayDAGStorage{std::move(extend)};
+template <typename Target>
+struct SPRStorage;
+
+template <typename Target>
+struct LongNameOf<SPRStorage<Target>> {
+  using type_helper = ExtendStorageType<void, Target, Extend::Nodes<HypotheticalNode>,
+                                        Extend::DAG<HypotheticalTree<Target>>>;
+  using type = OverlayStorageType<SPRStorage<Target>, type_helper>;
+};
+
+template <typename Target>
+struct SPRStorage : LongNameOf<SPRStorage<Target>>::type {
+  MOVE_ONLY(SPRStorage);
+
+  using LongNameType = typename LongNameOf<SPRStorage>::type;
+  using LongNameType::LongNameType;
+
+  static SPRStorage EmptyDefault() {
+    static_assert(Target::role == Role::Storage);
+    using helper = typename LongNameOf<SPRStorage<Target>>::type_helper;
+    return SPRStorage{helper::EmptyDefault()};
+  }
+
+  static SPRStorage Consume(Target&& target) {
+    static_assert(Target::role == Role::Storage);
+    using helper = typename LongNameOf<SPRStorage<Target>>::type_helper;
+    return SPRStorage{helper::Consume(std::move(target))};
+  }
+
+  static SPRStorage FromView(const Target& target) {
+    static_assert(Target::role == Role::View);
+    using helper = typename LongNameOf<SPRStorage<Target>>::type_helper;
+    return SPRStorage{helper::FromView(target)};
+  }
+};
+
+template <typename Target, typename = std::enable_if_t<Target::role == Role::Storage>>
+SPRStorage<Target> AddSPRStorage(Target&& dag) {
+  return SPRStorage<Target>::Consume(std::move(dag));
+}
+
+template <typename Target, typename = std::enable_if_t<Target::role == Role::View>>
+SPRStorage<Target> AddSPRStorage(const Target& dag) {
+  return SPRStorage<Target>::FromView(dag);
 }
 
 #include "larch/impl/spr/spr_view_impl.hpp"

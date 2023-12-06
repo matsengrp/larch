@@ -6,10 +6,10 @@ FeatureConstView<ReferenceSequence, CRTP, Tag>::GetReferenceSequence() const {
 
 template <typename CRTP, typename Tag>
 void FeatureConstView<ReferenceSequence, CRTP, Tag>::AssertUA() const {
-  auto& dag = static_cast<const CRTP&>(*this);
+  [[maybe_unused]] auto& dag = static_cast<const CRTP&>(*this);
   Assert(dag.HaveRoot());
-  auto ua = dag.GetRoot();
-  Assert(ua.GetCladesCount() == 1);
+  // auto ua = dag.GetRoot();
+  // TODO Assert((not dag.IsTree()) or ua.GetCladesCount() == 1);
 }
 
 template <typename CRTP, typename Tag>
@@ -28,8 +28,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SetReferenceSequence(
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
-    SetCompactGenomesFromNodeSequenceMap(
-        const std::unordered_map<NodeId, std::string>& node_sequence_map) const {
+    SetCompactGenomesFromNodeSequenceMap(const NodeSeqMap& node_sequence_map) const {
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
 
@@ -49,9 +48,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
-    SetCompactGenomesFromNodeMutationMap(
-        std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>&&
-            node_mutation_map) const {
+    SetCompactGenomesFromNodeMutationMap(NodeMutMap&& node_mutation_map) const {
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
 
@@ -71,9 +68,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
-    UpdateCompactGenomesFromNodeMutationMap(
-        std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>&&
-            node_mutation_map) const {
+    UpdateCompactGenomesFromNodeMutationMap(NodeMutMap&& node_mutation_map) const {
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
 
@@ -143,12 +138,13 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
       node = std::move(new_cgs.at(node.GetId().value));
     }
   }
+#ifndef NDEBUG
   // TODO extract validation to separate function to not hurt performance
-  std::unordered_map<CompactGenome, NodeId> leaf_cgs;
+  ContiguousMap<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {
     if (node.IsLeaf()) {
       bool success =
-          leaf_cgs.emplace(node.GetCompactGenome().Copy(), node.GetId()).second;
+          leaf_cgs.insert({node.GetCompactGenome().Copy(), node.GetId()}).second;
       if (not success) {
         // std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
         //           << node.GetId().value << " also seen at "
@@ -160,13 +156,15 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
       }
     }
   }
+#endif
 }
 
 template <typename CRTP, typename Tag>
-void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG() const {
+void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG(
+    bool coerce) const {
   auto dag = static_cast<const CRTP&>(*this);
   for (auto leaf : dag.GetLeafs()) {
-    if (not leaf.HaveSampleId()) {
+    if (not leaf.HaveSampleId() or coerce) {
       std::string id = leaf.GetCompactGenome().ToString();
       Assert(not id.empty());
       if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {

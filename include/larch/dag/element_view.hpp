@@ -7,6 +7,9 @@
  */
 template <Component C, typename DAGViewType>
 struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
+  static_assert(DAGViewType::role == Role::View);
+  static_assert(DAGViewType::component == Component::DAG);
+
  public:
   constexpr static const Component component = C;
   constexpr static const Role role = Role::View;
@@ -36,7 +39,7 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
   auto& GetFeatureExtraStorage() const;
 
  private:
-  std::decay_t<DAGViewType> dag_view_;
+  DAGViewType dag_view_;
   Id<C> id_;
 };
 

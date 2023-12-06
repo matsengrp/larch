@@ -19,8 +19,7 @@ struct ElementStorage {
   template <typename CRTP>
   struct ConstElementViewBase : FeatureConstView<Fs, CRTP>... {};
   template <typename CRTP>
-  struct MutableElementViewBase : ConstElementViewBase<CRTP>,
-                                  FeatureMutableView<Fs, CRTP>... {
+  struct MutableElementViewBase : FeatureMutableView<Fs, CRTP>... {
     using FeatureMutableView<Fs, CRTP>::operator=...;
   };
 

@@ -2,18 +2,67 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+template <typename... Features>
+struct ExtraStorage {
+  MOVE_ONLY(ExtraStorage);
+  ExtraStorage() = default;
+
+  constexpr static const Component component = Component::DAG;
+  constexpr static const Role role = Role::Storage;
+
+  using FeatureTypes = std::tuple<Features...>;
+
+  template <template <typename, typename> typename T, typename CRTP>
+  struct Base : T<Features, CRTP>... {};
+
+  template <typename Feature>
+  auto& GetFeatureStorage() {
+    return std::get<Feature>(features_storage_);
+  }
+
+  template <typename Feature>
+  const auto& GetFeatureStorage() const {
+    return std::get<Feature>(features_storage_);
+  }
+
+  template <typename Storage>
+  auto& GetTargetStorage(Storage& storage) const {
+    return storage;
+  }
+
+  template <typename Storage>
+  auto& GetTargetStorage(Storage& storage) {
+    return storage;
+  }
+
+ private:
+  FeatureTypes features_storage_;
+};
+
 /**
  * Owning storage for an entire DAG. All views (DAG, node or edge) are
  * internally pointing to an instance of DAGStorage or classes providing
  * the same interface, like ExtendDAGStorage.
  */
-template <typename NodesContainerT, typename EdgesContainerT, typename... Features>
+template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
+          typename ExtraStorageT>
 struct DAGStorage {
- public:
+  static_assert(ExtraStorageT::role == Role::Storage);
+  static_assert(ExtraStorageT::component == Component::DAG);
+
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 
-  using FeatureTypes = std::tuple<Features...>;
+  using Self = ShortName;
+
+  using ViewType = DAGView<Self>;
+  using ConstViewType = DAGView<const Self>;
+
+  using ExtraStorageType = ExtraStorageT;
+  using FeatureTypes = typename ExtraStorageT::FeatureTypes;
+  template <Component C>
+  using Container =
+      std::conditional_t<C == Component::Node, NodesContainerT, EdgesContainerT>;
   using AllNodeFeatures = typename NodesContainerT::AllFeatureTypes;
   using AllEdgeFeatures = typename EdgesContainerT::AllFeatureTypes;
 
@@ -32,16 +81,16 @@ struct DAGStorage {
   static const bool contains_element_feature;
 
   template <typename CRTP>
-  struct ConstDAGViewBase : FeatureConstView<Features, CRTP>...,
-                            ExtraFeatureConstView<Features, CRTP>...,
+  struct ConstDAGViewBase : ExtraStorageT::template Base<FeatureConstView, CRTP>,
+                            ExtraStorageT::template Base<ExtraFeatureConstView, CRTP>,
                             NodesContainerT::template ExtraConstElementViewBase<CRTP>,
                             EdgesContainerT::template ExtraConstElementViewBase<CRTP> {
   };
+
   template <typename CRTP>
   struct MutableDAGViewBase
-      : ConstDAGViewBase<CRTP>,
-        FeatureMutableView<Features, CRTP>...,
-        ExtraFeatureMutableView<Features, CRTP>...,
+      : ExtraStorageT::template Base<FeatureMutableView, CRTP>,
+        ExtraStorageT::template Base<ExtraFeatureMutableView, CRTP>,
         NodesContainerT::template ExtraMutableElementViewBase<CRTP>,
         EdgesContainerT::template ExtraMutableElementViewBase<CRTP> {
     template <typename F>
@@ -51,10 +100,12 @@ struct DAGStorage {
   };
 
   DAGStorage() = default;
+  DAGStorage(NodesContainerT&& nodes_container, EdgesContainerT&& edges_container,
+             ExtraStorageT&& features_storage);
   MOVE_ONLY(DAGStorage);
 
-  auto View();
-  auto View() const;
+  ViewType View();
+  ConstViewType View() const;
 
   NodeId AppendNode();
   EdgeId AppendEdge();
@@ -62,8 +113,20 @@ struct DAGStorage {
   void AddNode(NodeId id);
   void AddEdge(EdgeId id);
 
+  auto GetNodes() const { return nodes_container_.All(); }
+  auto GetEdges() const { return edges_container_.All(); }
+
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
+
+  template <Component C>
+  Id<C> GetNextAvailableId() const {
+    if constexpr (C == Component::Node) {
+      return nodes_container_.GetNextAvailableId();
+    } else {
+      return edges_container_.GetNextAvailableId();
+    }
+  }
 
   void InitializeNodes(size_t size);
   void InitializeEdges(size_t size);
@@ -95,8 +158,11 @@ struct DAGStorage {
   template <typename Feature>
   const auto& GetFeatureStorage() const;
 
+  auto& GetTargetStorage() { return features_storage_.GetTargetStorage(*this); }
+  auto& GetTargetStorage() const { return features_storage_.GetTargetStorage(*this); }
+
  private:
   NodesContainerT nodes_container_;
   EdgesContainerT edges_container_;
-  std::tuple<Features...> features_storage_;
+  ExtraStorageT features_storage_;
 };

@@ -19,7 +19,6 @@
 
 #include <string_view>
 #include <vector>
-#include <unordered_map>
 #include <utility>
 #include <optional>
 
@@ -30,39 +29,61 @@
 #include "larch/madag/sample_id.hpp"
 
 struct ReferenceSequence {
+  MOVE_ONLY_DEF_CTOR(ReferenceSequence);
   std::string reference_sequence_;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<ReferenceSequence, CRTP, Tag> {
-  const std::string &GetReferenceSequence() const;
+  const std::string& GetReferenceSequence() const;
   void AssertUA() const;
   bool HaveUA() const;
 };
 
+using NodeSeqMap =
+    IdContainer<NodeId, std::string, IdContinuity::Sparse, Ordering::Unordered>;
+using NodeMutMap = IdContainer<NodeId, ContiguousMap<MutationPosition, MutationBase>,
+                               IdContinuity::Sparse, Ordering::Unordered>;
+
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
   void SetReferenceSequence(std::string_view reference_sequence) const;
-  void SetCompactGenomesFromNodeSequenceMap(
-      const std::unordered_map<NodeId, std::string> &sequence_map) const;
-  void SetCompactGenomesFromNodeMutationMap(
-      std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>
-          &&node_mutation_map) const;
-  void UpdateCompactGenomesFromNodeMutationMap(
-      std::unordered_map<NodeId, ContiguousMap<MutationPosition, MutationBase>>
-          &&node_mutation_map) const;
-  void AddUA(const EdgeMutations &mutations_at_root) const;
+  void SetCompactGenomesFromNodeSequenceMap(const NodeSeqMap& sequence_map) const;
+  void SetCompactGenomesFromNodeMutationMap(NodeMutMap&& node_mutation_map) const;
+  void UpdateCompactGenomesFromNodeMutationMap(NodeMutMap&& node_mutation_map) const;
+  void AddUA(const EdgeMutations& mutations_at_root) const;
   void RecomputeCompactGenomes(bool recompute_leaves = true) const;
-  void SampleIdsFromCG() const;
+  void SampleIdsFromCG(bool coerce = false) const;
   void RecomputeEdgeMutations() const;
 };
 
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"
 
-using MADAGStorage =
-    ExtendDAGStorage<DefaultDAGStorage,
-                     Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
-                     Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+template <typename Target = DefaultDAGStorage>
+struct MADAGStorage;
 
-using MADAG = DAGView<const MADAGStorage>;
-using MutableMADAG = DAGView<MADAGStorage>;
+template <typename Target>
+struct LongNameOf<MADAGStorage<Target>> {
+  using type =
+      ExtendDAGStorage<MADAGStorage<Target>, Target,
+                       Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
+                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+};
+
+template <typename Target>
+struct MADAGStorage : LongNameOf<MADAGStorage<Target>>::type {
+  SHORT_NAME(MADAGStorage);
+};
+
+template <typename Target, typename = std::enable_if_t<Target::role == Role::Storage>>
+MADAGStorage<Target> AddMADAG(Target&& dag) {
+  return MADAGStorage<Target>::Consume(std::move(dag));
+}
+
+template <typename Target, typename = std::enable_if_t<Target::role == Role::View>>
+MADAGStorage<Target> AddMADAG(const Target& dag) {
+  return MADAGStorage<Target>::FromView(dag);
+}
+
+using MADAG = DAGView<const MADAGStorage<DefaultDAGStorage>>;
+using MutableMADAG = DAGView<MADAGStorage<DefaultDAGStorage>>;

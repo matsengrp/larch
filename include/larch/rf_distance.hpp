@@ -109,7 +109,8 @@ struct SumRFDistance_ {
   const Merge& reference_dag_;
   const Merge& compute_dag_;
 
-  explicit SumRFDistance_(const Merge& reference_dag, const Merge& compute_dag) : reference_dag_{reference_dag}, compute_dag_{compute_dag}{
+  explicit SumRFDistance_(const Merge& reference_dag, const Merge& compute_dag)
+      : reference_dag_{reference_dag}, compute_dag_{compute_dag} {
     SubtreeWeight<TreeCount, MergeDAG> below_tree_counts{reference_dag.GetResult()};
     std::vector<ArbitraryInt> above_tree_counts;
     above_tree_counts.resize(reference_dag.GetResult().GetNodesCount());
@@ -125,12 +126,14 @@ struct SumRFDistance_ {
         auto clade = [this, node] {
           auto& label = reference_dag_.GetResultNodeLabels().at(node);
           std::set<std::string> leafs;
-          for (auto l: label.GetLeafSet()->ToParentClade(label.GetSampleId())) {
+          for (auto l : label.GetLeafSet()->ToParentClade(label.GetSampleId())) {
             leafs.insert(l->ToString());
           }
           return leafs;
-        }(); 
-        leafset_to_full_treecount[clade] += above_tree_counts[node.GetId().value] * below_tree_counts.ComputeWeightBelow(node, {});
+        }();
+        leafset_to_full_treecount[clade] +=
+            above_tree_counts[node.GetId().value] *
+            below_tree_counts.ComputeWeightBelow(node, {});
       }
     }
     // sum all of the values in leafset_to_full_treecount
@@ -144,14 +147,14 @@ struct SumRFDistance_ {
   }
 
   template <typename DAG>
-  Weight ComputeEdge(DAG dag, EdgeId edge_id) {
+  Weight ComputeEdge(DAG dag, EdgeId edge_id) const {
     // clade should be a LeafSet, the key type in the mapping
     // leafset_to_full_treecount:
     auto clade = [this, dag, edge_id] {
       auto edge = dag.Get(edge_id);
       auto& label = compute_dag_.GetResultNodeLabels().at(edge.GetChild());
       std::set<std::string> leafs;
-      for (auto l: label.GetLeafSet()->ToParentClade(label.GetSampleId())) {
+      for (auto l : label.GetLeafSet()->ToParentClade(label.GetSampleId())) {
         leafs.insert(l->ToString());
       }
       return leafs;
@@ -164,11 +167,11 @@ struct SumRFDistance_ {
     }
   }
 
-  bool Compare(Weight lhs, Weight rhs) { return lhs < rhs; }
+  bool Compare(Weight lhs, Weight rhs) const { return lhs < rhs; }
 
-  bool CompareEqual(Weight lhs, Weight rhs) { return lhs == rhs; }
+  bool CompareEqual(Weight lhs, Weight rhs) const { return lhs == rhs; }
 
-  Weight Combine(Weight lhs, Weight rhs) { return lhs + rhs; }
+  Weight Combine(Weight lhs, Weight rhs) const { return lhs + rhs; }
 
   const ArbitraryInt& GetShiftSum() const { return shift_sum_; }
 };
@@ -176,13 +179,13 @@ struct SumRFDistance_ {
 // Not sure if you can substruct a templated struct like this...?
 struct SumRFDistance : SimpleWeightOps<SumRFDistance_> {
   explicit SumRFDistance(const Merge& reference_dag, const Merge& compute_dag)
-      : SimpleWeightOps<SumRFDistance_>{SumRFDistance_{reference_dag, compute_dag}} {
-  }
+      : SimpleWeightOps<SumRFDistance_>{SumRFDistance_{reference_dag, compute_dag}} {}
 };
 
 // Create a WeightOps for computing RF distances to the provided reference tree:
 struct RFDistance : SumRFDistance {
-  explicit RFDistance(const Merge& reference_dag, const Merge& compute_dag) : SumRFDistance{reference_dag, compute_dag} {
+  explicit RFDistance(const Merge& reference_dag, const Merge& compute_dag)
+      : SumRFDistance{reference_dag, compute_dag} {
     Assert(reference_dag.GetResult().IsTree());
     // now behave exactly like SumRFDistance
   }
@@ -197,12 +200,14 @@ struct MaxSumRFDistance_ : SumRFDistance_ {
 
 struct MaxSumRFDistance : SimpleWeightOps<MaxSumRFDistance_> {
   explicit MaxSumRFDistance(const Merge& reference_dag, const Merge& compute_dag)
-      : SimpleWeightOps<MaxSumRFDistance_>{MaxSumRFDistance_{reference_dag, compute_dag}} {}
+      : SimpleWeightOps<MaxSumRFDistance_>{
+            MaxSumRFDistance_{reference_dag, compute_dag}} {}
 };
 
 // Create a WeightOps for computing RF distances to the provided reference tree:
 struct MaxRFDistance : MaxSumRFDistance {
-  explicit MaxRFDistance(const Merge& reference_dag, const Merge& compute_dag) : MaxSumRFDistance{reference_dag, compute_dag} {
+  explicit MaxRFDistance(const Merge& reference_dag, const Merge& compute_dag)
+      : MaxSumRFDistance{reference_dag, compute_dag} {
     Assert(reference_dag.GetResult().IsTree());
     // now behave exactly like MaxSumRFDistance
   }

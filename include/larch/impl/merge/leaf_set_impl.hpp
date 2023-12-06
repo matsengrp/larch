@@ -1,30 +1,31 @@
-const LeafSet* LeafSet::Empty() {
+const LeafSet* LeafSet::GetEmpty() {
   static const LeafSet empty = {};
   return &empty;
 }
 
-template <typename Node>
-LeafSet::LeafSet(Node node, const std::vector<NodeLabel>& labels,
-                 std::vector<LeafSet>& computed_leafsets)
+template <typename Node, typename LabelsType, typename ComputedLSType>
+LeafSet::LeafSet(Node node, const LabelsType& labels, ComputedLSType& computed_leafsets)
     : clades_{[&] {
-        auto get_id = [&labels](Node n) -> UniqueData {
-          Assert(n.Const().HaveSampleId());
-          return labels.at(n.GetId().value).GetSampleId();
-        };
         std::vector<std::vector<UniqueData>> clades;
+        clades.reserve(node.GetCladesCount());
         if (node.IsLeaf()) {
-          clades.push_back({get_id(node)});
+          UniqueData id = labels.at(node.GetId()).GetSampleId();
+          clades.push_back({id});
         } else {
-          clades.reserve(node.GetCladesCount());
           for (auto clade : node.GetClades()) {
+            Assert(not clade.empty());
             std::vector<UniqueData> clade_leafs;
             clade_leafs.reserve(clade.size());
             for (Node child : clade | Transform::GetChild()) {
               if (child.IsLeaf()) {
-                clade_leafs.push_back(get_id(child));
+                Assert(child.Const().HaveSampleId());
+                UniqueData id = labels.at(child.GetId()).GetSampleId();
+                clade_leafs.push_back(id);
               } else {
-                for (auto& child_leafs :
-                     computed_leafsets.at(child.GetId().value).clades_) {
+                auto& computed_clades = computed_leafsets.at(child.GetId()).clades_;
+                Assert(not computed_clades.empty());
+                for (auto& child_leafs : computed_clades) {
+                  Assert(not child_leafs.empty());
                   clade_leafs.insert(clade_leafs.end(), child_leafs.begin(),
                                      child_leafs.end());
                 }
@@ -93,20 +94,17 @@ std::string LeafSet::ToString() const {
   return result + "}";
 }
 
-template <typename DAGType>
-std::vector<LeafSet> LeafSet::ComputeLeafSets(DAGType dag,
-                                              const std::vector<NodeLabel>& labels) {
-  std::vector<LeafSet> result;
-  result.resize(dag.GetNodesCount());
+template <typename ResultType, typename DAGType, typename LabelsType>
+ResultType LeafSet::ComputeLeafSets(DAGType dag, const LabelsType& labels) {
+  ResultType result;
   auto ComputeLS = [&](auto& self, auto for_node) {
-    const LeafSet& leaf_set = result.at(for_node.GetId().value);
-    if (not leaf_set.empty()) {
+    if (not result[for_node].empty()) {
       return;
     }
     for (auto child : for_node.GetChildren() | Transform::GetChild()) {
       self(self, child);
     }
-    result.at(for_node.GetId().value) = LeafSet{for_node, labels, result};
+    result.at(for_node) = LeafSet{for_node, labels, result};
   };
   for (auto node : dag.GetNodes()) {
     ComputeLS(ComputeLS, node);

@@ -19,6 +19,9 @@ std::ostream& operator<<(std::ostream& os, const NodeId node_id) {
 bool operator==(NodeId lhs, NodeId rhs) { return lhs.value == rhs.value; }
 bool operator!=(NodeId lhs, NodeId rhs) { return lhs.value != rhs.value; }
 bool operator<(NodeId lhs, NodeId rhs) { return lhs.value < rhs.value; }
+bool operator<=(NodeId lhs, NodeId rhs) { return lhs.value <= rhs.value; }
+bool operator>(NodeId lhs, NodeId rhs) { return lhs.value > rhs.value; }
+bool operator>=(NodeId lhs, NodeId rhs) { return lhs.value >= rhs.value; }
 
 size_t std::hash<NodeId>::operator()(NodeId id) const noexcept { return id.value; }
 
@@ -29,6 +32,10 @@ std::ostream& operator<<(std::ostream& os, const EdgeId edge_id) {
 bool operator==(EdgeId lhs, EdgeId rhs) { return lhs.value == rhs.value; }
 bool operator!=(EdgeId lhs, EdgeId rhs) { return lhs.value != rhs.value; }
 bool operator<(EdgeId lhs, EdgeId rhs) { return lhs.value < rhs.value; }
+bool operator<=(EdgeId lhs, EdgeId rhs) { return lhs.value <= rhs.value; }
+bool operator>(EdgeId lhs, EdgeId rhs) { return lhs.value > rhs.value; }
+bool operator>=(EdgeId lhs, EdgeId rhs) { return lhs.value >= rhs.value; }
+
 size_t std::hash<EdgeId>::operator()(EdgeId id) const noexcept { return id.value; }
 
 std::ostream& operator<<(std::ostream& os, const CladeIdx clade_id) {
@@ -38,6 +45,9 @@ std::ostream& operator<<(std::ostream& os, const CladeIdx clade_id) {
 bool operator==(CladeIdx lhs, CladeIdx rhs) { return lhs.value == rhs.value; }
 bool operator!=(CladeIdx lhs, CladeIdx rhs) { return lhs.value != rhs.value; }
 bool operator<(CladeIdx lhs, CladeIdx rhs) { return lhs.value < rhs.value; }
+bool operator<=(CladeIdx lhs, CladeIdx rhs) { return lhs.value <= rhs.value; }
+bool operator>(CladeIdx lhs, CladeIdx rhs) { return lhs.value > rhs.value; }
+bool operator>=(CladeIdx lhs, CladeIdx rhs) { return lhs.value >= rhs.value; }
 
 namespace Transform {
 
@@ -52,18 +62,29 @@ auto GetId() {
 }
 template <typename DAG>
 auto ToNodes(DAG dag) {
+  static_assert(DAG::role == Role::View);
   return ranges::views::transform([dag](auto&& i) {
     return typename DAG::NodeView{dag, i};
   });
 }
 template <typename DAG>
 auto ToEdges(DAG dag) {
+  static_assert(DAG::role == Role::View);
   return ranges::views::transform([dag](auto&& i) {
     return typename DAG::EdgeView{dag, i};
   });
 }
 auto ToConst() {
   return ranges::views::transform([](auto&& i) { return i.Const(); });
+}
+
+auto ToView() {
+  return ranges::views::transform([](auto&& i) { return i.View(); });
+}
+
+template <Component C>
+auto ToId() {
+  return ranges::views::transform([](size_t i) { return Id<C>{i}; });
 }
 
 }  // namespace Transform
@@ -83,8 +104,8 @@ static constexpr auto select_argument() {
 }
 
 template <typename T>
-auto ViewOf(T&& dag) {
-  if constexpr (std::decay_t<T>::role == Role::View) {
+typename ViewTypeOf<T>::type ViewOf(T& dag) {
+  if constexpr (std::remove_reference_t<T>::role == Role::View) {
     return dag;
   } else {
     return dag.View();

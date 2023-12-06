@@ -6,6 +6,17 @@
  * Basic per-edge feature.
  */
 struct Endpoints {
+  MOVE_ONLY(Endpoints);
+  Endpoints() = default;
+
+  inline Endpoints Copy() const {
+    Endpoints result;
+    result.parent_ = parent_;
+    result.child_ = child_;
+    result.clade_ = clade_;
+    return result;
+  }
+
   NodeId parent_;
   NodeId child_;
   CladeIdx clade_;

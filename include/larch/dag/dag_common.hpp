@@ -94,18 +94,32 @@ struct ElementView;
 
 template <typename DAGStorageType, typename DAGViewType>
 struct DefaultViewBase {
+ private:
+  struct MutableDAGViewBase : DAGStorageType::template ConstDAGViewBase<DAGViewType>,
+                              DAGStorageType::template MutableDAGViewBase<DAGViewType> {
+  };
+
+  template <Component C>
+  struct MutableElementViewBase
+      : DAGStorageType::template ConstElementViewBase<C, ElementView<C, DAGViewType>>,
+        DAGStorageType::template MutableElementViewBase<C,
+                                                        ElementView<C, DAGViewType>> {
+    using DAGStorageType::template MutableElementViewBase<
+        C, ElementView<C, DAGViewType>>::operator=;
+  };
+
+ public:
   using DAGViewBase = std::conditional_t<
       std::is_const_v<DAGStorageType>,
       typename DAGStorageType::template ConstDAGViewBase<DAGViewType>,
-      typename DAGStorageType::template MutableDAGViewBase<DAGViewType>>;
+      MutableDAGViewBase>;
 
   template <Component C>
   using ElementViewBase =
       std::conditional_t<std::is_const_v<DAGStorageType>,
                          typename DAGStorageType::template ConstElementViewBase<
                              C, ElementView<C, DAGViewType>>,
-                         typename DAGStorageType::template MutableElementViewBase<
-                             C, ElementView<C, DAGViewType>>>;
+                         MutableElementViewBase<C>>;
 };
 
 /**
@@ -128,6 +142,9 @@ inline std::ostream& operator<<(std::ostream& os, NodeId node_id);
 inline bool operator==(NodeId lhs, NodeId rhs);
 inline bool operator!=(NodeId lhs, NodeId rhs);
 inline bool operator<(NodeId lhs, NodeId rhs);
+inline bool operator<=(NodeId lhs, NodeId rhs);
+inline bool operator>(NodeId lhs, NodeId rhs);
+inline bool operator>=(NodeId lhs, NodeId rhs);
 
 template <>
 struct std::hash<NodeId> {
@@ -142,6 +159,9 @@ inline std::ostream& operator<<(std::ostream& os, EdgeId edge_id);
 inline bool operator==(EdgeId lhs, EdgeId rhs);
 inline bool operator!=(EdgeId lhs, EdgeId rhs);
 inline bool operator<(EdgeId lhs, EdgeId rhs);
+inline bool operator<=(EdgeId lhs, EdgeId rhs);
+inline bool operator>(EdgeId lhs, EdgeId rhs);
+inline bool operator>=(EdgeId lhs, EdgeId rhs);
 
 template <>
 struct std::hash<EdgeId> {
@@ -155,6 +175,9 @@ inline std::ostream& operator<<(std::ostream& os, CladeIdx clade_id);
 inline bool operator==(CladeIdx lhs, CladeIdx rhs);
 inline bool operator!=(CladeIdx lhs, CladeIdx rhs);
 inline bool operator<(CladeIdx lhs, CladeIdx rhs);
+inline bool operator<=(CladeIdx lhs, CladeIdx rhs);
+inline bool operator>(CladeIdx lhs, CladeIdx rhs);
+inline bool operator>=(CladeIdx lhs, CladeIdx rhs);
 
 namespace Transform {
 
@@ -166,6 +189,9 @@ auto ToNodes(DAG dag);
 template <typename DAG>
 auto ToEdges(DAG dag);
 inline auto ToConst();
+inline auto ToView();
+template <Component C>
+auto ToId();
 
 }  // namespace Transform
 
@@ -187,10 +213,13 @@ struct CombineBases<std::tuple<Ts...>> : Ts... {
 template <typename T>
 auto ViewOf(T&& dag);
 
-template <typename, template <typename, typename> typename>
+template <typename, template <typename, typename> typename = DefaultViewBase>
 struct DAGView;
 
-template <typename, typename, typename...>
+template <typename...>
+struct ExtraStorage;
+
+template <typename, typename, typename, typename>
 struct DAGStorage;
 
 template <Component, typename, typename...>
@@ -205,7 +234,51 @@ struct Endpoints;
 
 struct Connections;
 
-using DefaultDAGStorage =
-    DAGStorage<ElementsContainer<Component::Node, ElementStorage<Neighbors>>,
-               ElementsContainer<Component::Edge, ElementStorage<Endpoints>>,
-               Connections>;
+struct DefaultDAGStorage;
+
+template <typename T, typename = void>
+struct ViewTypeOf;
+
+template <typename T>
+struct ViewTypeOf<T, std::enable_if_t<T::role == Role::View>> {
+  static_assert(T::component == Component::DAG);
+  using type = T;
+};
+
+template <typename T>
+struct ViewTypeOf<T, std::enable_if_t<T::role == Role::Storage>> {
+  static_assert(T::component == Component::DAG);
+  using type = decltype(std::declval<T>().View());
+};
+
+template <typename>
+struct LongNameOf;
+
+#define SHORT_NAME(x)                                \
+  MOVE_ONLY(x);                                      \
+  static x EmptyDefault() {                          \
+    static_assert(Target::role == Role::Storage);    \
+    return x{Target::EmptyDefault()};                \
+  }                                                  \
+                                                     \
+  static x Consume(Target&& target) {                \
+    static_assert(Target::role == Role::Storage);    \
+    return x{std::move(target)};                     \
+  }                                                  \
+                                                     \
+  static x FromView(const Target& target) {          \
+    static_assert(Target::role == Role::View);       \
+    return x{Target{target}};                        \
+  }                                                  \
+  using LongNameType = typename LongNameOf<x>::type; \
+  using LongNameType::LongNameType
+
+template <typename Short, typename Long>
+struct IsNameCorrect {
+  static constexpr bool value = std::is_same_v<typename LongNameOf<Short>::type, Long>;
+};
+
+template <typename Long>
+struct IsNameCorrect<void, Long> {
+  static constexpr bool value = true;
+};

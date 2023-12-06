@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef USE_USHER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -16,13 +17,17 @@
 #include "src/matOptimize/Profitable_Moves_Enumerators/Profitable_Moves_Enumerators.hpp"
 #pragma GCC diagnostic pop
 
-#include "larch/madag/mutation_annotated_dag.hpp"
-
 namespace Mutation_Annotated_Tree {
 class Tree;
 class Node;
 }  // namespace Mutation_Annotated_Tree
 namespace MAT = Mutation_Annotated_Tree;
+
+#else
+#include "larch/optimize.hpp"
+#endif
+
+#include "larch/madag/mutation_annotated_dag.hpp"
 
 using MATNodePtr = MAT::Node*;
 
@@ -83,9 +88,28 @@ struct ExtraFeatureMutableView<MATConversion, CRTP> {
   static void BuildHelper(MATNodePtr par_node, Node node, DAG dag);
 };
 
-template <typename DAG>
-auto AddMATConversion(DAG&& dag) {
-  return ExtendStorage(std::forward<DAG>(dag), Extend::Nodes<MATConversion>{});
+template <typename Target>
+struct MATConversionStorage;
+
+template <typename Target>
+struct LongNameOf<MATConversionStorage<Target>> {
+  using type = ExtendStorageType<MATConversionStorage<Target>, Target,
+                                 Extend::Nodes<MATConversion>>;
+};
+
+template <typename Target>
+struct MATConversionStorage : LongNameOf<MATConversionStorage<Target>>::type {
+  SHORT_NAME(MATConversionStorage);
+};
+
+template <typename DAG, typename = std::enable_if_t<DAG::role == Role::Storage>>
+MATConversionStorage<DAG> AddMATConversion(DAG&& dag) {
+  return MATConversionStorage<DAG>::Consume(std::move(dag));
+}
+
+template <typename DAG, typename = std::enable_if_t<DAG::role == Role::View>>
+MATConversionStorage<DAG> AddMATConversion(const DAG& dag) {
+  return MATConversionStorage<DAG>::FromView(dag);
 }
 
 #include "larch/impl/mat_conversion_impl.hpp"

@@ -6,6 +6,17 @@
  * Basic per-node feature.
  */
 struct Neighbors {
+  MOVE_ONLY(Neighbors);
+  Neighbors() = default;
+
+  inline Neighbors Copy() const {
+    Neighbors result;
+    result.parents_ = parents_;
+    result.clades_ = clades_;
+    result.leafs_below_ = leafs_below_;
+    return result;
+  }
+
   std::vector<EdgeId> parents_;
   std::vector<std::vector<EdgeId>> clades_;
   std::vector<std::vector<NodeId>> leafs_below_;
@@ -19,7 +30,6 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
   size_t GetParentsCount() const;
   size_t GetCladesCount() const;
   auto GetChildren() const;
-  size_t GetChildrenCount() const;
   auto GetSingleParent() const;
   auto GetFirstParent() const;
   auto GetFirstChild() const;
