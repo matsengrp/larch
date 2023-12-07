@@ -5,6 +5,7 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <fstream>
 
 #include "larch/dag_loader.hpp"
 #include "larch/spr/spr_view.hpp"
@@ -27,3 +28,14 @@ bool add_test(const Test& test) noexcept;
                                ":" TOSTRING(__LINE__));                     \
     }                                                                       \
   }
+
+inline void print_peak_mem() {
+  std::ifstream str{"/proc/self/status"};
+  std::string line;
+  while (std::getline(str, line)) {
+    if (line.find("VmPeak:") == 0) {
+      std::cout << line << "\n";
+      break;
+    }
+  }
+}

@@ -7,7 +7,7 @@
 
 #include "test_common.hpp"
 #include "larch/dag_loader.hpp"
-#include "benchmark.hpp"
+#include "larch/benchmark.hpp"
 
 static void test_protobuf(const std::string& correct_path,
                           const std::vector<std::string>& paths) {

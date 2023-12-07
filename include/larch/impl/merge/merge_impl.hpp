@@ -70,9 +70,9 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   });
   std::vector<AddedEdge> added_edges;
   added_edges_reduction.GatherAndClear(
-      [](auto buckets, auto& result) {
-        for (auto& bucket : buckets) {
-          // TODO reserve
+      [&added_edges_reduction](auto buckets, auto& result) {
+        for (auto&& bucket : buckets) {
+          result.reserve(added_edges_reduction.size_approx());
           result.insert(result.end(), bucket.begin(), bucket.end());
         }
       },

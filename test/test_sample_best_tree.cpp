@@ -10,7 +10,7 @@
 #include "larch/dag_loader.hpp"
 #include "larch/subtree/tree_count.hpp"
 #include "larch/merge/merge.hpp"
-#include "benchmark.hpp"
+#include "larch/benchmark.hpp"
 
 #if __has_include(<valgrind/callgrind.h>)
 #include <valgrind/callgrind.h>

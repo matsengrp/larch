@@ -1,3 +1,4 @@
+#include "larch/benchmark.hpp"
 
 template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag)
@@ -16,80 +17,102 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         nodes_with_major_allele_set_change) {
   Assert(move.src != nullptr);
   Assert(move.dst != nullptr);
-  auto& storage = [this]() -> SPRType& {
-    std::shared_lock lock{mat_mtx_};
-    Assert(sample_mat_storage_ != nullptr);
-    return batch_storage_.AddElement([this](auto& bucket) -> auto& {
-      bucket.push_back(AddSPRStorage(sample_mat_storage_->View()));
-      return bucket.back();
-    });
-  }();
 
-  storage.View().GetRoot().Validate(true);
-#ifndef NDEBUG
-  for (auto i : storage.View().Const().GetLeafs()) {
-    Assert(i.HaveSampleId());
-  }
-#endif
-
-  if (storage.View().InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
-    storage.View().GetRoot().Validate(true);
-
-    auto fragment_storage = collapse_empty_fragment_edges_
-                                ? storage.View().MakeFragment()
-                                : storage.View().MakeUncollapsedFragment();
-    auto fragment = fragment_storage.View();
-
-    auto& impl = static_cast<CRTP&>(*this);
-    std::pair<bool, bool> accepted =
-        impl.OnMove(storage.View(), fragment, move, best_score_change,
-                    nodes_with_major_allele_set_change);
-    if (accepted.first) {
-      for (auto node : fragment.GetNodes()) {
-        if (not(node.IsUA() or node.IsMoveNew())) {
-          Assert(node.GetId().value != NoId);
-          if (node.GetOld().IsLeaf()) {
-            Assert(node.GetOld().HaveSampleId());
-            Assert(not node.GetOld().GetSampleId().value().empty());
+  finally merge_large_batch([&]() {
+    if (moves_batch_.size_approx() > 100) {
+      Benchmark bench;
+      bench.start();
+      auto all = moves_batch_.GatherAndClear([this](auto buckets) {
+        std::vector<MoveStorage> result;
+        result.reserve(moves_batch_.size_approx());
+        for (auto&& bucket : buckets) {
+          for (auto&& stored_move : bucket) {
+            if (stored_move.fragment) {
+              result.push_back(std::move(stored_move));
+            }
           }
         }
-      }
-      for (auto edge : fragment.GetEdges()) {
-        Assert(edge.GetId().value != NoId);
-        Assert(edge.GetChild().GetId().value != NoId);
-        if (not edge.GetParent().IsUA()) {
-          Assert(edge.GetParent().GetId().value != NoId);
-        }
-      }
-      applied_moves_count_++;
-      batch_.AddElement([&fragment_storage](auto& bucket) {
-        bucket.push_back(std::move(fragment_storage));
+        return result;
       });
-      /*
-      if (batch_.size() > 2048) {
-        std::unique_lock lock{merge_mtx_};
-        if (batch_.size() > 2048) {
-          merge_.AddDAGs(batch_);
-          merge_.GetResult().GetRoot().Validate(true, true);
-          batch_.clear();
-          batch_storage_.clear();
-        }
-      }
-      */
+      std::cout << "Gather " << all.size() << " in " << bench.lapMs() << "ms\n";
+      std::unique_lock lock{merge_mtx_};
+      bench.lapMs();
+      merge_.AddDAGs(
+          all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
+      std::cout << "  Merged in " << bench.lapMs() << "ms\n";
+      // merge_.GetResult().GetRoot().Validate(true, true);
     }
+  });
 
-    return accepted.second;
+  return moves_batch_.AddElement(
+      [this, &move, best_score_change,
+       &nodes_with_major_allele_set_change](auto& bucket) -> bool {
+        Benchmark bench;
+        std::shared_lock lock{mat_mtx_};
+        Assert(sample_mat_storage_ != nullptr);
+        bench.start();
+        bucket.push_back(MoveStorage{
+            std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
+            nullptr});
+        // std::cout << "Add spr: " << bench.lapMs() << "ms\n";
+        auto& storage = bucket.back();
+    // storage.spr->View().GetRoot().Validate(true);
+#ifndef NDEBUG
+        for (auto i : storage.spr->View().Const().GetLeafs()) {
+          Assert(i.HaveSampleId());
+        }
+#endif
+        bench.lapMs();
+        if (storage.spr->View().InitHypotheticalTree(
+                move, nodes_with_major_allele_set_change)) {
+          // storage.spr->View().GetRoot().Validate(true);
+          // std::cout << "  Init: " << bench.lapMs() << "ms\n";
+          storage.fragment = std::make_unique<FragmentType>(
+              collapse_empty_fragment_edges_
+                  ? storage.spr->View().MakeFragment()
+                  : storage.spr->View().MakeUncollapsedFragment());
+          // std::cout << "  Fragment: " << bench.lapMs() << "ms\n";
+          auto fragment = storage.fragment->View();
 
-  } else {
-    return false;
-  }
+          auto& impl = static_cast<CRTP&>(*this);
+          std::pair<bool, bool> accepted =
+              impl.OnMove(storage.spr->View(), fragment, move, best_score_change,
+                          nodes_with_major_allele_set_change);
+          if (accepted.first) {
+#ifndef NDEBUG
+            for (auto node : fragment.GetNodes()) {
+              if (not(node.IsUA() or node.IsMoveNew())) {
+                Assert(node.GetId().value != NoId);
+                if (node.GetOld().IsLeaf()) {
+                  Assert(node.GetOld().HaveSampleId());
+                  Assert(not node.GetOld().GetSampleId().value().empty());
+                }
+              }
+            }
+            for (auto edge : fragment.GetEdges()) {
+              Assert(edge.GetId().value != NoId);
+              Assert(edge.GetChild().GetId().value != NoId);
+              if (not edge.GetParent().IsUA()) {
+                Assert(edge.GetParent().GetId().value != NoId);
+              }
+            }
+#endif
+            applied_moves_count_.fetch_add(1);
+          }
+
+          return accepted.second;
+
+        } else {
+          return false;
+        }
+      });
 }
 
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
-  std::cout << "Larch-Usher callback Applying " << applied_moves_count_ << "\n"
+  std::cout << "Larch-Usher callback Applying " << applied_moves_count_.load() << "\n"
             << std::flush;
-  applied_moves_count_ = 0;
+  applied_moves_count_.store(0);
   reassigned_states_storage_ = std::make_unique<ReassignedStatesStorage>(
       AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
   auto reassigned_states = reassigned_states_storage_->View();
@@ -98,17 +121,24 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   reassigned_states.RecomputeCompactGenomes(true);
   {
     std::unique_lock lock{merge_mtx_};
-    if (batch_.size_approx() > 0) {
-      batch_.GatherAndClear([this](auto& buckets) {
-        auto all =
-            ranges::to_vector(buckets | ranges::views::join | Transform::ToView());
-        merge_.AddDAGs(all);
+    if (moves_batch_.size_approx() > 0) {
+      auto all = moves_batch_.GatherAndClear([this](auto buckets) {
+        std::vector<MoveStorage> result;
+        result.reserve(moves_batch_.size_approx());
+        for (auto&& bucket : buckets) {
+          for (auto&& stored_move : bucket) {
+            if (stored_move.fragment) {
+              result.push_back(std::move(stored_move));
+            }
+          }
+        }
+        return result;
       });
-      // TODO combine with batch_
-      batch_storage_.GatherAndClear([](auto&) {});
+      merge_.AddDAGs(
+          all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
     }
     merge_.AddDAGs(std::vector{reassigned_states});
-    merge_.GetResult().GetRoot().Validate(true, true);
+    // merge_.GetResult().GetRoot().Validate(true, true);
     merge_.ComputeResultEdgeMutations();
   }
   {
@@ -120,7 +150,7 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
 
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
-  applied_moves_count_ = 0;
+  applied_moves_count_.store(0);
   Assert(reassigned_states_storage_);
   auto reassigned_states = reassigned_states_storage_->View();
   reassigned_states.BuildFromMAT(tree, merge_.GetResult().GetReferenceSequence());
@@ -130,7 +160,7 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   {
     std::unique_lock lock{merge_mtx_};
     merge_.AddDAGs(std::vector{reassigned_states});
-    merge_.GetResult().GetRoot().Validate(true, true);
+    // merge_.GetResult().GetRoot().Validate(true, true);
     merge_.ComputeResultEdgeMutations();
   }
   {
@@ -145,8 +175,8 @@ Merge& BatchingCallback<CRTP, SampleDAG>::GetMerge() {
 }
 
 template <typename CRTP, typename SampleDAG>
-ArbitraryInt BatchingCallback<CRTP, SampleDAG>::GetAppliedMovesCount() {
-  return applied_moves_count_;
+size_t BatchingCallback<CRTP, SampleDAG>::GetAppliedMovesCount() {
+  return applied_moves_count_.load();
 }
 
 template <typename CRTP, typename SampleDAG>

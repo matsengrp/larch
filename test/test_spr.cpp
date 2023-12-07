@@ -4,7 +4,7 @@
 #include "larch/subtree/parsimony_score.hpp"
 #include "larch/spr/batching_callback.hpp"
 #include "sample_dag.hpp"
-#include "benchmark.hpp"
+#include "larch/benchmark.hpp"
 
 // #include <tbb/global_control.h>
 
@@ -35,10 +35,15 @@ struct Test_Move_Found_Callback
     std::ignore = fragment;
     std::ignore = nodes_with_major_allele_set_change;
     std::ignore = best_score_change;
+    // if (moves_count_.fetch_add(1) > 100) {
+    //   print_peak_mem();
+    //   moves_count_.store(0);
+    // }
     return {move.score_change <= 0, move.score_change <= 0};
   }
 
-  void OnRadius() {}
+  void OnRadius() { std::cout << "OnRadius\n"; }
+  std::atomic<size_t> moves_count_{0};
 };
 
 [[maybe_unused]] static MADAGStorage<> Load(std::string_view input_dag_path,
@@ -67,17 +72,21 @@ static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
       optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
+    std::cout << "Computing edge mutations\n";
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
 
     auto chosen_node = weight.GetDAG().GetRoot();
+    std::cout << "Sampling tree\n";
     auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
     MAT::Tree mat;
     sample.View().GetRoot().Validate(true);
+    std::cout << "Building MAT\n";
     sample.View().BuildMAT(mat);
     sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View().Const());
     Test_Move_Found_Callback callback{merge, sample.View()};
+    std::cout << "Optimizing\n";
     // Empty_Callback callback;
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
@@ -237,6 +246,24 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_sample(); }, "SPR: move"});
+
+[[maybe_unused]] static const auto test_added4 =
+    add_test({[] {
+                Benchmark bench_load;
+                std::cout << "Loading...\n";
+                bench_load.start();
+                auto input = Load("data/20B/20B_start_tree_no_ancestral.pb.gz",
+                                  "data/20B/ref_seq_noancestral.txt.gz");
+                bench_load.stop();
+                std::cout << "Load time: " << bench_load.durationMs() << " ms\n";
+                std::cout << "Node count: " << input.View().GetNodesCount() << "\n";
+                Benchmark bench;
+                bench.start();
+                test_spr(input, 1);
+                bench.stop();
+                std::cout << "Time: " << bench.durationMs() << " ms ";
+              },
+              "SPR: 20B"});
 
 //[[maybe_unused]] static const auto test_added4 = add_test(
 //    {[] {
