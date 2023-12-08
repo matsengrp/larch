@@ -54,6 +54,9 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   Original_State_t origin_states;
   check_samples(tree.root, origin_states, &tree);
   reassign_states(tree, origin_states);
+  std::vector<std::string> condense_arg{};
+  tree.condense_leaves(condense_arg);
+  tree.fix_node_idx();
   reassign_callback.OnReassignedStates(tree);
   radius_callback(tree);
 
@@ -66,7 +69,6 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   for (; static_cast<size_t>(1) << rad_exp <= ddepth; rad_exp++) {
     auto all_nodes = tree.depth_first_expansion();
     std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
-    tree.fix_node_idx();
     optimize_inner_loop(all_nodes,     // nodes to search
                         tree,          // tree
                         1 << rad_exp,  // radius
@@ -83,8 +85,14 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                         "intermediate_base",   // intermediate base name
                         "intermediate_newick"  // intermediate newick name
     );
+    tree.uncondense_leaves();
+    tree.condense_leaves(condense_arg);
+    tree.fix_node_idx();
     radius_callback(tree);
   }
+
+  tree.uncondense_leaves();
+  tree.fix_node_idx();
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
   auto result =
       std::make_pair(AddMATConversion(MADAGStorage<>::EmptyDefault()), std::move(tree));

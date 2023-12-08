@@ -50,7 +50,7 @@ struct FeatureMutableView<MATConversion, CRTP, Tag> {
 
   template <typename, typename>
   friend struct ExtraFeatureMutableView;
-  void SetUncondensedMATNode(MATNodePtr id) const;
+  void SetUncondensedMATNode(MATNodePtr cd_node_id, MATNodePtr uncd_node_id) const;
 };
 
 template <>

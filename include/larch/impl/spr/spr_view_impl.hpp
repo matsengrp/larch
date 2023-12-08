@@ -677,8 +677,10 @@ template <typename DAG>
 std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& src,
                                       std::vector<NodeId>& dst) {
   for (auto node : dag.GetNodes()) {
-    if (not node.IsUA() and not node.IsMATRoot()) {
-      Assert(node.GetParentsCount() == 1);
+    if (not node.IsUA()) {
+      if (node.IsCondensedInMAT() or (not node.IsMATRoot())) {
+        Assert(node.GetParentsCount() == 1);
+      }
     }
   }
   Assert(dag.IsTree());
@@ -686,7 +688,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   auto first_src_node = dag.Get(src[0]);
   auto first_dst_node = dag.Get(dst[0]);
   if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId() or
-      first_dst_node.IsMATRoot()) {
+      first_dst_node.GetSingleParent().GetParent().IsUA()) {
     // no-op
     return {};
   }

@@ -187,7 +187,7 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
   }
   if (not allow_dag) {
     if (storage.parents_.size() > 1) {
-      throw std::runtime_error{std::string{"Mulptiple parents at node "} +
+      throw std::runtime_error{std::string{"Multiple parents at node "} +
                                std::to_string(node.GetId().value)};
     }
   }
@@ -208,7 +208,7 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
         for (auto j : clade) {
           children += std::to_string(dag.Get(j).GetChild().GetId().value) + ", ";
         }
-        throw std::runtime_error{std::string{"Mulptiple children at node "} +
+        throw std::runtime_error{std::string{"Multiple children at node "} +
                                  std::to_string(node.GetId().value) + ", clade " +
                                  std::to_string(i.value) + " : " + children};
       }
