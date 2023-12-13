@@ -4,27 +4,16 @@
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
-#include <shared_mutex>
-#include <mutex>
-#include <thread>
-#include <atomic>
 #include <numeric>
-
-#include <tbb/concurrent_unordered_set.h>
-#include <tbb/concurrent_vector.h>
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 #include "larch/merge/leaf_set.hpp"
 #include "larch/merge/node_label.hpp"
 #include "larch/merge/edge_label.hpp"
-#include "larch/parallel/parallel_common.hpp"
+#include "larch/parallel/shared_state.hpp"
+#include "larch/parallel/growable_hash_map.hpp"
 
-template <typename T>
-using ConcurrentUnorderedSet =
-    tbb::concurrent_unordered_set<T, std::hash<T>, std::equal_to<T>>;
-
-template <typename K, typename V>
-using ConcurrentUnorderedMap = SharedState<std::unordered_map<K, V>>;
+#include "larch/id_container.hpp"
 
 template <typename Target = DefaultDAGStorage>
 struct MergeDAGStorage;
@@ -46,8 +35,7 @@ using MergeDAG = DAGView<const MergeDAGStorage<>>;
 using MutableMergeDAG = DAGView<MergeDAGStorage<>>;
 
 class Merge {
-  // TODO be a vector for normal DAGs and map for fragments
-  using NodeLabelsContainer = ContiguousMap<NodeId, NodeLabel>;
+  using AddedEdge = std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>;
 
  public:
   /**
@@ -86,11 +74,11 @@ class Merge {
   /**
    * Access the labels of the resulting DAG's nodes.
    */
-  inline const ConcurrentUnorderedMap<NodeLabel, NodeId>& GetResultNodes() const;
+  inline const GrowableHashMap<NodeLabel, NodeId>& GetResultNodes() const;
 
-  inline const ConcurrentUnorderedMap<NodeId, NodeLabel>& GetResultNodeLabels() const;
+  inline const GrowableHashMap<NodeId, NodeLabel>& GetResultNodeLabels() const;
 
-  inline const ConcurrentUnorderedMap<std::string, CompactGenome>& SampleIdToCGMap() const;
+  inline const GrowableHashMap<std::string, CompactGenome>& SampleIdToCGMap() const;
 
   /**
    * Compute the mutations on the resulting DAG's edges and store in the result MADAG.
@@ -102,57 +90,54 @@ class Merge {
  private:
   inline MutableMergeDAG ResultDAG();
 
-  template <typename DAGSRange>
-  static void MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
-                                  std::vector<NodeLabelsContainer>& dags_labels,
-                                  ConcurrentUnorderedMap<std::string, CompactGenome>& sample_id_to_cg_map,
-                                  MutableMergeDAG result_dag);
-
-  template <typename DAGSRange>
-  static void ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
-                              std::vector<NodeLabelsContainer>& dags_labels,
-                              ConcurrentUnorderedSet<LeafSet>& all_leaf_sets);
-
-  template <typename DAGSRange>
-  static void MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
-                         const std::vector<NodeLabelsContainer>& dags_labels,
-                         ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-                         ConcurrentUnorderedMap<NodeId, NodeLabel>& result_node_labels,
-                         std::atomic<size_t>& node_id);
-
-  template <typename DAGSRange>
-  static void MergeEdges(
+  template <typename DAGSRange, typename NodeLabelsContainer>
+  static void MergeCompactGenomes(
       size_t i, const DAGSRange& dags, NodeId below,
-      const std::vector<NodeLabelsContainer>& dags_labels,
-      const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-      ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
-      tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
-          added_edges);
-
-  static inline void BuildResult(
-      size_t i,
-      tbb::concurrent_vector<std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>>&
-          added_edges,
-      std::atomic<size_t>& edge_id,
-      const ConcurrentUnorderedMap<NodeLabel, NodeId>& result_nodes,
-      ConcurrentUnorderedMap<EdgeLabel, EdgeId>& result_edges,
+      std::vector<NodeLabelsContainer>& dags_labels,
+      GrowableHashMap<std::string, CompactGenome>& sample_id_to_cg_map,
       MutableMergeDAG result_dag);
 
+  template <typename DAGSRange, typename NodeLabelsContainer>
+  static void ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
+                              std::vector<NodeLabelsContainer>& dags_labels,
+                              GrowableHashSet<LeafSet>& all_leaf_sets);
+
+  template <typename DAGSRange, typename NodeLabelsContainer>
+  static void MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
+                         const std::vector<NodeLabelsContainer>& dags_labels,
+                         GrowableHashMap<NodeLabel, NodeId>& result_nodes,
+                         GrowableHashMap<NodeId, NodeLabel>& result_node_labels,
+                         std::atomic<size_t>& node_id);
+
+  template <typename DAGSRange, typename NodeLabelsContainer>
+  static void MergeEdges(size_t i, const DAGSRange& dags, NodeId below,
+                         const std::vector<NodeLabelsContainer>& dags_labels,
+                         const GrowableHashMap<NodeLabel, NodeId>& result_nodes,
+                         GrowableHashMap<EdgeLabel, EdgeId>& result_edges,
+                         Reduction<std::vector<AddedEdge>>& added_edges);
+
+  static inline void BuildResult(size_t i, std::vector<AddedEdge>& added_edges,
+                                 std::atomic<size_t>& edge_id,
+                                 const GrowableHashMap<NodeLabel, NodeId>& result_nodes,
+                                 GrowableHashMap<EdgeLabel, EdgeId>& result_edges,
+                                 MutableMergeDAG result_dag);
+
   // Every unique node leaf set, found among all input DAGs.
-  ConcurrentUnorderedSet<LeafSet> all_leaf_sets_;
+  GrowableHashSet<LeafSet> all_leaf_sets_{32};
 
   // Node ids of the resulting DAG's nodes.
-  ConcurrentUnorderedMap<NodeLabel, NodeId> result_nodes_;
-  ConcurrentUnorderedMap<NodeId, NodeLabel> result_node_labels_;
+  GrowableHashMap<NodeLabel, NodeId> result_nodes_{32};
+  GrowableHashMap<NodeId, NodeLabel> result_node_labels_{32};
 
   // Edge ids of the resulting DAG's edges.
-  ConcurrentUnorderedMap<EdgeLabel, EdgeId> result_edges_;
+  GrowableHashMap<EdgeLabel, EdgeId> result_edges_{32};
 
   // Resulting DAG from merging the input DAGs.
   MergeDAGStorage<> result_dag_storage_;
 
-  // Leaf nodes have a compact genome that is stored externally to the NodeLabels for merge purposes.
-  ConcurrentUnorderedMap<std::string, CompactGenome> sample_id_to_cg_map_;
+  // Leaf nodes have a compact genome that is stored externally to the NodeLabels for
+  // merge purposes.
+  GrowableHashMap<std::string, CompactGenome> sample_id_to_cg_map_{32};
 
   std::mutex add_dags_mtx_;
 };

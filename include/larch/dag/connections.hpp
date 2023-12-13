@@ -2,6 +2,8 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+#include "larch/contiguous_set.hpp"
+
 /**
  * Basic per-DAG feature.
  */
@@ -35,7 +37,8 @@ struct FeatureMutableView<Connections, CRTP, Tag> {
   void BuildConnectionsRaw() const;
   void AddLeaf(NodeId id) const;
 
-  std::map<std::set<NodeId>, std::set<NodeId>> BuildCladeUnionMap() const;
+  ContiguousMap<ContiguousSet<NodeId>, ContiguousSet<NodeId>> BuildCladeUnionMap()
+      const;
   void MakeComplete() const;
   void ClearConnections() const;
 };

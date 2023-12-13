@@ -40,7 +40,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
     paths_idx.emplace_back(i, paths.at(i));
   }
   std::cout << "Loading trees ";
-  tbb::parallel_for_each(paths_idx.begin(), paths_idx.end(), [&](auto path_idx) {
+  ParallelForEach(paths_idx, [&](auto path_idx) {
     std::cout << "." << std::flush;
     trees.at(path_idx.first) =
         dags ? LoadDAGFromProtobuf(path_idx.second)

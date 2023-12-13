@@ -1,5 +1,4 @@
 #include "larch/madag/compact_genome.hpp"
-#include "larch/merge/leaf_set.hpp"
 
 NodeLabel::NodeLabel()
     : compact_genome_{CompactGenome::GetEmpty()},
@@ -67,6 +66,25 @@ size_t NodeLabel::Hash() const noexcept {
                               : reinterpret_cast<std::uintptr_t>(sample_id_);
   return HashCombine(unique, reinterpret_cast<std::uintptr_t>(leaf_set_));
 }
+
+   bool NodeLabel::empty() const {
+    Assert(compact_genome_);
+    Assert(leaf_set_);
+    Assert(sample_id_);
+    if (compact_genome_->empty() and sample_id_->empty() and leaf_set_->empty()) {
+      return true;
+    }
+    return false;
+  }
+
+   std::string NodeLabel::ToString() const {
+    std::string result = "[";
+    result += compact_genome_->ToString();
+    result += "(";
+    result += leaf_set_->ToString();
+    result += ")";
+    return result;
+  }
 
 std::size_t std::hash<NodeLabel>::operator()(const NodeLabel& nl) const noexcept {
   return nl.Hash();

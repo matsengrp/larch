@@ -13,6 +13,8 @@ struct ElementsContainer {
   using AllFeatureTypes = decltype(std::tuple_cat(
       FeatureTypes{}, typename ElementStorageT::FeatureTypes{}));
 
+  static constexpr IdContinuity id_continuity = IdContinuity::Dense;
+
   template <typename Feature>
   static const bool contains_element_feature;
 
@@ -67,8 +69,8 @@ struct ElementsContainer {
   }
 
  private:
-  std::vector<ElementStorageT> elements_storage_;
-  std::vector<std::tuple<Features...>> features_storage_;
+  IdContainer<Id<C>, ElementStorageT> elements_storage_;
+  IdContainer<Id<C>, std::tuple<Features...>> features_storage_;
   std::tuple<ExtraFeatureStorage<Features>...> extra_features_storage_;
   typename ElementStorageT::ExtraStorage elements_extra_features_storage_;
 };

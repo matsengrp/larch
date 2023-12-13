@@ -19,7 +19,10 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
   auto& storage = [this]() -> SPRType& {
     std::shared_lock lock{mat_mtx_};
     Assert(sample_mat_storage_ != nullptr);
-    return *batch_storage_.push_back(AddSPRStorage(sample_mat_storage_->View()));
+    return batch_storage_.AddElement([this](auto& bucket) -> auto& {
+      bucket.push_back(AddSPRStorage(sample_mat_storage_->View()));
+      return bucket.back();
+    });
   }();
 
   storage.View().GetRoot().Validate(true);
@@ -59,7 +62,9 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         }
       }
       applied_moves_count_++;
-      batch_.push_back(std::move(fragment_storage));
+      batch_.AddElement([&fragment_storage](auto& bucket) {
+        bucket.push_back(std::move(fragment_storage));
+      });
       /*
       if (batch_.size() > 2048) {
         std::unique_lock lock{merge_mtx_};
@@ -93,10 +98,14 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   reassigned_states.RecomputeCompactGenomes(true);
   {
     std::unique_lock lock{merge_mtx_};
-    if (not batch_.empty()) {
-      merge_.AddDAGs(batch_ | Transform::ToView());
-      batch_.clear();
-      batch_storage_.clear();
+    if (batch_.size_approx() > 0) {
+      batch_.GatherAndClear([this](auto& buckets) {
+        auto all =
+            ranges::to_vector(buckets | ranges::views::join | Transform::ToView());
+        merge_.AddDAGs(all);
+      });
+      // TODO combine with batch_
+      batch_storage_.GatherAndClear([](auto&) {});
     }
     merge_.AddDAGs(std::vector{reassigned_states});
     merge_.GetResult().GetRoot().Validate(true, true);

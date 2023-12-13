@@ -45,7 +45,7 @@ using Edge = MutableMADAG::EdgeView;
   auto dag = dag_storage.View();
   auto clade_union_map = dag.BuildCladeUnionMap();
   size_t leaf_count = 0;
-  std::set<NodeId>* rootsplits = nullptr;
+  ContiguousSet<NodeId>* rootsplits = nullptr;
   for (auto& [clade_union, node_ids] : clade_union_map) {
     if (clade_union.size() > leaf_count) {
       rootsplits = &node_ids;

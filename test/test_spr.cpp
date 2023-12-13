@@ -6,7 +6,7 @@
 #include "sample_dag.hpp"
 #include "benchmark.hpp"
 
-#include <tbb/global_control.h>
+// #include <tbb/global_control.h>
 
 struct Empty_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
@@ -219,13 +219,17 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
               },
               "SPR: test_5_trees"});
 
-// [[maybe_unused]] static const auto test_added1 =
-//     add_test({[] {
-//                 test_spr(Load("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
-//                               "data/20D_from_fasta/refseq.txt.gz"),
-//                          1);
-//               },
-//               "SPR: tree 20D_from_fasta"});
+[[maybe_unused]] static const auto test_added1 =
+    add_test({[] {
+                auto input =
+                    Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz");
+                Benchmark bench;
+                bench.start();
+                test_spr(input, 3);
+                bench.stop();
+                std::cout << "Time: " << bench.durationMs() << " ms ";
+              },
+              "SPR: seedtree"});
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[] { test_spr(make_sample_dag(), 10); }, "SPR: sample"});

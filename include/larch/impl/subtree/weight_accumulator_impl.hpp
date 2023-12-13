@@ -48,9 +48,9 @@ typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::Abov
   // because edgeweight should have come from ComputeEdge:
   Assert(edgeweight.GetWeights().size() == 1);
   auto edgepair = edgeweight.GetWeights().begin();
-  std::map<typename WeightOps::Weight, Count> result;
+  ContiguousMap<typename WeightOps::Weight, Count> result;
   for (auto const& childitem : childnodeweight.GetWeights()) {
-    if (result.count(weight_ops_.AboveNode(edgepair->first, childitem.first)) < 1) {
+    if (not result.Contains(weight_ops_.AboveNode(edgepair->first, childitem.first))) {
       result.insert({weight_ops_.AboveNode(edgepair->first, childitem.first), 0});
     }
     result.at(weight_ops_.AboveNode(edgepair->first, childitem.first)) +=
@@ -69,7 +69,7 @@ WeightCounter<WeightOps>::WeightCounter(
     const WeightOps& weight_ops)
     : weight_ops_{weight_ops} {
   for (const auto& weight : inweights) {
-    if (weights_.count(weight) < 1) {
+    if (not weights_.Contains(weight)) {
       weights_.insert({weight, 0});
     }
     weights_.at(weight)++;
@@ -78,12 +78,12 @@ WeightCounter<WeightOps>::WeightCounter(
 
 template <typename WeightOps>
 WeightCounter<WeightOps>::WeightCounter(
-    std::map<typename WeightOps::Weight, Count>&& inweights,
+    ContiguousMap<typename WeightOps::Weight, Count>&& inweights,
     const WeightOps& weight_ops)
-    : weights_{inweights}, weight_ops_{weight_ops} {}
+    : weights_{std::forward<decltype(inweights)>(inweights)}, weight_ops_{weight_ops} {}
 
 template <typename WeightOps>
-const std::map<typename WeightOps::Weight, Count>&
+const ContiguousMap<typename WeightOps::Weight, Count>&
 WeightCounter<WeightOps>::GetWeights() const {
   return weights_;
 }
@@ -96,9 +96,9 @@ const WeightOps& WeightCounter<WeightOps>::GetWeightOps() const {
 template <typename WeightOps>
 WeightCounter<WeightOps> WeightCounter<WeightOps>::operator+(
     const WeightCounter<WeightOps>& rhs) const {
-  std::map<typename WeightOps::Weight, Count> result = weights_;
+  ContiguousMap<typename WeightOps::Weight, Count> result = weights_.Copy();
   for (auto const& map_pair : rhs.GetWeights()) {
-    if (result.count(map_pair.first) < 1) {
+    if (not result.Contains(map_pair.first)) {
       result.insert({map_pair.first, 0});
     }
     result.at(map_pair.first) += map_pair.second;
@@ -109,11 +109,11 @@ WeightCounter<WeightOps> WeightCounter<WeightOps>::operator+(
 template <typename WeightOps>
 WeightCounter<WeightOps> WeightCounter<WeightOps>::operator*(
     const WeightCounter<WeightOps>& rhs) const {
-  std::map<typename WeightOps::Weight, Count> result;
+  ContiguousMap<typename WeightOps::Weight, Count> result;
   for (auto const& lpair : weights_) {
     for (auto const& rpair : rhs.GetWeights()) {
       auto value = weight_ops_.BetweenClades({lpair.first, rpair.first});
-      if (result.count(value) < 1) {
+      if (not result.Contains(value)) {
         result.insert({value, 0});
       }
       result.at(value) += lpair.second * rpair.second;
@@ -133,8 +133,8 @@ WeightCounter<WeightOps>& WeightCounter<WeightOps>::operator=(
 template <typename WeightOps>
 WeightCounter<WeightOps>& WeightCounter<WeightOps>::operator=(
     WeightCounter<WeightOps>&& rhs) noexcept {
-  weights_ = rhs.weights_;
-  weight_ops_ = rhs.weight_ops_;
+  weights_ = std::move(rhs.weights_);
+  weight_ops_ = std::move(rhs.weight_ops_);
   return *this;
 }
 
@@ -151,7 +151,7 @@ bool WeightCounter<WeightOps>::operator!=(const WeightCounter<WeightOps>& rhs) {
 template <typename WeightOps>
 std::ostream& operator<<(std::ostream& os,
                          const WeightCounter<WeightOps>& weight_counter) {
-  auto weights = weight_counter.GetWeights();
+  const auto& weights = weight_counter.GetWeights();
   if (weights.empty()) {
     os << "{}";
     return os;

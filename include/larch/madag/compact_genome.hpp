@@ -26,7 +26,10 @@ class CompactGenome {
   inline static const CompactGenome* GetEmpty();
   CompactGenome() = default;
   MOVE_ONLY(CompactGenome);
-  inline CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mutations);
+  inline explicit CompactGenome(
+      ContiguousMap<MutationPosition, MutationBase>&& mutations);
+  inline CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mutations,
+                       size_t hash);
   inline CompactGenome(const std::string& sequence,
                        const std::string& reference_sequence);
 
