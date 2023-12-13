@@ -82,20 +82,20 @@ int main(int argc, char* argv[]) {
     std::string run_number =
         "  (" + std::to_string(ran) + "/" + std::to_string(num_tests) + ")";
 
-    std::cout << run_number << " TEST RUN: Begin '" << test.name << "' ... "
+    std::cout << run_number << " TEST RUN: '" << test.name << "' Begins... "
               << std::endl
               << std::flush;
 
     if (no_catch) {
       test.entry();
-      std::cout << run_number << " TEST RESULT: Passed." << std::endl;
+      std::cout << run_number << " TEST RESULT: '" << test.name << "' Passed." << std::endl;
     } else {
       try {
         test.entry();
-        std::cout << run_number << " TEST RESULT: Passed." << std::endl;
+        std::cout << run_number << " TEST RESULT: '" << test.name << "' Passed." << std::endl;
       } catch (const std::exception& e) {
         failed.push_back(test);
-        std::cerr << run_number << " TEST RESULT: Test '" << test.name
+        std::cerr << run_number << " TEST RESULT: '" << test.name
                   << "' failed with '" << e.what() << "'" << std::endl;
       }
     }

@@ -7,7 +7,7 @@
 static auto GetRFDistance(const Merge& merge1, const Merge& merge2) {
   // merge1 is the DAG we compute the weights for (summing distances to merge2)
   auto dag1 = merge1.GetResult();
-  std::cout << "\ndag1 (compute dag) address: " << &dag1.GetStorage() << "\n";
+  std::cout << "dag1 (compute dag) address: " << &dag1.GetStorage() << "\n";
   std::cout << "dag2 (reference dag) address: " << &merge2.GetResult().GetStorage()
             << "\n";
   SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag1)>> count{dag1};
@@ -18,8 +18,10 @@ static auto GetRFDistance(const Merge& merge1, const Merge& merge2) {
   if (merge2.GetResult().IsTree()) {
     Assert(shift_sum == merge2.GetResult().GetNodesCount() - 1);
   }
+  std::cout << "shift_sum: " << shift_sum << "\n";
   auto result =
       count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;
+  std::cout << "rf_distance: " << result << "\n";
   return result;
 }
 

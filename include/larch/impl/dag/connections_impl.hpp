@@ -106,13 +106,13 @@ void FeatureMutableView<Connections, CRTP, Tag>::ClearConnections() const {
 }
 
 template <typename CRTP, typename Tag>
-ContiguousMap<ContiguousSet<NodeId>, ContiguousSet<NodeId>>
+std::map<std::set<NodeId>, std::set<NodeId>>
 FeatureMutableView<Connections, CRTP, Tag>::BuildCladeUnionMap() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  ContiguousMap<ContiguousSet<NodeId>, ContiguousSet<NodeId>> clade_union_map;
+  std::map<std::set<NodeId>, std::set<NodeId>> clade_union_map;
   dag.GetRoot().CalculateLeafsBelow();
   for (auto node : dag.GetNodes()) {
-    ContiguousSet<NodeId> full_leafset;
+    std::set<NodeId> full_leafset;
     if (node.GetLeafsBelow().size() > 0) {
       for (const auto clade_leafset : node.GetLeafsBelow()) {
         full_leafset.insert(clade_leafset.begin(), clade_leafset.end());
@@ -122,9 +122,9 @@ FeatureMutableView<Connections, CRTP, Tag>::BuildCladeUnionMap() const {
     }
     if (clade_union_map.find(full_leafset) == clade_union_map.end()) {
       // TODO Copy()
-      clade_union_map[full_leafset.Copy()] = ContiguousSet<NodeId>();
+      clade_union_map[full_leafset] = std::set<NodeId>();
     }
-    clade_union_map[std::move(full_leafset)].insert(node.GetId());
+    clade_union_map[full_leafset].insert(node.GetId());
   }
   return clade_union_map;
 }
@@ -136,23 +136,23 @@ void FeatureMutableView<Connections, CRTP, Tag>::MakeComplete() const {
   size_t taxon_count = dag.GetLeafsCount();
   dag.ClearConnections();
   // Connect rootsplit nodes.
-  ContiguousSet<NodeId>* rootsplits = nullptr;
+  bool rootsplits_found = false;
   for (auto& [clade_union, node_ids] : clade_union_map) {
     if (clade_union.size() == taxon_count) {
-      rootsplits = &node_ids;
+      for (auto node_id : node_ids) {
+        dag.AppendEdge(dag.GetRoot().GetId(), node_id, {0});
+      }
+      rootsplits_found = true;
       break;
     }
   }
-  Assert(rootsplits != nullptr);
-  for (auto node_id : *rootsplits) {
-    dag.AppendEdge(dag.GetRoot().GetId(), node_id, {0});
-  }
+  Assert(rootsplits_found);
   // Connect all other nodes.
   for (auto parent_node : dag.GetNodes()) {
     auto leaf_sets = parent_node.GetLeafsBelow();
     for (size_t clade_idx = 0; clade_idx < leaf_sets.size(); clade_idx++) {
       auto leaf_clade = leaf_sets[clade_idx];
-      ContiguousSet<NodeId> clade_set(leaf_clade.begin(), leaf_clade.end());
+      std::set<NodeId> clade_set(leaf_clade.begin(), leaf_clade.end());
       auto possible_children = clade_union_map.find(clade_set);
       if (possible_children != clade_union_map.end()) {
         for (auto child_node_id : possible_children->second) {
