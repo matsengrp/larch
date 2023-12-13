@@ -72,7 +72,13 @@ MADAGStorage<> LoadDAGFromProtobuf(std::string_view path) {
   result.View().SetReferenceSequence(data.reference_seq());
 
   for (const auto& i : data.node_names()) {
-    result.View().AddNode({static_cast<size_t>(i.node_id())});
+    auto new_node = result.View().AddNode({static_cast<size_t>(i.node_id())});
+    if (i.condensed_leaves().size() > 0) {
+      for (auto cl : i.condensed_leaves()) {
+        new_node = SampleId{cl};
+        break;
+      }
+    }
   }
 
   size_t edge_id = 0;
@@ -95,7 +101,7 @@ MADAGStorage<> LoadDAGFromProtobuf(std::string_view path) {
   result.View().AssertUA();
 
   for (auto node : result.View().GetNodes()) {
-    if (node.IsLeaf()) {
+    if (node.IsLeaf() and not node.HaveSampleId()) {
       node = SampleId{node.GetCompactGenome().ToString()};
     }
   }
