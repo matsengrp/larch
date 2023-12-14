@@ -624,11 +624,11 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   auto get_rf_distance = [](const Merge& merge1, const Merge& merge2) {
     // merge1 is the DAG we compute the weights for (summing distances to merge2)
     auto dag1 = merge1.GetResult();
-    SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag1)>> count{dag1};
+    SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag1)>> rf_count{dag1};
     // merge2 is the reference DAG
     SumRFDistance weight_ops{merge2, merge1};
     ArbitraryInt shift_sum = weight_ops.GetOps().GetShiftSum();
-    auto rf_dist = count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;
+    auto rf_dist = rf_count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;
     return rf_dist;
   };
 
