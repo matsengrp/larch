@@ -15,7 +15,7 @@ class BatchingCallback : public Move_Found_Callback {
 
   virtual ~BatchingCallback() {}
 
-  using Storage = MergeDAGStorage<>;
+  using Storage = MergeDAGStorage<>;  // TODO MADAG storage?
   using MATStorage = decltype(AddMATConversion(Storage::EmptyDefault()));
   using SPRType =
       decltype(AddSPRStorage(AddMATConversion(Storage::EmptyDefault()).View()));

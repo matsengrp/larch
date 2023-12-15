@@ -1,3 +1,4 @@
+
 Merge::Merge(std::string_view reference_sequence)
     : result_dag_storage_{MergeDAGStorage<>::EmptyDefault()} {
   ResultDAG().SetReferenceSequence(reference_sequence);
@@ -23,9 +24,13 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   idxs.resize(dags.size());
   std::iota(idxs.begin(), idxs.end(), 0);
 
-  ParallelForEach(idxs, [&](size_t i) {
-    dags.at(i).GetRoot().Validate(true, not dags.at(i).IsTree());
-  });
+#ifndef NDEBUG
+  // TODO uncomment once extra edges/nodes are cleared in CollapseEmptyFragmentEdges
+  // ParallelForEach(idxs, [&](size_t i) {
+  //   auto dag = GetFullDAG(dags.at(i));
+  //   dag.GetRoot().Validate(true, not dag.IsTree());
+  // });
+#endif
 
   constexpr IdContinuity id_continuity = std::remove_reference_t<decltype(dags.at(
       0))>::template id_continuity<Component::Node>;
@@ -147,11 +152,11 @@ const GrowableHashMap<std::string, CompactGenome>& Merge::SampleIdToCGMap() cons
 }
 
 void Merge::ComputeResultEdgeMutations() {
-  // TODO parallel
   result_edges_.ReadAll(
       [](auto result_edges, auto& result_nodes, auto& sample_id_to_cg_map,
          auto result_dag) {
-        for (auto& [label, edge_id] : result_edges) {
+        SeqForEach(result_edges, [&](auto& i) {
+          auto& [label, edge_id] = i;
           Assert(label.GetParent().GetCompactGenome());
           const CompactGenome& parent = *label.GetParent().GetCompactGenome();
 
@@ -168,7 +173,7 @@ void Merge::ComputeResultEdgeMutations() {
             result_dag.Get(edge_id).SetEdgeMutations(CompactGenome::ToEdgeMutations(
                 result_dag.GetReferenceSequence(), parent, child));
           }
-        }
+        });
       },
       GetResultNodes(), SampleIdToCGMap(), ResultDAG());
 }
@@ -176,27 +181,6 @@ void Merge::ComputeResultEdgeMutations() {
 bool Merge::ContainsLeafset(const LeafSet& leafset) const {
   return all_leaf_sets_.find(leafset) != nullptr;
 }
-
-namespace {
-
-template <typename DAG>
-auto GetFullDAG(DAG dag) {
-  static_assert(DAG::role == Role::View);
-  static_assert(DAG::component == Component::DAG);
-  return dag;
-}
-
-template <typename DAG, template <typename, typename> typename Base>
-auto GetFullDAG(DAGView<FragmentStorage<DAG>, Base> dag) {
-  return dag.GetStorage().GetTargetStorage().View();
-}
-
-template <typename DAG, template <typename, typename> typename Base>
-auto GetFullDAG(DAGView<const FragmentStorage<DAG>, Base> dag) {
-  return dag.GetStorage().GetTargetStorage().View();
-}
-
-}  // namespace
 
 template <typename DAGSRange, typename NodeLabelsContainer>
 void Merge::MergeCompactGenomes(
@@ -243,6 +227,7 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
                             GrowableHashSet<LeafSet>& all_leaf_sets) {
   auto dag = GetFullDAG(dags.at(i));
   NodeLabelsContainer& labels = dags_labels.at(i);
+  labels.reserve(dag.GetNodesCount());
   using ComputedLSType =
       IdContainer<NodeId, LeafSet, IdContinuity::Sparse, Ordering::Ordered>;
   ComputedLSType computed_ls = LeafSet::ComputeLeafSets<ComputedLSType>(dag, labels);

@@ -632,6 +632,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   for (const auto& edgeadded : edge_already_added) {
     current_edges.push_back(edgeadded.first);
   }
+#ifndef NDEBUG
   for (auto node_id : current_nodes) {
     auto node = dag.Get(node_id);
     Assert(node_id.value != NoId);
@@ -641,9 +642,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   }
   for (auto edge_id : current_edges) {
     auto parent = dag.Get(edge_id).GetParent();
-#ifndef NDEBUG
     auto child = dag.Get(edge_id).GetChild();
-#endif
     Assert(child.GetParentsCount() == 1);
     Assert(edge_id.value != NoId);
     if (parent != dag.GetRoot()) {
@@ -655,7 +654,21 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
            current_nodes.end());
     Assert(parent.ContainsChild(child));
   }
+#endif
   Assert(current_nodes.size() == current_edges.size() + 1);
+
+  for (auto node_id : fragment_nodes) {
+    if (is_parent_of_collapsible_edge[node_id] and
+        is_child_of_collapsible_edge[node_id]) {
+      // TODO delete / clear this node
+    }
+  }
+
+  for (auto edge_id : fragment_edges) {
+    if (not edge_already_added[edge_id]) {
+      // TODO delete / clear this edge
+    }
+  }
 
   return {current_nodes, current_edges};
 }

@@ -20,60 +20,51 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
   finally merge_large_batch([&]() {
     if (moves_batch_.size_approx() > 100) {
-      Benchmark bench;
-      bench.start();
       auto all = moves_batch_.GatherAndClear([this](auto buckets) {
         std::vector<MoveStorage> result;
         result.reserve(moves_batch_.size_approx());
         for (auto&& bucket : buckets) {
           for (auto&& stored_move : bucket) {
-            if (stored_move.fragment) {
-              result.push_back(std::move(stored_move));
-            }
+            Assert(stored_move.fragment);
+            GetFullDAG(stored_move.fragment->View()).GetRoot().Validate(true, false);
+            result.push_back(std::move(stored_move));
           }
         }
         return result;
       });
-      std::cout << "Gather " << all.size() << " in " << bench.lapMs() << "ms\n";
-      std::unique_lock lock{merge_mtx_};
-      bench.lapMs();
-      merge_.AddDAGs(
-          all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
-      std::cout << "  Merged in " << bench.lapMs() << "ms\n";
-      // merge_.GetResult().GetRoot().Validate(true, true);
+      if (not all.empty()) {
+        std::unique_lock lock{merge_mtx_};
+        merge_.AddDAGs(
+            all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
+        merge_.GetResult().GetRoot().Validate(true, true);
+      }
     }
   });
 
   return moves_batch_.AddElement(
       [this, &move, best_score_change,
        &nodes_with_major_allele_set_change](auto& bucket) -> bool {
-        Benchmark bench;
         std::shared_lock lock{mat_mtx_};
         Assert(sample_mat_storage_ != nullptr);
-        bench.start();
         bucket.push_back(MoveStorage{
             std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
             nullptr});
-        // std::cout << "Add spr: " << bench.lapMs() << "ms\n";
         auto& storage = bucket.back();
-    // storage.spr->View().GetRoot().Validate(true);
+        storage.spr->View().GetRoot().Validate(true);
 #ifndef NDEBUG
         for (auto i : storage.spr->View().Const().GetLeafs()) {
           Assert(i.HaveSampleId());
         }
 #endif
-        bench.lapMs();
         if (storage.spr->View().InitHypotheticalTree(
                 move, nodes_with_major_allele_set_change)) {
-          // storage.spr->View().GetRoot().Validate(true);
-          // std::cout << "  Init: " << bench.lapMs() << "ms\n";
+          storage.spr->View().GetRoot().Validate(true);
           storage.fragment = std::make_unique<FragmentType>(
               collapse_empty_fragment_edges_
                   ? storage.spr->View().MakeFragment()
                   : storage.spr->View().MakeUncollapsedFragment());
-          // std::cout << "  Fragment: " << bench.lapMs() << "ms\n";
           auto fragment = storage.fragment->View();
-
+          GetFullDAG(fragment).GetRoot().Validate(true, false);
           auto& impl = static_cast<CRTP&>(*this);
           std::pair<bool, bool> accepted =
               impl.OnMove(storage.spr->View(), fragment, move, best_score_change,
@@ -103,6 +94,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
           return accepted.second;
 
         } else {
+          bucket.pop_back();
           return false;
         }
       });
@@ -120,25 +112,25 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   check_edge_mutations(reassigned_states.Const());
   reassigned_states.RecomputeCompactGenomes(true);
   {
-    std::unique_lock lock{merge_mtx_};
-    if (moves_batch_.size_approx() > 0) {
-      auto all = moves_batch_.GatherAndClear([this](auto buckets) {
-        std::vector<MoveStorage> result;
-        result.reserve(moves_batch_.size_approx());
-        for (auto&& bucket : buckets) {
-          for (auto&& stored_move : bucket) {
-            if (stored_move.fragment) {
-              result.push_back(std::move(stored_move));
-            }
-          }
+    auto all = moves_batch_.GatherAndClear([this](auto buckets) {
+      std::vector<MoveStorage> result;
+      result.reserve(moves_batch_.size_approx());
+      for (auto&& bucket : buckets) {
+        for (auto&& stored_move : bucket) {
+          Assert(stored_move.fragment);
+          // GetFullDAG(stored_move.fragment->View()).GetRoot().Validate(true, false);
+          result.push_back(std::move(stored_move));
         }
-        return result;
-      });
+      }
+      return result;
+    });
+    std::unique_lock lock{merge_mtx_};
+    if (not all.empty()) {
       merge_.AddDAGs(
           all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
     }
     merge_.AddDAGs(std::vector{reassigned_states});
-    // merge_.GetResult().GetRoot().Validate(true, true);
+    merge_.GetResult().GetRoot().Validate(true, true);
     merge_.ComputeResultEdgeMutations();
   }
   {
@@ -160,7 +152,7 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   {
     std::unique_lock lock{merge_mtx_};
     merge_.AddDAGs(std::vector{reassigned_states});
-    // merge_.GetResult().GetRoot().Validate(true, true);
+    merge_.GetResult().GetRoot().Validate(true, true);
     merge_.ComputeResultEdgeMutations();
   }
   {

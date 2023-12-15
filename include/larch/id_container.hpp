@@ -89,7 +89,7 @@ class IdContainer {
       bool inserted = value.first.value >= data_.size();
       T& val = this->operator[](value.first);
       val = std::forward<T>(value.second);
-      return {std::addressof(val), inserted};
+      return std::pair<iterator, bool>{std::addressof(val), inserted};
     } else {
       return data_.insert(std::forward<value_type>(value));
     }
@@ -127,7 +127,7 @@ class IdContainer {
     }
   }
 
-  bool Contains(Id key) const { return data_.Contains(key); }
+  bool Contains(Id key) const { return data_.find(key) != data_.end(); }
 
   void Union(const IdContainer& other) { return data_.Union(other); }
 

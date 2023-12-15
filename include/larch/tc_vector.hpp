@@ -65,6 +65,12 @@ class TCVector {
     size_ = s;
   }
 
+  void reserve(size_t s) {
+    if (s > size_) {
+      ensureCapacity(s);
+    }
+  }
+
   void clear() { size_ = 0; }
 
   T popBack() { return data_[--size_]; }

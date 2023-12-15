@@ -93,18 +93,24 @@ std::string LeafSet::ToString() const {
 template <typename ResultType, typename DAGType, typename LabelsType>
 ResultType LeafSet::ComputeLeafSets(DAGType dag, const LabelsType& labels) {
   ResultType result;
-  auto ComputeLS = [&](auto& self, auto for_node) {
-    if (not result[for_node].empty()) {
-      return;
-    }
+  result.reserve(dag.GetNodesCount());
+  auto ComputeLS = [&](auto& self, auto for_node) -> void {
     for (auto child : for_node.GetChildren() | Transform::GetChild()) {
       self(self, child);
     }
-    result.at(for_node) = LeafSet{for_node, labels, result};
+    auto& ls = result[for_node];
+    if (ls.empty()) {
+      ls = LeafSet{for_node, labels, result};
+    }
   };
+  ComputeLS(ComputeLS, dag.GetRoot());
+  // TODO workaround until extra edges/nodes are cleared in CollapseEmptyFragmentEdges
   for (auto node : dag.GetNodes()) {
-    ComputeLS(ComputeLS, node);
+    if (result[node].empty()) {
+      ComputeLS(ComputeLS, node);
+    }
   }
+  Assert(result.size() == dag.GetNodesCount());
   return result;
 }
 
