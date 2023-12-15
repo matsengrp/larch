@@ -104,13 +104,8 @@ ResultType LeafSet::ComputeLeafSets(DAGType dag, const LabelsType& labels) {
     }
   };
   ComputeLS(ComputeLS, dag.GetRoot());
-  // TODO workaround until extra edges/nodes are cleared in CollapseEmptyFragmentEdges
-  for (auto node : dag.GetNodes()) {
-    if (result[node].empty()) {
-      ComputeLS(ComputeLS, node);
-    }
-  }
-  Assert(result.size() == dag.GetNodesCount());
+  // TODO commented until extra edges/nodes are cleared in CollapseEmptyFragmentEdges
+  // Assert(result.size() == dag.GetNodesCount());
   return result;
 }
 

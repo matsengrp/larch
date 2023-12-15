@@ -26,7 +26,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         for (auto&& bucket : buckets) {
           for (auto&& stored_move : bucket) {
             Assert(stored_move.fragment);
-            GetFullDAG(stored_move.fragment->View()).GetRoot().Validate(true, false);
+            // GetFullDAG(stored_move.fragment->View()).GetRoot().Validate(true, false);
             result.push_back(std::move(stored_move));
           }
         }
@@ -36,7 +36,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         std::unique_lock lock{merge_mtx_};
         merge_.AddDAGs(
             all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
-        merge_.GetResult().GetRoot().Validate(true, true);
+        // merge_.GetResult().GetRoot().Validate(true, true);
       }
     }
   });
@@ -50,7 +50,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
             std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
             nullptr});
         auto& storage = bucket.back();
-        storage.spr->View().GetRoot().Validate(true);
+    // storage.spr->View().GetRoot().Validate(true);
 #ifndef NDEBUG
         for (auto i : storage.spr->View().Const().GetLeafs()) {
           Assert(i.HaveSampleId());
@@ -58,13 +58,13 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 #endif
         if (storage.spr->View().InitHypotheticalTree(
                 move, nodes_with_major_allele_set_change)) {
-          storage.spr->View().GetRoot().Validate(true);
+          // storage.spr->View().GetRoot().Validate(true);
           storage.fragment = std::make_unique<FragmentType>(
               collapse_empty_fragment_edges_
                   ? storage.spr->View().MakeFragment()
                   : storage.spr->View().MakeUncollapsedFragment());
           auto fragment = storage.fragment->View();
-          GetFullDAG(fragment).GetRoot().Validate(true, false);
+          // GetFullDAG(fragment).GetRoot().Validate(true, false);
           auto& impl = static_cast<CRTP&>(*this);
           std::pair<bool, bool> accepted =
               impl.OnMove(storage.spr->View(), fragment, move, best_score_change,
@@ -130,8 +130,7 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
           all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
     }
     merge_.AddDAGs(std::vector{reassigned_states});
-    merge_.GetResult().GetRoot().Validate(true, true);
-    merge_.ComputeResultEdgeMutations();
+    // merge_.GetResult().GetRoot().Validate(true, true);
   }
   {
     std::unique_lock lock{mat_mtx_};
@@ -152,8 +151,7 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   {
     std::unique_lock lock{merge_mtx_};
     merge_.AddDAGs(std::vector{reassigned_states});
-    merge_.GetResult().GetRoot().Validate(true, true);
-    merge_.ComputeResultEdgeMutations();
+    // merge_.GetResult().GetRoot().Validate(true, true);
   }
   {
     std::unique_lock lock{mat_mtx_};

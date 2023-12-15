@@ -3,6 +3,7 @@
 #include <vector>
 #include <unordered_map>
 #include <type_traits>
+#include <memory>
 
 #include "larch/common.hpp"
 #include "larch/tc_vector.hpp"
@@ -147,6 +148,36 @@ class IdContainer {
   void push_back(T&& value) {
     static_assert(Cont == IdContinuity::Dense);
     data_.push_back(std::forward<T>(value));
+  }
+
+  T* At(Id key) {
+    if constexpr (Cont == IdContinuity::Dense) {
+      if (key.value >= data_.size()) {
+        return nullptr;
+      }
+      return std::addressof(data_[key.value]);
+    } else {
+      auto it = data_.find(key);
+      if (it == data_.end()) {
+        return nullptr;
+      }
+      return std::addressof(*it);
+    }
+  }
+
+  const T* At(Id key) const {
+    if constexpr (Cont == IdContinuity::Dense) {
+      if (key.value >= data_.size()) {
+        return nullptr;
+      }
+      return std::addressof(data_[key.value]);
+    } else {
+      auto it = data_.find(key);
+      if (it == data_.end()) {
+        return nullptr;
+      }
+      return std::addressof(*it);
+    }
   }
 
  private:
