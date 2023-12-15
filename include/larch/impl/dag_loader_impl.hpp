@@ -54,9 +54,13 @@ void StoreDAGToProtobuf(DAG dag, std::string_view path) {
 
   data.set_reference_seq(dag.GetReferenceSequence());
 
-  for (size_t i = 0; i < dag.GetNodesCount(); ++i) {
+  size_t i = 0;
+  for (auto node : dag.GetNodes()) {
     auto* proto_node = data.add_node_names();
-    proto_node->set_node_id(static_cast<int64_t>(i));
+    proto_node->set_node_id(static_cast<int64_t>(i++));
+    if (node.IsLeaf()) {
+      proto_node->add_condensed_leaves(node.GetSampleId().value());
+    }
   }
 
   for (typename DAG::EdgeView edge : dag.GetEdges()) {
