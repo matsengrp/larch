@@ -55,6 +55,7 @@
                "the sampled tree to maximize parsimony.\n";
   std::cout << "  --callback-option    Callback configuration choice(default merge all "
                "profitable moves)\n";
+  std::cout << "  --trim   Trim optimized dag before writing to protobuf\n";
   std::cout
       << "  --keep-fragment-uncollapsed   Optional argument to keep empty fragment "
          "edges\n";
@@ -516,6 +517,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   size_t max_subtree_clade_size = 1000;  // NOLINT
   bool uniform_subtree_root = false;
   bool collapse_empty_fragment_edges = true;
+  bool final_trim = false;
   bool sample_uniformly = false;
 
   for (auto [name, params] : args) {
@@ -599,6 +601,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       callback_config = *params.begin();
     } else if (name == "--keep-fragment-uncollapsed") {
       collapse_empty_fragment_edges = false;
+    } else if (name == "--trim") {
+      final_trim = true;
     } else {
       std::cerr << "Unknown argument.\n";
       Fail();
@@ -815,7 +819,13 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::cout << "new node coefficient: " << move_coeff_nodes << "\n";
   std::cout << "parsimony score coefficient: " << move_coeff_pscore << "\n";
   logfile.close();
-  StoreDAGToProtobuf(merge.GetResult(), output_dag_path);
+  if (final_trim){
+    SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{merge.GetResult()};
+    merge.ComputeResultEdgeMutations();
+    StoreDAGToProtobuf(parsimonyscorer.TrimToMinWeight({}).View(), output_dag_path);
+  } else {
+    StoreDAGToProtobuf(merge.GetResult(), output_dag_path);
+  }
 
   return EXIT_SUCCESS;
 }

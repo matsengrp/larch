@@ -33,8 +33,10 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
                       std::string_view refseq_json_path, std::string_view out_path,
                       bool dags, bool trim) {
   std::vector<MADAGStorage<>> trees;
-  std::string reference_sequence =
-      std::string{LoadDAGFromJson(refseq_json_path).View().GetReferenceSequence()};
+  std::string reference_sequence = "";
+  if (not refseq_json_path.empty()) {
+    reference_sequence = std::string{LoadDAGFromJson(refseq_json_path).View().GetReferenceSequence()};
+  }
 
   trees.reserve(paths.size());
   std::vector<std::pair<size_t, std::string_view>> paths_idx;
@@ -53,7 +55,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
             << "\n";
 
   Benchmark merge_time;
-  Merge merge(reference_sequence);
+  Merge merge(trees.front().View().GetReferenceSequence());
   std::vector<MADAG> tree_refs{trees.begin(), trees.end()};
   merge_time.start();
   merge.AddDAGs(tree_refs);
@@ -110,6 +112,9 @@ int main(int argc, char** argv) try {
   if (input_filenames.size() < 1) {
     std::cerr << "Specify at least one input file names.\n";
     Fail();
+  }
+  for (auto pth: input_filenames){
+    std::cout << pth << "  to be merged\n";
   }
 
   return MergeTrees(input_filenames, refseq_filename, result_filename, dags, trim);
