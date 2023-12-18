@@ -64,8 +64,8 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   std::cout << "DAG edges: " << merge.GetResult().GetEdgesCount() << "\n";
 
   if (trim) {
-    SubtreeWeight<BinaryParsimonyScore, MADAG> weight{merge.GetResult()};
-    StoreDAGToProtobuf(weight.TrimToMinWeight({}), out_path);
+    SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
+    StoreDAGToProtobuf(weight.TrimToMinWeight({}).View(), out_path);
   } else {
     StoreDAGToProtobuf(merge.GetResult(), out_path);
   }
