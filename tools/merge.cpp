@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score_binary.hpp"
 #include "arguments.hpp"
 #include "larch/merge/merge.hpp"
 #include "larch/dag_loader.hpp"
@@ -16,6 +18,7 @@
   std::cout << "  -o,--output    Save the output to filename (default is merged.pb)\n";
   std::cout << "  -r,--refseq    Read reference sequence from Json file\n";
   std::cout << "  -d,--dag       Input files are DAGs\n";
+  std::cout << "  -t,--trim      Trim output to best parsimony\n";
 
   std::exit(EXIT_SUCCESS);
 }
@@ -28,7 +31,7 @@
 
 static int MergeTrees(const std::vector<std::string_view>& paths,
                       std::string_view refseq_json_path, std::string_view out_path,
-                      bool dags) {
+                      bool dags, bool trim) {
   std::vector<MADAGStorage<>> trees;
   std::string reference_sequence =
       std::string{LoadDAGFromJson(refseq_json_path).View().GetReferenceSequence()};
@@ -60,7 +63,13 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   std::cout << "DAG nodes: " << merge.GetResult().GetNodesCount() << "\n";
   std::cout << "DAG edges: " << merge.GetResult().GetEdgesCount() << "\n";
 
-  StoreDAGToProtobuf(merge.GetResult(), out_path);
+  if (trim) {
+    SubtreeWeight<BinaryParsimonyScore, MADAG> weight{merge.GetResult()};
+    StoreDAGToProtobuf(weight.TrimToMinWeight({}), out_path);
+  } else {
+    StoreDAGToProtobuf(merge.GetResult(), out_path);
+  }
+
 
   return EXIT_SUCCESS;
 }
@@ -72,6 +81,7 @@ int main(int argc, char** argv) try {
   std::string result_filename = "merged.pb";
   std::string refseq_filename;
   bool dags = false;
+  bool trim = false;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -92,15 +102,17 @@ int main(int argc, char** argv) try {
       refseq_filename = *params.begin();
     } else if (name == "-d" or name == "--dag") {
       dags = true;
+    } else if (name == "-t" or name == "--trim") {
+      trim = true;
     }
   }
 
-  if (input_filenames.size() < 2) {
-    std::cerr << "Specify at least two input file names.\n";
+  if (input_filenames.size() < 1) {
+    std::cerr << "Specify at least one input file names.\n";
     Fail();
   }
 
-  return MergeTrees(input_filenames, refseq_filename, result_filename, dags);
+  return MergeTrees(input_filenames, refseq_filename, result_filename, dags, trim);
 } catch (std::exception& e) {
   std::cerr << "Uncaught exception: " << e.what() << std::endl;
   std::terminate();
