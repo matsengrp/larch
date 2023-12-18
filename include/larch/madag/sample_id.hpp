@@ -4,8 +4,17 @@ struct SampleId {
   MOVE_ONLY(SampleId);
 
   SampleId() = default;
-  SampleId(std::optional<std::string> id) : sample_id_{std::move(id)} {}
+  SampleId(std::optional<std::string> id)
+      : hash_{[](const std::optional<std::string>& x) -> size_t {
+          if (not x.has_value()) {
+            return 0;
+          } else {
+            return std::hash<std::string>{}(x.value());
+          }
+        }(id)},
+        sample_id_{std::move(id)} {}
 
+  size_t hash_ = 0;
   std::optional<std::string> sample_id_;
 
   inline SampleId Copy() const { return SampleId(sample_id_); }
@@ -18,9 +27,7 @@ struct SampleId {
   }
 
   inline std::string ToString() const { return sample_id_.value_or(std::string{}); }
-  inline size_t Hash() const {
-    return std::hash<std::string>{}(sample_id_.value_or(std::string{}));
-  }
+  inline size_t Hash() const { return hash_; }
   inline static const SampleId* GetEmpty();
 };
 
