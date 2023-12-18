@@ -13,7 +13,13 @@ class BatchingCallback : public Move_Found_Callback {
   BatchingCallback(Merge& merge, SampleDAG sample_dag,
                    bool collapse_empty_fragment_edges);
 
-  virtual ~BatchingCallback() {}
+  virtual ~BatchingCallback() {
+    auto lock = WriteLock(mat_mtx_);
+    if (sample_mat_storage_ != nullptr) {
+      sample_mat_storage_->View().GetMutableMAT().delete_nodes();
+      sample_mat_storage_ = nullptr;
+    }
+  }
 
   using Storage = MergeDAGStorage<>;  // TODO MADAG storage?
   using MATStorage = decltype(AddMATConversion(Storage::EmptyDefault()));
