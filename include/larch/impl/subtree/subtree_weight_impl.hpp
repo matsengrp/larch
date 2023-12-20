@@ -85,7 +85,7 @@ SubtreeWeight<WeightOps, DAG>::TrimToMinWeight(const WeightOps& weight_ops) {
             cached_min_weight_edges_.at(node.GetId().value).at(clade_idx.value)[0]);
       },
       result.View());
-
+  result.View().BuildConnections();
   return result;
 }
 
