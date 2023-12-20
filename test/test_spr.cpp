@@ -263,7 +263,8 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
                 bench.stop();
                 std::cout << "Time: " << bench.durationMs() << " ms ";
               },
-              "SPR: 20B"});
+              "SPR: 20B",
+              {"slow"}});
 
 //[[maybe_unused]] static const auto test_added4 = add_test(
 //    {[] {

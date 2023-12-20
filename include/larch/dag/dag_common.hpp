@@ -222,7 +222,7 @@ struct ExtraStorage;
 template <typename, typename, typename, typename>
 struct DAGStorage;
 
-template <Component, typename, typename...>
+template <Component, typename, IdContinuity, typename...>
 struct ElementsContainer;
 
 template <typename...>

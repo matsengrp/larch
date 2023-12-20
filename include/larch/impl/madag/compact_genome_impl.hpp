@@ -23,7 +23,7 @@ static void ComputeMutations(const EdgeMutations& edge_mutations,
     } else {
       if (is_valid) {
         AssertMut(pos, nucs.second);
-        result.Insert(it, {pos, nucs.second});
+        result.insert_or_assign(pos, nucs.second);
       }
     }
   }

@@ -6,7 +6,6 @@
 #include <memory>
 
 #include "larch/common.hpp"
-#include "larch/tc_vector.hpp"
 #include "larch/contiguous_map.hpp"
 
 enum class IdContinuity { Dense, Sparse };
@@ -19,7 +18,7 @@ class IdContainer {
   static constexpr auto storage_type_helper = [] {
     if constexpr (Cont == IdContinuity::Dense) {
       if constexpr (std::is_trivially_copyable_v<T>) {
-        return type_identity<TCVector<T>>{};
+        return type_identity<std::vector<T>>{};
       } else {
         return type_identity<std::vector<T>>{};
       }

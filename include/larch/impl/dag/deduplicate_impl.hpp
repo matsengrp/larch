@@ -27,11 +27,6 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
                            .deduplicated_;
   const Feature* result =
       std::addressof(deduplicated.insert(std::forward<Feature>(feature)).first);
-  // const Feature* result = deduplicated.Write(
-  //     [](auto& write, Feature&& feat) {
-  //       return std::addressof(*write.insert(std::forward<Feature>(feat)).first);
-  //     },
-  //     std::forward<Feature>(feature));
   static_cast<const CRTP&>(*this)
       .template GetFeatureStorage<Deduplicate<Feature>>()
       .feature_ = result;
