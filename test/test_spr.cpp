@@ -266,6 +266,14 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
               "SPR: 20B",
               {"slow"}});
 
+[[maybe_unused]] static const auto test_added5 =
+    add_test({[] {
+                auto input = Load("data/ebov_dud17/output.pb.gz",
+                                  "data/ebov_dud17/output.txt.gz");
+                test_spr(input, 3);
+              },
+              "SPR: ebov_dud17"});
+
 //[[maybe_unused]] static const auto test_added4 = add_test(
 //    {[] {
 //       test_spr(Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz"),
