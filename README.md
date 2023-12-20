@@ -43,7 +43,6 @@ From the build directory:
 `./larch-test`
 
 Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
-
 *--list* produces a list of all available tests, along with an ID number.
 *--range* runs tests by ID in [begin, end] range arguments.
 
