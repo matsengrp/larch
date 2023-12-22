@@ -77,12 +77,14 @@ typename SubtreeWeight<WeightOps, DAG>::Storage
 SubtreeWeight<WeightOps, DAG>::TrimToMinWeight(const WeightOps& weight_ops) {
   Storage result = Storage::EmptyDefault();
   std::unordered_map<NodeId, NodeId> visited_nodes;
+  std::unordered_map<EdgeId, bool> visited_edges;
   result.View().SetReferenceSequence(dag_.GetReferenceSequence());
   ExtractSubset(
       dag_.GetRoot(), result.View().AppendNode(), weight_ops,
       [this](Node node, CladeIdx clade_idx) {
         return cached_min_weight_edges_.at(node.GetId().value).at(clade_idx.value);
       },
+      visited_edges,
       visited_nodes,
       result.View());
   result.View().BuildConnections();
@@ -302,11 +304,12 @@ void SubtreeWeight<WeightOps, DAG>::ExtractSubset(NodeType input_node,
                                                 NodeId result_node_id,
                                                 const WeightOps& weight_ops,
                                                 const EdgeSelector& edge_selector,
+                                                std::unordered_map<EdgeId, bool> visited_edge,
                                                 std::unordered_map<NodeId, NodeId> visited_node,
                                                 MutableDAGType result) {
 
   visited_node.insert({input_node.GetId(), NodeId{NoId}});
-  if (visited_node[input_node.GetId()].value == NoId) {
+  if (visited_node[input_node.GetId()] == NodeId{NoId}) {
     ComputeWeightBelow(input_node, weight_ops);
     auto result_node = result.Get(result_node_id);
     if constexpr (decltype(result_node)::template contains_feature<MappedNodes>) {
@@ -329,29 +332,31 @@ void SubtreeWeight<WeightOps, DAG>::ExtractSubset(NodeType input_node,
         auto input_edge = input_node.GetDAG().Get(input_edge_id);
         auto input_child_id = input_edge.GetChild().GetId();
 
-        visited_node.insert({input_child_id, {NoId}});
-        if (visited_node[input_child_id] != NodeId{NoId}) {
+        if (not visited_edge[input_edge_id]) {
+          visited_edge.insert({input_edge_id, true});
 
-          NodeId result_child_id = visited_node[input_child_id];
+          visited_node.insert({input_child_id, {NoId}});
+          if (visited_node[input_child_id] != NodeId{NoId}) {
 
-          auto result_edge =
-              result.AppendEdge(result_node_id, result_child_id, input_edge.GetClade());
+            NodeId result_child_id = visited_node[input_child_id];
+            auto result_edge =
+                result.AppendEdge(result_node_id, result_child_id, input_edge.GetClade());
 
-          result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
+            result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
+          } else {
 
-        } else {
+            NodeId result_child_id = result.AppendNode();
 
-          NodeId result_child_id = result.AppendNode();
-          visited_node.insert_or_assign(input_child_id, result_child_id);
+            auto result_edge =
+                result.AppendEdge(result_node_id, result_child_id, input_edge.GetClade());
 
-          auto result_edge =
-              result.AppendEdge(result_node_id, result_child_id, input_edge.GetClade());
+            result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
 
-          result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
-
-          ExtractSubset(input_edge.GetChild(), result_child_id, weight_ops, edge_selector,
-                      visited_node,
-                      result);
+            ExtractSubset(input_edge.GetChild(), result_child_id, weight_ops, edge_selector,
+                        visited_edge,
+                        visited_node,
+                        result);
+          }
         }
       }
       ++clade_idx.value;

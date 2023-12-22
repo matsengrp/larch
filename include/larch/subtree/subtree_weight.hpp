@@ -97,6 +97,7 @@ class SubtreeWeight {
   template <typename NodeType, typename EdgeSelector, typename MutableDAGType>
   void ExtractSubset(NodeType input_node, NodeId result_node_id,
                    const WeightOps& weight_ops, const EdgeSelector& edge_selector,
+                   std::unordered_map<EdgeId, bool> visited_edge,
                    std::unordered_map<NodeId, NodeId> visited_node,
                    MutableDAGType result);
 
