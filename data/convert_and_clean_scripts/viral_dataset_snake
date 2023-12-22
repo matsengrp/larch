@@ -46,7 +46,8 @@ rule all:
         base_filename+".vcf",
         base_filename+".fasta",
         base_filename+".pb",
-        base_filename+".txt"
+        base_filename+".txt",
+        touch("larch_usher.done")
 
 
 rule create_reference_sequence_file:
@@ -54,9 +55,9 @@ rule create_reference_sequence_file:
         input_file=input_fasta_file
     output:
         refseq_file=base_filename+".txt",
-        fasta_with_ignored_sites=temp(base_filename+"_ommitted_sites.txt")
+        fasta_file=base_filename+".fasta"
     run:
-        with open(input_fasta_file, "r") as f:
+        with open(input.fasta_file, "r") as f:
             algmnt = next(AlignIO.parse(f, "fasta"))
 
         def get_most_common_value(idx):
@@ -87,32 +88,30 @@ rule create_reference_sequence_file:
                         sites_to_remove.append(i)
 
         # the only remaining sites that have "N" in the consensus_ref_seq are sites that have no values across all sequences. Remove those sites and write the skipped sites to a file
-        with open(base_filename+".txt", "w") as f:
+        with open(output.refseq_file, "w") as f:
             f.write(str(disambiguated_ref_seq).replace("N", ""))
-
         for s in sites_to_remove[::-1]:
             algmnt = algmnt[:, :s] + algmnt[:, s+1:]
-        fn = base_filename+"_ommitted_sites.txt"
+        fn = output.fasta_file
         AlignIO.write(algmnt, fn, "fasta-2line")
 
 
 rule create_fasta_with_cleaned_names:
     input:
-        fasta_file=input_fasta_file,
         refseq_file=rules.create_reference_sequence_file.output.refseq_file,
-        fasta_with_ignored_sites=rules.create_reference_sequence_file.output.fasta_with_ignored_sites
+        fasta_file=rules.create_reference_sequence_file.output.fasta_file
     output:
         fasta_file=base_filename+".fasta",
         nh_file=temp(base_filename+".nh")
     shell:
         """
-        sed "s/\-/N/g; s/\?/N/g; s/|/\_/g" {input.fasta_with_ignored_sites} > {output.fasta_file}
+        sed "s/\-/N/g; s/\?/N/g; s/|/\_/g" {input.fasta_file} > {output.fasta_file}
         rootseq=$(head -1 {input.refseq_file})
         sed -i "1s/^/>\ unambiguous_root_seq\\n$rootseq\\n/g" {output.fasta_file}
         seq1=$(awk 'NR == 1' {output.fasta_file})
         seq2=$(awk 'NR == 3' {output.fasta_file})
         initialstring="(${{seq1:2}},${{seq2:2}})1;"
-        echo $initialstring > {base_filename}.nh
+        echo $initialstring > {output.nh_file}
         """
 
 
@@ -127,7 +126,7 @@ rule create_vcf_from_fasta:
           rsync -aP rsync://hgdownload.soe.ucsc.edu/genome/admin/exe/linux.x86_64/faToVcf .
         fi
         chmod +x faToVcf
-        ./faToVcf {input.input_file} {base_filename}.vcf -ambiguousToN
+        ./faToVcf {input.input_file} {output.vcf_file} -ambiguousToN
         """
 
 
