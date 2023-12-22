@@ -72,7 +72,13 @@ MADAGStorage<> LoadDAGFromProtobuf(std::string_view path) {
   result.View().SetReferenceSequence(data.reference_seq());
 
   for (const auto& i : data.node_names()) {
-    result.View().AddNode({static_cast<size_t>(i.node_id())});
+    auto new_node = result.View().AddNode({static_cast<size_t>(i.node_id())});
+    if (i.condensed_leaves().size() > 0) {
+      for (auto cl : i.condensed_leaves()) {
+        new_node = SampleId{cl};
+        break;
+      }
+    }
   }
 
   size_t edge_id = 0;
@@ -95,7 +101,7 @@ MADAGStorage<> LoadDAGFromProtobuf(std::string_view path) {
   result.View().AssertUA();
 
   for (auto node : result.View().GetNodes()) {
-    if (node.IsLeaf()) {
+    if (node.IsLeaf() and not node.HaveSampleId()) {
       node = SampleId{node.GetCompactGenome().ToString()};
     }
   }
@@ -161,70 +167,47 @@ MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
   apply_mutations(apply_mutations, result.View().GetRoot().GetFirstChild(),
                   data.node_mutations(), muts_idx);
 
+  // uncollapsing has to occur _after_ we read the mutations, since those mutations
+  // are stored for edges in an ordered traversal of the condensed newick tree.
+  for (auto orig_leaf_in_dag : result.View().GetLeafs()) {
+    std::string node_name = orig_leaf_in_dag.GetSampleId().value();
+    // check if this leaf is condensed
+    if (node_name.find("_condensed_") != std::string::npos) {
+      // find the corresponding condensed leaf in the data.condensed_nodes() dictionary
+      for (const auto & cn : data.condensed_nodes()) {
+        std::string condensed_node_name = static_cast<std::string>(cn.node_name());
+        if (condensed_node_name == node_name) {
+          // expand this condensed leaf node in the result.View() by:
+          // - renaming this node to the first string in the list, and
+          // - adding all of the sibling nodes as children of the condensed leaf node's parent.
+          auto parent_edge = orig_leaf_in_dag.GetSingleParent();
+          auto parent_node = parent_edge.GetParent();
+          auto clade_idx = parent_node.GetCladesCount();
+          size_t ctr = 0;
+          for (const auto & sib_node : cn.condensed_leaves()) {
+            auto sib_node_name = static_cast<std::string>(sib_node);
+            if (ctr < 1) {
+              orig_leaf_in_dag = SampleId{sib_node_name};
+            } else {
+              auto muts_copy = parent_edge.GetEdgeMutations().Copy();
+              auto new_sib_node = result.View().AppendNode();
+              new_sib_node = SampleId{sib_node_name};
+              auto new_sib_edge = result.View().AppendEdge();
+              new_sib_edge.SetEdgeMutations(std::move(muts_copy));
+              result.View().AddEdge(new_sib_edge, parent_node, new_sib_node, {clade_idx++});
+              result.View().AddLeaf(new_sib_node);
+            }
+            ctr++;
+          }
+        }
+      }
+    }
+  }
+  result.View().BuildConnections();
   result.View().GetRoot().Validate(true, false);
   return result;
 }
 
-/*
-MADAGStorage LoadTreeFromProtobuf(std::string_view path,
-                                  std::string_view reference_sequence,
-                                  std::string_view vcf_path) {
-  Parsimony::data data;
-  Parse(data, path);
-
-  MADAGStorage result;
-  result.View().SetReferenceSequence(reference_sequence);
-
-  std::unordered_map<size_t, size_t> num_children;
-  std::map<size_t, std::optional<std::string>> seq_ids;
-  ParseNewick(
-      data.newick(),
-      [&seq_ids](size_t node_id, std::string_view label, std::optional<double>) {
-        seq_ids[node_id] = label;
-      },
-      [&result, &num_children](size_t parent, size_t child) {
-        result.View().AddEdge({child}, {parent}, {child}, {num_children[parent]++});
-      });
-  result.View().InitializeNodes(result.View().GetEdgesCount() + 1);
-  result.View().BuildConnections();
-
-  for (auto node : result.View().GetNodes()) {
-    if (node.IsLeaf()) {
-      node.SetSampleId(seq_ids[node.GetId().value]);
-    }
-  }
-
-  result.View().AddUA({});
-
-  Assert(static_cast<size_t>(data.node_mutations_size()) ==
-         result.View().GetNodesCount() - 1);
-  using Edge = MutableMADAG::EdgeView;
-  auto apply_mutations = [](auto& self, Edge edge, const auto& node_mutations,
-                            size_t& idx) -> void {
-    const auto& pb_muts = node_mutations.Get(static_cast<int>(idx++)).mutation();
-    EdgeMutations muts;
-    for (auto i : pb_muts | ranges::views::transform(DecodeMutation)) {
-      muts.insert(i);
-    }
-    edge.SetEdgeMutations(std::move(muts));
-    for (Edge child : edge.GetChild().GetChildren()) {
-      self(self, child, node_mutations, idx);
-    }
-  };
-  size_t muts_idx = 0;
-  apply_mutations(apply_mutations, result.View().GetRoot().GetFirstChild(),
-                  data.node_mutations(), muts_idx);
-
-  auto sample = AddMATConversion(result.View());
-  MAT::Tree mat;
-  sample.View().BuildMAT(mat);
-  VCF_input(std::string(vcf_path).c_str(), mat);
-  Original_State_t vcf_data;
-  check_samples(mat.root, vcf_data, &mat);
-
-  return result;
-}
-*/
 
 [[nodiscard]] nlohmann::json LoadJson(std::string_view path) {
   if (IsGzipped(path)) {

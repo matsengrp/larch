@@ -154,6 +154,7 @@ file(GLOB MATOPTIMIZE_SRC
   "deps/usher/src/matOptimize/mutation_annotated_tree_nuc_utils.cpp"
   "deps/usher/src/matOptimize/optimize_inner_loop.cpp"
   "deps/usher/src/matOptimize/Mutation_Collection.cpp"
+  "deps/usher/src/matOptimize/condense.cpp"
   "deps/usher/src/matOptimize/reassign_states.cpp"
   "deps/usher/src/matOptimize/detailed_mutations_load.cpp"
   "deps/usher/src/matOptimize/detailed_mutations_store.cpp"
