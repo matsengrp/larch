@@ -741,7 +741,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
               << sample.GetNodesCount() << "\n";
-    sample.View().RecomputeEdgeMutations();
     MAT::Tree mat;
     sample.View().GetRoot().Validate(true);
     sample.View().BuildMAT(mat);
