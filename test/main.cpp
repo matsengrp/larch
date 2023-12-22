@@ -71,11 +71,13 @@ int main(int argc, char* argv[]) {
       test_id++;
     }
   }
+  std::cout << std::endl;
 
   if (opt_list_names) {
     return EXIT_SUCCESS;
   }
 
+  std::vector<bool> test_result;
   std::vector<std::pair<int, Test>> failed;
   size_t ran = 0;
   const auto num_tests = tests.size();
@@ -84,7 +86,7 @@ int main(int argc, char* argv[]) {
     ++ran;
 
     std::string run_number_str =
-        "(" + std::to_string(ran) + " of " + std::to_string(num_tests) + ")";
+        "  (" + std::to_string(ran) + " of " + std::to_string(num_tests) + ")";
     std::string test_id_str = "[" + std::to_string(test_id) + "]";
     std::string test_name_str = "'" + test.name + "'";
     std::string test_header_str = run_number_str + " " + test_id_str;
@@ -108,19 +110,20 @@ int main(int argc, char* argv[]) {
                   << " failed with '" << e.what() << "'" << std::endl;
       }
     }
-    std::cout << "--+--" << std::endl;
   }
+  std::cout << std::endl;
+
   if (not failed.empty()) {
-    std::cerr << "TESTS FAILED: " << failed.size() << "/" << num_tests << std::endl;
+    std::cerr << "  TESTS FAILED: " << failed.size() << "/" << num_tests << std::endl;
     for (auto& [test_id, test] : failed) {
       std::string test_id_str = "[" + std::to_string(test_id) + "]";
       std::cerr << "  " << test_id_str << " " << test.name << "\n";
     }
     print_peak_mem();
     return EXIT_FAILURE;
+  } else {
+    std::cout << "  ALL TESTS PASSED." << std::endl;
+    print_peak_mem();
+    return EXIT_SUCCESS;
   }
-
-  std::cout << "ALL TESTS PASSED." << std::endl;
-  print_peak_mem();
-  return EXIT_SUCCESS;
 }
