@@ -4,8 +4,8 @@
 
 template <typename DAG>
 static void AssertLCA(DAG dag, size_t n0, size_t n1, size_t lca) {
-  Assert(FindLCA(dag.Get(NodeId{n0}), dag.Get(NodeId{n1})).lca.value == lca);
-  Assert(FindLCA(dag.Get(NodeId{n1}), dag.Get(NodeId{n0})).lca.value == lca);
+  TestAssert(FindLCA(dag.Get(NodeId{n0}), dag.Get(NodeId{n1})).lca.value == lca);
+  TestAssert(FindLCA(dag.Get(NodeId{n1}), dag.Get(NodeId{n0})).lca.value == lca);
 }
 
 static void test_lca() {

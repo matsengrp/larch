@@ -7,7 +7,7 @@
 
 #include "test_common.hpp"
 #include "larch/dag_loader.hpp"
-#include "benchmark.hpp"
+#include "larch/benchmark.hpp"
 
 static void test_protobuf(const std::string& correct_path,
                           const std::vector<std::string>& paths) {
@@ -22,9 +22,9 @@ static void test_protobuf(const std::string& correct_path,
     view.SampleIdsFromCG(true);
     for (auto node : view.GetNodes()) {
       if (node.IsLeaf()) {
-        Assert(node.HaveSampleId());
+        TestAssert(node.HaveSampleId());
       } else {
-        Assert(not node.HaveSampleId());
+        TestAssert(not node.HaveSampleId());
       }
     }
     tree_views.push_back(view);
@@ -38,11 +38,11 @@ static void test_protobuf(const std::string& correct_path,
   merge.AddDAGs(tree_views);
   merge.GetResult().GetRoot().Validate(true, true);
 
-  assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
-               "Nodes count");
+  TestAssert(correct_result.View().GetNodesCount() ==
+             merge.GetResult().GetNodesCount());
 
-  assert_equal(correct_result.View().GetEdgesCount(), merge.GetResult().GetEdgesCount(),
-               "Edges count");
+  TestAssert(correct_result.View().GetEdgesCount() ==
+             merge.GetResult().GetEdgesCount());
 }
 
 static void test_five_trees() {
@@ -104,8 +104,8 @@ static void test_case_20d() {
         path_idx.second, correct_result.View().GetReferenceSequence()));
     for (auto node : trees.at(path_idx.first)->View().GetNodes()) {
       if (node.IsLeaf()) {
-        Assert(node.GetSampleId().has_value());
-        Assert(not node.GetSampleId().value().empty());
+        TestAssert(node.GetSampleId().has_value());
+        TestAssert(not node.GetSampleId().value().empty());
       }
     }
     trees.at(path_idx.first)->View().RecomputeCompactGenomes(true);
@@ -124,11 +124,11 @@ static void test_case_20d() {
   merge.GetResult().GetRoot().Validate(true, true);
   std::cout << " DAGs merged in " << merge_time.durationMs() << " ms. ";
 
-  assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
-               "Nodes count");
+  TestAssert(correct_result.View().GetNodesCount() ==
+             merge.GetResult().GetNodesCount());
 
-  assert_equal(correct_result.View().GetEdgesCount(), merge.GetResult().GetEdgesCount(),
-               "Edges count");
+  TestAssert(correct_result.View().GetEdgesCount() ==
+             merge.GetResult().GetEdgesCount());
 }
 
 static void test_add_trees() {
@@ -168,11 +168,11 @@ static void test_add_trees() {
   merge.AddDAGs(tree_views2);
   merge.GetResult().GetRoot().Validate(true, true);
 
-  assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
-               "Nodes count");
+  TestAssert(correct_result.View().GetNodesCount() ==
+             merge.GetResult().GetNodesCount());
 
-  assert_equal(correct_result.View().GetEdgesCount(), merge.GetResult().GetEdgesCount(),
-               "Edges count");
+  TestAssert(correct_result.View().GetEdgesCount() ==
+             merge.GetResult().GetEdgesCount());
 }
 
 static void test_subtree() {
@@ -202,11 +202,11 @@ static void test_subtree() {
     merge.GetResult().GetRoot().Validate(true, true);
   }
 
-  assert_equal(correct_result.View().GetNodesCount(), merge.GetResult().GetNodesCount(),
-               "Nodes count");
+  TestAssert(correct_result.View().GetNodesCount() ==
+             merge.GetResult().GetNodesCount());
 
-  assert_equal(correct_result.View().GetEdgesCount(), merge.GetResult().GetEdgesCount(),
-               "Edges count");
+  TestAssert(correct_result.View().GetEdgesCount() ==
+             merge.GetResult().GetEdgesCount());
 }
 
 [[maybe_unused]] static const auto test0_added =
@@ -219,7 +219,7 @@ static void test_subtree() {
     add_test({test_case_ref, "Merge: Tree with different ref"});
 
 [[maybe_unused]] static const auto test3_added =
-    add_test({test_case_20d, "Merge: 800 trees"});
+    add_test({test_case_20d, "Merge: 800 trees", {"slow"}});
 
 [[maybe_unused]] static const auto test4_added =
     add_test({test_add_trees, "Merge: Add trees"});

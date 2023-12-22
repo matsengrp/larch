@@ -22,7 +22,7 @@ static void test_weight_accum(MADAG dag, Weight expected_score) {
   /* for (auto& scorepair : score.GetWeights()) { */
   /*   std::cout << scorepair.first << " | " << scorepair.second << "\n"; */
   /* } */
-  assert_equal(score, expected_score, "unexpected parsimony counts");
+  TestAssert(score == expected_score);
 }
 
 static void test_weight_accum(std::string_view path, Weight expected_score) {

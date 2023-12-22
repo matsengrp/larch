@@ -6,14 +6,15 @@
  * Stores a collection of elements (nodes or edges, distinguished by the `Id`
  * parameter).
  */
-template <Component C, typename ElementStorageT, typename... Features>
+template <Component C, typename ElementStorageT,
+          IdContinuity IdCont = IdContinuity::Dense, typename... Features>
 struct ElementsContainer {
  public:
   using FeatureTypes = std::tuple<Features...>;
   using AllFeatureTypes = decltype(std::tuple_cat(
       FeatureTypes{}, typename ElementStorageT::FeatureTypes{}));
 
-  static constexpr IdContinuity id_continuity = IdContinuity::Dense;
+  static constexpr IdContinuity id_continuity = IdCont;
 
   template <typename Feature>
   static const bool contains_element_feature;
@@ -69,8 +70,8 @@ struct ElementsContainer {
   }
 
  private:
-  IdContainer<Id<C>, ElementStorageT> elements_storage_;
-  IdContainer<Id<C>, std::tuple<Features...>> features_storage_;
+  IdContainer<Id<C>, ElementStorageT, id_continuity> elements_storage_;
+  IdContainer<Id<C>, std::tuple<Features...>, id_continuity> features_storage_;
   std::tuple<ExtraFeatureStorage<Features>...> extra_features_storage_;
   typename ElementStorageT::ExtraStorage elements_extra_features_storage_;
 };

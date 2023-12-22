@@ -9,28 +9,28 @@
 
 template <typename LHS, typename RHS>
 static void AssertNodesEqual(LHS lhs_node, RHS rhs_node) {
-  // assert_equal(lhs_node.GetId().value, rhs_node.GetId().value, "Node id");
-  assert_equal(lhs_node.GetCladesCount(), rhs_node.GetCladesCount(), "Clades count");
+  // TestAssert(lhs_node.GetId().value == rhs_node.GetId().value);
+  TestAssert(lhs_node.GetCladesCount() == rhs_node.GetCladesCount());
 }
 
 template <typename LHS, typename RHS>
 static void AssertEdgesEqual(LHS lhs_edge, RHS rhs_edge) {
   AssertNodesEqual(lhs_edge.GetParent(), rhs_edge.GetParent());
   AssertNodesEqual(lhs_edge.GetChild(), rhs_edge.GetChild());
-  // assert_equal(lhs_edge.GetId().value, rhs_edge.GetId().value, "Edge id");
+  // TestAssert(lhs_edge.GetId().value == rhs_edge.GetId().value);
 
   const EdgeMutations& lhs_muts = lhs_edge.GetEdgeMutations();
   const EdgeMutations& rhs_muts = rhs_edge.GetEdgeMutations();
-  assert_equal(lhs_muts.size(), rhs_muts.size(), "Edge mutations count");
+  TestAssert(lhs_muts.size() == rhs_muts.size());
   for (size_t i = 0; i < lhs_muts.size(); ++i) {
-    assert_equal(lhs_muts.size(), rhs_muts.size(), "Edge mutation");
+    TestAssert(lhs_muts.size() == rhs_muts.size());
   }
 }
 
 template <typename LHS, typename RHS>
 static void AssertDAGsEqual(LHS lhs, RHS rhs) {
-  assert_equal(lhs.GetNodesCount(), rhs.GetNodesCount(), "Nodes count");
-  assert_equal(lhs.GetEdgesCount(), rhs.GetEdgesCount(), "Edges count");
+  TestAssert(lhs.GetNodesCount() == rhs.GetNodesCount());
+  TestAssert(lhs.GetEdgesCount() == rhs.GetEdgesCount());
 
   AssertEdgesEqual(lhs.GetRoot().GetFirstChild(), rhs.GetRoot().GetFirstChild());
 }
@@ -92,7 +92,8 @@ static void test_loading_dag(std::string_view path) {
                 test_loading_tree("data/startmat/startmat_no_ancestral.pb.gz",
                                   "data/startmat/refseq.txt.gz");
               },
-              "Loading: tree startmat"});
+              "Loading: tree startmat",
+              {"slow"}});
 
 // [[maybe_unused]] static const auto test_added3 =
 //     add_test({[] {
@@ -113,7 +114,8 @@ static void test_loading_dag(std::string_view path) {
                 test_loading_tree("data/AY.103/AY.103_start_tree_no_ancestral.pb.gz",
                                   "data/AY.103/ref_seq_noancestral.txt.gz");
               },
-              "Loading: tree AY.103"});
+              "Loading: tree AY.103",
+              {"slow"}});
 
 // [[maybe_unused]] static const auto test_added6 = add_test(
 //     {[] {

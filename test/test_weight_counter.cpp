@@ -29,18 +29,14 @@ template std::string to_string(size_t&);
 
 static void test_counter_add(Counter lhs, Counter rhs, Counter expected_counter) {
   Counter result = lhs + rhs;
-  assert_equal(
-      result, expected_counter,
-      "Expected: " + to_string(expected_counter) + "\nGot: " + to_string(result));
+  TestAssert(result == expected_counter);
 }
 
 static void test_counter_multiply(Counter lhs, Counter rhs, Counter expected_counter) {
   /* std::cout << lhs << "\n"; */
   /* std::cout << rhs << "\n"; */
   Counter result = lhs * rhs;
-  assert_equal(
-      result, expected_counter,
-      "Expected: " + to_string(expected_counter) + "\nGot: " + to_string(result));
+  TestAssert(result == expected_counter);
 }
 
 [[maybe_unused]] static const auto test_added0 = add_test(

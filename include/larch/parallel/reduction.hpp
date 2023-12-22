@@ -9,6 +9,7 @@ class Reduction {
 
   template <typename F, typename... Args>
   decltype(auto) AddElement(F&& func, Args&&... args) {
+    auto gather_lock = ReadLock(gather_mutex_);
     auto& [mutex, data] = [this]() -> auto& {
       while (true) {  // TODO endless
         for (auto& i : buckets_) {
@@ -16,6 +17,7 @@ class Reduction {
             return i;
           }
         }
+        std::this_thread::yield();
       }
     }
     ();
@@ -36,17 +38,22 @@ class Reduction {
   }
 
   template <typename F, typename... Args>
-  void GatherAndClear(F&& func, Args&&... args) {
-    for (auto& i : buckets_) {
-      i.mutex_.lock();
-    }
-    auto data = buckets_ | ranges::views::transform(
-                               [](const auto& i) -> const auto& { return i.data_; });
-    std::invoke(std::forward<F>(func), data, std::forward<Args>(args)...);
-    buckets_ = FixedArray<Bucket>{buckets_.size()};
-    size_approx_.store(0);
-    for (auto& i : buckets_) {
-      i.mutex_.unlock();
+  decltype(auto) GatherAndClear(F&& func, Args&&... args) {
+    auto gather_lock = WriteLock(gather_mutex_);
+    finally cleanup{[this] {
+      size_approx_.store(0);
+      for (auto& i : buckets_) {
+        i.data_ = Container{};
+      }
+    }};
+    auto data = buckets_ | ranges::views::transform([](auto& i) -> Container&& {
+                  return std::move(i.data_);
+                });
+    if constexpr (std::is_void_v<decltype(std::invoke(std::forward<F>(func), data,
+                                                      std::forward<Args>(args)...))>) {
+      std::invoke(std::forward<F>(func), data, std::forward<Args>(args)...);
+    } else {
+      return std::invoke(std::forward<F>(func), data, std::forward<Args>(args)...);
     }
   }
 
@@ -60,4 +67,5 @@ class Reduction {
 
   FixedArray<Bucket> buckets_;
   std::atomic<size_t> size_approx_{0};
+  std::shared_mutex gather_mutex_;
 };
