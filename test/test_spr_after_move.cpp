@@ -19,11 +19,11 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
                       nodes_with_major_allele_set_change) override {
-    Assert(move.src != nullptr);
-    Assert(move.dst != nullptr);
+    TestAssert(move.src != nullptr);
+    TestAssert(move.dst != nullptr);
     auto storage = [this](std::string ref_seq) {
       MAT::Tree* mat = sample_mat_.load();
-      Assert(mat != nullptr);
+      TestAssert(mat != nullptr);
       auto mat_conv = AddMATConversion(Storage{});
       mat_conv.View().BuildFromMAT(*mat, ref_seq);
       check_edge_mutations(mat_conv.View().Const());
@@ -316,11 +316,8 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
           os.close();
         }
 
-        assert_true(
-            test_compare_dag_vs_spr_nodes(dag, spr, src_node, dest_node, child_counts),
-            "DAG '" + dag_name + "' created invalid DAG after move " +
-                std::to_string(src_node.GetId().value) + " -> " +
-                std::to_string(dest_node.GetId().value));
+        TestAssert(
+            test_compare_dag_vs_spr_nodes(dag, spr, src_node, dest_node, child_counts));
       }
     }
   }

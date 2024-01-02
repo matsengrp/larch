@@ -64,37 +64,37 @@ using Edge = MutableMADAG::EdgeView;
   // dag_info(dag_storage);
   dag.ClearConnections();
   // dag_info(dag_storage);
-  assert_false(dag_compare_topologies(dag_storage, dag_storage_truth),
-               "DAGs are incorrectly equal after removing edges.");
+  TestAssert((not dag_compare_topologies(dag_storage, dag_storage_truth)) &&
+             "DAGs are incorrectly equal after removing edges.");
 
   // dag_make_complete_rootsplits(dag_storage);
   dag.MakeComplete();
   // dag_info(dag_storage);
-  assert_true(dag_compare_topologies(dag_storage, dag_storage_truth),
-              "DAGs are not equal after recompleting the DAG.");
+  TestAssert(dag_compare_topologies(dag_storage, dag_storage_truth) &&
+             "DAGs are not equal after recompleting the DAG.");
 }
 
 [[maybe_unused]] static void test_sample_dag_completion() {
   auto dag_storage = make_sample_dag_topology();
   auto dag_storage_truth = make_sample_dag_topology();
-  assert_true(dag_compare_topologies(dag_storage, dag_storage_truth),
-              "DAGs are not equal before altering.");
+  TestAssert(dag_compare_topologies(dag_storage, dag_storage_truth) &&
+             "DAGs are not equal before altering.");
   test_dag_completion_single(dag_storage, dag_storage_truth);
 }
 
 [[maybe_unused]] static void test_big_sample_dag_completion_without_missing_edges() {
   auto big_dag_storage_complete = make_big_sample_dag_topology(false);
   auto big_dag_storage_truth = make_big_sample_dag_topology();
-  assert_true(dag_compare_topologies(big_dag_storage_complete, big_dag_storage_truth),
-              "DAGs are not equal before altering.");
+  TestAssert(dag_compare_topologies(big_dag_storage_complete, big_dag_storage_truth) &&
+             "DAGs are not equal before altering.");
   test_dag_completion_single(big_dag_storage_complete, big_dag_storage_truth);
 }
 
 [[maybe_unused]] static void test_big_sample_dag_completion_with_missing_edges() {
   auto big_dag_storage_incomplete = make_big_sample_dag_topology(true);
   auto big_dag_storage_truth = make_big_sample_dag_topology();
-  assert_false(
-      dag_compare_topologies(big_dag_storage_incomplete, big_dag_storage_truth),
+  TestAssert(
+      (not dag_compare_topologies(big_dag_storage_incomplete, big_dag_storage_truth)) &&
       "DAGs are incorrectly equal before altering.");
   test_dag_completion_single(big_dag_storage_incomplete, big_dag_storage_truth);
 }

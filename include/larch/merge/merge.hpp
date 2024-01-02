@@ -91,36 +91,28 @@ class Merge {
   inline MutableMergeDAG ResultDAG();
 
   template <typename DAGSRange, typename NodeLabelsContainer>
-  static void MergeCompactGenomes(
-      size_t i, const DAGSRange& dags, NodeId below,
-      std::vector<NodeLabelsContainer>& dags_labels,
-      GrowableHashMap<std::string, CompactGenome>& sample_id_to_cg_map,
-      MutableMergeDAG result_dag);
+  void MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
+                           std::vector<NodeLabelsContainer>& dags_labels);
 
   template <typename DAGSRange, typename NodeLabelsContainer>
-  static void ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
-                              std::vector<NodeLabelsContainer>& dags_labels,
-                              GrowableHashSet<LeafSet>& all_leaf_sets);
+  void ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
+                       std::vector<NodeLabelsContainer>& dags_labels);
 
   template <typename DAGSRange, typename NodeLabelsContainer>
-  static void MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
-                         const std::vector<NodeLabelsContainer>& dags_labels,
-                         GrowableHashMap<NodeLabel, NodeId>& result_nodes,
-                         GrowableHashMap<NodeId, NodeLabel>& result_node_labels,
-                         std::atomic<size_t>& node_id);
+  void MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
+                  const std::vector<NodeLabelsContainer>& dags_labels,
+                  std::atomic<size_t>& node_id);
 
   template <typename DAGSRange, typename NodeLabelsContainer>
-  static void MergeEdges(size_t i, const DAGSRange& dags, NodeId below,
-                         const std::vector<NodeLabelsContainer>& dags_labels,
-                         const GrowableHashMap<NodeLabel, NodeId>& result_nodes,
-                         GrowableHashMap<EdgeLabel, EdgeId>& result_edges,
-                         Reduction<std::vector<AddedEdge>>& added_edges);
+  void MergeEdges(size_t i, const DAGSRange& dags, NodeId below,
+                  const std::vector<NodeLabelsContainer>& dags_labels,
+                  Reduction<std::vector<AddedEdge>>& added_edges);
 
-  static inline void BuildResult(size_t i, std::vector<AddedEdge>& added_edges,
-                                 std::atomic<size_t>& edge_id,
-                                 const GrowableHashMap<NodeLabel, NodeId>& result_nodes,
-                                 GrowableHashMap<EdgeLabel, EdgeId>& result_edges,
-                                 MutableMergeDAG result_dag);
+  inline void BuildResult(size_t i, std::vector<AddedEdge>& added_edges,
+                          std::atomic<size_t>& edge_id);
+
+  template <typename Edge>
+  void ComputeResultEdgeMutations(Edge edge, const EdgeLabel& label);
 
   // Every unique node leaf set, found among all input DAGs.
   GrowableHashSet<LeafSet> all_leaf_sets_{32};

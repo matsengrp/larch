@@ -1,7 +1,7 @@
 #include <iostream>
-#include <vector>
+#include <set>
 #include <regex>
-#include <fstream>
+#include <chrono>
 
 #ifdef USE_USHER
 #include <mpi.h>
@@ -19,17 +19,6 @@ bool add_test(const Test& test) noexcept {
   return true;
 }
 
-static void print_peak_mem() {
-  std::ifstream str{"/proc/self/status"};
-  std::string line;
-  while (std::getline(str, line)) {
-    if (line.find("VmPeak:") == 0) {
-      std::cout << line << "\n";
-      break;
-    }
-  }
-}
-
 int main(int argc, char* argv[]) {
 #ifdef USE_USHER
   int ignored{};
@@ -39,8 +28,10 @@ int main(int argc, char* argv[]) {
   bool opt_list_names = false;
   bool opt_test_range = false;
 
-  std::pair<size_t, size_t> range;
+  std::pair<int, int> range;
   std::regex regex{".*"};
+  std::set<std::string> include_tags;
+  std::set<std::string> exclude_tags;
   for (int i = 1; i < argc; ++i) {
     if (std::string("nocatch") == argv[i]) {
       no_catch = true;
@@ -48,82 +39,139 @@ int main(int argc, char* argv[]) {
       opt_list_names = true;
     } else if (std::string("--range") == argv[i]) {
       opt_test_range = true;
-      range.first = static_cast<size_t>(atoi(argv[++i]));
-      range.second = static_cast<size_t>(atoi(argv[++i]));
+      range.first = atoi(argv[++i]);
+      range.second = atoi(argv[++i]);
+    } else if (std::string("+tag") == argv[i]) {
+      include_tags.insert(argv[++i]);
+    } else if (std::string("-tag") == argv[i]) {
+      exclude_tags.insert(argv[++i]);
     } else {
+      std::cout << "Regex: " << argv[i] << std::endl;
       regex = argv[i];
     }
   }
 
-  std::cout << "LIST TESTS:" << std::endl;
   std::vector<std::pair<int, Test>> tests;
   {
-    size_t test_id = 1;
+    std::cout << "LIST TESTS:" << std::endl;
+    int test_id = 1;
     for (auto& test : get_all_tests()) {
+      bool included = false;
+      bool excluded = false;
+      for (auto& tag : test.tags) {
+        if (include_tags.find(tag) != include_tags.end()) {
+          included = true;
+        }
+        if (exclude_tags.find(tag) != exclude_tags.end()) {
+          excluded = true;
+        }
+      }
+      if (excluded or (not include_tags.empty() and not included)) {
+        continue;
+      }
       std::smatch match;
       if (std::regex_match(test.name, match, regex)) {
         if ((!opt_test_range) ||
             ((test_id >= range.first) && (test_id <= range.second))) {
           tests.push_back({test_id, test});
-          std::cout << "  [" << test_id << "] " << test.name << std::endl;
+          std::cout << "  [" << test_id << "] " << test.name;
+          if (not test.tags.empty()) {
+            std::cout << " | Tags: ";
+            for (size_t i = 0; i < test.tags.size(); ++i) {
+              std::cout << test.tags.at(i);
+              if (i + 1 < test.tags.size()) {
+                std::cout << ", ";
+              }
+            }
+          }
+          std::cout << std::endl;
         }
       }
       test_id++;
     }
+    std::cout << std::endl;
   }
-  std::cout << std::endl;
 
   if (opt_list_names) {
     return EXIT_SUCCESS;
   }
 
-  std::vector<bool> test_result;
-  std::vector<std::pair<int, Test>> failed;
-  size_t ran = 0;
-  const auto num_tests = tests.size();
-  std::cout << "RUNNING " << num_tests << " TEST(S) ..." << std::endl;
-  for (auto& [test_id, test] : tests) {
-    ++ran;
+  {
+    std::vector<bool> test_results;
+    std::vector<double> test_runtimes;
+    std::vector<std::pair<int, Test>> failed;
 
-    std::string run_number_str =
-        "  (" + std::to_string(ran) + " of " + std::to_string(num_tests) + ")";
-    std::string test_id_str = "[" + std::to_string(test_id) + "]";
-    std::string test_name_str = "'" + test.name + "'";
-    std::string test_header_str = run_number_str + " " + test_id_str;
+    size_t ran = 0;
+    const auto num_tests = tests.size();
+    std::cout << "RUNNING " << num_tests << " TEST(S) ..." << std::endl;
+    for (auto& [test_id, test] : tests) {
+      ++ran;
+      auto start_time = std::chrono::steady_clock::now();
 
-    std::cout << test_header_str << " TEST RUN: " << test_name_str << " Begins... "
-              << std::endl
-              << std::flush;
+      std::string run_number_str =
+          "  (" + std::to_string(ran) + " of " + std::to_string(num_tests) + ")";
+      std::string test_id_str = "[" + std::to_string(test_id) + "]";
+      std::string test_name_str = "'" + test.name + "'";
+      std::string test_header_str = run_number_str + " " + test_id_str;
 
-    if (no_catch) {
-      test.entry();
-      std::cout << test_header_str << " TEST RESULT: " << test_name_str << " Passed."
-                << std::endl;
-    } else {
-      try {
+      std::cout << test_header_str << " TEST RUN: " << test_name_str << " Begins... "
+                << std::endl
+                << std::flush;
+
+      if (no_catch) {
         test.entry();
         std::cout << test_header_str << " TEST RESULT: " << test_name_str << " Passed."
                   << std::endl;
-      } catch (const std::exception& e) {
-        failed.push_back({test_id, test});
-        std::cerr << test_header_str << " TEST RESULT: " << test_name_str
-                  << " failed with '" << e.what() << "'" << std::endl;
+        test_results.push_back(true);
+      } else {
+        try {
+          test.entry();
+          std::cout << test_header_str << " TEST RESULT: " << test_name_str << " Passed."
+                    << std::endl;
+          test_results.push_back(true);
+        } catch (const std::exception& e) {
+          failed.push_back({test_id, test});
+          std::cerr << test_header_str << " TEST RESULT: " << test_name_str
+                    << " failed with '" << e.what() << "'" << std::endl;
+          test_results.push_back(false);
+        }
       }
-    }
-  }
-  std::cout << std::endl;
 
-  if (not failed.empty()) {
-    std::cerr << "  TESTS FAILED: " << failed.size() << "/" << num_tests << std::endl;
-    for (auto& [test_id, test] : failed) {
-      std::string test_id_str = "[" + std::to_string(test_id) + "]";
-      std::cerr << "  " << test_id_str << " " << test.name << "\n";
+      auto diff_time = std::chrono::steady_clock::now() - start_time;
+      auto run_time = double(std::chrono::duration <double, std::milli>(diff_time).count()) / 1000.0;
+      std::cout << test_header_str << " TEST RUNTIME: " << run_time << "s" << std::endl;
+      test_runtimes.push_back(run_time);
     }
-    print_peak_mem();
-    return EXIT_FAILURE;
-  } else {
-    std::cout << "  ALL TESTS PASSED." << std::endl;
-    print_peak_mem();
-    return EXIT_SUCCESS;
+    std::cout << std::endl;
+
+    std::cout << "SUMMARY:" << std::endl;
+    for (size_t i = 0; i < tests.size(); i++) {
+      auto [test_id, test] = tests[i];
+      std::string run_number_str =
+          "(" + std::to_string(ran) + " of " + std::to_string(num_tests) + ")";
+      std::string test_id_str = "[" + std::to_string(test_id) + "]";
+      std::string test_name_str = "'" + test.name + "'";
+      std::string test_header_str = run_number_str + " " + test_id_str;
+      std::string test_result_str = (test_results[i] ? "PASS" : "FAIL");
+      std::string test_runtime_str = std::to_string(test_runtimes[i]) + "s";
+
+      std::cout << "  " << test_id_str << " " << test_result_str
+                << " | " << test_runtime_str << " | " << test_name_str << std::endl;
+    }
+    std::cout << std::endl;
+
+    if (not failed.empty()) {
+      std::cerr << "TESTS FAILED: " << failed.size() << "/" << num_tests << std::endl;
+      for (auto& [test_id, test] : failed) {
+        std::string test_id_str = "[" + std::to_string(test_id) + "]";
+        std::cerr << "  " << test_id_str << " " << test.name << "\n";
+      }
+      print_peak_mem();
+      return EXIT_FAILURE;
+    } else {
+      std::cout << "ALL TESTS PASSED." << std::endl;
+      print_peak_mem();
+      return EXIT_SUCCESS;
+    }
   }
 }

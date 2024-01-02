@@ -14,7 +14,7 @@ static void test_tree_count(MADAG dag, TreeCount::Weight expected_score) {
 
   TreeCount::Weight score = treecount.ComputeWeightBelow(dag.GetRoot(), {});
 
-  assert_equal(score, expected_score, "Tree count doesn't match truth");
+  TestAssert(score == expected_score);
 }
 
 static void test_tree_count(std::string_view path, TreeCount::Weight expected_score) {

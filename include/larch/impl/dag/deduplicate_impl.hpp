@@ -27,11 +27,6 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
                            .deduplicated_;
   const Feature* result =
       std::addressof(deduplicated.insert(std::forward<Feature>(feature)).first);
-  // const Feature* result = deduplicated.Write(
-  //     [](auto& write, Feature&& feat) {
-  //       return std::addressof(*write.insert(std::forward<Feature>(feat)).first);
-  //     },
-  //     std::forward<Feature>(feature));
   static_cast<const CRTP&>(*this)
       .template GetFeatureStorage<Deduplicate<Feature>>()
       .feature_ = result;
@@ -64,15 +59,6 @@ const Feature* ExtraFeatureConstView<Deduplicate<Feature>, CRTP>::FindDeduplicat
   } else {
     return std::addressof(result.value());
   }
-  // return deduplicated.Read(
-  //     [](auto& read, const Feature& feat) {
-  //       auto result = read.find(feat);
-  //       if (result == read.end()) {
-  //         return nullptr;
-  //       }
-  //       return std::addressof(*result);
-  //     },
-  //     feature);
 }
 
 template <typename Feature, typename CRTP>
@@ -87,24 +73,6 @@ ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>::AddDeduplicated(
                            .template GetFeatureExtraStorage<C, Deduplicate<Feature>>()
                            .deduplicated_;
 
-  auto result = deduplicated.insert(feature.Copy());
+  auto result = deduplicated.insert(feature, [](const auto& x) { return x.Copy(); });
   return {std::addressof(result.first), result.second};
-  // auto* existing = deduplicated.Read(
-  //     [](auto& read, const Feature& feat) -> const Feature* {
-  //       auto result = read.find(feat);
-  //       if (result == read.end()) {
-  //         return nullptr;
-  //       }
-  //       return std::addressof(*result);
-  //     },
-  //     feature);
-  // if (existing != nullptr) {
-  //   return {existing, false};
-  // }
-  // return deduplicated.Write(
-  //     [](auto& write, const Feature& feat) -> std::pair<const Feature*, bool> {
-  //       auto [iter, success] = write.insert(feat.Copy());
-  //       return {std::addressof(*iter), success};
-  //     },
-  //     feature);
 }

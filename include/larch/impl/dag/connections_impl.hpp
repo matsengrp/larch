@@ -63,9 +63,9 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
   });
   storage.root_.value = root_id.load();
   leafs.GatherAndClear(
-      [](auto buckets, auto& stor) {
-        for (auto& bucket : buckets) {
-          // TODO reserve
+      [&leafs](auto buckets, auto& stor) {
+        for (auto&& bucket : buckets) {
+          stor.leafs_.reserve(leafs.size_approx());
           stor.leafs_.insert(stor.leafs_.end(), bucket.begin(), bucket.end());
         }
       },

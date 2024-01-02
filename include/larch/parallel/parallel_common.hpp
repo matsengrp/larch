@@ -24,7 +24,11 @@ std::unique_lock<M> WriteLock(M& mutex) {
 
 template <typename Range, typename F>
 void ParallelForEach(Range&& range, F&& func) {
-  // ranges::for_each(std::forward<Range>(range), std::forward<F>(func));
   std::for_each(std::execution::par_unseq, std::begin(range), std::end(range),
                 std::forward<F>(func));
+}
+
+template <typename Range, typename F>
+void SeqForEach(Range&& range, F&& func) {
+  ranges::for_each(std::forward<Range>(range), std::forward<F>(func));
 }
