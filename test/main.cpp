@@ -46,7 +46,6 @@ int main(int argc, char* argv[]) {
     } else if (std::string("-tag") == argv[i]) {
       exclude_tags.insert(argv[++i]);
     } else {
-      std::cout << "Regex: " << argv[i] << std::endl;
       regex = argv[i];
     }
   }
@@ -54,8 +53,9 @@ int main(int argc, char* argv[]) {
   std::vector<std::pair<int, Test>> tests;
   {
     std::cout << "LIST TESTS:" << std::endl;
-    int test_id = 1;
+    int test_id = 0;
     for (auto& test : get_all_tests()) {
+      test_id++;
       bool included = false;
       bool excluded = false;
       for (auto& tag : test.tags) {
@@ -87,7 +87,6 @@ int main(int argc, char* argv[]) {
           std::cout << std::endl;
         }
       }
-      test_id++;
     }
     std::cout << std::endl;
   }
@@ -139,7 +138,6 @@ int main(int argc, char* argv[]) {
 
       auto diff_time = std::chrono::steady_clock::now() - start_time;
       auto run_time = double(std::chrono::duration <double, std::milli>(diff_time).count()) / 1000.0;
-      std::cout << test_header_str << " TEST RUNTIME: " << run_time << "s" << std::endl;
       test_runtimes.push_back(run_time);
     }
     std::cout << std::endl;
