@@ -264,6 +264,7 @@ larch_executable(larch-test
   test/test_loading.cpp
   test/test_map.cpp
   test/test_mat_conversion.cpp
+  test/test_mat_view.cpp
   test/test_matOptimize.cpp
   test/test_merge.cpp
   test/test_overlay.cpp

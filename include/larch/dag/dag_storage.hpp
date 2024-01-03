@@ -53,7 +53,8 @@ struct DAGStorage {
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 
-  using Self = ShortName;
+  using Self =
+      std::conditional_t<std::is_same_v<ShortName, void>, DAGStorage, ShortName>;
 
   using ViewType = DAGView<Self>;
   using ConstViewType = DAGView<const Self>;

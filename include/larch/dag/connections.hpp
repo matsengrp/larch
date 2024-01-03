@@ -35,6 +35,7 @@ struct FeatureMutableView<Connections, CRTP, Tag> {
    */
   void BuildConnections() const;
   void BuildConnectionsRaw() const;
+  void BuildRootAndLeafs() const;
   void AddLeaf(NodeId id) const;
 
   ContiguousMap<ContiguousSet<NodeId>, ContiguousSet<NodeId>> BuildCladeUnionMap()

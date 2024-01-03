@@ -37,11 +37,30 @@ auto FeatureConstView<Connections, CRTP, Tag>::GetLeafsCount() const {
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
+  BuildConnectionsRaw();
+  BuildRootAndLeafs();
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
+  auto& dag = static_cast<const CRTP&>(*this);
+  ParallelForEach(dag.GetNodes(), [](auto node) { node.ClearConnections(); });
+  for (auto edge : dag.GetEdges()) {
+    Assert(edge.GetParentId().value != NoId && "Edge has no parent");
+    Assert(edge.GetChildId().value != NoId && "Edge has no child");
+    Assert(edge.GetClade().value != NoId && "Edge has no clade index");
+    Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
+    edge.GetParent().AddEdge(edge.GetClade(), edge, true);
+    edge.GetChild().AddEdge(edge.GetClade(), edge, false);
+  }
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs() const {
   auto& storage = GetFeatureStorage(this);
   auto& dag = static_cast<const CRTP&>(*this);
   storage.root_ = {NoId};
   storage.leafs_ = {};
-  BuildConnectionsRaw();
   std::atomic<size_t> root_id{NoId};
   Reduction<std::vector<NodeId>> leafs{32};
   ParallelForEach(dag.GetNodes(), [&](auto node) {
@@ -70,20 +89,6 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
         }
       },
       storage);
-}
-
-template <typename CRTP, typename Tag>
-void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
-  auto& dag = static_cast<const CRTP&>(*this);
-  ParallelForEach(dag.GetNodes(), [](auto node) { node.ClearConnections(); });
-  for (auto edge : dag.GetEdges()) {
-    Assert(edge.GetParentId().value != NoId && "Edge has no parent");
-    Assert(edge.GetChildId().value != NoId && "Edge has no child");
-    Assert(edge.GetClade().value != NoId && "Edge has no clade index");
-    Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
-    edge.GetParent().AddEdge(edge.GetClade(), edge, true);
-    edge.GetChild().AddEdge(edge.GetClade(), edge, false);
-  }
 }
 
 template <typename CRTP, typename Tag>
