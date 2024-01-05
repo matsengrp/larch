@@ -27,13 +27,16 @@ struct ExtraFeatureConstView<MATNodeStorage, CRTP> {
   }
 };
 
+struct MATEdgeStorage;
+
 template <typename CRTP>
 struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
   void SetMAT(MAT::Tree* mat) const {
     auto& dag = static_cast<const CRTP&>(*this);
-    auto& storage =
-        dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>();
-    storage.mat_tree_ = mat;
+    dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>().mat_tree_ =
+        mat;
+    dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>().mat_tree_ =
+        mat;
   }
 };
 
@@ -166,6 +169,8 @@ struct MATNodesContainer {
 
   auto All() const {
     return ranges::views::iota(size_t{0}, GetCount()) |
+           ranges::views::filter(
+               [this](size_t i) { return GetMAT().get_node(i) != nullptr; }) |
            ranges::views::transform([](size_t i) -> NodeId { return {i}; });
   }
 
@@ -202,12 +207,12 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   auto GetParent() const {
     auto [dag_edge, mat, mat_node] = access();
     Assert(mat_node->parent != nullptr);
-    return Transform::ToNodes(dag_edge.GetDAG())(NodeId{mat_node->parent->node_id});
+    return dag_edge.GetDAG().Get(NodeId{mat_node->parent->node_id});
   }
 
   auto GetChild() const {
     auto [dag_edge, mat, mat_node] = access();
-    return Transform::ToNodes(dag_edge.GetDAG())(NodeId{mat_node->node_id});
+    return dag_edge.GetDAG().Get(NodeId{mat_node->node_id});
   }
 
   CladeIdx GetClade() const {
@@ -245,6 +250,11 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   bool IsTreeRoot() const { return GetParent().IsTreeRoot(); }
 
   bool IsLeaf() const { return GetChild().IsLeaf(); }
+
+  EdgeMutations GetEdgeMutations() const {
+    // TODO implment
+    return EdgeMutations{};
+  }
 
  private:
   auto access() const {
@@ -310,6 +320,8 @@ struct MATEdgesContainer {
 
   auto All() const {
     return ranges::views::iota(size_t{0}, GetCount()) |
+           ranges::views::filter(
+               [this](size_t i) { return GetMAT().get_node(i) != nullptr; }) |
            ranges::views::transform([](size_t i) -> EdgeId { return {i}; });
   }
 
