@@ -193,6 +193,8 @@ struct MATEdgeStorage {
   MATEdgeStorage() = default;
 
   inline MATEdgeStorage Copy() const { return {}; }
+
+  mutable EdgeMutations mutations_;
 };
 
 template <>
@@ -251,9 +253,22 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
   bool IsLeaf() const { return GetChild().IsLeaf(); }
 
-  EdgeMutations GetEdgeMutations() const {
-    // TODO implment
-    return EdgeMutations{};
+  const EdgeMutations& GetEdgeMutations() const {
+    auto [dag_edge, mat, mat_node] = access();
+    auto& storage = dag_edge.template GetFeatureStorage<MATEdgeStorage>();
+    if (storage.mutations_.empty()) {
+      storage.mutations_ = EdgeMutations{
+          mat_node->mutations |
+          ranges::views::transform(
+              [](const MAT::Mutation& mut)
+                  -> std::pair<MutationPosition, std::pair<char, char>> {
+                static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
+                return {{static_cast<size_t>(mut.get_position())},
+                        {decode.at(one_hot_to_two_bit(mut.get_par_one_hot())),
+                         decode.at(one_hot_to_two_bit(mut.get_mut_one_hot()))}};
+              })};
+    }
+    return storage.mutations_;
   }
 
  private:
@@ -307,6 +322,22 @@ struct MATEdgesContainer {
   EdgeId GetNextAvailableId() const { return {GetCount()}; }
 
   template <typename Feature>
+  const auto& GetFeatureStorage(EdgeId id) const {
+    if (features_storage_.empty()) {
+      features_storage_.resize(GetMAT().get_size_upper());
+    }
+    return std::get<Feature>(features_storage_.at(id));
+  }
+
+  template <typename Feature>
+  auto& GetFeatureStorage(EdgeId id) {
+    if (features_storage_.empty()) {
+      features_storage_.resize(GetMAT().get_size_upper());
+    }
+    return std::get<Feature>(features_storage_.at(id));
+  }
+
+  template <typename Feature>
   auto& GetFeatureExtraStorage() {
     static_assert(std::is_same_v<Feature, MATEdgeStorage>);
     return extra_edge_storage_;
@@ -336,5 +367,6 @@ struct MATEdgesContainer {
     return *extra_edge_storage_.mat_tree_;
   }
 
+  mutable IdContainer<EdgeId, AllFeatureTypes, id_continuity> features_storage_;
   ExtraFeatureStorage<MATEdgeStorage> extra_edge_storage_;
 };

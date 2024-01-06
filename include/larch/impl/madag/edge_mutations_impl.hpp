@@ -34,6 +34,8 @@ auto EdgeMutations::end() const -> decltype(mutations_.end()) {
 
 size_t EdgeMutations::size() const { return mutations_.size(); }
 
+bool EdgeMutations::empty() const { return mutations_.empty(); }
+
 auto EdgeMutations::operator[](MutationPosition pos) -> decltype(mutations_[pos]) {
   Assert(pos.value != NoId);
   return mutations_[pos];
