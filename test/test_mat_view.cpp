@@ -6,7 +6,8 @@
 using MVStorage =
     DAGStorage<void, MATNodesContainer, MATEdgesContainer, ExtraStorage<Connections>>;
 
-using Storage = ExtendStorageType<void, MVStorage, Extend::Nodes<CompactGenome>>;
+using Storage = ExtendStorageType<void, MVStorage, Extend::Nodes<CompactGenome>,
+                                  Extend::DAG<ReferenceSequence>>;
 
 template <typename DAGView>
 void test_mat_view_impl(DAGView dag) {
@@ -27,7 +28,9 @@ void test_mat_view_impl(DAGView dag) {
   mv_storage.View().SetMAT(std::addressof(mat));
   auto storage = Storage::Consume(std::move(mv_storage));
   auto mv = storage.View();
+  mv.SetReferenceSequence(dag.GetReferenceSequence());
   mv.BuildRootAndLeafs();
+  // mv.RecomputeCompactGenomes();
   MADAGToDOT(mv, std::cout);
 
   // check BuildFromMAT
