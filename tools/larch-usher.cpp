@@ -19,7 +19,7 @@
 #include "larch/merge/merge.hpp"
 #include "larch/merge/leaf_set.hpp"
 #include "larch/spr/batching_callback.hpp"
-#include "benchmark.hpp"
+#include "larch/benchmark.hpp"
 #include <mpi.h>
 
 #include "larch/usher_glue.hpp"

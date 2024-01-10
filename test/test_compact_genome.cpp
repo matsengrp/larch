@@ -27,8 +27,7 @@
 
   size_t index = 0;
   for (Edge edge : dag.GetEdges()) {
-    assert_equal(edge.GetEdgeMutations(), loaded_edge_mutatons.at(index++),
-                 "Edge mutations");
+    TestAssert(edge.GetEdgeMutations() == loaded_edge_mutatons.at(index++));
   }
 
   for (Node node : dag.GetNodes()) {
@@ -37,7 +36,7 @@
   dag.RecomputeCompactGenomes(true);
   index = 0;
   for (Node node : dag.GetNodes()) {
-    assert_equal(node.GetCompactGenome(), computed_cgs.at(index++), "Compact genomes");
+    TestAssert(node.GetCompactGenome() == computed_cgs.at(index++));
   }
 }
 

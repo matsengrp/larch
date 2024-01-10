@@ -3,9 +3,9 @@
 #include <vector>
 #include <unordered_map>
 #include <type_traits>
+#include <memory>
 
 #include "larch/common.hpp"
-#include "larch/tc_vector.hpp"
 #include "larch/contiguous_map.hpp"
 
 enum class IdContinuity { Dense, Sparse };
@@ -18,7 +18,7 @@ class IdContainer {
   static constexpr auto storage_type_helper = [] {
     if constexpr (Cont == IdContinuity::Dense) {
       if constexpr (std::is_trivially_copyable_v<T>) {
-        return type_identity<TCVector<T>>{};
+        return type_identity<std::vector<T>>{};
       } else {
         return type_identity<std::vector<T>>{};
       }
@@ -89,7 +89,7 @@ class IdContainer {
       bool inserted = value.first.value >= data_.size();
       T& val = this->operator[](value.first);
       val = std::forward<T>(value.second);
-      return {std::addressof(val), inserted};
+      return std::pair<iterator, bool>{std::addressof(val), inserted};
     } else {
       return data_.insert(std::forward<value_type>(value));
     }
@@ -127,7 +127,7 @@ class IdContainer {
     }
   }
 
-  bool Contains(Id key) const { return data_.Contains(key); }
+  bool Contains(Id key) const { return data_.find(key) != data_.end(); }
 
   void Union(const IdContainer& other) { return data_.Union(other); }
 
@@ -147,6 +147,36 @@ class IdContainer {
   void push_back(T&& value) {
     static_assert(Cont == IdContinuity::Dense);
     data_.push_back(std::forward<T>(value));
+  }
+
+  T* At(Id key) {
+    if constexpr (Cont == IdContinuity::Dense) {
+      if (key.value >= data_.size()) {
+        return nullptr;
+      }
+      return std::addressof(data_[key.value]);
+    } else {
+      auto it = data_.find(key);
+      if (it == data_.end()) {
+        return nullptr;
+      }
+      return std::addressof(*it);
+    }
+  }
+
+  const T* At(Id key) const {
+    if constexpr (Cont == IdContinuity::Dense) {
+      if (key.value >= data_.size()) {
+        return nullptr;
+      }
+      return std::addressof(data_[key.value]);
+    } else {
+      auto it = data_.find(key);
+      if (it == data_.end()) {
+        return nullptr;
+      }
+      return std::addressof(*it);
+    }
   }
 
  private:

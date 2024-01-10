@@ -8,7 +8,7 @@
 #include "arguments.hpp"
 #include "larch/merge/merge.hpp"
 #include "larch/dag_loader.hpp"
-#include "benchmark.hpp"
+#include "larch/benchmark.hpp"
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";

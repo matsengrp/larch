@@ -144,6 +144,25 @@ class GrowableHashSet {
     return {*result.first, result.second};
   }
 
+  template <typename Fn>
+  std::pair<const K&, bool> insert(const K& value, Fn&& maker) {
+    size_t hash = std::hash<K>{}(value);
+    auto& [mutex, data] = buckets_.at(hash % buckets_.size());
+
+    auto rlock = ReadLock(mutex);
+    auto it = data.find(value);
+    if (it == data.end()) {
+      rlock.unlock();
+      auto wlock = WriteLock(mutex);  // TODO upgradeable lock
+      size_t size = data.size();
+      auto result =
+          data.insert(data.end(), std::invoke(std::forward<Fn>(maker), value));
+      return {*result, data.size() != size};
+    } else {
+      return {*it, false};
+    }
+  }
+
   const K* find(const K& k) const {
     size_t hash = std::hash<K>{}(k);
     auto& [mutex, data] = buckets_.at(hash % buckets_.size());

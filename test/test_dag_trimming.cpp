@@ -14,7 +14,7 @@ static void test_dag_trimming(MADAG dag, size_t expected_edges) {
 
   MADAGStorage trimmed = weight.TrimToMinWeight({});
 
-  assert_equal(trimmed.View().GetEdgesCount(), expected_edges, "Edges count");
+  TestAssert(trimmed.View().GetEdgesCount() == expected_edges);
 }
 
 static void test_dag_trimming(std::string_view path, size_t expected_edges) {

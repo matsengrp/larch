@@ -26,7 +26,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 
   NodeId node_id;
   do {
-    Assert(weight.GetDAG().GetNodesCount() > 0);
+    TestAssert(weight.GetDAG().GetNodesCount() > 0);
     node_id = {std::uniform_int_distribution<size_t>{
         0, weight.GetDAG().GetNodesCount() - 1}(random_generator)};
     auto node = weight.GetDAG().Get(node_id);

@@ -4,15 +4,11 @@
 #include <algorithm>
 #include <initializer_list>
 
-#include "larch/tc_vector.hpp"
-
 template <typename K, typename V>
 class ContiguousMap {
  public:
   using value_type = std::pair<K, V>;
-  using storage_type =
-      std::conditional_t<std::is_trivially_copyable_v<value_type>, TCVector<value_type>,
-                         std::vector<value_type>>;
+  using storage_type = std::vector<value_type>;
   using iterator = typename storage_type::iterator;
   using const_iterator = typename storage_type::const_iterator;
 
@@ -33,9 +29,11 @@ class ContiguousMap {
   const_iterator end() const { return data_.end(); }
 
   const_iterator find(const K& key) const {
-    return std::lower_bound(
-        data_.begin(), data_.end(), key,
-        [](const value_type& lhs, const K& rhs) { return lhs.first < rhs; });
+    auto result = Find(key);
+    if (result != data_.end() and not(result->first == key)) {
+      return data_.end();
+    }
+    return result;
   }
 
   bool operator==(const ContiguousMap& other) const { return data_ == other.data_; }
@@ -53,9 +51,11 @@ class ContiguousMap {
   iterator end() { return data_.end(); }
 
   iterator find(const K& key) {
-    return std::lower_bound(
-        data_.begin(), data_.end(), key,
-        [](const value_type& lhs, const K& rhs) { return lhs.first < rhs; });
+    auto result = Find(key);
+    if (result != data_.end() and not(result->first == key)) {
+      return data_.end();
+    }
+    return result;
   }
 
   void clear() { data_.clear(); }
@@ -65,7 +65,7 @@ class ContiguousMap {
   void erase(iterator it) { data_.erase(it); }
 
   std::pair<iterator, bool> insert(const value_type& value) {
-    auto it = find(value.first);
+    auto it = Find(value.first);
     if (it != end() and it->first == value.first) {
       return {it, false};
     } else {
@@ -74,7 +74,7 @@ class ContiguousMap {
   }
 
   std::pair<iterator, bool> insert(value_type&& value) {
-    auto it = find(value.first);
+    auto it = Find(value.first);
     if (it != end() and it->first == value.first) {
       return {it, false};
     } else {
@@ -84,7 +84,7 @@ class ContiguousMap {
 
   template <typename Mapped>
   std::pair<iterator, bool> insert_or_assign(const K& key, Mapped&& value) {
-    auto it = find(key);
+    auto it = Find(key);
     if (it != end() and it->first == key) {
       it->second = std::forward<Mapped>(value);
       return {it, false};
@@ -94,7 +94,7 @@ class ContiguousMap {
   }
 
   V& operator[](const K& key) {
-    auto it = find(key);
+    auto it = Find(key);
     if (it != end() and it->first == key) {
       return it->second;
     } else {
@@ -103,7 +103,7 @@ class ContiguousMap {
   }
 
   V& operator[](K&& key) {
-    auto it = find(key);
+    auto it = Find(key);
     if (it != end() and it->first == key) {
       return it->second;
     } else {
@@ -123,7 +123,7 @@ class ContiguousMap {
     return it->second;
   }
 
-  bool Contains(const K& key) const { return find(key) != end(); }
+  bool Contains(const K& key) const { return find(key) != data_.end(); }
 
   void Union(const ContiguousMap& other) {
     storage_type result;
@@ -131,17 +131,44 @@ class ContiguousMap {
     std::set_union(data_.begin(), data_.end(), other.data_.begin(), other.data_.end(),
                    std::back_inserter(result));
     data_ = std::move(result);
-  }
-
-  iterator Insert(iterator it, value_type&& value) {
-    return data_.insert(it, std::forward<value_type>(value));
-  }
-
-  iterator Insert(iterator it, const value_type& value) {
-    return data_.insert(it, value);
+    AssertOrdered();
   }
 
  private:
   ContiguousMap(const ContiguousMap&) = default;
+
+  void AssertOrdered() const {
+    for (size_t i = 0; i + 1 < data_.size(); ++i) {
+      Assert((data_[i].first < data_[i + 1].first) or
+             (data_[i].first == data_[i + 1].first));
+    }
+  }
+
+  iterator Find(const K& key) {
+    AssertOrdered();
+    return std::lower_bound(
+        data_.begin(), data_.end(), key,
+        [](const value_type& lhs, const K& rhs) { return lhs.first < rhs; });
+  }
+
+  const_iterator Find(const K& key) const {
+    AssertOrdered();
+    return std::lower_bound(
+        data_.begin(), data_.end(), key,
+        [](const value_type& lhs, const K& rhs) { return lhs.first < rhs; });
+  }
+
+  iterator Insert(iterator it, value_type&& value) {
+    auto result = data_.insert(it, std::forward<value_type>(value));
+    AssertOrdered();
+    return result;
+  }
+
+  iterator Insert(iterator it, const value_type& value) {
+    auto result = data_.insert(it, value);
+    AssertOrdered();
+    return result;
+  }
+
   storage_type data_;
 };

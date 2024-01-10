@@ -9,7 +9,7 @@
 #include "larch/dag_loader.hpp"
 #include "larch/subtree/tree_count.hpp"
 #include "larch/merge/merge.hpp"
-#include "benchmark.hpp"
+#include "larch/benchmark.hpp"
 
 #if __has_include(<valgrind/callgrind.h>)
 #include <valgrind/callgrind.h>
@@ -19,11 +19,11 @@ static void test_sample_tree(MADAG dag) {
   SubtreeWeight<ParsimonyScore, MADAG> weight(dag);
 
   auto result = weight.SampleTree({});
-  assert_true(result.View().IsTree(), "Tree");
+  TestAssert(result.View().IsTree());
 
   SubtreeWeight<TreeCount, MADAG> tree_count{dag};
   auto result2 = tree_count.UniformSampleTree({});
-  assert_true(result2.View().IsTree(), "Tree");
+  TestAssert(result2.View().IsTree());
 }
 
 static void test_sample_tree(std::string_view path) {

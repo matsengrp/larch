@@ -106,11 +106,11 @@ static void test_optimizing_with_hypothetical_tree(
   two_tree_dag.AddDAG(optimized_tree.first.View());
 
   // check topologies of the two DAGs match in feature count
-  Assert(two_tree_dag.GetResult().GetNodesCount() ==
-         dag_altered_in_callback.GetResult().GetNodesCount());
-  Assert(two_tree_dag.GetResult().GetEdgesCount() ==
-         dag_altered_in_callback.GetResult().GetEdgesCount());
+  TestAssert(two_tree_dag.GetResult().GetNodesCount() ==
+             dag_altered_in_callback.GetResult().GetNodesCount());
+  TestAssert(two_tree_dag.GetResult().GetEdgesCount() ==
+             dag_altered_in_callback.GetResult().GetEdgesCount());
 
-  Assert(single_move_callback.computed_score_change ==
-         single_move_callback.matOptimize_reported_score_change_);
+  TestAssert(single_move_callback.computed_score_change ==
+             single_move_callback.matOptimize_reported_score_change_);
 }

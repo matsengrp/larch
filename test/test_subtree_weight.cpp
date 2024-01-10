@@ -13,7 +13,7 @@ static void test_subtree_weight(MADAG dag, size_t expected_score) {
 
   size_t score = weight.ComputeWeightBelow(dag.GetRoot(), {});
 
-  assert_equal(score, expected_score, "Parsimony score");
+  TestAssert(score == expected_score);
 }
 
 static void test_subtree_weight(std::string_view path, size_t expected_score) {

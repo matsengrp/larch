@@ -14,15 +14,15 @@ static void test_overlay(std::string_view input_dag_path,
   [[maybe_unused]] auto input_node = input_dag.Get(NodeId{10});
   auto overlay_node = overlay_dag.Get(NodeId{10});
 
-  Assert(not input_node.GetCompactGenome().empty());
-  Assert(not overlay_node.GetCompactGenome().empty());
-  Assert(input_node.GetCompactGenome() == overlay_node.GetCompactGenome());
+  TestAssert(not input_node.GetCompactGenome().empty());
+  TestAssert(not overlay_node.GetCompactGenome().empty());
+  TestAssert(input_node.GetCompactGenome() == overlay_node.GetCompactGenome());
 
   overlay_node.SetOverlay<CompactGenome>();
 
-  Assert(overlay_node.IsOverlaid<CompactGenome>());
-  Assert(not overlay_node.GetCompactGenome().empty());
-  Assert(input_node.GetCompactGenome() == overlay_node.GetCompactGenome());
+  TestAssert(overlay_node.IsOverlaid<CompactGenome>());
+  TestAssert(not overlay_node.GetCompactGenome().empty());
+  TestAssert(input_node.GetCompactGenome() == overlay_node.GetCompactGenome());
 
   ContiguousMap<MutationPosition, MutationBase> new_cg;
   new_cg.insert({{5}, {'A'}});
@@ -31,8 +31,8 @@ static void test_overlay(std::string_view input_dag_path,
   new_cg.insert({{20}, {'C'}});
   overlay_node = CompactGenome{std::move(new_cg)};
 
-  Assert(not overlay_node.GetCompactGenome().empty());
-  Assert(input_node.GetCompactGenome() != overlay_node.GetCompactGenome());
+  TestAssert(not overlay_node.GetCompactGenome().empty());
+  TestAssert(input_node.GetCompactGenome() != overlay_node.GetCompactGenome());
 }
 
 [[maybe_unused]] static const auto test_added0 =

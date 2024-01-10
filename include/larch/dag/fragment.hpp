@@ -154,3 +154,20 @@ FragmentStorage<Target> AddFragmentStorage(const Target& target,
   return FragmentStorage<Target>::FromView(target, std::move(nodes), std::move(edges),
                                            root_node_id);
 }
+
+template <typename DAG>
+auto GetFullDAG(DAG&& dag) {
+  static_assert(std::remove_reference_t<DAG>::role == Role::View);
+  static_assert(std::remove_reference_t<DAG>::component == Component::DAG);
+  return dag;
+}
+
+template <typename DAG, template <typename, typename> typename Base>
+auto GetFullDAG(DAGView<FragmentStorage<DAG>, Base>&& dag) {
+  return dag.GetStorage().GetTargetStorage().View();
+}
+
+template <typename DAG, template <typename, typename> typename Base>
+auto GetFullDAG(DAGView<const FragmentStorage<DAG>, Base>&& dag) {
+  return dag.GetStorage().GetTargetStorage().View();
+}
