@@ -63,10 +63,11 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
 
-  std::cout << "DAG nodes: " << merge.GetResult().GetNodesCount() << "\n";
-  std::cout << "DAG edges: " << merge.GetResult().GetEdgesCount() << "\n";
+  std::cout << "DAG nodes(without trimming): " << merge.GetResult().GetNodesCount() << "\n";
+  std::cout << "DAG edges(without trimming): " << merge.GetResult().GetEdgesCount() << "\n";
 
   if (trim) {
+    merge.ComputeResultEdgeMutations();
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
     StoreDAGToProtobuf(weight.TrimToMinWeight({}).View(), out_path);
   } else {
