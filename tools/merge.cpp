@@ -35,7 +35,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   std::vector<MADAGStorage<>> trees;
   std::string reference_sequence = "";
   if (not refseq_json_path.empty()) {
-    reference_sequence = std::string{LoadDAGFromJson(refseq_json_path).View().GetReferenceSequence()};
+    reference_sequence = std::string{LoadReferenceSequence(refseq_json_path)};
   }
 
   trees.reserve(paths.size());
@@ -50,6 +50,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
     trees.at(path_idx.first) =
         dags ? LoadDAGFromProtobuf(path_idx.second)
              : LoadTreeFromProtobuf(path_idx.second, reference_sequence);
+    trees.at(path_idx.first).View().RecomputeCompactGenomes();
   });
   std::cout << " done."
             << "\n";
