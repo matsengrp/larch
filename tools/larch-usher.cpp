@@ -155,6 +155,12 @@ struct Treebased_Move_Found_Callback
                                /*nodes_with_major_allele_set_change*/) {
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
+      for (auto hypothetical_node : fragment.GetNodes()) {
+        if (not(this->GetMerge().ContainsLeafset(hypothetical_node.GetLeafSet()))) {
+          ++node_id_map_count;
+        }
+      }
+/*
       auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
         std::vector<const SampleId*> ls;
         for (auto leaf_node : leaf_node_ids) {
@@ -214,6 +220,7 @@ struct Treebased_Move_Found_Callback
           }
         }
       }
+*/
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
@@ -296,6 +303,12 @@ struct Merge_All_Profitable_Moves_Found_Callback
                                /*nodes_with_major_allele_set_change*/) {
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
+      for (auto hypothetical_node : fragment.GetNodes()) {
+        if (not(this->GetMerge().ContainsLeafset(hypothetical_node.GetLeafSet()))) {
+          ++node_id_map_count;
+        }
+      }
+/*
       auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
         std::vector<const SampleId*> ls;
         for (auto leaf_node : leaf_node_ids) {
@@ -355,6 +368,7 @@ struct Merge_All_Profitable_Moves_Found_Callback
           }
         }
       }
+*/
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
@@ -422,6 +436,12 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
                                /*nodes_with_major_allele_set_change*/) {
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
+      for (auto hypothetical_node : fragment.GetNodes()) {
+        if (not(this->GetMerge().ContainsLeafset(hypothetical_node.GetLeafSet()))) {
+          ++node_id_map_count;
+        }
+      }
+/*
       auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
         std::vector<const SampleId*> ls;
         for (auto leaf_node : leaf_node_ids) {
@@ -481,6 +501,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
           }
         }
       }
+*/
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;

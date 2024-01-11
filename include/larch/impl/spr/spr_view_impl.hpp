@@ -657,6 +657,30 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
 #endif
   Assert(current_nodes.size() == current_edges.size() + 1);
 
+/* begin pseudocode for updating the leafets of affected nodes */
+  auto calculate_leaf_sets = [&](NodeId this_node_id) {
+    auto this_node = dag.Get(this_node_id);
+    std::vector<std::vector<SampleId>> current_leafsets;
+    if (leafset_calculated[this_node] or (not is_parent_of_collapsible_edge[this_node])) {
+      return this_node.GetLeafSet().Copy();
+    } else { 
+      for (auto child: this_node.GetChildren() | Transform::GetChild) {
+        current_leafsets.push_back(calculate_leaf_sets(child));
+      }
+      return LeafSet{std::move(current_leafsets)};
+    }
+  };
+  std::map<NodeId, bool> leafset_calculated;
+  for (auto node_id : current_nodes) {
+    if (is_parent_of_collapsible_edge[node_id]) {
+      auto node = dag.Get(node_id);
+      node.template SetOverlay<Deduplicate<LeafSet>>();
+      node = calculate_leaf_sets(node);
+      leafset_calculated.insert_or_assign(node, true);
+    }
+  }
+/* end pseudocode for updating the leafets of affected nodes */
+
   for (auto node_id : fragment_nodes) {
     if (is_parent_of_collapsible_edge[node_id] and
         is_child_of_collapsible_edge[node_id]) {
@@ -931,6 +955,56 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
          (has_unifurcation_after_move ? old_num_nodes : old_num_nodes + 1));
   Assert(dag.GetEdgesCount() ==
          (has_unifurcation_after_move ? old_num_edges : old_num_edges + 1));
+
+  /* begin pseudocode for updating the leafets of affected nodes */
+  // note that this code uses the routines ''clades_union'' and ''clades_difference''
+  // that are defined in tools/larch-usher.cpp
+  auto current_node = src_parent_node;
+  bool reached_lca = false;
+  auto src_node_clade_union = src_node.GetLeafSet()->ToParentClade().Copy();
+  auto dst_node_clade_union = dst_node.GetLeafSet()->ToParentClade().Copy();
+  while (not reached_lca) {
+    if (not current_node.IsMoveNew()) {
+      std::vector<std::vector<SampleId>> recomputed_leafsets;
+      for (auto& ls: current_node.GetLeafSet()) {
+        auto altered_ls = clades_difference(ls, src_node_clade_union);
+        recomputed_leafsets.emplace_back(altered_ls);
+      }
+      current_node.template SetOverlay<Deduplicate<LeafSet>>();
+      current_node = LeafSet{recomputed_ls};
+      current_node = current_node.GetSingleParent().GetParent();
+    } else {
+      auto this_ls = LeafSet{std::vector{src_node_clade_union, dst_node_clade_union}};
+      current_node.template SetOverlay<Deduplicate<LeafSet>>();
+      current_node = LeafSet{recomputed_ls};
+    }
+    if (current_node.GetId() == lca) {
+      reached_lca = true;
+      break;
+    }
+  }
+  current_node = dst_node.GetSingleParent().GetParent();
+  reached_lca = false;
+  while (not reached_lca) {
+    if (not current_node.IsMoveNew()) {
+      std::vector<std::vector<SampleId>> recomputed_leafsets;
+      for (auto child: current_node.GetChildren() | Transform::GetChild()) {
+        recomputed_leafsets.emplace_back(std::move(child.GetLeafSet()->ToParentClade().Copy()));
+      } 
+      current_node.template SetOverlay<Deduplicate<LeafSet>>();
+      current_node = LeafSet{recomputed_ls};
+      current_node = current_node.GetSingleParent().GetParent();
+    } else {
+      auto this_ls = LeafSet{std::vector{src_node_clade_union, dst_node_clade_union}};
+      current_node.template SetOverlay<Deduplicate<LeafSet>>();
+      current_node = LeafSet{recomputed_ls};
+    }
+    if (current_node.GetId() == lca) {
+      reached_lca = true;
+      break;
+    }
+  }
+  /* end pseudocode for updating the leafets of affected nodes */
 
   return {new_node, has_unifurcation_after_move};
 }
