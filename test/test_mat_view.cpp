@@ -30,7 +30,8 @@ void test_mat_view_impl(DAGView dag) {
   auto mv = storage.View();
   mv.SetReferenceSequence(dag.GetReferenceSequence());
   mv.BuildRootAndLeafs();
-  // mv.RecomputeCompactGenomes();
+  mv.RecomputeCompactGenomes();
+  // mv.GetRoot().Validate(true, false);
   MADAGToDOT(mv, std::cout);
 
   // check BuildFromMAT

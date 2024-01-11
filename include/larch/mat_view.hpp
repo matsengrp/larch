@@ -67,7 +67,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 
   size_t GetParentsCount() const {
     auto [dag_node, mat, mat_node, is_ua] = access();
-    if (is_ua or mat_node->parent == nullptr) {
+    if (is_ua) {
       return 0;
     } else {
       return 1;
@@ -99,9 +99,10 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   auto GetSingleParent() const {
     auto [dag_node, mat, mat_node, is_ua] = access();
     Assert(not is_ua);
-    Assert(mat_node->parent != nullptr);
+    EdgeId parent{mat_node->parent == nullptr ? mat.root->node_id
+                                              : mat_node->parent->node_id};
     auto dag = dag_node.GetDAG();
-    return typename decltype(dag)::EdgeView{dag, EdgeId{mat_node->parent->node_id}};
+    return typename decltype(dag)::EdgeView{dag, parent};
   }
 
   auto GetFirstParent() const {
@@ -122,7 +123,10 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   bool IsLeaf() const { return GetCladesCount() == 0; }
 
   auto GetLeafsBelow() const;
-  void Validate(bool recursive = false, bool allow_dag = false) const;
+  void Validate(bool recursive = false, bool allow_dag = false) const {
+    auto node = static_cast<const CRTP&>(*this).Const();
+    ValidateImpl(node, recursive, allow_dag);
+  }
   auto GetParentNodes() const;
   auto GetChildNodes() const;
   bool ContainsParent(NodeId node) const;
