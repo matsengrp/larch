@@ -961,8 +961,14 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   // that are defined in tools/larch-usher.cpp
   auto current_node = src_parent_node;
   bool reached_lca = false;
-  auto src_node_clade_union = src_node.GetLeafSet()->ToParentClade().Copy();
-  auto dst_node_clade_union = dst_node.GetLeafSet()->ToParentClade().Copy();
+  auto src_node_clade_union = first_src_node.GetLeafSet()->ToParentClade().Copy();
+  auto dst_node_clade_union = first_dst_node.GetLeafSet()->ToParentClade().Copy();
+  for (size_t i = 1; i < src.size(); i++) {
+    src_node_clade_union = clades_union(src_node_clade_union, dag.Get(src[i]).GetLeafSet()->ToParentClade().Copy());
+  }
+  for (size_t i = 1; i < dst.size(); i++) {
+    dst_node_clade_union = clades_union(dst_node_clade_union, dag.Get(dst[i]).GetLeafSet()->ToParentClade().Copy());
+  }
   while (not reached_lca) {
     if (not current_node.IsMoveNew()) {
       std::vector<std::vector<SampleId>> recomputed_leafsets;
