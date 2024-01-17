@@ -2,6 +2,8 @@
 #include <type_traits>
 #include <set>
 
+struct SumRFDistance;
+
 template <typename WeightOps, typename DAG>
 SubtreeWeight<WeightOps, DAG>::SubtreeWeight(DAG dag)
     : dag_{dag},

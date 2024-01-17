@@ -66,7 +66,7 @@
   auto unamb_seq_map = make_sample_unambiguous_sequence_map();
   auto unamb_dag = unamb_dag_storage.View();
 
-  bool write_files = true;
+  bool write_files = false;
   if (write_files) {
     WriteDAGToFile(amb_dag_storage, "_ignore/amb_dag.dot");
     WriteDAGToFile(unamb_dag_storage, "_ignore/unamb_dag.dot");

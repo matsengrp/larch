@@ -272,7 +272,8 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
                                   "data/ebov_dud17/output.txt.gz");
                 test_spr(input, 3);
               },
-              "SPR: ebov_dud17"});
+              "SPR: ebov_dud17",
+              {"slow"}});
 
 //[[maybe_unused]] static const auto test_added4 = add_test(
 //    {[] {
