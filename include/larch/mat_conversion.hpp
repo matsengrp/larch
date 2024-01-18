@@ -28,6 +28,7 @@ namespace MAT = Mutation_Annotated_Tree;
 #endif
 
 #include "larch/madag/mutation_annotated_dag.hpp"
+#include "larch/merge/leaf_set.hpp"
 
 using MATNodePtr = MAT::Node*;
 

@@ -657,29 +657,31 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
 #endif
   Assert(current_nodes.size() == current_edges.size() + 1);
 
-/* begin pseudocode for updating the leafets of affected nodes */
-  auto calculate_leaf_sets = [&](NodeId this_node_id) {
+  /* begin pseudocode for updating the leafets of affected nodes */
+  std::map<NodeId, bool> leafset_calculated;
+  auto calculate_leaf_sets = [&](auto&& /*self*/, NodeId this_node_id) {
     auto this_node = dag.Get(this_node_id);
-    std::vector<std::vector<SampleId>> current_leafsets;
-    if (leafset_calculated[this_node] or (not is_parent_of_collapsible_edge[this_node])) {
-      return this_node.GetLeafSet().Copy();
-    } else { 
-      for (auto child: this_node.GetChildren() | Transform::GetChild) {
-        current_leafsets.push_back(calculate_leaf_sets(child));
-      }
+    std::vector<std::vector<const SampleId*>> current_leafsets;
+    if (leafset_calculated[this_node] or
+        (not is_parent_of_collapsible_edge[this_node])) {
+      return this_node.GetLeafSet()->Copy();
+    } else {
+      // TODO:
+      // for (auto child : this_node.GetChildren() | Transform::GetChild()) {
+      // current_leafsets.push_back(self(self, child));
+      // }
       return LeafSet{std::move(current_leafsets)};
     }
   };
-  std::map<NodeId, bool> leafset_calculated;
   for (auto node_id : current_nodes) {
     if (is_parent_of_collapsible_edge[node_id]) {
       auto node = dag.Get(node_id);
-      node.template SetOverlay<Deduplicate<LeafSet>>();
-      node = calculate_leaf_sets(node);
+      // node.template SetOverlay<Deduplicate<LeafSet>>();
+      node = calculate_leaf_sets(calculate_leaf_sets, node);
       leafset_calculated.insert_or_assign(node, true);
     }
   }
-/* end pseudocode for updating the leafets of affected nodes */
+  /* end pseudocode for updating the leafets of affected nodes */
 
   for (auto node_id : fragment_nodes) {
     if (is_parent_of_collapsible_edge[node_id] and
@@ -959,51 +961,60 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   /* begin pseudocode for updating the leafets of affected nodes */
   // note that this code uses the routines ''clades_union'' and ''clades_difference''
   // that are defined in tools/larch-usher.cpp
-  auto current_node = src_parent_node;
+  NodeId current_node_id = src_parent_node;
   bool reached_lca = false;
-  auto src_node_clade_union = first_src_node.GetLeafSet()->ToParentClade().Copy();
-  auto dst_node_clade_union = first_dst_node.GetLeafSet()->ToParentClade().Copy();
+  auto src_node_clade_union = first_src_node.GetLeafSet()->GetClades();
+  auto dst_node_clade_union = first_dst_node.GetLeafSet()->GetClades();
   for (size_t i = 1; i < src.size(); i++) {
-    src_node_clade_union = clades_union(src_node_clade_union, dag.Get(src[i]).GetLeafSet()->ToParentClade().Copy());
+    src_node_clade_union =
+        clades_union(src_node_clade_union, dag.Get(src[i]).GetLeafSet()->GetClades());
   }
   for (size_t i = 1; i < dst.size(); i++) {
-    dst_node_clade_union = clades_union(dst_node_clade_union, dag.Get(dst[i]).GetLeafSet()->ToParentClade().Copy());
+    dst_node_clade_union =
+        clades_union(dst_node_clade_union, dag.Get(dst[i]).GetLeafSet()->GetClades());
   }
   while (not reached_lca) {
+    auto current_node = dag.Get(current_node_id);
+    std::vector<std::vector<const SampleId*>> recomputed_leafsets;
     if (not current_node.IsMoveNew()) {
-      std::vector<std::vector<SampleId>> recomputed_leafsets;
-      for (auto& ls: current_node.GetLeafSet()) {
-        auto altered_ls = clades_difference(ls, src_node_clade_union);
-        recomputed_leafsets.emplace_back(altered_ls);
-      }
-      current_node.template SetOverlay<Deduplicate<LeafSet>>();
-      current_node = LeafSet{recomputed_ls};
-      current_node = current_node.GetSingleParent().GetParent();
+      // TODO:
+      // for (auto& ls : *current_node.GetLeafSet()) {
+      //   auto altered_ls = clades_difference(ls, src_node_clade_union);
+      //   recomputed_leafsets.emplace_back(altered_ls);
+      // }
+      // current_node.template SetOverlay<Deduplicate<LeafSet>>();
+      current_node = LeafSet{std::move(recomputed_leafsets)};
+      current_node_id = current_node.GetSingleParent().GetParent();
     } else {
-      auto this_ls = LeafSet{std::vector{src_node_clade_union, dst_node_clade_union}};
-      current_node.template SetOverlay<Deduplicate<LeafSet>>();
-      current_node = LeafSet{recomputed_ls};
+      // TODO:
+      // auto this_ls = LeafSet{std::vector{src_node_clade_union,
+      // dst_node_clade_union}};
+      // current_node.template SetOverlay<Deduplicate<LeafSet>>();
+      current_node = LeafSet{std::move(recomputed_leafsets)};
     }
     if (current_node.GetId() == lca) {
       reached_lca = true;
       break;
     }
   }
-  current_node = dst_node.GetSingleParent().GetParent();
+  current_node_id = dst_parent_node;
   reached_lca = false;
   while (not reached_lca) {
+    auto current_node = dag.Get(current_node_id);
+    std::vector<std::vector<const SampleId*>> recomputed_leafsets;
     if (not current_node.IsMoveNew()) {
-      std::vector<std::vector<SampleId>> recomputed_leafsets;
-      for (auto child: current_node.GetChildren() | Transform::GetChild()) {
-        recomputed_leafsets.emplace_back(std::move(child.GetLeafSet()->ToParentClade().Copy()));
-      } 
-      current_node.template SetOverlay<Deduplicate<LeafSet>>();
-      current_node = LeafSet{recomputed_ls};
-      current_node = current_node.GetSingleParent().GetParent();
+      for (auto child : current_node.GetChildren() | Transform::GetChild()) {
+        recomputed_leafsets.emplace_back(child.GetLeafSet()->ToParentClade());
+      }
+      // current_node.template SetOverlay<Deduplicate<LeafSet>>();
+      current_node = LeafSet{std::move(recomputed_leafsets)};
+      current_node_id = current_node.GetSingleParent().GetParent();
     } else {
-      auto this_ls = LeafSet{std::vector{src_node_clade_union, dst_node_clade_union}};
-      current_node.template SetOverlay<Deduplicate<LeafSet>>();
-      current_node = LeafSet{recomputed_ls};
+      // TODO:
+      // auto this_ls = LeafSet{std::vector{src_node_clade_union,
+      // dst_node_clade_union}};
+      // current_node.template SetOverlay<Deduplicate<LeafSet>>();
+      current_node = LeafSet{std::move(recomputed_leafsets)};
     }
     if (current_node.GetId() == lca) {
       reached_lca = true;

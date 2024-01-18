@@ -33,8 +33,9 @@ static void test_sample_tree(std::string_view path) {
   test_sample_tree(dag.View());
 }
 
-/* add pseudocode for test to compare leafsets of sampled DAG with merge's corresponding leafsets */
-static void test_sample_tree_with_leafsets(std::string_view path) {
+/* add pseudocode for test to compare leafsets of sampled DAG with merge's corresponding
+ * leafsets */
+[[maybe_unused]] static void test_sample_tree_with_leafsets(std::string_view path) {
   MADAGStorage dag = LoadDAGFromProtobuf(path);
   dag.View().RecomputeCompactGenomes(true);
   Merge merge{dag.View().GetReferenceSequence()};
@@ -48,18 +49,24 @@ static void test_sample_tree_with_leafsets(std::string_view path) {
   sample_dag.View().BuildMAT(sample_mat);
 
   // compare the leafsets in sample_dag and merge
-  for (auto node: sample_dag.GetNodes()) {
-    auto merge_node_leafset = merge.GetResult().Get(node.GetOriginalId()).GetLeafSet();
-    Assert(node.GetLeafSet() == merge_node_leafset);
-  }
+  // TODO:
+  // for (auto node : sample_dag.GetNodes()) {
+  //   auto merge_node_leafset =
+  //   merge.GetResult().Get(node.GetOriginalId()).GetLeafSet();
+  //   Assert(node.GetLeafSet() == merge_node_leafset);
+  // }
 
-  // check that leafsets are calculated correctly between a MAT and the dag obtained by BuildFromMAT
-  auto sample_dag_from_mat = AddMappedNodes(AddMATConversion(MergeDAGStorage<>::EmptyDefault()));
-  sample_dag_from_mat.View().BuildFromMAT(sample_mat, merge.GetResult().GetReferenceSequence());
-  for (auto node: sample_dag_from_mat.View().GetNodes()) {
-    auto merge_node_leafset = merge.GetResult().Get(node.GetOriginalId()).GetLeafSet();
-    Assert(node.GetLeafSet() == merge_node_leafset);
-  }
+  // check that leafsets are calculated correctly between a MAT and the dag obtained by
+  // BuildFromMAT
+  // auto sample_dag_from_mat =
+  //     AddMappedNodes(AddMATConversion(MergeDAGStorage<>::EmptyDefault()));
+  // sample_dag_from_mat.View().BuildFromMAT(sample_mat,
+  //                                         merge.GetResult().GetReferenceSequence());
+  // for (auto node : sample_dag_from_mat.View().GetNodes()) {
+  //   auto merge_node_leafset =
+  //   merge.GetResult().Get(node.GetOriginalId()).GetLeafSet();
+  //   Assert(node.GetLeafSet() == merge_node_leafset);
+  // }
 }
 /* end pseudocode for test */
 

@@ -73,7 +73,8 @@ template <typename CRTP>
 auto ExtraFeatureConstView<MATConversion, CRTP>::GetUncondensedNodeFromMAT(
     MATNodePtr node) const {
   auto& dag = static_cast<const CRTP&>(*this);
-  auto dag_node = dag.Get(dag.template GetFeatureExtraStorage<Component::Node, MATConversion>()
+  auto dag_node =
+      dag.Get(dag.template GetFeatureExtraStorage<Component::Node, MATConversion>()
                   .reverse_map_.at(node));
   if (dag_node.IsCondensedInMAT()) {
     return dag.template GetFeatureExtraStorage<Component::Node, MATConversion>()
@@ -187,9 +188,8 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
   BuildHelper(mat.root, root_node, dag);
   dag.BuildConnections();
   if (mat.condensed_nodes.size() > 0) {
-
-    std::unordered_map<NodeId, size_t>parent_clades_map;
-    for (auto leaf: dag.GetLeafs()) {
+    std::unordered_map<NodeId, size_t> parent_clades_map;
+    for (auto leaf : dag.GetLeafs()) {
       auto parent = leaf.GetSingleParent().GetParent();
       parent_clades_map.insert({parent.GetId(), parent.GetCladesCount()});
     }
@@ -205,14 +205,18 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
         // reset the DAG node that points to the condensed node so that it
         // now points to the first node in the vector of condensed nodes.
         for (auto node : dag_parent_node.GetChildren() | Transform::GetChild()) {
-          if (not node.IsCondensedInMAT()) { // ignore any children that have already been uncondensed.
+          if (not node.IsCondensedInMAT()) {  // ignore any children that have already
+                                              // been uncondensed.
             if (node.GetMATNode() == node_to_uncondense) {
-              node.SetUncondensedMATNode(node_to_uncondense, mat.get_node(cn->second[0]));
+              node.SetUncondensedMATNode(node_to_uncondense,
+                                         mat.get_node(cn->second[0]));
               std::string sample_id = cn->second[0];
               Assert(not sample_id.empty());
-              if constexpr (decltype(node)::template contains_feature<Deduplicate<SampleId>>) {
-                auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-                    SampleId{sample_id});
+              if constexpr (decltype(node)::template contains_feature<
+                                Deduplicate<SampleId>>) {
+                auto id_iter =
+                    dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+                        SampleId{sample_id});
                 node = id_iter.first;
               } else {
                 node.SetSampleId(sample_id);
@@ -222,7 +226,9 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
           }
         }
         // add all of the remaining condensed nodes as siblings
-        auto clade_idx = parent_clades_map[dag_parent_node.GetId()];//dag_parent_node.GetCladesCount();
+        auto clade_idx =
+            parent_clades_map[dag_parent_node
+                                  .GetId()];  // dag_parent_node.GetCladesCount();
         for (size_t s = 1; s < num_samples; s++) {
           auto dag_child_node = dag.AppendNode();
           auto mat_child_node = mat.get_node(cn->second[s]);
@@ -230,23 +236,26 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
           dag_child_node.SetUncondensedMATNode(node_to_uncondense, mat_child_node);
           std::string sample_id = cn->second[s];
           Assert(not sample_id.empty());
-          if constexpr (decltype(dag_child_node)::template contains_feature<Deduplicate<SampleId>>) {
-            auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-                SampleId{sample_id});
+          if constexpr (decltype(dag_child_node)::template contains_feature<
+                            Deduplicate<SampleId>>) {
+            auto id_iter =
+                dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+                    SampleId{sample_id});
             dag_child_node = id_iter.first;
           } else {
             dag_child_node.SetSampleId(sample_id);
           }
           auto child_edge = dag.AppendEdge();
           child_edge.Set(dag_parent_node, dag_child_node, {clade_idx++});
-          child_edge.SetEdgeMutations(EdgeMutations{mutations_view(node_to_uncondense)});
+          child_edge.SetEdgeMutations(
+              EdgeMutations{mutations_view(node_to_uncondense)});
         }
         parent_clades_map.insert_or_assign(dag_parent_node.GetId(), clade_idx);
       }
     }
     dag.BuildConnections();
   }
-/* begin pseudocode for adding leafets to nodes */
+  /* begin pseudocode for adding leafets to nodes */
   bool add_leafsets = false;
   for (auto leaf : dag.GetLeafs()) {
     if (not leaf.IsCondensedInMAT()) {
@@ -271,28 +280,30 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
   }
 
   if (add_leafsets) {
-    for (auto node: dag.GetNodes()) {
-      if (not (node.IsLeaf() or node.IsUA())) {
+    for (auto node : dag.GetNodes()) {
+      if (not(node.IsLeaf() or node.IsUA())) {
         std::vector<std::vector<SampleId>> this_node_ls;
-        for (auto child: node.GetChildren() | Transform::GetChild()) {
+        for (auto child : node.GetChildren() | Transform::GetChild()) {
           std::vector<SampleId> this_clade;
           if (not child.IsCondensedInMAT()) {
             auto mat_child = child.GetMATNode();
-            for (auto mat_leaf: mat_child.get_leaves()) {
-              this_clade.push_back(dag.GetNodeFromMAT(mat_leaf).GetSampleId().Copy());
+            for (auto* mat_leaf : child.GetDAG().GetMAT().get_leaves(mat_child)) {
+              this_clade.push_back({dag.GetNodeFromMAT(mat_leaf).GetSampleId()});
             }
           } else {
-            this_clade.push_back(child.GetSampleId().Copy());
+            this_clade.push_back({child.GetSampleId()});
           }
           this_node_ls.emplace_back(std::move(this_clade));
         }
-        auto id_iter = dag.template AsFeature<Deduplicate<LeafSet>>().AddDeduplicated(
-            LeafSet{this_node_ls});
-        node = id_iter.first;
+        // TODO:
+        // auto id_iter = dag.template
+        // AsFeature<Deduplicate<LeafSet>>().AddDeduplicated(
+        //     LeafSet{this_node_ls});
+        // node = id_iter.first;
       }
     }
   }
-/* end pseudocode for adding leafets to nodes */
+  /* end pseudocode for adding leafets to nodes */
 
   dag.AddUA(EdgeMutations{mutations_view(mat.root)});
 #ifndef NDEBUG

@@ -58,6 +58,7 @@ struct HypotheticalNode {
 
   ContiguousSet<MutationPosition> changed_base_sites_;
   bool has_changed_topology_ = false;
+  const LeafSet* leaf_set_ = nullptr;
 };
 
 template <typename CRTP, typename Tag>
@@ -103,6 +104,8 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
   // in the hypothetical tree are guaranteed to also be unchanged from before
   // the SPR move. This method identifies the second kind.
   bool IsNonrootAnchorNode() const;
+
+  const LeafSet* GetLeafSet() const { return GetFeatureStorage(this).leaf_set_; }
 };
 
 template <typename CRTP, typename Tag>
@@ -111,6 +114,11 @@ struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {
   void PreorderComputeCompactGenome(std::vector<NodeId>& result,
                                     std::vector<EdgeId>& result_edges) const;
   void PreorderTraverseCollectFragmentEdges(std::vector<EdgeId>& fragment_edges) const;
+
+  const FeatureMutableView& operator=(const LeafSet& leafset) const {
+    GetFeatureStorage(this).leaf_set_ = std::addressof(leafset);
+    return *this;
+  }
 };
 
 template <typename DAG>

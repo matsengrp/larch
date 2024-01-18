@@ -80,41 +80,6 @@ static int ParseNumber(std::string_view str) {
 
 void check_edge_mutations(MADAG madag);
 
-std::vector<std::vector<const SampleId*>> clades_union(
-    const std::vector<std::vector<const SampleId*>>& lhs,
-    const std::vector<std::vector<const SampleId*>>& rhs) {
-  std::vector<std::vector<const SampleId*>> result;
-
-  for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-    std::vector<const SampleId*> clade{lhs_clade};
-    clade.insert(clade.end(), rhs_clade.begin(), rhs_clade.end());
-    ranges::sort(clade);
-    ranges::unique(clade);
-    result.push_back(std::move(clade));
-  }
-
-  ranges::sort(result);
-  return result;
-}
-
-std::vector<std::vector<const SampleId*>> clades_difference(
-    const std::vector<std::vector<const SampleId*>>& lhs,
-    const std::vector<std::vector<const SampleId*>>& rhs) {
-  std::vector<std::vector<const SampleId*>> result;
-
-  for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-    std::vector<const SampleId*> clade;
-    std::set_difference(lhs_clade.begin(), lhs_clade.end(), rhs_clade.begin(),
-                        rhs_clade.end(), std::inserter(clade, clade.begin()));
-    ranges::sort(clade);
-    ranges::unique(clade);
-    result.push_back(std::move(clade));
-  }
-
-  ranges::sort(result);
-  return result;
-}
-
 using Storage = MergeDAGStorage<>;
 using ReassignedStatesStorage =
     decltype(AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
@@ -156,71 +121,71 @@ struct Treebased_Move_Found_Callback
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
       for (auto hypothetical_node : fragment.GetNodes()) {
-        if (not(this->GetMerge().ContainsLeafset(hypothetical_node.GetLeafSet()))) {
+        if (not(this->GetMerge().ContainsLeafset(*hypothetical_node.GetLeafSet()))) {
           ++node_id_map_count;
         }
       }
-/*
-      auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
-        std::vector<const SampleId*> ls;
-        for (auto leaf_node : leaf_node_ids) {
-          auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
-          ls.push_back(&sid);
-        }
-        ranges::sort(ls);
-        ranges::unique(ls);
-        std::vector<std::vector<const SampleId*>> to_ret;
-        to_ret.push_back(std::move(ls));
-        return to_ret;
-      };
-      auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveSources())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
-      auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveTargets())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
-      for (auto hypothetical_node : fragment.GetNodes()) {
-        if (hypothetical_node.IsMoveNew()) {
-          if (not(this->GetMerge().ContainsLeafset(
-                  clades_union(src_leaf_set, dst_leaf_set)))) {
-            ++node_id_map_count;
-          }
-        } else {
-          if (not hypothetical_node.GetOld().IsLeaf()) {
-            if (hypothetical_node.HasChangedTopology() and
-                hypothetical_node.GetOld().HaveMATNode()) {
-              if (not(hypothetical_node.GetOld().GetMATNode()->node_id ==
-                          move.src->node_id or
-                      hypothetical_node.GetOld().GetMATNode()->node_id ==
-                          move.dst->node_id or
-                      hypothetical_node.GetOld().GetMATNode()->is_root())) {
-                const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().at(
-                    this->GetMappedStorage()
-                        .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
-                        .GetOriginalId())
-                    .GetLeafSet()->GetClades();
+      /*
+            auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
+              std::vector<const SampleId*> ls;
+              for (auto leaf_node : leaf_node_ids) {
+                auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
+                ls.push_back(&sid);
+              }
+              ranges::sort(ls);
+              ranges::unique(ls);
+              std::vector<std::vector<const SampleId*>> to_ret;
+              to_ret.push_back(std::move(ls));
+              return to_ret;
+            };
+            auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveSources())
+                              : this->GetMerge().GetResultNodeLabels().at(
+                                                 this->GetMappedStorage()
+                                                 .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                                                 .GetOriginalId())
+                                                 .GetLeafSet()
+                                                 ->GetClades();
+            auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveTargets())
+                              : this->GetMerge().GetResultNodeLabels().at(
+                                                 this->GetMappedStorage()
+                                                 .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                                                 .GetOriginalId())
+                                                 .GetLeafSet()
+                                                 ->GetClades();
+            for (auto hypothetical_node : fragment.GetNodes()) {
+              if (hypothetical_node.IsMoveNew()) {
                 if (not(this->GetMerge().ContainsLeafset(
-                            clades_difference(current_leaf_sets, src_leaf_set)) and
-                        this->GetMerge().ContainsLeafset(
-                            clades_difference(current_leaf_sets, dst_leaf_set)))) {
+                        clades_union(src_leaf_set, dst_leaf_set)))) {
                   ++node_id_map_count;
+                }
+              } else {
+                if (not hypothetical_node.GetOld().IsLeaf()) {
+                  if (hypothetical_node.HasChangedTopology() and
+                      hypothetical_node.GetOld().HaveMATNode()) {
+                    if (not(hypothetical_node.GetOld().GetMATNode()->node_id ==
+                                move.src->node_id or
+                            hypothetical_node.GetOld().GetMATNode()->node_id ==
+                                move.dst->node_id or
+                            hypothetical_node.GetOld().GetMATNode()->is_root())) {
+                      const auto& current_leaf_sets =
+         this->GetMerge().GetResultNodeLabels().at( this->GetMappedStorage()
+                              .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                              .GetOriginalId())
+                          .GetLeafSet()->GetClades();
+                      if (not(this->GetMerge().ContainsLeafset(
+                                  clades_difference(current_leaf_sets, src_leaf_set))
+         and this->GetMerge().ContainsLeafset( clades_difference(current_leaf_sets,
+         dst_leaf_set)))) {
+                        ++node_id_map_count;
+                      }
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-      }
-*/
+      */
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
@@ -297,78 +262,78 @@ struct Merge_All_Profitable_Moves_Found_Callback
         move_score_coeffs_{1, 1} {};
 
   template <typename SPRView, typename FragmentType>
-  std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment,
+  std::pair<bool, bool> OnMove(SPRView /*spr*/, const FragmentType& fragment,
                                Profitable_Moves& move, int /*best_score_change*/,
                                std::vector<Node_With_Major_Allele_Set_Change>&
                                /*nodes_with_major_allele_set_change*/) {
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
       for (auto hypothetical_node : fragment.GetNodes()) {
-        if (not(this->GetMerge().ContainsLeafset(hypothetical_node.GetLeafSet()))) {
+        if (not(this->GetMerge().ContainsLeafset(*hypothetical_node.GetLeafSet()))) {
           ++node_id_map_count;
         }
       }
-/*
-      auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
-        std::vector<const SampleId*> ls;
-        for (auto leaf_node : leaf_node_ids) {
-          auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
-          ls.push_back(&sid);
-        }
-        ranges::sort(ls);
-        ranges::unique(ls);
-        std::vector<std::vector<const SampleId*>> to_ret;
-        to_ret.push_back(std::move(ls));
-        return to_ret;
-      };
-      auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveSources())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
-      auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveTargets())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
-      for (auto hypothetical_node : fragment.GetNodes()) {
-        if (hypothetical_node.IsMoveNew()) {
-          if (not(this->GetMerge().ContainsLeafset(
-                  clades_union(src_leaf_set, dst_leaf_set)))) {
-            ++node_id_map_count;
-          }
-        } else {
-          if (not hypothetical_node.GetOld().IsLeaf()) {
-            if (hypothetical_node.HasChangedTopology() and
-                hypothetical_node.GetOld().HaveMATNode()) {
-              if (not(hypothetical_node.GetOld().GetMATNode()->node_id ==
-                          move.src->node_id or
-                      hypothetical_node.GetOld().GetMATNode()->node_id ==
-                          move.dst->node_id or
-                      hypothetical_node.GetOld().GetMATNode()->is_root())) {
-                const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().at(
-                    this->GetMappedStorage()
-                        .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
-                        .GetOriginalId())
-                    .GetLeafSet()->GetClades();
+      /*
+            auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
+              std::vector<const SampleId*> ls;
+              for (auto leaf_node : leaf_node_ids) {
+                auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
+                ls.push_back(&sid);
+              }
+              ranges::sort(ls);
+              ranges::unique(ls);
+              std::vector<std::vector<const SampleId*>> to_ret;
+              to_ret.push_back(std::move(ls));
+              return to_ret;
+            };
+            auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveSources())
+                              : this->GetMerge().GetResultNodeLabels().at(
+                                                 this->GetMappedStorage()
+                                                 .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                                                 .GetOriginalId())
+                                                 .GetLeafSet()
+                                                 ->GetClades();
+            auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveTargets())
+                              : this->GetMerge().GetResultNodeLabels().at(
+                                                 this->GetMappedStorage()
+                                                 .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                                                 .GetOriginalId())
+                                                 .GetLeafSet()
+                                                 ->GetClades();
+            for (auto hypothetical_node : fragment.GetNodes()) {
+              if (hypothetical_node.IsMoveNew()) {
                 if (not(this->GetMerge().ContainsLeafset(
-                            clades_difference(current_leaf_sets, src_leaf_set)) and
-                        this->GetMerge().ContainsLeafset(
-                            clades_difference(current_leaf_sets, dst_leaf_set)))) {
+                        clades_union(src_leaf_set, dst_leaf_set)))) {
                   ++node_id_map_count;
+                }
+              } else {
+                if (not hypothetical_node.GetOld().IsLeaf()) {
+                  if (hypothetical_node.HasChangedTopology() and
+                      hypothetical_node.GetOld().HaveMATNode()) {
+                    if (not(hypothetical_node.GetOld().GetMATNode()->node_id ==
+                                move.src->node_id or
+                            hypothetical_node.GetOld().GetMATNode()->node_id ==
+                                move.dst->node_id or
+                            hypothetical_node.GetOld().GetMATNode()->is_root())) {
+                      const auto& current_leaf_sets =
+         this->GetMerge().GetResultNodeLabels().at( this->GetMappedStorage()
+                              .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                              .GetOriginalId())
+                          .GetLeafSet()->GetClades();
+                      if (not(this->GetMerge().ContainsLeafset(
+                                  clades_difference(current_leaf_sets, src_leaf_set))
+         and this->GetMerge().ContainsLeafset( clades_difference(current_leaf_sets,
+         dst_leaf_set)))) {
+                        ++node_id_map_count;
+                      }
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-      }
-*/
+      */
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
@@ -441,67 +406,67 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
           ++node_id_map_count;
         }
       }
-/*
-      auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
-        std::vector<const SampleId*> ls;
-        for (auto leaf_node : leaf_node_ids) {
-          auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
-          ls.push_back(&sid);
-        }
-        ranges::sort(ls);
-        ranges::unique(ls);
-        std::vector<std::vector<const SampleId*>> to_ret;
-        to_ret.push_back(std::move(ls));
-        return to_ret;
-      };
-      auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveSources())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
-      auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveTargets())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
-      for (auto hypothetical_node : fragment.GetNodes()) {
-        if (hypothetical_node.IsMoveNew()) {
-          if (not(this->GetMerge().ContainsLeafset(
-                  clades_union(src_leaf_set, dst_leaf_set)))) {
-            ++node_id_map_count;
-          }
-        } else {
-          if (not hypothetical_node.GetOld().IsLeaf()) {
-            if (hypothetical_node.HasChangedTopology() and
-                hypothetical_node.GetOld().HaveMATNode()) {
-              if (not(hypothetical_node.GetOld().GetMATNode()->node_id ==
-                          move.src->node_id or
-                      hypothetical_node.GetOld().GetMATNode()->node_id ==
-                          move.dst->node_id or
-                      hypothetical_node.GetOld().GetMATNode()->is_root())) {
-                const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().at(
-                    this->GetMappedStorage()
-                        .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
-                        .GetOriginalId())
-                    .GetLeafSet()->GetClades();
+      /*
+            auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
+              std::vector<const SampleId*> ls;
+              for (auto leaf_node : leaf_node_ids) {
+                auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
+                ls.push_back(&sid);
+              }
+              ranges::sort(ls);
+              ranges::unique(ls);
+              std::vector<std::vector<const SampleId*>> to_ret;
+              to_ret.push_back(std::move(ls));
+              return to_ret;
+            };
+            auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveSources())
+                              : this->GetMerge().GetResultNodeLabels().at(
+                                                 this->GetMappedStorage()
+                                                 .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                                                 .GetOriginalId())
+                                                 .GetLeafSet()
+                                                 ->GetClades();
+            auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveTargets())
+                              : this->GetMerge().GetResultNodeLabels().at(
+                                                 this->GetMappedStorage()
+                                                 .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                                                 .GetOriginalId())
+                                                 .GetLeafSet()
+                                                 ->GetClades();
+            for (auto hypothetical_node : fragment.GetNodes()) {
+              if (hypothetical_node.IsMoveNew()) {
                 if (not(this->GetMerge().ContainsLeafset(
-                            clades_difference(current_leaf_sets, src_leaf_set)) and
-                        this->GetMerge().ContainsLeafset(
-                            clades_difference(current_leaf_sets, dst_leaf_set)))) {
+                        clades_union(src_leaf_set, dst_leaf_set)))) {
                   ++node_id_map_count;
+                }
+              } else {
+                if (not hypothetical_node.GetOld().IsLeaf()) {
+                  if (hypothetical_node.HasChangedTopology() and
+                      hypothetical_node.GetOld().HaveMATNode()) {
+                    if (not(hypothetical_node.GetOld().GetMATNode()->node_id ==
+                                move.src->node_id or
+                            hypothetical_node.GetOld().GetMATNode()->node_id ==
+                                move.dst->node_id or
+                            hypothetical_node.GetOld().GetMATNode()->is_root())) {
+                      const auto& current_leaf_sets =
+         this->GetMerge().GetResultNodeLabels().at( this->GetMappedStorage()
+                              .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                              .GetOriginalId())
+                          .GetLeafSet()->GetClades();
+                      if (not(this->GetMerge().ContainsLeafset(
+                                  clades_difference(current_leaf_sets, src_leaf_set))
+         and this->GetMerge().ContainsLeafset( clades_difference(current_leaf_sets,
+         dst_leaf_set)))) {
+                        ++node_id_map_count;
+                      }
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-      }
-*/
+      */
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
@@ -645,7 +610,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWors"
              "tParsimony\tSecondsElapsed";
 
-  //tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAGStorage<> input_dag =
       refseq_path.empty()
           ? LoadDAGFromProtobuf(input_dag_path)

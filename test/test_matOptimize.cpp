@@ -38,41 +38,6 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   return weight.GetDAG().Get(node_id);
 };
 
-std::vector<std::vector<const SampleId*>> clades_union(
-    const std::vector<std::vector<const SampleId*>>& lhs,
-    const std::vector<std::vector<const SampleId*>>& rhs) {
-  std::vector<std::vector<const SampleId*>> result;
-
-  for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-    std::vector<const SampleId*> clade{lhs_clade};
-    clade.insert(clade.end(), rhs_clade.begin(), rhs_clade.end());
-    ranges::sort(clade);
-    ranges::unique(clade);
-    result.push_back(std::move(clade));
-  }
-
-  ranges::sort(result);
-  return result;
-}
-
-std::vector<std::vector<const SampleId*>> clades_difference(
-    const std::vector<std::vector<const SampleId*>>& lhs,
-    const std::vector<std::vector<const SampleId*>>& rhs) {
-  std::vector<std::vector<const SampleId*>> result;
-
-  for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-    std::vector<const SampleId*> clade;
-    std::set_difference(lhs_clade.begin(), lhs_clade.end(), rhs_clade.begin(),
-                        rhs_clade.end(), std::inserter(clade, clade.begin()));
-    ranges::sort(clade);
-    ranges::unique(clade);
-    result.push_back(std::move(clade));
-  }
-
-  ranges::sort(result);
-  return result;
-}
-
 // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor)
 template <typename SampleDAG>
 struct Larch_Move_Found_Callback : public Move_Found_Callback {
