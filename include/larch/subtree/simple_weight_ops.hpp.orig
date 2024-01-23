@@ -26,6 +26,7 @@ template <typename BinaryOperatorWeightOps>
 struct SimpleWeightOps {
   using Weight = typename BinaryOperatorWeightOps::Weight;
 
+<<<<<<< HEAD
   SimpleWeightOps() = default;
 
   explicit SimpleWeightOps(BinaryOperatorWeightOps&& ops)
@@ -35,13 +36,22 @@ struct SimpleWeightOps {
   Weight ComputeLeaf(DAG dag, NodeId node_id) const;
 
   template <typename DAG>
+=======
+  template <typename DAG>
+  Weight ComputeLeaf(DAG dag, NodeId node_id) const;
+
+  template <typename DAG>
+>>>>>>> origin/main
   Weight ComputeEdge(DAG dag, EdgeId edge_id) const;
   inline std::pair<Weight, std::vector<size_t>> WithinCladeAccumOptimum(
       std::vector<Weight>) const;
   inline Weight BetweenClades(std::vector<Weight>) const;
   inline Weight AboveNode(Weight edgeweight, Weight childnodeweight) const;
+<<<<<<< HEAD
 
   inline const BinaryOperatorWeightOps& GetOps() const;
+=======
+>>>>>>> origin/main
 
  private:
   BinaryOperatorWeightOps binary_operator_weight_ops_ = BinaryOperatorWeightOps();
