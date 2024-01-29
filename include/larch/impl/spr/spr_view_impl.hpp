@@ -659,17 +659,17 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
 
   /* begin pseudocode for updating the leafets of affected nodes */
   std::map<NodeId, bool> leafset_calculated;
-  auto calculate_leaf_sets = [&](auto&& /*self*/, NodeId this_node_id) {
+  auto calculate_leaf_sets = [&](auto&& self, NodeId this_node_id) {
     auto this_node = dag.Get(this_node_id);
     std::vector<std::vector<const SampleId*>> current_leafsets;
     if (leafset_calculated[this_node] or
         (not is_parent_of_collapsible_edge[this_node])) {
       return this_node.GetLeafSet()->Copy();
     } else {
-      // TODO:
-      // for (auto child : this_node.GetChildren() | Transform::GetChild()) {
-      // current_leafsets.push_back(self(self, child));
-      // }
+      for (auto child : this_node.GetChildren() | Transform::GetChild()) {
+        current_leafsets.push_back(self(self, child).ToParentClade());
+      }
+      current_leafsets |= ranges::actions::sort | ranges::actions::unique;
       return LeafSet{std::move(current_leafsets)};
     }
   };
@@ -977,20 +977,20 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
     auto current_node = dag.Get(current_node_id);
     std::vector<std::vector<const SampleId*>> recomputed_leafsets;
     if (not current_node.IsMoveNew()) {
-      // TODO:
-      // for (auto& ls : *current_node.GetLeafSet()) {
-      //   auto altered_ls = clades_difference(ls, src_node_clade_union);
-      //   recomputed_leafsets.emplace_back(altered_ls);
-      // }
+      for (auto& ls : *current_node.GetLeafSet()) {
+        auto altered_ls = single_clade_difference(ls, src_node_clade_union);
+        recomputed_leafsets.emplace_back(altered_ls);
+      }
       // current_node.template SetOverlay<Deduplicate<LeafSet>>();
       current_node = LeafSet{std::move(recomputed_leafsets)};
       current_node_id = current_node.GetSingleParent().GetParent();
     } else {
-      // TODO:
-      // auto this_ls = LeafSet{std::vector{src_node_clade_union,
-      // dst_node_clade_union}};
+      std::vector clades = src_node_clade_union;
+      clades.insert(clades.end(), dst_node_clade_union.begin(),
+                    dst_node_clade_union.end());
+      auto this_ls = LeafSet{std::move(clades)};
       // current_node.template SetOverlay<Deduplicate<LeafSet>>();
-      current_node = LeafSet{std::move(recomputed_leafsets)};
+      current_node = LeafSet{std::move(this_ls)};
     }
     if (current_node.GetId() == lca) {
       reached_lca = true;
@@ -1010,11 +1010,12 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
       current_node = LeafSet{std::move(recomputed_leafsets)};
       current_node_id = current_node.GetSingleParent().GetParent();
     } else {
-      // TODO:
-      // auto this_ls = LeafSet{std::vector{src_node_clade_union,
-      // dst_node_clade_union}};
+      std::vector clades = src_node_clade_union;
+      clades.insert(clades.end(), dst_node_clade_union.begin(),
+                    dst_node_clade_union.end());
+      auto this_ls = LeafSet{std::move(clades)};
       // current_node.template SetOverlay<Deduplicate<LeafSet>>();
-      current_node = LeafSet{std::move(recomputed_leafsets)};
+      current_node = LeafSet{std::move(this_ls)};
     }
     if (current_node.GetId() == lca) {
       reached_lca = true;

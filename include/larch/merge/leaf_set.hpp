@@ -83,6 +83,21 @@ inline std::vector<std::vector<const SampleId*>> clades_union(
   return result;
 }
 
+inline std::vector<const SampleId*> single_clade_difference(
+    const std::vector<const SampleId*>& lhs_clade,
+    const std::vector<std::vector<const SampleId*>>& rhs) {
+  std::vector<const SampleId*> result;
+
+  for (auto& rhs_clade : rhs) {
+    std::set_difference(lhs_clade.begin(), lhs_clade.end(), rhs_clade.begin(),
+                        rhs_clade.end(), std::inserter(result, result.begin()));
+  }
+
+  ranges::sort(result);
+  ranges::unique(result);
+  return result;
+}
+
 inline std::vector<std::vector<const SampleId*>> clades_difference(
     const std::vector<std::vector<const SampleId*>>& lhs,
     const std::vector<std::vector<const SampleId*>>& rhs) {
