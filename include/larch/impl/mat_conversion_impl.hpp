@@ -295,11 +295,15 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
           }
           this_node_ls.emplace_back(std::move(this_clade));
         }
-        // TODO:
-        // auto id_iter = dag.template
-        // AsFeature<Deduplicate<LeafSet>>().AddDeduplicated(
-        //     LeafSet{this_node_ls});
-        // node = id_iter.first;
+        if constexpr (dag.template contains_element_feature<Component::Node,
+                                                            Deduplicate<LeafSet>>) {
+          auto id_iter = dag.template AsFeature<Deduplicate<LeafSet>>().AddDeduplicated(
+              LeafSet{this_node_ls});
+          node = id_iter.first;
+        } else {
+          // TODO:
+          // node = LeafSet{this_node_ls};
+        }
       }
     }
   }

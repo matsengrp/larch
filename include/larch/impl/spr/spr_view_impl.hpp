@@ -963,8 +963,8 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   // that are defined in tools/larch-usher.cpp
   NodeId current_node_id = src_parent_node;
   bool reached_lca = false;
-  auto src_node_clade_union = first_src_node.GetLeafSet()->GetClades();
-  auto dst_node_clade_union = first_dst_node.GetLeafSet()->GetClades();
+  std::vector src_node_clade_union = first_src_node.GetLeafSet()->GetClades();
+  std::vector dst_node_clade_union = first_dst_node.GetLeafSet()->GetClades();
   for (size_t i = 1; i < src.size(); i++) {
     src_node_clade_union =
         clades_union(src_node_clade_union, dag.Get(src[i]).GetLeafSet()->GetClades());
@@ -985,10 +985,9 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
       current_node = LeafSet{std::move(recomputed_leafsets)};
       current_node_id = current_node.GetSingleParent().GetParent();
     } else {
-      std::vector clades = src_node_clade_union;
-      clades.insert(clades.end(), dst_node_clade_union.begin(),
-                    dst_node_clade_union.end());
-      auto this_ls = LeafSet{std::move(clades)};
+      auto this_ls = LeafSet(
+          std::vector{ranges::to_vector(src_node_clade_union | ranges::views::join),
+                      ranges::to_vector(dst_node_clade_union | ranges::views::join)});
       // current_node.template SetOverlay<Deduplicate<LeafSet>>();
       current_node = LeafSet{std::move(this_ls)};
     }
@@ -1010,10 +1009,9 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
       current_node = LeafSet{std::move(recomputed_leafsets)};
       current_node_id = current_node.GetSingleParent().GetParent();
     } else {
-      std::vector clades = src_node_clade_union;
-      clades.insert(clades.end(), dst_node_clade_union.begin(),
-                    dst_node_clade_union.end());
-      auto this_ls = LeafSet{std::move(clades)};
+      auto this_ls = LeafSet(
+          std::vector{ranges::to_vector(src_node_clade_union | ranges::views::join),
+                      ranges::to_vector(dst_node_clade_union | ranges::views::join)});
       // current_node.template SetOverlay<Deduplicate<LeafSet>>();
       current_node = LeafSet{std::move(this_ls)};
     }
