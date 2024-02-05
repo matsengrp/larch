@@ -3,14 +3,14 @@
 #include "larch/mat_view.hpp"
 #include "sample_dag.hpp"
 
-using MVStorage =
+using MATViewStorage =
     DAGStorage<void, MATNodesContainer, MATEdgesContainer, ExtraStorage<Connections>>;
-
-using Storage = ExtendStorageType<void, MVStorage, Extend::Nodes<CompactGenome>,
+using Storage = ExtendStorageType<void, MATViewStorage, Extend::Nodes<CompactGenome>,
                                   Extend::DAG<ReferenceSequence>>;
 
 template <typename DAGView>
 void test_mat_view_impl(DAGView dag) {
+  // Create MAT Conversion
   TestAssert(dag.IsTree());
   dag.GetRoot().Validate(true);
   auto mat_conv = AddMATConversion(dag);
@@ -21,17 +21,20 @@ void test_mat_view_impl(DAGView dag) {
   // check BuildMAT
   check_MAT_MADAG_Eq(mat, dag);
 
+  std::cout << "\nDAG view\n";
   MADAGToDOT(dag, std::cout);
-  std::cout << "\n\nMAT view\n";
 
-  MVStorage mv_storage;
-  mv_storage.View().SetMAT(std::addressof(mat));
-  auto storage = Storage::Consume(std::move(mv_storage));
+  // Create MAT View
+  MATViewStorage matview_storage;
+  matview_storage.View().SetMAT(std::addressof(mat));
+  auto storage = Storage::Consume(std::move(matview_storage));
   auto mv = storage.View();
   mv.SetReferenceSequence(dag.GetReferenceSequence());
   mv.BuildRootAndLeafs();
   mv.RecomputeCompactGenomes();
   // mv.GetRoot().Validate(true, false);
+
+  std::cout << "\n\nMAT view\n";
   MADAGToDOT(mv, std::cout);
 
   // check BuildFromMAT

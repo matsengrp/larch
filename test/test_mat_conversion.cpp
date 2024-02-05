@@ -59,7 +59,7 @@ template <typename DAG>
                 test_sample_id_conversion("data/startmat/startmat_no_ancestral.pb.gz",
                                           "data/startmat/refseq.txt.gz", "");
               },
-              "Check SampleIds on startmat",
+              "MATConversion: Check SampleIds on startmat",
               {"slow"}});
 
 [[maybe_unused]] static const auto test_added2 =
@@ -69,4 +69,4 @@ template <typename DAG>
                     "data/test_ambiguous_vcf/sample_reference_sequence.fasta",
                     "data/test_ambiguous_vcf/amb.vcf");
               },
-              "Check SampleIds on MakeSampleDAG with ambiguous VCF input"});
+              "MATConversion: Check SampleIds on MakeSampleDAG with ambiguous VCF input"});

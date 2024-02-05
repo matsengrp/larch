@@ -416,3 +416,6 @@ struct MATEdgesContainer {
   mutable IdContainer<EdgeId, AllFeatureTypes, id_continuity> features_storage_;
   ExtraFeatureStorage<MATEdgeStorage> extra_edge_storage_;
 };
+
+using MATViewStorage =
+    DAGStorage<void, MATNodesContainer, MATEdgesContainer, ExtraStorage<Connections>>;
