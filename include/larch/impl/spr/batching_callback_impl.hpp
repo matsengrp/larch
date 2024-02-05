@@ -46,6 +46,8 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
        &nodes_with_major_allele_set_change](auto& bucket) -> bool {
         std::shared_lock lock{mat_mtx_};
         Assert(sample_mat_storage_ != nullptr);
+
+/* CONDENSING CODE: probably want to change this to an uncondensed storage, once it's implemented*/
         bucket.push_back(MoveStorage{
             std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
             nullptr});

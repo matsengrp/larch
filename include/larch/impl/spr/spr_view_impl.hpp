@@ -8,7 +8,11 @@ template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveSource() const {
   auto& node = static_cast<const CRTP&>(*this);
   auto move_src = node.GetDAG().GetMoveSources();
-  // return node.GetDAG().GetMoveSource().GetId() == node.GetId();
+
+  /*
+   * CONDENSING CODE: should instead be something like:
+   * return node.GetDAG().GetMoveSource().GetId() == node.GetId();
+  */
   return (std::find(move_src.begin(), move_src.end(), node.GetId()) != move_src.end());
 }
 
@@ -16,7 +20,11 @@ template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveTarget() const {
   auto& node = static_cast<const CRTP&>(*this);
   auto move_dst = node.GetDAG().GetMoveTargets();
-  // return node.GetDAG().GetMoveTarget().GetId() == node.GetId();
+
+  /* 
+   * CONDENSING CODE: should instead be something like:
+   * return node.GetDAG().GetMoveTarget().GetId() == node.GetId();
+  */
   return (std::find(move_dst.begin(), move_dst.end(), node.GetId()) != move_dst.end());
 }
 
@@ -306,6 +314,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {
   return dag.GetNodeFromMAT(self.data_->move_.src);
 }
 
+/* CONDENSING CODE: can remove this function (replace all calls to it with calls to `GetMoveSource' */
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSources() const {
   auto& self = GetFeatureStorage(this);
@@ -320,6 +329,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTarget() const {
   return dag.GetNodeFromMAT(self.data_->move_.dst);
 }
 
+/* CONDENSING CODE: can remove this function (replace all calls to it with calls to `GetMoveTarget' */
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTargets() const {
   auto& self = GetFeatureStorage(this);
@@ -691,6 +701,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetLCAAncestors() const {
 
 namespace {
 
+/* CONDENSING CODE: can change the last two args to single NodeIds rather than vectors */
 template <typename DAG>
 std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& src,
                                       std::vector<NodeId>& dst) {
@@ -703,6 +714,12 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   }
   Assert(dag.IsTree());
 
+  /* CONDENSING CODE:
+   * first_src_node is the first node in the vector `src', and we should
+   * replace all instances of `first_src_node' with the single Node
+   * dag.Get(src) after we make src into a single NodeId.
+   * Same with dst.
+  */
   auto first_src_node = dag.Get(src[0]);
   auto first_dst_node = dag.Get(dst[0]);
   if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId() or
@@ -941,11 +958,15 @@ template <typename DAG, typename CRTP, typename Tag>
 std::pair<NodeId, bool> FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(
     NodeId lca, NodeId src, NodeId dst) const {
   auto& dag = static_cast<const CRTP&>(*this);
+  /* CONDENSING CODE:
+   * we can just pass src and dst without putting them into vectors.
+  */
   std::vector<NodeId> srcs{src};
   std::vector<NodeId> dsts{dst};
   return ApplyMoveImpl(dag, lca, srcs, dsts);
 }
 
+/* CONDENSING CODE: can remove this function altogether */
 template <typename DAG, typename CRTP, typename Tag>
 std::pair<NodeId, bool> FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(
     NodeId lca, std::vector<NodeId> src, std::vector<NodeId> dst) const {
@@ -960,6 +981,7 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   auto& self = GetFeatureStorage(this);
   Assert(not self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
+  /* CONDENSING CODE: we won't need to uncondense src and dst before calling ApplyMove */
   auto [new_node, has_unifurcation_after_move] = dag.ApplyMove(
       dag.GetNodeFromMAT(move.LCA), dag.GetUncondensedNodeFromMAT(move.src),
       dag.GetUncondensedNodeFromMAT(move.dst));
