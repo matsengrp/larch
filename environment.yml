@@ -1,4 +1,4 @@
-name: larch-dev
+name: larch-devel
 channels:
   - conda-forge
   - bioconda
