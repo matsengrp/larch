@@ -20,7 +20,6 @@ class BatchingCallback : public Move_Found_Callback {
       sample_mat_storage_->View().GetMutableMAT().delete_nodes();
       sample_mat_storage_ = nullptr;
     }
-    std::cout << "*** Destroy: BatchCallback..." << std::endl;
   }
 
   // TODO old datatypes
@@ -34,14 +33,15 @@ class BatchingCallback : public Move_Found_Callback {
 
   // TODO new datatypes
   using MATViewStorage =
-    DAGStorage<void, MATNodesContainer, MATEdgesContainer, ExtraStorage<Connections>>;
-  using NewStorage = ExtendStorageType<void, MATViewStorage, Extend::Nodes<CompactGenome>,
-                                  Extend::DAG<ReferenceSequence>>;
-  using NewSPRType =
-      decltype(AddSPRStorage(NewStorage::EmptyDefault()).View());
+      DAGStorage<void, MATNodesContainer, MATEdgesContainer, ExtraStorage<Connections>>;
+  using NewStorage =
+      ExtendStorageType<void, MATViewStorage, Extend::Nodes<CompactGenome>,
+                        Extend::DAG<ReferenceSequence>>;
+  using NewSPRType = decltype(AddSPRStorage(NewStorage::EmptyDefault()).View());
   // using NewReassignedStatesStorage =
   //     decltype(AddMappedNodes(AddMATConversion(NewStorage::EmptyDefault())));
-  // using NewFragmentType = FragmentStorage<decltype(std::declval<NewSPRType>().View())>;
+  // using NewFragmentType =
+  // FragmentStorage<decltype(std::declval<NewSPRType>().View())>;
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&

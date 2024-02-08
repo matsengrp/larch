@@ -7,25 +7,15 @@ bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMATRoot() const {
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveSource() const {
   auto& node = static_cast<const CRTP&>(*this);
-  auto move_src = node.GetDAG().GetMoveSources();
-
-  /*
-   * CONDENSING CODE: should instead be something like:
-   * return node.GetDAG().GetMoveSource().GetId() == node.GetId();
-  */
-  return (std::find(move_src.begin(), move_src.end(), node.GetId()) != move_src.end());
+  auto move_src = node.GetDAG().GetMoveSource();
+  return (move_src.GetId() == node.GetId());
 }
 
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMoveTarget() const {
   auto& node = static_cast<const CRTP&>(*this);
-  auto move_dst = node.GetDAG().GetMoveTargets();
-
-  /* 
-   * CONDENSING CODE: should instead be something like:
-   * return node.GetDAG().GetMoveTarget().GetId() == node.GetId();
-  */
-  return (std::find(move_dst.begin(), move_dst.end(), node.GetId()) != move_dst.end());
+  auto move_dst = node.GetDAG().GetMoveTarget();
+  return (move_dst.GetId() == node.GetId());
 }
 
 template <typename CRTP, typename Tag>
@@ -314,14 +304,6 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {
   return dag.GetNodeFromMAT(self.data_->move_.src);
 }
 
-/* CONDENSING CODE: can remove this function (replace all calls to it with calls to `GetMoveSource' */
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSources() const {
-  auto& self = GetFeatureStorage(this);
-  auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetUncondensedNodeFromMAT(self.data_->move_.src);
-}
-
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTarget() const {
   auto& self = GetFeatureStorage(this);
@@ -329,7 +311,19 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTarget() const {
   return dag.GetNodeFromMAT(self.data_->move_.dst);
 }
 
-/* CONDENSING CODE: can remove this function (replace all calls to it with calls to `GetMoveTarget' */
+// TODO_DR: Used by larch_usher.cpp
+/* CONDENSING CODE: can remove this function (replace all calls to it with calls to
+ * `GetMoveSource' */
+template <typename DAG, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSources() const {
+  auto& self = GetFeatureStorage(this);
+  auto& dag = static_cast<const CRTP&>(*this);
+  return dag.GetUncondensedNodeFromMAT(self.data_->move_.src);
+}
+
+// TODO_DR: Used by larch_usher.cpp
+/* CONDENSING CODE: can remove this function (replace all calls to it with calls to
+ * `GetMoveTarget' */
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTargets() const {
   auto& self = GetFeatureStorage(this);
@@ -384,8 +378,8 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
       return lca;
     }
     for (auto node : lca.GetChildren() | Transform::GetChild()) {
-      auto srcs = dag.GetMoveSources();
-      if (std::find(srcs.begin(), srcs.end(), node.GetId()) != srcs.end()) {
+      auto src = dag.GetMoveSource();
+      if (src == node.GetId()) {
         return node;
       }
     }
@@ -701,10 +695,8 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetLCAAncestors() const {
 
 namespace {
 
-/* CONDENSING CODE: can change the last two args to single NodeIds rather than vectors */
 template <typename DAG>
-std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& src,
-                                      std::vector<NodeId>& dst) {
+std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& dst) {
   for (auto node : dag.GetNodes()) {
     if (not node.IsUA()) {
       if (node.IsCondensedInMAT() or (not node.IsMATRoot())) {
@@ -714,14 +706,8 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   }
   Assert(dag.IsTree());
 
-  /* CONDENSING CODE:
-   * first_src_node is the first node in the vector `src', and we should
-   * replace all instances of `first_src_node' with the single Node
-   * dag.Get(src) after we make src into a single NodeId.
-   * Same with dst.
-  */
-  auto first_src_node = dag.Get(src[0]);
-  auto first_dst_node = dag.Get(dst[0]);
+  auto first_src_node = dag.Get(src);
+  auto first_dst_node = dag.Get(dst);
   if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId() or
       first_dst_node.GetSingleParent().GetParent().IsUA()) {
     // no-op
@@ -731,11 +717,13 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   auto src_parent_node = first_src_node.GetSingleParent().GetParent();
   auto dst_parent_node = first_dst_node.GetSingleParent().GetParent();
   const bool is_sibling_move = src_parent_node.GetId() == dst_parent_node.GetId();
+  size_t src_size = 1;
+  size_t dst_size = 1;
   const bool has_unifurcation_after_move =
-      is_sibling_move ? src_parent_node.GetCladesCount() <= (src.size() + dst.size())
-                      : src_parent_node.GetCladesCount() <= (src.size() + 1);
+      is_sibling_move ? src_parent_node.GetCladesCount() <= (src_size + dst_size)
+                      : src_parent_node.GetCladesCount() <= (src_size + 1);
   if ((is_sibling_move and
-       (src_parent_node.GetCladesCount() == (src.size() + dst.size()))) or
+       (src_parent_node.GetCladesCount() == (src_size + dst_size))) or
       src_parent_node.IsTreeRoot() or src_parent_node.IsUA() or
       (not is_sibling_move and src_parent_node == lca)) {
     // no-op
@@ -753,7 +741,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   std::vector<EdgeId> src_edges;
   std::vector<EdgeId> src_sibling_edges;
   for (auto e : src_parent_node.GetChildren()) {
-    if (std::find(src.begin(), src.end(), e.GetChild().GetId()) == src.end()) {
+    if (src != e.GetChild().GetId()) {
       src_sibling_edges.push_back(e.GetId());
     } else {
       src_edges.push_back(e.GetId());
@@ -762,14 +750,14 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, std::vector<NodeId>& 
   std::vector<EdgeId> dst_edges;
   std::vector<EdgeId> dst_sibling_edges;
   for (auto e : dst_parent_node.GetChildren()) {
-    if (std::find(dst.begin(), dst.end(), e.GetChild().GetId()) == dst.end()) {
+    if (dst != e.GetChild().GetId()) {
       dst_sibling_edges.push_back(e.GetId());
     } else {
       dst_edges.push_back(e.GetId());
     }
   }
-  Assert(src.size() == src_edges.size());
-  Assert(dst.size() == dst_edges.size());
+  Assert(src_size == src_edges.size());
+  Assert(dst_size == dst_edges.size());
 
   if (is_sibling_move) {
     auto src_parent_single_parent = src_parent_node.GetParentsCount() > 0
@@ -958,19 +946,6 @@ template <typename DAG, typename CRTP, typename Tag>
 std::pair<NodeId, bool> FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(
     NodeId lca, NodeId src, NodeId dst) const {
   auto& dag = static_cast<const CRTP&>(*this);
-  /* CONDENSING CODE:
-   * we can just pass src and dst without putting them into vectors.
-  */
-  std::vector<NodeId> srcs{src};
-  std::vector<NodeId> dsts{dst};
-  return ApplyMoveImpl(dag, lca, srcs, dsts);
-}
-
-/* CONDENSING CODE: can remove this function altogether */
-template <typename DAG, typename CRTP, typename Tag>
-std::pair<NodeId, bool> FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(
-    NodeId lca, std::vector<NodeId> src, std::vector<NodeId> dst) const {
-  auto& dag = static_cast<const CRTP&>(*this);
   return ApplyMoveImpl(dag, lca, src, dst);
 }
 
@@ -981,10 +956,9 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   auto& self = GetFeatureStorage(this);
   Assert(not self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
-  /* CONDENSING CODE: we won't need to uncondense src and dst before calling ApplyMove */
-  auto [new_node, has_unifurcation_after_move] = dag.ApplyMove(
-      dag.GetNodeFromMAT(move.LCA), dag.GetUncondensedNodeFromMAT(move.src),
-      dag.GetUncondensedNodeFromMAT(move.dst));
+  auto [new_node, has_unifurcation_after_move] =
+      dag.ApplyMove(dag.GetNodeFromMAT(move.LCA), dag.GetNodeFromMAT(move.src),
+                    dag.GetNodeFromMAT(move.dst));
 
   if (new_node.value == NoId) {
     return false;

@@ -15,12 +15,6 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
     Profitable_Moves& move, int best_score_change,
     std::vector<Node_With_Major_Allele_Set_Change>&
         nodes_with_major_allele_set_change) {
-  std::cout << "** BatchingCallback::operator(move, score, nodes)...\n";
-  // std::cout << "**** move: " << move.src->node_id << "->" << move.dst->node_id << ", ";
-  // std::cout << " best_score_change: " << best_score_change << ", ";
-  // // std::cout << "node_with_change: " << node_with_major_allele_set_change << std::endl;
-  // std::cout << std::endl;
-
   Assert(move.src != nullptr);
   Assert(move.dst != nullptr);
 
@@ -52,12 +46,13 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
        &nodes_with_major_allele_set_change](auto& bucket) -> bool {
         std::shared_lock lock{mat_mtx_};
 
-        /* CONDENSING CODE: probably want to change this to an uncondensed storage, once it's implemented*/
+        /* CONDENSING CODE: probably want to change this to an uncondensed storage, once
+         * it's implemented*/
         // TODO old
-        // Assert(sample_mat_storage_ != nullptr);
-        // bucket.push_back(MoveStorage{
-        //     std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
-        //     nullptr});
+        Assert(sample_mat_storage_ != nullptr);
+        bucket.push_back(MoveStorage{
+            std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
+            nullptr});
         // TODO new
         // Assert(sample_matview_storage_ != nullptr);
         // bucket.push_back(MoveStorage{
@@ -117,7 +112,6 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
-  std::cout << "** BatchingCallback::operator(tree)..." << std::endl;
   std::cout << "Larch-Usher callback Applying " << applied_moves_count_.load() << "\n"
             << std::flush;
   applied_moves_count_.store(0);
@@ -166,7 +160,6 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
 
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
-  std::cout << "** OnReassignStates..." << std::endl;
   applied_moves_count_.store(0);
   Assert(reassigned_states_storage_);
   auto reassigned_states = reassigned_states_storage_->View();
@@ -190,19 +183,16 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
 
 template <typename CRTP, typename SampleDAG>
 Merge& BatchingCallback<CRTP, SampleDAG>::GetMerge() {
-  std::cout << "** GetMerge..." << std::endl;
   return merge_;
 }
 
 template <typename CRTP, typename SampleDAG>
 size_t BatchingCallback<CRTP, SampleDAG>::GetAppliedMovesCount() {
-  std::cout << "** GetAppliedMovesCount..." << std::endl;
   return applied_moves_count_.load();
 }
 
 template <typename CRTP, typename SampleDAG>
 auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
-  std::cout << "** GetMappedStorage..." << std::endl;
   Assert(reassigned_states_storage_);
   return reassigned_states_storage_->View();
 }
@@ -211,7 +201,6 @@ auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
                                                          std::string_view ref_seq) {
-  std::cout << "** Create: CreateMATStorage..." << std::endl;
   sample_mat_storage_ =
       std::make_unique<MATStorage>(AddMATConversion(Storage::EmptyDefault()));
   auto view = sample_mat_storage_->View();
@@ -224,8 +213,9 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
 // TODO new
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage(MAT::Tree& tree,
-                                                         std::string_view ref_seq) {
-  std::cout << "** Create: CreateMATViewStorage..." << std::endl;
+                                                             std::string_view ref_seq) {
+  std::ignore = tree;
+  std::ignore = ref_seq;
   sample_matview_storage_ = std::make_unique<MATViewStorage>();
   sample_matview_storage_->View().SetMAT(std::addressof(tree));
   auto storage = NewStorage::Consume(std::move(*sample_matview_storage_));
