@@ -2,22 +2,25 @@
 
 template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag)
-    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {
-    }
+    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {}
 template <typename CRTP, typename SampleDAG>
 BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag,
                                                     bool collapse_empty_fragment_edges)
     : merge_{merge},
       sample_dag_{sample_dag},
-      collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {
-      }
+      collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {}
 
 template <typename CRTP, typename SampleDAG>
 bool BatchingCallback<CRTP, SampleDAG>::operator()(
     Profitable_Moves& move, int best_score_change,
     std::vector<Node_With_Major_Allele_Set_Change>&
         nodes_with_major_allele_set_change) {
-  std::cout << "** BatchingCallback::operator(move, best_score_change, nodes_with_change)..." << std::endl;
+  std::cout << "** BatchingCallback::operator(move, score, nodes)...\n";
+  // std::cout << "**** move: " << move.src->node_id << "->" << move.dst->node_id << ", ";
+  // std::cout << " best_score_change: " << best_score_change << ", ";
+  // // std::cout << "node_with_change: " << node_with_major_allele_set_change << std::endl;
+  // std::cout << std::endl;
+
   Assert(move.src != nullptr);
   Assert(move.dst != nullptr);
 
@@ -49,14 +52,13 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
        &nodes_with_major_allele_set_change](auto& bucket) -> bool {
         std::shared_lock lock{mat_mtx_};
 
-        // TODO old method for adding SPRs
-        Assert(sample_mat_storage_ != nullptr);
-
-/* CONDENSING CODE: probably want to change this to an uncondensed storage, once it's implemented*/
-        bucket.push_back(MoveStorage{
-            std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
-            nullptr});
-        // TODO new method for adding SPRs
+        /* CONDENSING CODE: probably want to change this to an uncondensed storage, once it's implemented*/
+        // TODO old
+        // Assert(sample_mat_storage_ != nullptr);
+        // bucket.push_back(MoveStorage{
+        //     std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
+        //     nullptr});
+        // TODO new
         // Assert(sample_matview_storage_ != nullptr);
         // bucket.push_back(MoveStorage{
         //     std::make_unique<NewSPRType>(AddSPRStorage(sample_matview_storage_->View())),
@@ -120,10 +122,10 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
             << std::flush;
   applied_moves_count_.store(0);
 
-  // TODO old method for reassigned states
+  // TODO old
   reassigned_states_storage_ = std::make_unique<ReassignedStatesStorage>(
       AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
-  // TODO new method for reassigned states
+  // TODO new
   // new_reassigned_states_storage_ = std::make_unique<NewReassignedStatesStorage>(
   //     AddMappedNodes(AddMATConversion(NewStorage::EmptyDefault())));
 
@@ -205,7 +207,7 @@ auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
   return reassigned_states_storage_->View();
 }
 
-// TODO old method for creating storage
+// TODO old
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
                                                          std::string_view ref_seq) {
@@ -219,7 +221,7 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
   view.SampleIdsFromCG();
 }
 
-// TODO new method for creating storage
+// TODO new
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage(MAT::Tree& tree,
                                                          std::string_view ref_seq) {

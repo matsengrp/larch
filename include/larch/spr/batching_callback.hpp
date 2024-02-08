@@ -39,8 +39,8 @@ class BatchingCallback : public Move_Found_Callback {
                                   Extend::DAG<ReferenceSequence>>;
   using NewSPRType =
       decltype(AddSPRStorage(NewStorage::EmptyDefault()).View());
-  using NewReassignedStatesStorage =
-      decltype(AddMappedNodes(AddMATConversion(NewStorage::EmptyDefault())));
+  // using NewReassignedStatesStorage =
+  //     decltype(AddMappedNodes(AddMATConversion(NewStorage::EmptyDefault())));
   // using NewFragmentType = FragmentStorage<decltype(std::declval<NewSPRType>().View())>;
 
   bool operator()(Profitable_Moves& move, int best_score_change,
@@ -77,9 +77,9 @@ class BatchingCallback : public Move_Found_Callback {
   std::unique_ptr<MATStorage> sample_mat_storage_;
 
   // TODO add new MATView
-  std::unique_ptr<NewReassignedStatesStorage> new_reassigned_states_storage_ =
-    std::make_unique<NewReassignedStatesStorage>(
-        AddMappedNodes(AddMATConversion(NewStorage::EmptyDefault())));
+  // std::unique_ptr<NewReassignedStatesStorage> new_reassigned_states_storage_ =
+  //   std::make_unique<NewReassignedStatesStorage>(
+  //       AddMappedNodes(AddMATConversion(NewStorage::EmptyDefault())));
   std::unique_ptr<MATViewStorage> sample_matview_storage_;
 
   std::atomic<size_t> applied_moves_count_;
