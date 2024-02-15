@@ -7,17 +7,7 @@
 
 enum class RFDistanceType { Min, MinSum, Max, MaxSum };
 
-[[maybe_unused]] static auto BruteForceRFDistance(
-    const Merge& merge1, const Merge& merge2,
-    RFDistanceType rf_dist_type = RFDistanceType::MinSum) {
-  std::ignore = merge1;
-  std::ignore = merge2;
-  std::ignore = rf_dist_type;
-  ArbitraryInt result = 0;
-  return result;
-}
-
-[[maybe_unused]] static auto GetRFDistance(
+[[maybe_unused]] static auto get_rf_distance(
     const Merge& comp_merge1, const Merge& ref_merge2,
     RFDistanceType rf_dist_type = RFDistanceType::MinSum, bool print_info = true) {
   // comp_merge1 is the DAG we compute the weights for (summing distances to ref_merge2)
@@ -82,7 +72,7 @@ static void test_zero_rf_distance() {
   auto view = storage.View();
   Merge merge{view.GetReferenceSequence()};
   merge.AddDAG(view);
-  Assert(GetRFDistance(merge, merge) == 0);
+  Assert(get_rf_distance(merge, merge) == 0);
 }
 
 static void test_rf_on_two_identical_topologies() {
@@ -106,47 +96,18 @@ static void test_rf_on_two_identical_topologies() {
   merge2.AddDAGs(std::vector{dag1});
   merge2.AddDAGs(std::vector{dag2});
 
-  Assert(GetRFDistance(merge1, merge2) == 0);
-}
-
-static MADAGStorage<> MakeNonintersectingSampleDAG() {
-  MADAGStorage<> input_storage = MADAGStorage<>::EmptyDefault();
-  auto dag = input_storage.View();
-  dag.SetReferenceSequence("GAA");
-  dag.InitializeNodes(11);
-  dag.AddEdge({0}, {0}, {10}, {0});
-  dag.AddEdge({1}, {8}, {1}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
-  dag.AddEdge({2}, {8}, {2}, {1}).GetMutableEdgeMutations()[{2}] = {'A', 'C'};
-  dag.AddEdge({3}, {10}, {3}, {0}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
-  dag.AddEdge({4}, {7}, {4}, {0}).GetMutableEdgeMutations()[{2}] = {'A', 'G'};
-  dag.AddEdge({5}, {7}, {5}, {1}).GetMutableEdgeMutations()[{2}] = {'A', 'C'};
-  dag.AddEdge({6}, {9}, {6}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
-  dag.AddEdge({7}, {9}, {7}, {1});
-  dag.AddEdge({8}, {10}, {8}, {1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
-  dag.AddEdge({9}, {10}, {9}, {2}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
-  dag.BuildConnections();
-  dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{2}] = {'A', 'C'};
-  dag.Get(EdgeId{6}).GetMutableEdgeMutations()[{2}] = {'A', 'T'};
-  dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{3}] = {'A', 'C'};
-  dag.Get(EdgeId{2}).GetMutableEdgeMutations()[{3}] = {'A', 'G'};
-  dag.Get(EdgeId{3}).GetMutableEdgeMutations()[{3}] = {'A', 'T'};
-  dag.Get(EdgeId{4}).GetMutableEdgeMutations()[{3}] = {'A', 'G'};
-  dag.Get(EdgeId{5}).GetMutableEdgeMutations()[{3}] = {'A', 'C'};
-  dag.Get(EdgeId{6}).GetMutableEdgeMutations()[{3}] = {'A', 'T'};
-  dag.RecomputeCompactGenomes(true);
-  dag.SampleIdsFromCG();
-  return input_storage;
+  Assert(get_rf_distance(merge1, merge2) == 0);
 }
 
 static void test_rf_two_distinct_topologies_single_merge() {
   auto dag1_storage = make_sample_dag();
-  auto dag2_storage = MakeNonintersectingSampleDAG();
+  auto dag2_storage = make_nonintersecting_sample_dag();
   auto dag1 = dag1_storage.View();
   auto dag2 = dag2_storage.View();
 
   Merge merge(dag1.GetReferenceSequence());
   merge.AddDAGs(std::vector{dag1, dag2});
-  auto dist = GetRFDistance(merge, merge);
+  auto dist = get_rf_distance(merge, merge);
   auto truedist = (dag1.GetEdgesCount() + dag2.GetEdgesCount() -
                    dag1.GetLeafs().size() - dag2.GetLeafs().size() - 2);
   if (dist != truedist) {
@@ -158,7 +119,7 @@ static void test_rf_two_distinct_topologies_single_merge() {
 
 static void test_rf_distance_hand_computed_example() {
   auto dag1_storage = make_sample_dag();
-  auto dag2_storage = MakeNonintersectingSampleDAG();
+  auto dag2_storage = make_nonintersecting_sample_dag();
   auto dag1 = dag1_storage.View();
   auto dag2 = dag2_storage.View();
 
@@ -168,17 +129,16 @@ static void test_rf_distance_hand_computed_example() {
   merge2.AddDAGs(std::vector{dag1, dag2});
   auto true_dist = dag1.GetEdgesCount() + dag2.GetEdgesCount() -
                    dag1.GetLeafs().size() - dag2.GetLeafs().size() - 2;
-  Assert(GetRFDistance(merge1, merge2) == true_dist);
+  Assert(get_rf_distance(merge1, merge2) == true_dist);
 
   Merge merge(dag1.GetReferenceSequence());
   merge.AddDAGs(std::vector{dag1, dag2});
-  Assert(GetRFDistance(merge1, merge2) == GetRFDistance(merge, merge));
+  Assert(get_rf_distance(merge1, merge2) == get_rf_distance(merge, merge));
 }
 
 static void test_rf_distance_different_weight_ops() {
-  auto dag0_storage = make_base_sample_dag();
   auto dag1_storage = make_sample_dag();
-  auto dag2_storage = MakeNonintersectingSampleDAG();
+  auto dag2_storage = make_nonintersecting_sample_dag();
   auto dag3_storage = make_sample_dag_with_one_unique_node();
   auto dag1 = dag1_storage.View();
   auto dag2 = dag2_storage.View();
@@ -245,17 +205,17 @@ static void test_rf_distance_different_weight_ops() {
   for (auto rf_dist_type : {RFDistanceType::Min, RFDistanceType::Max,
                             RFDistanceType::MinSum, RFDistanceType::MaxSum}) {
     bool do_print = true;
-    dist = GetRFDistance(merge1, merge2, rf_dist_type, do_print);
+    dist = get_rf_distance(merge1, merge2, rf_dist_type, do_print);
     Assert(dist == compute_true_dist({1}, {2}, rf_dist_type, do_print));
-    dist = GetRFDistance(merge2, merge1, rf_dist_type, do_print);
+    dist = get_rf_distance(merge2, merge1, rf_dist_type, do_print);
     Assert(dist == compute_true_dist({2}, {1}, rf_dist_type, do_print));
-    dist = GetRFDistance(merge1, merge3, rf_dist_type, do_print);
+    dist = get_rf_distance(merge1, merge3, rf_dist_type, do_print);
     Assert(dist == compute_true_dist({1}, {3}, rf_dist_type, do_print));
-    dist = GetRFDistance(merge3, merge1, rf_dist_type, do_print);
+    dist = get_rf_distance(merge3, merge1, rf_dist_type, do_print);
     Assert(dist == compute_true_dist({3}, {1}, rf_dist_type, do_print));
-    dist = GetRFDistance(merge2, merge3, rf_dist_type, do_print);
+    dist = get_rf_distance(merge2, merge3, rf_dist_type, do_print);
     Assert(dist == compute_true_dist({2}, {3}, rf_dist_type, do_print));
-    dist = GetRFDistance(merge3, merge2, rf_dist_type, do_print);
+    dist = get_rf_distance(merge3, merge2, rf_dist_type, do_print);
     Assert(dist == compute_true_dist({3}, {2}, rf_dist_type, do_print));
   }
 
@@ -264,58 +224,58 @@ static void test_rf_distance_different_weight_ops() {
   {
     bool do_print = true;
     // MADAG containing itself.
-    dist = GetRFDistance(merge1_2, merge1, RFDistanceType::Min, do_print);
+    dist = get_rf_distance(merge1_2, merge1, RFDistanceType::Min, do_print);
     Assert(dist == compute_true_dist({1, 2}, {1}, RFDistanceType::Min, do_print));
-    dist = GetRFDistance(merge1_2, merge1, RFDistanceType::Max, do_print);
+    dist = get_rf_distance(merge1_2, merge1, RFDistanceType::Max, do_print);
     Assert(dist == compute_true_dist({1, 2}, {1}, RFDistanceType::Max, do_print));
-    dist = GetRFDistance(merge1_2, merge1, RFDistanceType::MinSum, do_print);
+    dist = get_rf_distance(merge1_2, merge1, RFDistanceType::MinSum, do_print);
     Assert(dist == compute_true_dist({1, 2}, {1}, RFDistanceType::MinSum, do_print));
-    dist = GetRFDistance(merge1_2, merge1, RFDistanceType::MaxSum, do_print);
+    dist = get_rf_distance(merge1_2, merge1, RFDistanceType::MaxSum, do_print);
     Assert(dist == compute_true_dist({1, 2}, {1}, RFDistanceType::MaxSum, do_print));
 
     // MADAG containing two differing MATs.
-    dist = GetRFDistance(merge2_3, merge1, RFDistanceType::Min, do_print);
+    dist = get_rf_distance(merge2_3, merge1, RFDistanceType::Min, do_print);
     Assert(dist == compute_true_dist({2, 3}, {1}, RFDistanceType::Min, do_print));
-    dist = GetRFDistance(merge2_3, merge1, RFDistanceType::Max, do_print);
+    dist = get_rf_distance(merge2_3, merge1, RFDistanceType::Max, do_print);
     Assert(dist == compute_true_dist({2, 3}, {1}, RFDistanceType::Max, do_print));
-    dist = GetRFDistance(merge2_3, merge1, RFDistanceType::MinSum, do_print);
+    dist = get_rf_distance(merge2_3, merge1, RFDistanceType::MinSum, do_print);
     Assert(dist == compute_true_dist({2, 3}, {1}, RFDistanceType::MinSum, do_print));
-    dist = GetRFDistance(merge2_3, merge1, RFDistanceType::MaxSum, do_print);
+    dist = get_rf_distance(merge2_3, merge1, RFDistanceType::MaxSum, do_print);
     Assert(dist == compute_true_dist({2, 3}, {1}, RFDistanceType::MaxSum, do_print));
   }
 
   // Compute RF-Distance of MATs to three-MAT MADAGs.
   {
     bool do_print = true;
-    dist = GetRFDistance(merge1_2_3, merge1, RFDistanceType::Min, do_print);
+    dist = get_rf_distance(merge1_2_3, merge1, RFDistanceType::Min, do_print);
     Assert(dist == compute_true_dist({1, 2, 3}, {1}, RFDistanceType::Min, do_print));
-    dist = GetRFDistance(merge1_2_3, merge1, RFDistanceType::Max, do_print);
+    dist = get_rf_distance(merge1_2_3, merge1, RFDistanceType::Max, do_print);
     Assert(dist == compute_true_dist({1, 2, 3}, {1}, RFDistanceType::Max, do_print));
-    dist = GetRFDistance(merge1_2_3, merge1, RFDistanceType::MinSum, do_print);
+    dist = get_rf_distance(merge1_2_3, merge1, RFDistanceType::MinSum, do_print);
     Assert(dist == compute_true_dist({1, 2, 3}, {1}, RFDistanceType::MinSum, do_print));
-    dist = GetRFDistance(merge1_2_3, merge1, RFDistanceType::MaxSum, do_print);
+    dist = get_rf_distance(merge1_2_3, merge1, RFDistanceType::MaxSum, do_print);
     Assert(dist == compute_true_dist({1, 2, 3}, {1}, RFDistanceType::MaxSum, do_print));
   }
 
   // Compute sum RF-Distances over MADAGs.
   {
     bool do_print = true;
-    dist = GetRFDistance(merge1_2_3, merge1_2, RFDistanceType::MinSum, do_print);
+    dist = get_rf_distance(merge1_2_3, merge1_2, RFDistanceType::MinSum, do_print);
     Assert(dist ==
            compute_true_dist({1, 2, 3}, {1, 2}, RFDistanceType::MinSum, do_print));
-    dist = GetRFDistance(merge1_2_3, merge1_2, RFDistanceType::MaxSum, do_print);
+    dist = get_rf_distance(merge1_2_3, merge1_2, RFDistanceType::MaxSum, do_print);
     Assert(dist ==
            compute_true_dist({1, 2, 3}, {1, 2}, RFDistanceType::MaxSum, do_print));
-    dist = GetRFDistance(merge1_2, merge1_2_3, RFDistanceType::MinSum, do_print);
+    dist = get_rf_distance(merge1_2, merge1_2_3, RFDistanceType::MinSum, do_print);
     Assert(dist ==
            compute_true_dist({1, 2}, {1, 2, 3}, RFDistanceType::MinSum, do_print));
-    dist = GetRFDistance(merge1_2, merge1_2_3, RFDistanceType::MaxSum, do_print);
+    dist = get_rf_distance(merge1_2, merge1_2_3, RFDistanceType::MaxSum, do_print);
     Assert(dist ==
            compute_true_dist({1, 2}, {1, 2, 3}, RFDistanceType::MaxSum, do_print));
-    dist = GetRFDistance(merge1_2_3, merge1_2_3, RFDistanceType::MinSum, do_print);
+    dist = get_rf_distance(merge1_2_3, merge1_2_3, RFDistanceType::MinSum, do_print);
     Assert(dist ==
            compute_true_dist({1, 2, 3}, {1, 2, 3}, RFDistanceType::MinSum, do_print));
-    dist = GetRFDistance(merge1_2_3, merge1_2_3, RFDistanceType::MaxSum, do_print);
+    dist = get_rf_distance(merge1_2_3, merge1_2_3, RFDistanceType::MaxSum, do_print);
     Assert(dist ==
            compute_true_dist({1, 2, 3}, {1, 2, 3}, RFDistanceType::MaxSum, do_print));
   }

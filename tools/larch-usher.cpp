@@ -54,8 +54,8 @@
                "Default: 1\n";
   std::cout << "  --sample-any-tree    Sample any tree for optimization, rather than "
                "requiring the sampled tree to maximize parsimony.\n";
-  std::cout << "  --sample-method    Select method for optimization "
-               "[] \n";
+  std::cout << "  --sample-method      Select method for optimization "
+               "[parsimony, random, rf-minsum, rf-maxsum]\n";
   std::cout << "  --callback-option    Callback configuration choice(default merge all "
                "profitable moves)\n";
   std::cout << "  --trim   Trim optimized dag before writing to protobuf\n";
