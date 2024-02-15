@@ -611,7 +611,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       move_coeff_nodes = ParseNumber(*params.begin());
     } else if (name == "--sample-method") {
       if (params.empty()) {
-        std::cerr << "parsimony score move coefficient not specified\n";
+        std::cerr << "sample-method not specified [parsimony, random, rf-minsum, "
+                     "rf-maxsum]\n";
         Fail();
       }
       auto arg = *params.begin();
