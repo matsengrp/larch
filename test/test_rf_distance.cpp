@@ -3,25 +3,77 @@
 #include "test_common.hpp"
 #include "sample_dag.hpp"
 #include "larch/subtree/subtree_weight.hpp"
+#include "larch/dag_loader.hpp"
 
-static auto GetRFDistance(const Merge& merge1, const Merge& merge2) {
-  // merge1 is the DAG we compute the weights for (summing distances to merge2)
-  auto dag1 = merge1.GetResult();
-  std::cout << "dag1 (compute dag) address: " << &dag1.GetStorage() << "\n";
-  std::cout << "dag2 (reference dag) address: " << &merge2.GetResult().GetStorage()
-            << "\n";
-  SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag1)>> count{dag1};
-  // merge2 is the reference DAG
-  SumRFDistance weight_ops{merge2, merge1};
-  ArbitraryInt shift_sum = weight_ops.GetOps().GetShiftSum();
-  // make sure shift sum is correct
-  if (merge2.GetResult().IsTree()) {
-    Assert(shift_sum == merge2.GetResult().GetNodesCount() - 1);
+enum class RFDistanceType { Min, MinSum, Max, MaxSum };
+
+[[maybe_unused]] static auto BruteForceRFDistance(
+    const Merge& merge1, const Merge& merge2,
+    RFDistanceType rf_dist_type = RFDistanceType::MinSum) {
+  std::ignore = merge1;
+  std::ignore = merge2;
+  std::ignore = rf_dist_type;
+  ArbitraryInt result = 0;
+  return result;
+}
+
+[[maybe_unused]] static auto GetRFDistance(
+    const Merge& comp_merge1, const Merge& ref_merge2,
+    RFDistanceType rf_dist_type = RFDistanceType::MinSum, bool print_info = true) {
+  // comp_merge1 is the DAG we compute the weights for (summing distances to ref_merge2)
+  // ref_merge2 is the reference DAG.
+  auto dag1 = comp_merge1.GetResult();
+  if (print_info) {
+    std::cout << "dag1 (compute dag) address: " << &dag1.GetStorage() << "\n";
+    std::cout << "dag2 (reference dag) address: "
+              << &ref_merge2.GetResult().GetStorage() << "\n";
   }
-  std::cout << "shift_sum: " << shift_sum << "\n";
-  auto result =
-      count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;
-  std::cout << "rf_distance: " << result << "\n";
+  ArbitraryInt shift_sum, result;
+
+  // compute min rf_distance
+  if (rf_dist_type == RFDistanceType::Min) {
+    SubtreeWeight<RFDistance, MergeDAG> count{dag1};
+    RFDistance weight_ops{ref_merge2, comp_merge1};
+    shift_sum = weight_ops.GetOps().GetShiftSum();
+    result =
+        count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;
+  }
+  // compute minsum rf_distance
+  else if (rf_dist_type == RFDistanceType::MinSum) {
+    SubtreeWeight<SumRFDistance, MergeDAG> count{dag1};
+    SumRFDistance weight_ops{ref_merge2, comp_merge1};
+    shift_sum = weight_ops.GetOps().GetShiftSum();
+    result =
+        count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;
+  }
+  // compute max rf_distance
+  else if (rf_dist_type == RFDistanceType::Max) {
+    SubtreeWeight<MaxRFDistance, MergeDAG> count{dag1};
+    MaxRFDistance weight_ops{ref_merge2, comp_merge1};
+    shift_sum = weight_ops.GetOps().GetShiftSum();
+    result =
+        count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;
+  }
+  // compute maxsum rf_distance
+  else if (rf_dist_type == RFDistanceType::MaxSum) {
+    SubtreeWeight<MaxSumRFDistance, MergeDAG> count{dag1};
+    MaxSumRFDistance weight_ops{ref_merge2, comp_merge1};
+    shift_sum = weight_ops.GetOps().GetShiftSum();
+    result =
+        count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;
+  } else {
+    std::cerr << "ERROR: Invalid RFDistanceType" << std::endl;
+    Assert(false);
+  }
+
+  // make sure shift sum is correct
+  if (ref_merge2.GetResult().IsTree()) {
+    Assert(shift_sum == ref_merge2.GetResult().GetNodesCount() - 1);
+  }
+  if (print_info) {
+    std::cout << "shift_sum: " << shift_sum << "\n";
+    std::cout << "rf_distance: " << result << "\n";
+  }
   return result;
 }
 
@@ -113,15 +165,160 @@ static void test_rf_distance_hand_computed_example() {
   Merge merge1(dag1.GetReferenceSequence());
   merge1.AddDAGs(std::vector{dag1});
   Merge merge2(dag1.GetReferenceSequence());
-  merge2.AddDAGs(std::vector{dag1});
-  merge2.AddDAGs(std::vector{dag2});
-  Assert(GetRFDistance(merge1, merge2) ==
-         (dag1.GetEdgesCount() + dag2.GetEdgesCount() - dag1.GetLeafs().size() -
-          dag2.GetLeafs().size() - 2));
+  merge2.AddDAGs(std::vector{dag1, dag2});
+  auto true_dist = dag1.GetEdgesCount() + dag2.GetEdgesCount() -
+                   dag1.GetLeafs().size() - dag2.GetLeafs().size() - 2;
+  Assert(GetRFDistance(merge1, merge2) == true_dist);
 
   Merge merge(dag1.GetReferenceSequence());
   merge.AddDAGs(std::vector{dag1, dag2});
   Assert(GetRFDistance(merge1, merge2) == GetRFDistance(merge, merge));
+}
+
+static void test_rf_distance_different_weight_ops() {
+  auto dag0_storage = make_base_sample_dag();
+  auto dag1_storage = make_sample_dag();
+  auto dag2_storage = MakeNonintersectingSampleDAG();
+  auto dag3_storage = make_sample_dag_with_one_unique_node();
+  auto dag1 = dag1_storage.View();
+  auto dag2 = dag2_storage.View();
+  auto dag3 = dag3_storage.View();
+
+  Merge merge1(dag1.GetReferenceSequence());
+  merge1.AddDAGs(std::vector{dag1});
+  Merge merge2(dag2.GetReferenceSequence());
+  merge2.AddDAGs(std::vector{dag2});
+  Merge merge3(dag1.GetReferenceSequence());
+  merge3.AddDAGs(std::vector{dag3});
+
+  Merge merge1_2(dag1.GetReferenceSequence());
+  merge1_2.AddDAGs(std::vector{dag1, dag2});
+  Merge merge1_3(dag1.GetReferenceSequence());
+  merge1_3.AddDAGs(std::vector{dag1, dag3});
+  Merge merge2_3(dag1.GetReferenceSequence());
+  merge2_3.AddDAGs(std::vector{dag2, dag3});
+  Merge merge1_2_3(dag1.GetReferenceSequence());
+  merge1_2_3.AddDAGs(std::vector{dag1, dag2, dag3});
+
+  // Hand-computed RF-distances for single MATs.
+  std::map<std::pair<int, int>, ArbitraryInt> true_dist_map;
+  true_dist_map[{1, 1}] = true_dist_map[{2, 2}] = true_dist_map[{3, 3}] = 0;
+  true_dist_map[{1, 2}] = true_dist_map[{2, 1}] = 6;
+  true_dist_map[{1, 3}] = true_dist_map[{3, 1}] = 1;
+  true_dist_map[{2, 3}] = true_dist_map[{3, 2}] = 7;
+
+  // Use hand-computed distances to find rf-distance types on merged MADAGs.
+  auto compute_true_dist = [&](std::vector<int> compute_ids, std::vector<int> ref_ids,
+                               RFDistanceType rf_dist_type, bool do_print = false) {
+    ArbitraryInt total = 0;
+    std::vector<ArbitraryInt> vec;
+
+    for (auto compute_id : compute_ids) {
+      std::vector<ArbitraryInt> subvec;
+      for (auto ref_id : ref_ids) {
+        subvec.push_back(true_dist_map[{compute_id, ref_id}]);
+      }
+      if (rf_dist_type == RFDistanceType::Min) {
+        vec.push_back(*std::min_element(subvec.begin(), subvec.end()));
+      } else if (rf_dist_type == RFDistanceType::Max) {
+        vec.push_back(*std::max_element(subvec.begin(), subvec.end()));
+      } else {
+        vec.push_back(std::accumulate(subvec.begin(), subvec.end(), ArbitraryInt{0}));
+      }
+    }
+
+    if (rf_dist_type == RFDistanceType::Min or rf_dist_type == RFDistanceType::MinSum) {
+      total = *std::min_element(vec.begin(), vec.end());
+    } else {
+      total = *std::max_element(vec.begin(), vec.end());
+    }
+
+    if (do_print) {
+      std::cout << "true_rf_distance: " << total << std::endl;
+    }
+    return total;
+  };
+
+  // Compute RF-Distance of single MATs (which will have the same result for all
+  // methods).
+  ArbitraryInt dist;
+  for (auto rf_dist_type : {RFDistanceType::Min, RFDistanceType::Max,
+                            RFDistanceType::MinSum, RFDistanceType::MaxSum}) {
+    bool do_print = true;
+    dist = GetRFDistance(merge1, merge2, rf_dist_type, do_print);
+    Assert(dist == compute_true_dist({1}, {2}, rf_dist_type, do_print));
+    dist = GetRFDistance(merge2, merge1, rf_dist_type, do_print);
+    Assert(dist == compute_true_dist({2}, {1}, rf_dist_type, do_print));
+    dist = GetRFDistance(merge1, merge3, rf_dist_type, do_print);
+    Assert(dist == compute_true_dist({1}, {3}, rf_dist_type, do_print));
+    dist = GetRFDistance(merge3, merge1, rf_dist_type, do_print);
+    Assert(dist == compute_true_dist({3}, {1}, rf_dist_type, do_print));
+    dist = GetRFDistance(merge2, merge3, rf_dist_type, do_print);
+    Assert(dist == compute_true_dist({2}, {3}, rf_dist_type, do_print));
+    dist = GetRFDistance(merge3, merge2, rf_dist_type, do_print);
+    Assert(dist == compute_true_dist({3}, {2}, rf_dist_type, do_print));
+  }
+
+  // Compute RF-Distance of MATs to two-MAT MADAGs (sum methods will have the same
+  // result as non-sum).
+  {
+    bool do_print = true;
+    // MADAG containing itself.
+    dist = GetRFDistance(merge1_2, merge1, RFDistanceType::Min, do_print);
+    Assert(dist == compute_true_dist({1, 2}, {1}, RFDistanceType::Min, do_print));
+    dist = GetRFDistance(merge1_2, merge1, RFDistanceType::Max, do_print);
+    Assert(dist == compute_true_dist({1, 2}, {1}, RFDistanceType::Max, do_print));
+    dist = GetRFDistance(merge1_2, merge1, RFDistanceType::MinSum, do_print);
+    Assert(dist == compute_true_dist({1, 2}, {1}, RFDistanceType::MinSum, do_print));
+    dist = GetRFDistance(merge1_2, merge1, RFDistanceType::MaxSum, do_print);
+    Assert(dist == compute_true_dist({1, 2}, {1}, RFDistanceType::MaxSum, do_print));
+
+    // MADAG containing two differing MATs.
+    dist = GetRFDistance(merge2_3, merge1, RFDistanceType::Min, do_print);
+    Assert(dist == compute_true_dist({2, 3}, {1}, RFDistanceType::Min, do_print));
+    dist = GetRFDistance(merge2_3, merge1, RFDistanceType::Max, do_print);
+    Assert(dist == compute_true_dist({2, 3}, {1}, RFDistanceType::Max, do_print));
+    dist = GetRFDistance(merge2_3, merge1, RFDistanceType::MinSum, do_print);
+    Assert(dist == compute_true_dist({2, 3}, {1}, RFDistanceType::MinSum, do_print));
+    dist = GetRFDistance(merge2_3, merge1, RFDistanceType::MaxSum, do_print);
+    Assert(dist == compute_true_dist({2, 3}, {1}, RFDistanceType::MaxSum, do_print));
+  }
+
+  // Compute RF-Distance of MATs to three-MAT MADAGs.
+  {
+    bool do_print = true;
+    dist = GetRFDistance(merge1_2_3, merge1, RFDistanceType::Min, do_print);
+    Assert(dist == compute_true_dist({1, 2, 3}, {1}, RFDistanceType::Min, do_print));
+    dist = GetRFDistance(merge1_2_3, merge1, RFDistanceType::Max, do_print);
+    Assert(dist == compute_true_dist({1, 2, 3}, {1}, RFDistanceType::Max, do_print));
+    dist = GetRFDistance(merge1_2_3, merge1, RFDistanceType::MinSum, do_print);
+    Assert(dist == compute_true_dist({1, 2, 3}, {1}, RFDistanceType::MinSum, do_print));
+    dist = GetRFDistance(merge1_2_3, merge1, RFDistanceType::MaxSum, do_print);
+    Assert(dist == compute_true_dist({1, 2, 3}, {1}, RFDistanceType::MaxSum, do_print));
+  }
+
+  // Compute sum RF-Distances over MADAGs.
+  {
+    bool do_print = true;
+    dist = GetRFDistance(merge1_2_3, merge1_2, RFDistanceType::MinSum, do_print);
+    Assert(dist ==
+           compute_true_dist({1, 2, 3}, {1, 2}, RFDistanceType::MinSum, do_print));
+    dist = GetRFDistance(merge1_2_3, merge1_2, RFDistanceType::MaxSum, do_print);
+    Assert(dist ==
+           compute_true_dist({1, 2, 3}, {1, 2}, RFDistanceType::MaxSum, do_print));
+    dist = GetRFDistance(merge1_2, merge1_2_3, RFDistanceType::MinSum, do_print);
+    Assert(dist ==
+           compute_true_dist({1, 2}, {1, 2, 3}, RFDistanceType::MinSum, do_print));
+    dist = GetRFDistance(merge1_2, merge1_2_3, RFDistanceType::MaxSum, do_print);
+    Assert(dist ==
+           compute_true_dist({1, 2}, {1, 2, 3}, RFDistanceType::MaxSum, do_print));
+    dist = GetRFDistance(merge1_2_3, merge1_2_3, RFDistanceType::MinSum, do_print);
+    Assert(dist ==
+           compute_true_dist({1, 2, 3}, {1, 2, 3}, RFDistanceType::MinSum, do_print));
+    dist = GetRFDistance(merge1_2_3, merge1_2_3, RFDistanceType::MaxSum, do_print);
+    Assert(dist ==
+           compute_true_dist({1, 2, 3}, {1, 2, 3}, RFDistanceType::MaxSum, do_print));
+  }
 }
 
 [[maybe_unused]] static const auto test_added0 =
@@ -137,3 +334,7 @@ static void test_rf_distance_hand_computed_example() {
 [[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_rf_two_distinct_topologies_single_merge(); },
               "RF distance: distinct topologies, one merge"});
+
+[[maybe_unused]] static const auto test_added4 =
+    add_test({[] { test_rf_distance_different_weight_ops(); },
+              "RF distance: using different weight ops (Min, MinSum, Max, MaxSum)"});
