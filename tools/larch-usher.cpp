@@ -533,6 +533,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string vcf_path;
   std::string callback_config = "best-moves";
   bool write_intermediate_pb = true;
+
   enum class SampleMethod {
     Random,
     UniformRandom,
@@ -689,7 +690,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::ofstream logfile;
   logfile.open(logfile_name);
   logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWors"
-             "tParsimony\tMinSumRFDistance\tMaxSumRFDistance\tMinSumRFCount\tMaxSumRFCount\tSecondsElapsed";
+             "tParsimony\tMinSumRFDistance\tMaxSumRFDistance\tMinSumRFCount\tMaxSumRFCo"
+             "unt\tSecondsElapsed";
 
   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAGStorage<> input_dag =
@@ -718,7 +720,20 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     return std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
   };
 
-  auto logger = [&merge, &logfile, &time_elapsed, &write_intermediate_pb](size_t iteration) {
+  auto logger = [&merge, &logfile, &time_elapsed,
+                 &write_intermediate_pb](size_t iteration) {
+    auto get_rf_distance = [](const Merge& merge1, const Merge& merge2) {
+      // merge1 is the DAG we compute the weights for (summing distances to merge2)
+      auto dag1 = merge1.GetResult();
+      SubtreeWeight<SumRFDistance, MergeDAG> rf_count{dag1};
+      // merge2 is the reference DAG
+      SumRFDistance weight_ops{merge2, merge1};
+      ArbitraryInt shift_sum = weight_ops.GetOps().GetShiftSum();
+      auto rf_dist =
+          rf_count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) +
+          shift_sum;
+      return rf_dist;
+    };
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{merge.GetResult()};
     SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> maxparsimonyscorer{
         merge.GetResult()};
@@ -738,12 +753,17 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     MaxSumRFDistance this_max_rf_weight_ops{merge, merge};
     auto shiftsum = this_min_rf_weight_ops.GetOps().GetShiftSum();
 
-    auto min_rf_distance = this_min_sum_rf_dist.ComputeWeightBelow(merge.GetResult().GetRoot(), this_min_rf_weight_ops) + shiftsum;
-    auto min_rf_count = this_min_sum_rf_dist.MinWeightCount(merge.GetResult().GetRoot(), this_min_rf_weight_ops);
+    auto min_rf_distance = this_min_sum_rf_dist.ComputeWeightBelow(
+                               merge.GetResult().GetRoot(), this_min_rf_weight_ops) +
+                           shiftsum;
+    auto min_rf_count = this_min_sum_rf_dist.MinWeightCount(merge.GetResult().GetRoot(),
+                                                            this_min_rf_weight_ops);
 
-    auto max_rf_distance = this_max_sum_rf_dist.ComputeWeightBelow(merge.GetResult().GetRoot(), this_max_rf_weight_ops) + shiftsum;
-    auto max_rf_count = this_max_sum_rf_dist.MinWeightCount(merge.GetResult().GetRoot(), this_max_rf_weight_ops);
-
+    auto max_rf_distance = this_max_sum_rf_dist.ComputeWeightBelow(
+                               merge.GetResult().GetRoot(), this_max_rf_weight_ops) +
+                           shiftsum;
+    auto max_rf_count = this_max_sum_rf_dist.MinWeightCount(merge.GetResult().GetRoot(),
+                                                            this_max_rf_weight_ops);
 
     std::cout << "Best parsimony score in DAG: " << minparsimony << "\n";
     std::cout << "Worst parsimony score in DAG: " << maxparsimony << "\n";
@@ -754,12 +774,9 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
             << '\t' << merge.GetResult().GetEdgesCount() << '\t' << minparsimony << '\t'
-            << minparsimonytrees << '\t' << maxparsimony << '\t'
-            << min_rf_distance << '\t'
-            << max_rf_distance << '\t'
-            << min_rf_count << '\t'
-            << max_rf_count << '\t'
-            << time_elapsed() << std::flush;
+            << minparsimonytrees << '\t' << maxparsimony << '\t' << min_rf_distance
+            << '\t' << max_rf_distance << '\t' << min_rf_count << '\t' << max_rf_count
+            << '\t' << time_elapsed() << std::flush;
     if (write_intermediate_pb) {
       std::string intermediate_dag_path = "intermediate_MADAG_untrimmed.pb";
       StoreDAGToProtobuf(merge.GetResult(), intermediate_dag_path);
