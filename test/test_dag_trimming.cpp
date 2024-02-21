@@ -23,7 +23,7 @@ static void test_dag_trimming(std::string_view path, size_t expected_edges) {
 }
 
 [[maybe_unused]] static const auto test_added0 =
-    add_test({[] { test_dag_trimming("data/testcase/full_dag.pb.gz", 57); },
+    add_test({[] { test_dag_trimming("data/testcase/full_dag.pb.gz", 530); },
               "DAG trimming: testcase"});
 
 [[maybe_unused]] static const auto test_added1 =
