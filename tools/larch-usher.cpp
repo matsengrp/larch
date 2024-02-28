@@ -686,7 +686,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::ofstream logfile;
   logfile.open(logfile_name);
   logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWors"
-             "tParsimony\tSecondsElapsed";
+             "tParsimony\tSumRFDistance\tSecondsElapsed";
 
   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAGStorage<> input_dag =

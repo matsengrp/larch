@@ -27,7 +27,7 @@ if len(data) > 4 and data[4].strip() == "+":
 else:
     all_data["options"] = ['']
 
-prefix=dir_name + '/' + all_data["log_folder_name"] + "/"
+prefix=dir_name + '/'
 
 directories = [
     "option_" + x
@@ -43,6 +43,7 @@ plot_fields = [("MaxParsimony", notransform),
                ("NTrees", logtransform),
                ("NEdges", notransform),
                ("NNodes", notransform),
+               ("RFDistance", notransform),
                ("SecondsElapsed", notransform),
                ]
 
@@ -61,7 +62,7 @@ colors = [
 ]
 
 
-fields = ['Iteration', 'NTrees', 'NNodes', 'NEdges', 'MaxParsimony', 'NTreesMaxParsimony', 'WorstParsimony', 'SecondsElapsed']
+fields = ['Iteration', 'NTrees', 'NNodes', 'NEdges', 'MaxParsimony', 'NTreesMaxParsimony', 'WorstParsimony', 'RFDistance', 'SecondsElapsed']
 iterations = 501
 
 def floor_mean(numbers):
@@ -108,9 +109,9 @@ for ax, (plot_field, (vertical_transform, vertical_transform_name)) in zip(axarr
                         data[field_idx][iteration_idx].append(0 if dat == '' else int(dat))
         data_dict = dict(zip(fields, data))
         itlist = list(range(len([row[0] for row in data_dict['Iteration'] if len(row) > 0])))
-        meanlist = [vertical_transform(mean(row)) for row in data_dict[plot_field] if len(row) > 0]
-        minlist = [vertical_transform(min(row)) for row in data_dict[plot_field] if len(row) > 0]
-        maxlist = [vertical_transform(max(row)) for row in data_dict[plot_field] if len(row) > 0]
+        meanlist = [float(vertical_transform(mean(row))) for row in data_dict[plot_field] if len(row) > 0]
+        minlist = [float(vertical_transform(min(row))) for row in data_dict[plot_field] if len(row) > 0]
+        maxlist = [float(vertical_transform(max(row))) for row in data_dict[plot_field] if len(row) > 0]
         assert len(itlist) == len(maxlist) and len(maxlist) == len(minlist) and len(minlist) == len(meanlist)
         ax.plot(itlist,
                 meanlist,
