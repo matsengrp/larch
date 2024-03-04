@@ -43,7 +43,7 @@ plot_fields = [("MaxParsimony", notransform),
                ("NTrees", logtransform),
                ("NEdges", notransform),
                ("NNodes", notransform),
-               ("RFDistance", notransform),
+               ("RFDistance", logtransform),
                ("SecondsElapsed", notransform),
                ]
 
@@ -97,6 +97,7 @@ for ax, (plot_field, (vertical_transform, vertical_transform_name)) in zip(axarr
             [[] for _ in range(iterations)]
             for _ in range(len(fields))
         ]
+        basic_val = 1 if "og" in vertical_transform_name else 0
         for logfile in p.glob('log*/logfile.csv'):
             with open(logfile, newline='') as csvfile:
                 reader = csv.reader(csvfile, delimiter='\t')
@@ -106,7 +107,7 @@ for ax, (plot_field, (vertical_transform, vertical_transform_name)) in zip(axarr
                     continue
                 for iteration_idx, row in enumerate(reader):
                     for field_idx, dat in enumerate(row):
-                        data[field_idx][iteration_idx].append(0 if dat == '' else int(dat))
+                        data[field_idx][iteration_idx].append(basic_val if dat == '' else max(int(dat), basic_val))
         data_dict = dict(zip(fields, data))
         itlist = list(range(len([row[0] for row in data_dict['Iteration'] if len(row) > 0])))
         meanlist = [float(vertical_transform(mean(row))) for row in data_dict[plot_field] if len(row) > 0]

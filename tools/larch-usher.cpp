@@ -740,14 +740,19 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         maxparsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     SubtreeWeight<TreeCount, MergeDAG> treecount{merge.GetResult()};
     auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-    auto rf_distance = get_rf_distance(merge, merge);
+
+    const auto& trimmed = parsimonyscorer.TrimToMinWeight({});
+    Merge trimmed_merge{trimmed.View().GetReferenceSequence()};
+    trimmed_merge.AddDAG(trimmed.View());
+    trimmed_merge.ComputeResultEdgeMutations();
+    auto rf_distance = get_rf_distance(trimmed_merge, trimmed_merge);
 
     std::cout << "Best parsimony score in DAG: " << minparsimony << "\n";
     std::cout << "Worst parsimony score in DAG: " << maxparsimony << "\n";
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << ntrees
               << "\n";
     std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
-    std::cout << "RF distance: " << rf_distance << "\n";
+    std::cout << "summed RF distance over optimal trees: " << rf_distance << "\n";
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
             << '\t' << merge.GetResult().GetEdgesCount() << '\t' << minparsimony << '\t'
