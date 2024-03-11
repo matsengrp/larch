@@ -532,6 +532,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string refseq_path;
   std::string vcf_path;
   std::string callback_config = "best-moves";
+  bool write_intermediate_pb = true;
   enum class SampleMethod {
     Random,
     UniformRandom,
@@ -653,6 +654,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       callback_config = *params.begin();
     } else if (name == "--keep-fragment-uncollapsed") {
       collapse_empty_fragment_edges = false;
+    } else if (name == "--quiet") {
+      write_intermediate_pb = false;
     } else if (name == "--trim") {
       final_trim = true;
     } else {
@@ -686,7 +689,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::ofstream logfile;
   logfile.open(logfile_name);
   logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWors"
-             "tParsimony\tSumRFDistance\tSecondsElapsed";
+             "tParsimony\tSumRFDistance\tAvgSumRFDistance\tSecondsElapsed";
 
   // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAGStorage<> input_dag =
@@ -727,7 +730,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     return rf_dist;
   };
 
-  auto logger = [&merge, &logfile, &time_elapsed, &get_rf_distance](size_t iteration) {
+  auto logger = [&merge, &logfile, &time_elapsed, &get_rf_distance, &write_intermediate_pb](size_t iteration) {
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{merge.GetResult()};
     SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> maxparsimonyscorer{
         merge.GetResult()};
@@ -753,11 +756,16 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
               << "\n";
     std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
     std::cout << "summed RF distance over optimal trees: " << rf_distance << "\n";
+    std::cout << "average summed RF distance over optimal trees: " << rf_distance / minparsimonytrees << "\n";
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
             << '\t' << merge.GetResult().GetEdgesCount() << '\t' << minparsimony << '\t'
-            << minparsimonytrees << '\t' << maxparsimony << '\t' << rf_distance << '\t'
+            << minparsimonytrees << '\t' << maxparsimony << '\t' << rf_distance << '\t' << rf_distance / minparsimonytrees << '\t'
             << time_elapsed() << std::flush;
+    if (write_intermediate_pb) {
+      std::string intermediate_dag_path = "intermediate_MADAG_untrimmed.pb";
+      StoreDAGToProtobuf(trimmed_merge.GetResult(), intermediate_dag_path);
+    }
   };
   logger(0);
 

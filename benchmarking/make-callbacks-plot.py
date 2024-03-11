@@ -43,7 +43,8 @@ plot_fields = [("MaxParsimony", notransform),
                ("NTrees", logtransform),
                ("NEdges", notransform),
                ("NNodes", notransform),
-               ("RFDistance", logtransform),
+               ("SumRFDistance", logtransform),
+               ("AverageRFDistance", notransform),
                ("SecondsElapsed", notransform),
                ]
 
@@ -62,7 +63,7 @@ colors = [
 ]
 
 
-fields = ['Iteration', 'NTrees', 'NNodes', 'NEdges', 'MaxParsimony', 'NTreesMaxParsimony', 'WorstParsimony', 'RFDistance', 'SecondsElapsed']
+fields = ['Iteration', 'NTrees', 'NNodes', 'NEdges', 'MaxParsimony', 'NTreesMaxParsimony', 'WorstParsimony', 'SumRFDistance', 'AverageRFDistance', 'SecondsElapsed']
 iterations = 501
 
 def floor_mean(numbers):
