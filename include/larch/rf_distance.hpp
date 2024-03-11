@@ -195,7 +195,7 @@ struct MaxSumRFDistance_ : SumRFDistance_ {
   using Weight = typename SumRFDistance_::Weight;
   explicit MaxSumRFDistance_(const Merge& reference_dag, const Merge& compute_dag)
       : SumRFDistance_{reference_dag, compute_dag} {}
-  bool Compare(Weight lhs, Weight rhs) { return lhs > rhs; }
+  bool Compare(Weight lhs, Weight rhs) const { return lhs > rhs; }
 };
 
 struct MaxSumRFDistance : SimpleWeightOps<MaxSumRFDistance_> {

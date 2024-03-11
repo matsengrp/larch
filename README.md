@@ -14,9 +14,11 @@ To get a recent cmake, download from `https://cmake.org/download/`, for example:
 
 `wget https://github.com/Kitware/CMake/releases/download/v3.23.1/cmake-3.23.1-linux-x86_64.tar.gz`
 
-To setup a conda environment capable of building Larch, use:
+To setup a conda environment capable of building Larch, use the environment
+file provided:
 
-`conda install --channel "conda-forge/label/main" --update-deps --override-channels cmake make cxx-compiler openmpi boost-cpp automake autoconf libtool yasm`
+`conda env create -f environment.yml`
+
 
 Building
 --------

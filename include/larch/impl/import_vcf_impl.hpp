@@ -16,7 +16,6 @@
 #include "src/matOptimize/tree_rearrangement_internal.hpp"
 #pragma GCC diagnostic pop
 
-#include "isa-l/igzip_lib.h"
 #include "tbb/concurrent_queue.h"
 #include "tbb/flow_graph.h"
 #include "tbb/parallel_for.h"
@@ -135,104 +134,7 @@ struct line_align {
     return true;
   }
 };
-struct gzip_input_source {
-  unsigned char *map_start;
-  // char* read_curr;
-  size_t mapped_size;
-  struct isal_gzip_header gz_hdr;
-  mutable unsigned char *getc_buf;
-  mutable unsigned char *get_c_ptr;
-  struct inflate_state *state;
-  gzip_input_source(const char *fname) {
-    struct stat stat_buf;
-    stat(fname, &stat_buf);
-    mapped_size = stat_buf.st_size;
-    auto fh = open(fname, O_RDONLY);
-    map_start =
-        (unsigned char *)mmap(nullptr, mapped_size, PROT_READ, MAP_SHARED, fh, 0);
-    // madvise(map_start, mapped_size, MADV_SEQUENTIAL|MADV_WILLNEED);
-    close(fh);
-    state = new struct inflate_state;
-    getc_buf = new unsigned char[BUFSIZ];
-    get_c_ptr = 0;
-
-    isal_inflate_init(state);
-    state->next_in = map_start;
-    state->avail_in = mapped_size;
-    state->crc_flag = IGZIP_GZIP;
-    isal_gzip_header_init(&gz_hdr);
-    auto ret = isal_read_gzip_header(state, &gz_hdr);
-    fprintf(stderr, "Header ret: %d\n", ret);
-    decompress_to_buffer(getc_buf, BUFSIZ);
-    get_c_ptr = getc_buf;
-  }
-  void unalloc() { munmap(map_start, mapped_size); }
-  bool decompress_to_buffer(unsigned char *buffer, size_t buffer_size) const {
-    if (!state->avail_in) {
-      return false;
-    }
-    state->next_out = buffer;
-    state->avail_out = buffer_size;
-    auto out = ISAL_DECOMP_OK;
-    // while
-    // (out==ISAL_DECOMP_OK&&state->avail_out>0&&state->avail_in>0&&state->block_state!=ISAL_BLOCK_FINISH)
-    // {
-    out = isal_inflate(state);
-    //}
-    if (out != ISAL_DECOMP_OK) {
-      fprintf(stderr, "decompress error %d\n", out);
-    }
-    // copied from
-    // https://github.com/intel/isa-l/blob/78f5c31e66fedab78328e592c49eefe4c2a733df/programs/igzip_cli.c#L952
-    while (state->avail_out > 0 && state->avail_in > 0 && state->next_in[0] == 31) {
-      // fprintf(stderr,"continuing\n");
-      if (state->avail_in > 1 && state->next_in[1] != 139) break;
-      isal_inflate_reset(state);
-      // while
-      // (out==ISAL_DECOMP_OK&&state->avail_out>0&&state->avail_in>0&&state->block_state!=ISAL_BLOCK_FINISH)
-      // {
-      out = isal_inflate(state);
-      //}
-      if (out != ISAL_DECOMP_OK) {
-        fprintf(stderr, "restart error %d\n", out);
-      }
-    }
-    return state->avail_out < buffer_size;
-  }
-  int getc() {
-    if (get_c_ptr == state->next_out) {
-      get_c_ptr = getc_buf;
-      if (!decompress_to_buffer(getc_buf, BUFSIZ)) {
-        return -1;
-      }
-    }
-    return *(get_c_ptr++);
-  }
-
-  void operator()(
-      tbb::concurrent_bounded_queue<std::pair<char *, uint8_t *>> &out) const {
-    char *line_out = new char[alloc_size];
-    // if (getc_buf) {
-    auto load_size = getc_buf + BUFSIZ - get_c_ptr;
-    memcpy(line_out, get_c_ptr, load_size);
-    decompress_to_buffer((unsigned char *)line_out + load_size, read_size - load_size);
-    delete[](getc_buf);
-    getc_buf = nullptr;
-    fprintf(stderr, "getc_buff_deallocated\n");
-    out.emplace(line_out, state->next_out);
-    //}
-    line_out = new char[alloc_size];
-    while (decompress_to_buffer((unsigned char *)line_out, read_size)) {
-      out.emplace(line_out, state->next_out);
-      line_out = new char[alloc_size];
-    }
-    out.emplace(nullptr, nullptr);
-    out.emplace(nullptr, nullptr);
-    fprintf(stderr, "reach end\n");
-    delete[] line_out;
-  }
-};
-
+//
 // Parse a block of lines, assuming there is a complete line in the line_in
 // buffer
 typedef tbb::flow::multifunction_node<line_start_later,
@@ -519,13 +421,8 @@ inline void VCF_input(const char *name, MAT::Tree &tree) {
   std::thread progress_meter(print_progress, &done, &done_mutex);
   // open file set increase buffer size
   std::string vcf_filename(name);
-  if (vcf_filename.find(".gz\0") != std::string::npos) {
-    gzip_input_source fd(name);
-    process(tree, fd);
-  } else {
-    raw_input_source fd(name);
-    process(tree, fd);
-  }
+  raw_input_source fd(name);
+  process(tree, fd);
   done = true;
   progress_bar_cv.notify_all();
   progress_meter.join();
