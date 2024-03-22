@@ -16,7 +16,14 @@ To get a recent cmake, download from `https://cmake.org/download/`, for example:
 
 To setup a conda environment capable of building Larch, use:
 
-`conda install --channel "conda-forge/label/main" --update-deps --override-channels cmake make cxx-compiler openmpi boost-cpp automake autoconf libtool yasm`
+`conda create -n larch`
+`conda activate larch`
+`conda install --channel "conda-forge/label/main" --update-deps --override-channels cmake make cxx-compiler openmpi open-mpicc open-mpicxx boost-cpp automake autoconf libtool yasm ucx`
+
+If you encounter an issue running `cmake`, try this:
+`conda activate larch`
+`CONDA_ROOT=$(conda info --envs | grep '\*' | awk '{ print $3 }')`
+`ln -s $CONDA_ROOT/lib/librhash.so.1 $CONDA/lib/librhash.so.0`
 
 Building
 --------
@@ -29,9 +36,10 @@ Building
 
 `make -j16`
 
-Optionally add -DCMAKE_CXX_CLANG_TIDY="clang-tidy" to enable clang-tidy.
-
-Optionally add -DUSE_ASAN=yes to enable asan and ubsan.
+Build options:
+  - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
+  - add `-DUSE_ASAN=yes` to enable asan and ubsan.
+  - add `-DUSE_ISAL=no` to omit isa-l library from build.
 
 Running
 -------

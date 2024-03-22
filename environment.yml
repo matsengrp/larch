@@ -4,12 +4,23 @@ channels:
   - bioconda
   - defaults
 dependencies:
+  # - cmake=3.19.6
+  # - make
+  # - cxx-compiler
+  # - openmpi
+  # - boost-cpp
+  # - automake
+  # - autoconf
+  # - libtool
+  # - yasm
+
   - git
-  - isa-l
   - cxx-compiler
   - mafft
   - boost-cpp
   - openmpi
+  - openmpi-mpicc
+  - openmpi-mpicxx
   - python
   - rsync
   - wget
@@ -23,3 +34,6 @@ dependencies:
   - backports.lzma
   - libtool
   - automake
+  - yasm
+  - isa-l
+
