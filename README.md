@@ -18,12 +18,12 @@ To setup a conda environment capable of building Larch, use:
 
 `conda create -n larch`
 `conda activate larch`
-`conda install --channel "conda-forge/label/main" --update-deps --override-channels cmake make cxx-compiler openmpi open-mpicc open-mpicxx boost-cpp automake autoconf libtool yasm ucx`
+`conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib`
 
 If you encounter an issue running `cmake`, try this:
 `conda activate larch`
 `CONDA_ROOT=$(conda info --envs | grep '\*' | awk '{ print $3 }')`
-`ln -s $CONDA_ROOT/lib/librhash.so.1 $CONDA/lib/librhash.so.0`
+`ln -s $CONDA_ROOT/lib/librhash.so.1 $CONDA_ROOT/lib/librhash.so.0`
 
 Building
 --------
