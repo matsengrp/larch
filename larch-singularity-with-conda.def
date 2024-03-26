@@ -1,0 +1,43 @@
+BootStrap: library
+From: ubuntu:22.04
+
+%post
+    # export DEBIAN_FRONTEND="noninteractive"
+    apt -y update
+    apt -y upgrade
+    # GENERAL OS PROGRAMS
+    apt -y install --no-install-recommends wget bzip2 unzip ca-certificates curl git
+    apt -y install --no-install-recommends vim nano perl help2man less
+    # DEV PROGRAMS
+    # apt -y install --no-install-recommends git black clang-format clang-tidy
+    # BUILD PROGRAMS
+    # apt -y install --no-install-recommends cmake protobuf-compiler automake autoconf build-essential libtool nasm yasm openmpi-bin libopenmpi-dev
+    # BUILD PROGRAMS
+    # apt -y install --no-install-recommends wget git ca-certificates make g++ mpi-default-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-date-time-dev libboost-iostreams-dev
+
+    # Install Miniconda
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh
+    /bin/bash /tmp/miniconda.sh -b -p /opt/conda
+    rm /tmp/miniconda.sh
+    # /opt/conda/bin/conda clean -tipsy
+
+    # Initialize Miniconda
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
+    echo "conda activate base" >> ~/.bashrc
+
+    # Install additional packages if needed
+    /opt/conda/bin/conda install -y --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib
+
+    # Clean up
+    # apt-get clean && \
+    # rm -rf /var/lib/apt/lists/*
+
+    # MAKE LARCH SSH KEY
+    cd $PROGDIR
+    mkdir ssh
+    chmod 700 ssh
+    touch ssh/larch-key
+    chmod 600 ssh/larch-key
+
+%environment
+    export PATH="/opt/conda/bin:${PATH}"

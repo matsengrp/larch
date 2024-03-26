@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(larch)
 
 option(USE_USHER "Use matOptimize" yes)
+option(USE_ISAL "Use isa-l" yes)
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
@@ -89,6 +90,7 @@ endif()
 
 find_package(ZLIB)
 
+if(${USE_ISAL})
 ExternalProject_Add(isa-l
   GIT_REPOSITORY https://github.com/intel/isa-l.git
   GIT_TAG v2.30.0
@@ -104,6 +106,8 @@ ExternalProject_Add(isa-l
   INSTALL_COMMAND make install
 )
 set(isal_lib ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
+endif()
+
 set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
@@ -226,15 +230,18 @@ target_include_directories(usher PUBLIC include)
 target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
 target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
 
+if(${USE_ISAL})
 target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/isa-l/install/include)
+target_link_libraries(usher PUBLIC ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
+add_dependencies(usher isa-l)
+endif()
+
 add_dependencies(usher range-v3)
 
-add_dependencies(usher isa-l)
 target_include_directories(usher PUBLIC ${PROTO_OUT_DIR}/deps/usher)
 larch_link_opts(usher)
 target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
 
-target_link_libraries(usher PUBLIC ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
 set_target_properties(usher
   PROPERTIES CXX_CLANG_TIDY ""
 )

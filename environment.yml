@@ -1,15 +1,17 @@
 name: larch-dev
 channels:
+  - conda-forge/label/main
   - conda-forge
   - bioconda
   - defaults
 dependencies:
   - git
-  - isa-l
   - cxx-compiler
   - mafft
   - boost-cpp
   - openmpi
+  - openmpi-mpicc
+  - openmpi-mpicxx
   - python
   - rsync
   - wget
@@ -23,3 +25,6 @@ dependencies:
   - backports.lzma
   - libtool
   - automake
+  - yasm
+  - isa-l
+
