@@ -1,19 +1,10 @@
 name: larch-dev
 channels:
+  - conda-forge/label/main
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  # - cmake=3.19.6
-  # - make
-  # - cxx-compiler
-  # - openmpi
-  # - boost-cpp
-  # - automake
-  # - autoconf
-  # - libtool
-  # - yasm
-
   - git
   - cxx-compiler
   - mafft

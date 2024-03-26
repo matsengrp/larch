@@ -4,9 +4,11 @@ From: ubuntu:22.04
 %post
   apt -y update
   apt -y upgrade
-  apt -y install --no-install-recommends wget git ca-certificates make g++ mpi-default-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-date-time-dev libboost-iostreams-dev libtool yasm
+  apt -y install --no-install-recommends wget git ca-certificates make g++ mpi-default-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-date-time-dev libboost-iostreams-dev libtool yasm openmpi-bin libopenmpi-dev
   mkdir /matsen
-  cd /matsen 
+  cd /matsen
   wget https://github.com/Kitware/CMake/releases/download/v3.27.3/cmake-3.27.3-linux-x86_64.tar.gz
-  tar xvf cmake-3.27.3-linux-x86_64.tar.gz 
+  tar xvf cmake-3.27.3-linux-x86_64.tar.gz
 
+%environment
+  export PATH="matsen/cmake-3.27.3-linux-x86_64/bin/cmake:${PATH}"
