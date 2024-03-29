@@ -85,15 +85,22 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   auto GetChildren() const {
     auto [dag_node, mat, mat_node, is_ua] = access();
     auto dag = dag_node.GetDAG();
+
+    using Edge = typename decltype(dag)::EdgeView;
+
+    auto child_edge = [dag, dag_node, is_ua](const MAT::Node* i) {
+      if (is_ua) {
+        return Edge{dag, EdgeId{dag_node.GetFirstChild().GetId().value}};
+      } else {
+        Assert(i != nullptr);
+        return Edge{dag, EdgeId{i->node_id}};
+      }
+    };
     if (is_ua) {
-      return ranges::views::iota(dag_node.GetId().value, dag_node.GetId().value + 1) |
-             ranges::views::transform([dag](size_t i) {
-               return typename decltype(dag)::EdgeView{dag, EdgeId{i}};
-             });
+      return empty_node | ranges::views::transform(child_edge);
+    } else {
+      return mat_node->children | ranges::views::transform(child_edge);
     }
-    return mat_node->children | ranges::views::transform([dag](MAT::Node* i) {
-             return typename decltype(dag)::EdgeView{dag, EdgeId{i->node_id}};
-           });
   }
 
   auto GetSingleParent() const {
@@ -110,8 +117,15 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     return GetSingleParent();
   }
 
-  auto GetFirstChild() const;
-  auto GetFirstClade() const;
+  auto GetFirstChild() const {
+    Assert(not IsLeaf());
+    return (*GetFirstClade().begin()).GetChild();
+  }
+
+  auto GetFirstClade() const {
+    Assert(not IsLeaf());
+    return GetClade({0});
+  }
 
   bool IsUA() const {
     auto [dag_node, mat, mat_node, is_ua] = access();
@@ -135,6 +149,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   std::string ChildrenToString() const;
 
  private:
+  static inline std::vector<MAT::Node*> empty_node{nullptr};
   auto access() const {
     auto dag_node = static_cast<const CRTP&>(*this);
     NodeId id = dag_node.GetId();

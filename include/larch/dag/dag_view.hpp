@@ -45,6 +45,23 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   explicit DAGView(Storage& dag_storage);
 
+  DAGView(DAGView&& other) = default;
+  DAGView(const DAGView& other) = default;
+
+  DAGView& operator=(DAGView&& other) {
+    dag_storage_ = std::addressof(other.GetStorage());
+    return *this;
+  }
+
+  DAGView& operator=(const DAGView& other) {
+    dag_storage_ = std::addressof(other.GetStorage());
+    return *this;
+  }
+
+  bool operator==(const DAGView& other) const {
+    return std::addressof(GetStorage()) == std::addressof(other.GetStorage());
+  }
+
   operator DAGView<const Storage, Base>() const;
 
   DAGView<const Storage, Base> Const() const;
@@ -84,7 +101,7 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   template <Component C>
   Id<C> GetNextAvailableId() const {
-    return dag_storage_.template GetNextAvailableId<C>();
+    return GetStorage().template GetNextAvailableId<C>();
   }
 
   NodeId GetNextAvailableNodeId() const {
@@ -120,5 +137,5 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   Storage& GetStorage() const;
 
  private:
-  Storage& dag_storage_;
+  Storage* dag_storage_ = nullptr;
 };

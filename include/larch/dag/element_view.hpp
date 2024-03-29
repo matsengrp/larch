@@ -25,6 +25,15 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
 
   ElementView(DAGViewType dag_view, Id<C> id);
 
+  ElementView(ElementView&& other) = default;
+  ElementView(const ElementView& other) = default;
+  ElementView& operator=(ElementView&& other) = default;
+  ElementView& operator=(const ElementView& other) = default;
+
+  bool operator==(const ElementView& other) const {
+    return dag_view_ == other.dag_view_ and id_ == other.id_;
+  }
+
   auto Const() const;
 
   operator Id<C>() const;

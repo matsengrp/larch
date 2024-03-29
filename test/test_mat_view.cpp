@@ -34,14 +34,25 @@ void test_mat_view_impl(DAGView dag) {
   mv.RecomputeCompactGenomes();
   // mv.GetRoot().Validate(true, false);
 
-  std::cout << "\n\nMAT view\n";
-  MADAGToDOT(mv, std::cout);
-
   // check BuildFromMAT
   auto dag_from_mat = AddMATConversion(MergeDAGStorage<>::EmptyDefault());
   dag_from_mat.View().BuildFromMAT(mat, dag.GetReferenceSequence());
   dag_from_mat.View().GetRoot().Validate(true);
   check_MAT_MADAG_Eq(mat, dag_from_mat.View());
+
+  auto merge_mv = ExtendDAGStorage<void, decltype(mv), Extend::Nodes<SampleId>,
+                                   Extend::Empty<>, Extend::Empty<>>::FromView(mv);
+  merge_mv.View().SampleIdsFromCG();
+  Merge merge(mv.GetReferenceSequence());
+
+  std::cout << "\n\nMAT view\n";
+  MADAGToDOT(merge_mv.View(), std::cout);
+
+  merge.AddDAG(merge_mv.View());
+  merge.GetResult().GetRoot().Validate(true, true);
+
+  std::cout << "\n\nMerge result\n";
+  MADAGToDOT(merge.GetResult(), std::cout);
 }
 
 void test_mat_view(std::string_view input_dag_path, std::string_view refseq_path,

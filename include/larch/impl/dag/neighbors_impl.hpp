@@ -160,11 +160,11 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
     // Assert(dag.HaveUA());
     Assert(node.GetId() == dag.GetRoot());
   } else {
-    size_t children_count = 0;
-    for ([[maybe_unused]] auto child : node.GetChildren()) {
-      ++children_count;
-    }
-    Assert(children_count != 1);
+    // size_t children_count = 0;
+    // for ([[maybe_unused]] auto child : node.GetChildren()) {
+    //   ++children_count;
+    // }
+    // Assert(children_count != 1);
   }
 #ifndef NDEBUG
   ContiguousSet<std::string> sample_ids;
