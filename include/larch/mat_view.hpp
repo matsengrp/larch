@@ -107,7 +107,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto [dag_node, mat, mat_node, is_ua] = access();
     Assert(not is_ua);
     EdgeId parent{mat_node->parent == nullptr ? mat.root->node_id
-                                              : mat_node->parent->node_id};
+                                              : mat_node->node_id};
     auto dag = dag_node.GetDAG();
     return typename decltype(dag)::EdgeView{dag, parent};
   }
