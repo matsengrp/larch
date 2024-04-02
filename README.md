@@ -28,12 +28,10 @@ If you encounter an issue running `cmake`, try this:
 Building
 --------
 
+`git submodule update --init --recursive`
 `mkdir build`
-
 `cd build`
-
 `cmake -DCMAKE_BUILD_TYPE=Debug ..`
-
 `make -j16`
 
 Build options:
@@ -47,7 +45,6 @@ Running
 From the build directory:
 
 `ln -s ../data`
-
 `./larch-test`
 
 Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
