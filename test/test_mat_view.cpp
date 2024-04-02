@@ -32,7 +32,7 @@ void test_mat_view_impl(DAGView dag) {
   mv.SetReferenceSequence(dag.GetReferenceSequence());
   mv.BuildRootAndLeafs();
   mv.RecomputeCompactGenomes();
-  // mv.GetRoot().Validate(true, false);
+  mv.GetRoot().Validate(true, false);
 
   // check BuildFromMAT
   auto dag_from_mat = AddMATConversion(MergeDAGStorage<>::EmptyDefault());

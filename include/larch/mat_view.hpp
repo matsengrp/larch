@@ -46,11 +46,23 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
   }
 };
 
+template <typename T>
+struct MATValidator {
+  MATValidator(const T& storage) : storage_{storage} {}
+
+  auto CladesRange() const { return storage_.GetClades(); }
+
+  auto ParentsRange() const { return storage_.GetParents(); }
+
+ private:
+  const T& storage_;
+};
+
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   auto GetParents() const {
     return ranges::views::iota(size_t{0}, GetParentsCount()) |
-           ranges::views::transform([this](size_t i) { return GetSingleParent(); });
+           ranges::views::transform([this](size_t) { return GetSingleParent(); });
   }
   auto GetClades() const {
     return ranges::views::iota(size_t{0}, GetCladesCount()) |
@@ -106,8 +118,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   auto GetSingleParent() const {
     auto [dag_node, mat, mat_node, is_ua] = access();
     Assert(not is_ua);
-    EdgeId parent{mat_node->parent == nullptr ? mat.root->node_id
-                                              : mat_node->node_id};
+    EdgeId parent{mat_node->parent == nullptr ? mat.root->node_id : mat_node->node_id};
     auto dag = dag_node.GetDAG();
     return typename decltype(dag)::EdgeView{dag, parent};
   }
@@ -137,14 +148,33 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   bool IsLeaf() const { return GetCladesCount() == 0; }
 
   auto GetLeafsBelow() const;
+
   void Validate(bool recursive = false, bool allow_dag = false) const {
     auto node = static_cast<const CRTP&>(*this).Const();
-    ValidateImpl(node, recursive, allow_dag);
+    ValidateImpl(node, MATValidator{*this}, recursive, allow_dag);
   }
+
   auto GetParentNodes() const;
   auto GetChildNodes() const;
-  bool ContainsParent(NodeId node) const;
-  bool ContainsChild(NodeId node) const;
+
+  bool ContainsParent(NodeId node) const {
+    auto [dag_node, mat, mat_node, is_ua] = access();
+    if (mat_node->parent == nullptr) {
+      return false;
+    }
+    return mat_node->parent->node_id == node.value;
+  }
+
+  bool ContainsChild(NodeId node) const {
+    auto [dag_node, mat, mat_node, is_ua] = access();
+    for (auto* i : mat_node->children) {
+      if (i->node_id == node.value) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   std::string ParentsToString() const;
   std::string ChildrenToString() const;
 
