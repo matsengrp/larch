@@ -14,26 +14,30 @@ To get a recent cmake, download from `https://cmake.org/download/`, for example:
 
 `wget https://github.com/Kitware/CMake/releases/download/v3.23.1/cmake-3.23.1-linux-x86_64.tar.gz`
 
-To setup a conda environment capable of building Larch, use the environment
-file provided:
+To setup a conda environment capable of building Larch, use:
 
-`conda env create -f environment.yml`
+`conda create -n larch`
+`conda activate larch`
+`conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib`
 
+If you encounter an issue running `cmake`, try this:
+`conda activate larch`
+`CONDA_ROOT=$(conda info --envs | grep '\*' | awk '{ print $3 }')`
+`ln -s $CONDA_ROOT/lib/librhash.so.1 $CONDA_ROOT/lib/librhash.so.0`
 
 Building
 --------
 
+`git submodule update --init --recursive`
 `mkdir build`
-
 `cd build`
-
 `cmake -DCMAKE_BUILD_TYPE=Debug ..`
-
 `make -j16`
 
-Optionally add -DCMAKE_CXX_CLANG_TIDY="clang-tidy" to enable clang-tidy.
-
-Optionally add -DUSE_ASAN=yes to enable asan and ubsan.
+Build options:
+  - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
+  - add `-DUSE_ASAN=yes` to enable asan and ubsan.
+  - add `-DUSE_ISAL=no` to omit isa-l library from build.
 
 Running
 -------
@@ -41,7 +45,6 @@ Running
 From the build directory:
 
 `ln -s ../data`
-
 `./larch-test`
 
 Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
