@@ -445,7 +445,7 @@ struct MATEdgesContainer {
   }
 
   auto All() const {
-    return ranges::views::iota(size_t{0}, GetCount()) |
+    return ranges::views::iota(size_t{0}, GetCount() + 1) |
            ranges::views::filter([this](size_t i) {
              return i != extra_edge_storage_.ua_node_id_.value and
                     GetMAT().get_node(i) != nullptr;
