@@ -39,10 +39,12 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
         mat;
     dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>().mat_tree_ =
         mat;
+    size_t ua_node_id = 0;  // mat->get_size_upper();
+    Assert(mat->get_node(ua_node_id) == nullptr);
     dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>().ua_node_id_ =
-        NodeId{mat->get_size_upper()};
+        NodeId{ua_node_id};
     dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>().ua_node_id_ =
-        NodeId{mat->get_size_upper()};
+        NodeId{ua_node_id};
   }
 };
 
@@ -223,8 +225,7 @@ struct MATNodesContainer {
   MATNodesContainer() = default;
   MOVE_ONLY(MATNodesContainer);
 
-  // +1 for UA
-  size_t GetCount() const { return GetMAT().get_size_upper() + 1; }
+  size_t GetCount() const { return GetMAT().get_size_upper(); }
 
   NodeId GetNextAvailableId() const { return {GetCount()}; }
 
@@ -295,16 +296,19 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
   auto GetChild() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();
+    if (is_ua) {
+      return dag_edge.GetDAG().Get(NodeId{mat.root->node_id});
+    }
     return dag_edge.GetDAG().Get(NodeId{mat_node->node_id});
   }
 
   CladeIdx GetClade() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();
+    CladeIdx result{0};
     if (is_ua) {
-      return CladeIdx{0};
+      return result;
     }
     Assert(mat_node->parent != nullptr);
-    CladeIdx result{};
     for (auto* i : mat_node->parent->children) {
       if (i == mat_node) {
         return result;
@@ -405,8 +409,10 @@ struct MATEdgesContainer {
   MATEdgesContainer() = default;
   MOVE_ONLY(MATEdgesContainer);
 
-  // +1 for the UA
-  size_t GetCount() const { return GetMAT().get_size_upper(); }
+  size_t GetCount() const {
+    Assert(GetMAT().get_size_upper() > 0);
+    return GetMAT().get_size_upper() - 1;
+  }
 
   EdgeId GetNextAvailableId() const { return {GetCount()}; }
 
