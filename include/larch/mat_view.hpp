@@ -161,14 +161,21 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 
   bool ContainsParent(NodeId node) const {
     auto [dag_node, mat, mat_node, is_ua] = access();
-    if (mat_node->parent == nullptr) {
+    if (is_ua) {
       return false;
+    }
+    Assert(mat_node != nullptr);
+    if (mat_node->parent == nullptr) {
+      return node == GetUA();
     }
     return mat_node->parent->node_id == node.value;
   }
 
   bool ContainsChild(NodeId node) const {
     auto [dag_node, mat, mat_node, is_ua] = access();
+    if (is_ua) {
+      return node.value == mat.root->node_id;
+    }
     for (auto* i : mat_node->children) {
       if (i->node_id == node.value) {
         return true;
@@ -182,6 +189,14 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 
  private:
   static inline std::vector<MAT::Node*> empty_node{nullptr};
+
+  NodeId GetUA() const {
+    auto dag_node = static_cast<const CRTP&>(*this);
+    auto dag = dag_node.GetDAG();
+    return dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
+        .ua_node_id_;
+  }
+
   auto access() const {
     auto dag_node = static_cast<const CRTP&>(*this);
     NodeId id = dag_node.GetId();
