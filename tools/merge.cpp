@@ -19,6 +19,7 @@
   std::cout << "  -r,--refseq    Read reference sequence from Json file\n";
   std::cout << "  -d,--dag       Input files are DAGs\n";
   std::cout << "  -t,--trim      Trim output to best parsimony\n";
+  std::cout << "  -s,--sample    Sample a single tree from DAG\n";
 
   std::exit(EXIT_SUCCESS);
 }
@@ -31,7 +32,7 @@
 
 static int MergeTrees(const std::vector<std::string_view>& paths,
                       std::string_view refseq_json_path, std::string_view out_path,
-                      bool dags, bool trim) {
+                      bool dags, bool trim, bool sample_tree) {
   std::vector<MADAGStorage<>> trees;
   std::string reference_sequence = "";
   if (not refseq_json_path.empty()) {
@@ -63,15 +64,27 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
 
+  std::cout << "DAG leave(without trimming): " << merge.GetResult().GetLeafsCount() << "\n";
   std::cout << "DAG nodes(without trimming): " << merge.GetResult().GetNodesCount() << "\n";
   std::cout << "DAG edges(without trimming): " << merge.GetResult().GetEdgesCount() << "\n";
 
   if (trim) {
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
-    StoreDAGToProtobuf(weight.TrimToMinWeight({}).View(), out_path);
+    if (sample_tree) {
+      std::cout << "sampling a tree from the minweight options\n";
+      StoreDAGToProtobuf(weight.MinWeightSampleTree({}).View(), out_path);
+    } else {
+      StoreDAGToProtobuf(weight.TrimToMinWeight({}).View(), out_path);
+    }
   } else {
-    StoreDAGToProtobuf(merge.GetResult(), out_path);
+    if (sample_tree) {
+      std::cout << "sampling a tree from the merge DAG\n";
+        SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
+        StoreDAGToProtobuf(weight.SampleTree({}).View(), out_path);
+    } else {
+        StoreDAGToProtobuf(merge.GetResult(), out_path);
+    }
   }
 
 
@@ -86,6 +99,7 @@ int main(int argc, char** argv) try {
   std::string refseq_filename;
   bool dags = false;
   bool trim = false;
+  bool sample_tree = false;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -108,6 +122,8 @@ int main(int argc, char** argv) try {
       dags = true;
     } else if (name == "-t" or name == "--trim") {
       trim = true;
+    } else if (name == "-s" or name == "--sample") {
+      sample_tree = true;
     }
   }
 
@@ -119,7 +135,7 @@ int main(int argc, char** argv) try {
     std::cout << pth << "  to be merged\n";
   }
 
-  return MergeTrees(input_filenames, refseq_filename, result_filename, dags, trim);
+  return MergeTrees(input_filenames, refseq_filename, result_filename, dags, trim, sample_tree);
 } catch (std::exception& e) {
   std::cerr << "Uncaught exception: " << e.what() << std::endl;
   std::terminate();
