@@ -32,7 +32,6 @@ Building
 Build options:
   - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
   - add `-DUSE_ASAN=yes` to enable asan and ubsan.
-  - add `-DUSE_ISAL=no` to omit isa-l library from build.
 
 Running
 -------
@@ -44,8 +43,10 @@ From the build directory:
 
 Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
 
-- `--list` : produces a list of all available tests, along with an ID number.
-- `--range` : runs tests by ID in [begin, end] range arguments.
+- `--list` : produces a list of all available tests, along with an ID number, but does not run them.
+- `--range [begin] [end]` : runs tests by ID in [begin, end] range arguments.
+- `-tag [tag_name]` : Excludes tests with given [test_name].
+- `+tag [tag_name]` : Includes tests with given [test_name].
 
 Third-party
 -----------
