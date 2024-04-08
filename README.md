@@ -20,11 +20,6 @@ To setup a conda environment capable of building Larch, use:
 `conda activate larch`
 `conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib`
 
-If you encounter an issue running `cmake`, try this:
-`conda activate larch`
-`CONDA_ROOT=$(conda info --envs | grep '\*' | awk '{ print $3 }')`
-`ln -s $CONDA_ROOT/lib/librhash.so.1 $CONDA_ROOT/lib/librhash.so.0`
-
 Building
 --------
 
@@ -49,8 +44,8 @@ From the build directory:
 
 Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
 
-*--list* produces a list of all available tests, along with an ID number.
-*--range* runs tests by ID in [begin, end] range arguments.
+- `--list` : produces a list of all available tests, along with an ID number.
+- `--range` : runs tests by ID in [begin, end] range arguments.
 
 Third-party
 -----------
