@@ -33,7 +33,7 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   using EdgeView = ElementView<Component::Edge, DAGView<Storage, Base>>;
   using BaseType = Base<Storage, DAGView<Storage, Base>>;
   using StorageType = Storage;
-  using MutableType = DAGView<std::remove_const_t<Storage>>;
+  using MutableType = DAGView<std::remove_const_t<Storage>, Base>;
 
   template <Component C>
   static constexpr IdContinuity id_continuity =

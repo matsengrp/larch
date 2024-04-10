@@ -40,8 +40,9 @@ void test_mat_view_impl(DAGView dag) {
   dag_from_mat.View().GetRoot().Validate(true);
   check_MAT_MADAG_Eq(mat, dag_from_mat.View());
 
-  auto merge_mv = ExtendDAGStorage<void, decltype(mv), Extend::Nodes<SampleId>,
-                                   Extend::Empty<>, Extend::Empty<>>::FromView(mv);
+  auto merge_mv =
+      ExtendDAGStorage<void, decltype(mv), Extend::Nodes<SampleId>, Extend::Empty<>,
+                       Extend::Empty<>, DefaultViewBase>::FromView(mv);
   merge_mv.View().SampleIdsFromCG();
   Merge merge(mv.GetReferenceSequence());
 

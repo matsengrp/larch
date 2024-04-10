@@ -88,7 +88,7 @@ struct Empty {
  * Adds new features to an existing DAG. See `namespace Extend` for more info.
  */
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase>
 struct ExtendDAGStorage {
  public:
   constexpr static const Component component = Component::DAG;
@@ -101,6 +101,9 @@ struct ExtendDAGStorage {
 
   using Self =
       std::conditional_t<std::is_same_v<ShortName, void>, ExtendDAGStorage, ShortName>;
+
+  using ViewType = DAGView<Self, ViewBase>;
+  using ConstViewType = DAGView<const Self, ViewBase>;
 
   using TargetView = typename ViewTypeOf<Target>::type;
   using OnNodes = select_argument_t<Extend::Nodes, Arg0, Arg1, Arg2>;
@@ -204,8 +207,8 @@ struct ExtendDAGStorage {
     return Self{Target{}};
   }
 
-  DAGView<Self> View();
-  DAGView<const Self> View() const;
+  ViewType View();
+  ConstViewType View() const;
 
   NodeId AppendNode();
   EdgeId AppendEdge();
@@ -273,20 +276,27 @@ struct ExtendDAGStorage {
 };
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
-          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
-using ExtendStorageType = ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>;
+          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
+          template <typename, typename> typename ViewBase = DefaultViewBase>
+using ExtendStorageType =
+    ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>;
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
+          template <typename, typename> typename ViewBase = DefaultViewBase,
           typename = std::enable_if_t<Target::role == Role::Storage>>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2> AddExtend(Target&& target) {
-  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::Consume(
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase> AddExtend(
+    Target&& target) {
+  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::Consume(
       std::move(target));
 }
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
+          template <typename, typename> typename ViewBase = DefaultViewBase,
           typename = std::enable_if_t<Target::role == Role::View>>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2> AddExtend(const Target& target) {
-  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::FromView(target);
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase> AddExtend(
+    const Target& target) {
+  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::FromView(
+      target);
 }

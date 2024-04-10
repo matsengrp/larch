@@ -3,10 +3,10 @@
 #endif
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase>
 template <Component C, typename Feature>
-inline constexpr bool ExtendDAGStorage<ShortName, Target, Arg0, Arg1,
-                                       Arg2>::contains_element_feature = [] {
+inline constexpr bool ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                                       ViewBase>::contains_element_feature = [] {
   // NOLINTBEGIN
   if constexpr (TargetView::StorageType::template contains_element_feature<C,
                                                                            Feature>) {
@@ -22,105 +22,110 @@ inline constexpr bool ExtendDAGStorage<ShortName, Target, Arg0, Arg1,
 }();
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-DAGView<typename ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::Self>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::View() {
-  return DAGView<Self>{static_cast<Self&>(*this)};
+          typename Arg2, template <typename, typename> typename ViewBase>
+typename ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::ViewType
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::View() {
+  return ViewType{static_cast<Self&>(*this)};
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-DAGView<const typename ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::Self>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::View() const {
-  return DAGView<const Self>{static_cast<const Self&>(*this)};
+          typename Arg2, template <typename, typename> typename ViewBase>
+typename ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::ConstViewType
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::View() const {
+  return ConstViewType{static_cast<const Self&>(*this)};
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-NodeId ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::AppendNode() {
+          typename Arg2, template <typename, typename> typename ViewBase>
+NodeId ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::AppendNode() {
   additional_node_features_storage_.push_back({});
   return GetTarget().AppendNode().GetId();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-EdgeId ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::AppendEdge() {
+          typename Arg2, template <typename, typename> typename ViewBase>
+EdgeId ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::AppendEdge() {
   additional_edge_features_storage_.push_back({});
   return GetTarget().AppendEdge().GetId();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::AddNode(NodeId id) {
+          typename Arg2, template <typename, typename> typename ViewBase>
+void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::AddNode(
+    NodeId id) {
   std::ignore = GetOrInsert(additional_node_features_storage_, id);
   GetTarget().AddNode(id);
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::AddEdge(EdgeId id) {
+          typename Arg2, template <typename, typename> typename ViewBase>
+void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::AddEdge(
+    EdgeId id) {
   std::ignore = GetOrInsert(additional_edge_features_storage_, id);
   GetTarget().AddEdge(id);
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetNodesCount() const {
+          typename Arg2, template <typename, typename> typename ViewBase>
+size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetNodesCount()
+    const {
   return GetTarget().GetNodesCount();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetEdgesCount() const {
+          typename Arg2, template <typename, typename> typename ViewBase>
+size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetEdgesCount()
+    const {
   return GetTarget().GetEdgesCount();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetNodes() const {
+          typename Arg2, template <typename, typename> typename ViewBase>
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetNodes() const {
   return GetTarget().GetStorage().GetNodes();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetEdges() const {
+          typename Arg2, template <typename, typename> typename ViewBase>
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetEdges() const {
   return GetTarget().GetStorage().GetEdges();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::InitializeNodes(
+          typename Arg2, template <typename, typename> typename ViewBase>
+void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::InitializeNodes(
     size_t size) {
   GetTarget().InitializeNodes(size);
   additional_node_features_storage_.resize(size);
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::InitializeEdges(
+          typename Arg2, template <typename, typename> typename ViewBase>
+void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::InitializeEdges(
     size_t size) {
   GetTarget().InitializeEdges(size);
   additional_edge_features_storage_.resize(size);
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::ClearNodes() {
+          typename Arg2, template <typename, typename> typename ViewBase>
+void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::ClearNodes() {
   GetTarget().ClearNodes();
   additional_node_features_storage_.clear();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::ClearEdges() {
+          typename Arg2, template <typename, typename> typename ViewBase>
+void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::ClearEdges() {
   GetTarget().GetStorage().ClearEdges();
   additional_edge_features_storage_.clear();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase>
 template <typename Feature>
-auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage() {
+auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                       ViewBase>::GetFeatureStorage() {
   if constexpr (tuple_contains_v<decltype(additional_dag_features_storage_), Feature>) {
     return std::get<Feature>(additional_dag_features_storage_);
   } else {
@@ -129,10 +134,10 @@ auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage()
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase>
 template <typename Feature>
-const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage()
-    const {
+const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                             ViewBase>::GetFeatureStorage() const {
   if constexpr (tuple_contains_v<decltype(additional_dag_features_storage_), Feature>) {
     return std::get<Feature>(additional_dag_features_storage_);
   } else {
@@ -141,10 +146,10 @@ const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureSto
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase>
 template <typename F>
-auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
-    NodeId id) {
+auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                       ViewBase>::GetFeatureStorage(NodeId id) {
   if constexpr (tuple_contains_v<std::remove_reference_t<
                                      decltype(additional_node_features_storage_.at(0))>,
                                  F>) {
@@ -155,10 +160,10 @@ auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase>
 template <typename F>
-const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
-    NodeId id) const {
+const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                             ViewBase>::GetFeatureStorage(NodeId id) const {
   if constexpr (tuple_contains_v<
                     typename decltype(additional_node_features_storage_)::value_type,
                     F>) {
@@ -169,10 +174,10 @@ const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureSto
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase>
 template <typename F>
-auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
-    EdgeId id) {
+auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                       ViewBase>::GetFeatureStorage(EdgeId id) {
   if constexpr (tuple_contains_v<
                     typename decltype(additional_edge_features_storage_)::value_type,
                     F>) {
@@ -183,10 +188,10 @@ auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase>
 template <typename F>
-const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureStorage(
-    EdgeId id) const {
+const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                             ViewBase>::GetFeatureStorage(EdgeId id) const {
   if constexpr (tuple_contains_v<
                     typename decltype(additional_edge_features_storage_)::value_type,
                     F>) {
@@ -197,9 +202,10 @@ const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureSto
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase>
 template <Component C, typename F>
-auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() {
+auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                       ViewBase>::GetFeatureExtraStorage() {
   if constexpr (std::remove_reference_t<Target>::template contains_element_feature<C,
                                                                                    F>) {
     return GetTarget().template GetFeatureExtraStorage<C, F>();
@@ -213,10 +219,10 @@ auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureExtraStor
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase>
 template <Component C, typename F>
-const auto&
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() const {
+const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                             ViewBase>::GetFeatureExtraStorage() const {
   if constexpr (Target::template contains_element_feature<C, F>) {
     return GetTarget().template GetFeatureExtraStorage<C, F>();
   } else {
@@ -229,21 +235,23 @@ ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetFeatureExtraStorage() 
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::ExtendDAGStorage(Target&& target)
+          typename Arg2, template <typename, typename> typename ViewBase>
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::ExtendDAGStorage(
+    Target&& target)
     : target_{std::forward<Target>(target)} {
   additional_node_features_storage_.resize(GetTarget().GetNodesCount());
   additional_edge_features_storage_.resize(GetTarget().GetEdgesCount());
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetTarget() {
+          typename Arg2, template <typename, typename> typename ViewBase>
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetTarget() {
   return ViewOf(target_);
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
-auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::GetTarget() const {
+          typename Arg2, template <typename, typename> typename ViewBase>
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetTarget()
+    const {
   return ViewOf(target_);
 }

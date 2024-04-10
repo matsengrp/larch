@@ -59,19 +59,19 @@ struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
 
 #include "larch/impl/madag/mutation_annotated_dag_impl.hpp"
 
-template <typename Target = DefaultDAGStorage>
+template <typename Target = DefaultDAGStorage,
+          template <typename, typename> typename ViewBase = DefaultViewBase>
 struct MADAGStorage;
 
-template <typename Target>
-struct LongNameOf<MADAGStorage<Target>> {
-  using type =
-      ExtendDAGStorage<MADAGStorage<Target>, Target,
-                       Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
-                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>>;
+template <typename Target, template <typename, typename> typename ViewBase>
+struct LongNameOf<MADAGStorage<Target, ViewBase>> {
+  using type = ExtendDAGStorage<
+      MADAGStorage<Target>, Target, Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
+      Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>, ViewBase>;
 };
 
-template <typename Target>
-struct MADAGStorage : LongNameOf<MADAGStorage<Target>>::type {
+template <typename Target, template <typename, typename> typename ViewBase>
+struct MADAGStorage : LongNameOf<MADAGStorage<Target, ViewBase>>::type {
   SHORT_NAME(MADAGStorage);
 };
 
@@ -85,5 +85,5 @@ MADAGStorage<Target> AddMADAG(const Target& dag) {
   return MADAGStorage<Target>::FromView(dag);
 }
 
-using MADAG = DAGView<const MADAGStorage<DefaultDAGStorage>>;
-using MutableMADAG = DAGView<MADAGStorage<DefaultDAGStorage>>;
+using MADAG = typename MADAGStorage<DefaultDAGStorage>::ConstViewType;
+using MutableMADAG = typename MADAGStorage<DefaultDAGStorage>::ViewType;

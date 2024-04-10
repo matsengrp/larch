@@ -44,7 +44,8 @@ struct ToOverlayStorage<std::tuple<Features...>> {
 
 }  // namespace
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase = DefaultViewBase>
 struct OverlayDAGStorage {
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
@@ -56,6 +57,9 @@ struct OverlayDAGStorage {
 
   using Self =
       std::conditional_t<std::is_same_v<ShortName, void>, OverlayDAGStorage, ShortName>;
+
+  using ViewType = DAGView<Self, ViewBase>;
+  using ConstViewType = DAGView<const Self, ViewBase>;
 
   using TargetView = typename ViewTypeOf<Target>::type;
 
@@ -120,8 +124,8 @@ struct OverlayDAGStorage {
     return Self{Target{target}};
   }
 
-  auto View();
-  auto View() const;
+  ViewType View();
+  ConstViewType View() const;
 
   NodeId AppendNode();
   EdgeId AppendEdge();

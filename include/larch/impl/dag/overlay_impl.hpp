@@ -95,57 +95,70 @@ bool FeatureConstView<OverlayDAG, CRTP, Tag>::HaveOverlays() const {
              storage.added_edge_storage_.empty());
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <Component C, typename Feature>
-inline constexpr bool OverlayDAGStorage<ShortName, Target>::contains_element_feature =
-    TargetView::StorageType::template contains_element_feature<C, Feature>;
+inline constexpr bool
+    OverlayDAGStorage<ShortName, Target, ViewBase>::contains_element_feature =
+        TargetView::StorageType::template contains_element_feature<C, Feature>;
 
-template <typename ShortName, typename Target>
-auto OverlayDAGStorage<ShortName, Target>::View() {
-  return DAGView<Self>{static_cast<Self&>(*this)};
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+typename OverlayDAGStorage<ShortName, Target, ViewBase>::ViewType
+OverlayDAGStorage<ShortName, Target, ViewBase>::View() {
+  return ViewType{static_cast<Self&>(*this)};
 }
 
-template <typename ShortName, typename Target>
-auto OverlayDAGStorage<ShortName, Target>::View() const {
-  return DAGView<const Self>{static_cast<const Self&>(*this)};
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+typename OverlayDAGStorage<ShortName, Target, ViewBase>::ConstViewType
+OverlayDAGStorage<ShortName, Target, ViewBase>::View() const {
+  return ConstViewType{static_cast<const Self&>(*this)};
 }
 
-template <typename ShortName, typename Target>
-NodeId OverlayDAGStorage<ShortName, Target>::AppendNode() {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+NodeId OverlayDAGStorage<ShortName, Target, ViewBase>::AppendNode() {
   auto result = GetNextAvailableId<Component::Node>();
   added_node_storage_.push_back({});
   return result;
 }
 
-template <typename ShortName, typename Target>
-EdgeId OverlayDAGStorage<ShortName, Target>::AppendEdge() {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+EdgeId OverlayDAGStorage<ShortName, Target, ViewBase>::AppendEdge() {
   auto result = GetNextAvailableId<Component::Edge>();
   added_edge_storage_.push_back({});
   return result;
 }
 
-template <typename ShortName, typename Target>
-void OverlayDAGStorage<ShortName, Target>::AddNode(NodeId id) {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+void OverlayDAGStorage<ShortName, Target, ViewBase>::AddNode(NodeId id) {
   View().Overlay(id);
 }
 
-template <typename ShortName, typename Target>
-void OverlayDAGStorage<ShortName, Target>::AddEdge(EdgeId id) {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+void OverlayDAGStorage<ShortName, Target, ViewBase>::AddEdge(EdgeId id) {
   View().Overlay(id);
 }
 
-template <typename ShortName, typename Target>
-size_t OverlayDAGStorage<ShortName, Target>::GetNodesCount() const {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+size_t OverlayDAGStorage<ShortName, Target, ViewBase>::GetNodesCount() const {
   return GetTarget().GetNodesCount() + added_node_storage_.size();
 }
 
-template <typename ShortName, typename Target>
-size_t OverlayDAGStorage<ShortName, Target>::GetEdgesCount() const {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+size_t OverlayDAGStorage<ShortName, Target, ViewBase>::GetEdgesCount() const {
   return GetTarget().GetEdgesCount() + added_edge_storage_.size();
 }
 
-template <typename ShortName, typename Target>
-auto OverlayDAGStorage<ShortName, Target>::GetNodes() const {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetNodes() const {
   auto target_nodes = GetTarget().GetStorage().GetNodes();
   auto first_added = GetTarget().GetNextAvailableNodeId();
   auto added_nodes =
@@ -155,8 +168,9 @@ auto OverlayDAGStorage<ShortName, Target>::GetNodes() const {
   return ranges::views::concat(target_nodes, added_nodes);
 }
 
-template <typename ShortName, typename Target>
-auto OverlayDAGStorage<ShortName, Target>::GetEdges() const {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetEdges() const {
   auto target_edges = GetTarget().GetStorage().GetEdges();
   auto first_added = GetTarget().GetNextAvailableEdgeId();
   auto added_edges =
@@ -166,87 +180,104 @@ auto OverlayDAGStorage<ShortName, Target>::GetEdges() const {
   return ranges::views::concat(target_edges, added_edges);
 }
 
-template <typename ShortName, typename Target>
-void OverlayDAGStorage<ShortName, Target>::InitializeNodes(size_t size) {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+void OverlayDAGStorage<ShortName, Target, ViewBase>::InitializeNodes(size_t size) {
   if (size < GetTarget().GetNodesCount()) {
     Fail("Overlayed DAG can only be grown");
   }
   added_node_storage_.resize(size - GetTarget().GetNodesCount());
 }
 
-template <typename ShortName, typename Target>
-void OverlayDAGStorage<ShortName, Target>::InitializeEdges(size_t size) {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+void OverlayDAGStorage<ShortName, Target, ViewBase>::InitializeEdges(size_t size) {
   if (size < GetTarget().GetEdgesCount()) {
     Fail("Overlayed DAG can only be grown");
   }
   added_edge_storage_.resize(size - GetTarget().GetEdgesCount());
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <typename F>
-auto& OverlayDAGStorage<ShortName, Target>::GetFeatureStorage() {
+auto& OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorage() {
   return GetTarget().template GetFeatureStorage<F>();
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <typename F>
-const auto& OverlayDAGStorage<ShortName, Target>::GetFeatureStorage() const {
+const auto& OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorage() const {
   return GetTarget().template GetFeatureStorage<F>();
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <typename F>
-auto& OverlayDAGStorage<ShortName, Target>::GetFeatureStorage(NodeId id) {
+auto& OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorage(NodeId id) {
   return GetFeatureStorageImpl<F>(*this, id);
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <typename F>
-const auto& OverlayDAGStorage<ShortName, Target>::GetFeatureStorage(NodeId id) const {
+const auto& OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorage(
+    NodeId id) const {
   return GetFeatureStorageImpl<F>(*this, id);
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <typename F>
-auto& OverlayDAGStorage<ShortName, Target>::GetFeatureStorage(EdgeId id) {
+auto& OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorage(EdgeId id) {
   return GetFeatureStorageImpl<F>(*this, id);
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <typename F>
-const auto& OverlayDAGStorage<ShortName, Target>::GetFeatureStorage(EdgeId id) const {
+const auto& OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorage(
+    EdgeId id) const {
   return GetFeatureStorageImpl<F>(*this, id);
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <Component C, typename F>
-auto& OverlayDAGStorage<ShortName, Target>::GetFeatureExtraStorage() {
+auto& OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureExtraStorage() {
   return GetTarget().template GetFeatureExtraStorage<C, F>();
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <Component C, typename F>
-const auto& OverlayDAGStorage<ShortName, Target>::GetFeatureExtraStorage() const {
+const auto& OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureExtraStorage()
+    const {
   return GetTarget().template GetFeatureExtraStorage<C, F>();
 }
 
-template <typename ShortName, typename Target>
-OverlayDAGStorage<ShortName, Target>::OverlayDAGStorage(Target&& target)
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+OverlayDAGStorage<ShortName, Target, ViewBase>::OverlayDAGStorage(Target&& target)
     : target_{std::move(target)} {}
 
-template <typename ShortName, typename Target>
-auto OverlayDAGStorage<ShortName, Target>::GetTarget() {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetTarget() {
   return ViewOf(target_);
 }
 
-template <typename ShortName, typename Target>
-auto OverlayDAGStorage<ShortName, Target>::GetTarget() const {
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
+auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetTarget() const {
   return ViewOf(target_);
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <typename F, typename OverlayStorageType>
-auto OverlayDAGStorage<ShortName, Target>::GetFeatureStorageImpl(
+auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
     OverlayStorageType& self, NodeId id)
     -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
                               OverlayStorageType::TargetView::is_mutable,
@@ -273,9 +304,10 @@ auto OverlayDAGStorage<ShortName, Target>::GetFeatureStorageImpl(
   }
 }
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase>
 template <typename F, typename OverlayStorageType>
-auto OverlayDAGStorage<ShortName, Target>::GetFeatureStorageImpl(
+auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
     OverlayStorageType& self, EdgeId id)
     -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
                               OverlayStorageType::TargetView::is_mutable,
