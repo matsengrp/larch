@@ -20,6 +20,24 @@ To setup a conda environment capable of building Larch, use:
 `conda activate larch`
 `conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib`
 
+Build Environments
+------------------
+
+* singularity 3.5.3
+* conda 22.9.0
+
+Larch can be built utilizing a Singularity container or a Conda environment.
+
+To build Singularity image, use the definition provided:
+
+`singularity build larch-singularity.sif larch-singularity.def`
+`singularity shell larch-singularity.sif --net`
+
+To setup a conda environment capable of building Larch, use the environment
+file provided:
+
+`conda env create -f environment.yml`
+
 Building
 --------
 
@@ -43,10 +61,14 @@ From the build directory:
 
 Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
 
-- `--list` : produces a list of all available tests, along with an ID number, but does not run them.
-- `--range [begin] [end]` : runs tests by ID in [begin, end] range arguments.
-- `-tag [tag_name]` : Excludes tests with given [test_name].
-- `+tag [tag_name]` : Includes tests with given [test_name].
+larch-test options:
+
+- `nocatch` allows test exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
+- `--list` produces a list of all available tests, along with an ID number.
+- `--range` runs tests by ID with a string of comma-separated range or single ID arguments [e.g. 1-5,7,9,12-13].
+- `-tag` excludes tests with a given tag.
+- `+tag` finds tests with a given tag.
+- For example, the `-tag "slow"` removes tests which require an long runtime to complete.
 
 Third-party
 -----------

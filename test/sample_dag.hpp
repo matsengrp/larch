@@ -141,7 +141,7 @@
   auto dag = dag_storage.View();
   dag.SetCompactGenomesFromNodeSequenceMap(seq_map);
   dag.RecomputeEdgeMutations();
-  dag.RecomputeCompactGenomes();
+  dag.RecomputeCompactGenomes(false);
   dag.SampleIdsFromCG();
   return dag_storage;
 }
@@ -152,7 +152,7 @@
   auto dag = dag_storage.View();
   dag.SetCompactGenomesFromNodeSequenceMap(seq_map);
   dag.RecomputeEdgeMutations();
-  // dag.RecomputeCompactGenomes();
+  dag.RecomputeCompactGenomes(false);
   dag.SampleIdsFromCG();
   return dag_storage;
 }
@@ -163,7 +163,7 @@
   auto dag = dag_storage.View();
   dag.SetCompactGenomesFromNodeSequenceMap(seq_map);
   dag.RecomputeEdgeMutations();
-  dag.RecomputeCompactGenomes();
+  dag.RecomputeCompactGenomes(false);
   dag.SampleIdsFromCG();
   return dag_storage;
 }
