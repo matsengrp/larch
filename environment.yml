@@ -1,6 +1,5 @@
 name: larch-dev
 channels:
-  - conda-forge/label/main
   - conda-forge
   - bioconda
   - defaults
