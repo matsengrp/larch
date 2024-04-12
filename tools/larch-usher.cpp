@@ -26,6 +26,7 @@
 #include "larch/usher_glue.hpp"
 
 #include <tbb/global_control.h>
+
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
   std::cout << "larch-usher -i,--input file -o,--output file [-m,--matopt file] "
@@ -52,8 +53,9 @@
   std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
                "Default: 1\n";
   std::cout << "  --sample-any-tree    Sample any tree for optimization, rather than "
-               "requiring "
-               "the sampled tree to maximize parsimony.\n";
+               "requiring the sampled tree to maximize parsimony.\n";
+  std::cout << "  --sample-method      Select method for optimization "
+               "[parsimony, random, rf-minsum, rf-maxsum]\n";
   std::cout << "  --callback-option    Callback configuration choice(default merge all "
                "profitable moves)\n";
   std::cout << "  --trim   Trim optimized dag before writing to protobuf\n";
@@ -169,22 +171,26 @@ struct Treebased_Move_Found_Callback
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
-      auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveSources())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
-      auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveTargets())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
+      auto src_leaf_set =
+          spr.GetMoveSource().GetOld().IsCondensedInMAT()
+              ? make_leaf_set(spr.GetMoveSources())
+              : this->GetMerge()
+                    .GetResultNodeLabels()
+                    .at(this->GetMappedStorage()
+                            .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                            .GetOriginalId())
+                    .GetLeafSet()
+                    ->GetClades();
+      auto dst_leaf_set =
+          spr.GetMoveTarget().GetOld().IsCondensedInMAT()
+              ? make_leaf_set(spr.GetMoveTargets())
+              : this->GetMerge()
+                    .GetResultNodeLabels()
+                    .at(this->GetMappedStorage()
+                            .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                            .GetOriginalId())
+                    .GetLeafSet()
+                    ->GetClades();
       for (auto hypothetical_node : fragment.GetNodes()) {
         if (hypothetical_node.IsMoveNew()) {
           if (not(this->GetMerge().ContainsLeafset(
@@ -200,11 +206,14 @@ struct Treebased_Move_Found_Callback
                       hypothetical_node.GetOld().GetMATNode()->node_id ==
                           move.dst->node_id or
                       hypothetical_node.GetOld().GetMATNode()->is_root())) {
-                const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().at(
-                    this->GetMappedStorage()
-                        .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
-                        .GetOriginalId())
-                    .GetLeafSet()->GetClades();
+                const auto& current_leaf_sets =
+                    this->GetMerge()
+                        .GetResultNodeLabels()
+                        .at(this->GetMappedStorage()
+                                .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                                .GetOriginalId())
+                        .GetLeafSet()
+                        ->GetClades();
                 if (not(this->GetMerge().ContainsLeafset(
                             clades_difference(current_leaf_sets, src_leaf_set)) and
                         this->GetMerge().ContainsLeafset(
@@ -310,22 +319,26 @@ struct Merge_All_Profitable_Moves_Found_Callback
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
-      auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveSources())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
-      auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveTargets())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
+      auto src_leaf_set =
+          spr.GetMoveSource().GetOld().IsCondensedInMAT()
+              ? make_leaf_set(spr.GetMoveSources())
+              : this->GetMerge()
+                    .GetResultNodeLabels()
+                    .at(this->GetMappedStorage()
+                            .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                            .GetOriginalId())
+                    .GetLeafSet()
+                    ->GetClades();
+      auto dst_leaf_set =
+          spr.GetMoveTarget().GetOld().IsCondensedInMAT()
+              ? make_leaf_set(spr.GetMoveTargets())
+              : this->GetMerge()
+                    .GetResultNodeLabels()
+                    .at(this->GetMappedStorage()
+                            .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                            .GetOriginalId())
+                    .GetLeafSet()
+                    ->GetClades();
       for (auto hypothetical_node : fragment.GetNodes()) {
         if (hypothetical_node.IsMoveNew()) {
           if (not(this->GetMerge().ContainsLeafset(
@@ -341,11 +354,14 @@ struct Merge_All_Profitable_Moves_Found_Callback
                       hypothetical_node.GetOld().GetMATNode()->node_id ==
                           move.dst->node_id or
                       hypothetical_node.GetOld().GetMATNode()->is_root())) {
-                const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().at(
-                    this->GetMappedStorage()
-                        .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
-                        .GetOriginalId())
-                    .GetLeafSet()->GetClades();
+                const auto& current_leaf_sets =
+                    this->GetMerge()
+                        .GetResultNodeLabels()
+                        .at(this->GetMappedStorage()
+                                .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                                .GetOriginalId())
+                        .GetLeafSet()
+                        ->GetClades();
                 if (not(this->GetMerge().ContainsLeafset(
                             clades_difference(current_leaf_sets, src_leaf_set)) and
                         this->GetMerge().ContainsLeafset(
@@ -436,22 +452,26 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
-      auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveSources())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
-      auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
-                        ? make_leaf_set(spr.GetMoveTargets())
-                        : this->GetMerge().GetResultNodeLabels().at(
-                                           this->GetMappedStorage()
-                                           .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
-                                           .GetOriginalId())
-                                           .GetLeafSet()
-                                           ->GetClades();
+      auto src_leaf_set =
+          spr.GetMoveSource().GetOld().IsCondensedInMAT()
+              ? make_leaf_set(spr.GetMoveSources())
+              : this->GetMerge()
+                    .GetResultNodeLabels()
+                    .at(this->GetMappedStorage()
+                            .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                            .GetOriginalId())
+                    .GetLeafSet()
+                    ->GetClades();
+      auto dst_leaf_set =
+          spr.GetMoveTarget().GetOld().IsCondensedInMAT()
+              ? make_leaf_set(spr.GetMoveTargets())
+              : this->GetMerge()
+                    .GetResultNodeLabels()
+                    .at(this->GetMappedStorage()
+                            .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                            .GetOriginalId())
+                    .GetLeafSet()
+                    ->GetClades();
       for (auto hypothetical_node : fragment.GetNodes()) {
         if (hypothetical_node.IsMoveNew()) {
           if (not(this->GetMerge().ContainsLeafset(
@@ -467,11 +487,14 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
                       hypothetical_node.GetOld().GetMATNode()->node_id ==
                           move.dst->node_id or
                       hypothetical_node.GetOld().GetMATNode()->is_root())) {
-                const auto& current_leaf_sets = this->GetMerge().GetResultNodeLabels().at(
-                    this->GetMappedStorage()
-                        .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
-                        .GetOriginalId())
-                    .GetLeafSet()->GetClades();
+                const auto& current_leaf_sets =
+                    this->GetMerge()
+                        .GetResultNodeLabels()
+                        .at(this->GetMappedStorage()
+                                .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                                .GetOriginalId())
+                        .GetLeafSet()
+                        ->GetClades();
                 if (not(this->GetMerge().ContainsLeafset(
                             clades_difference(current_leaf_sets, src_leaf_set)) and
                         this->GetMerge().ContainsLeafset(
@@ -509,7 +532,17 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string refseq_path;
   std::string vcf_path;
   std::string callback_config = "best-moves";
-  bool sample_best_tree = true;
+  bool write_intermediate_pb = true;
+  enum class SampleMethod {
+    Random,
+    UniformRandom,
+    Parsimony,
+    UniformParsimony,
+    MinSumRFDistance,
+    MaxSumRFDistance
+  };
+  SampleMethod sample_method = SampleMethod::Parsimony;
+  bool sample_uniformly = false;
   size_t count = 1;
   int move_coeff_nodes = 1;
   int move_coeff_pscore = 1;
@@ -519,7 +552,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   bool uniform_subtree_root = false;
   bool collapse_empty_fragment_edges = true;
   bool final_trim = false;
-  bool sample_uniformly = false;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -578,8 +610,28 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         Fail();
       }
       move_coeff_nodes = ParseNumber(*params.begin());
+    } else if (name == "--sample-method") {
+      if (params.empty()) {
+        std::cerr << "sample-method not specified [parsimony, random, rf-minsum, "
+                     "rf-maxsum]\n";
+        Fail();
+      }
+      auto arg = *params.begin();
+      if (arg == "random") {
+        sample_method = SampleMethod::Random;
+      } else if (arg == "parsimony") {
+        sample_method = SampleMethod::Parsimony;
+      } else if (arg == "rf-minsum") {
+        sample_method = SampleMethod::MinSumRFDistance;
+      } else if (arg == "rf-maxsum") {
+        sample_method = SampleMethod::MaxSumRFDistance;
+      } else {
+        std::cerr << "ERROR: Unknown --sample-method option '" << arg << "'"
+                  << std::endl;
+        std::exit(EXIT_FAILURE);
+      }
     } else if (name == "--sample-any-tree") {
-      sample_best_tree = false;
+      sample_method = SampleMethod::Random;
     } else if (name == "--sample-uniformly") {
       sample_uniformly = true;
     } else if (name == "-r" or name == "--MAT-refseq-file") {
@@ -602,11 +654,21 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       callback_config = *params.begin();
     } else if (name == "--keep-fragment-uncollapsed") {
       collapse_empty_fragment_edges = false;
+    } else if (name == "--quiet") {
+      write_intermediate_pb = false;
     } else if (name == "--trim") {
       final_trim = true;
     } else {
       std::cerr << "Unknown argument.\n";
       Fail();
+    }
+  }
+
+  if (sample_uniformly) {
+    if (sample_method == SampleMethod::Random) {
+      sample_method = SampleMethod::UniformRandom;
+    } else if (sample_method == SampleMethod::Parsimony) {
+      sample_method = SampleMethod::UniformParsimony;
     }
   }
 
@@ -627,9 +689,9 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::ofstream logfile;
   logfile.open(logfile_name);
   logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWors"
-             "tParsimony\tSecondsElapsed";
+             "tParsimony\tMinSumRFDistance\tMaxSumRFDistance\tMinSumRFCount\tMaxSumRFCount\tSecondsElapsed";
 
-  //tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAGStorage<> input_dag =
       refseq_path.empty()
           ? LoadDAGFromProtobuf(input_dag_path)
@@ -638,7 +700,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   input_dag.View().RecomputeCompactGenomes(true);
   LoadVCFData(input_dag, vcf_path);
   auto input_dag_view = input_dag.View();
-  // if the DAG is from a DAG protobuf file, then it needs to be equipped with SampleIds
+  // if the DAG is from a DAG protobuf file, then it needs to be equipped with
+  // SampleIds
   if (vcf_path.empty()) {
     input_dag_view.SampleIdsFromCG();
   }
@@ -655,18 +718,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     return std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
   };
 
-  auto get_rf_distance = [](const Merge& merge1, const Merge& merge2) {
-    // merge1 is the DAG we compute the weights for (summing distances to merge2)
-    auto dag1 = merge1.GetResult();
-    SubtreeWeight<SumRFDistance, std::decay_t<decltype(dag1)>> rf_count{dag1};
-    // merge2 is the reference DAG
-    SumRFDistance weight_ops{merge2, merge1};
-    ArbitraryInt shift_sum = weight_ops.GetOps().GetShiftSum();
-    auto rf_dist = rf_count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) + shift_sum;
-    return rf_dist;
-  };
-
-  auto logger = [&merge, &logfile, &time_elapsed, &get_rf_distance](size_t iteration) {
+  auto logger = [&merge, &logfile, &time_elapsed, &write_intermediate_pb](size_t iteration) {
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{merge.GetResult()};
     SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> maxparsimonyscorer{
         merge.GetResult()};
@@ -679,19 +731,39 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         maxparsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     SubtreeWeight<TreeCount, MergeDAG> treecount{merge.GetResult()};
     auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-    auto rf_distance = get_rf_distance(merge, merge);
+
+    SubtreeWeight<SumRFDistance, MergeDAG> this_min_sum_rf_dist{merge.GetResult()};
+    SumRFDistance this_min_rf_weight_ops{merge, merge};
+    SubtreeWeight<MaxSumRFDistance, MergeDAG> this_max_sum_rf_dist{merge.GetResult()};
+    MaxSumRFDistance this_max_rf_weight_ops{merge, merge};
+    auto shiftsum = this_min_rf_weight_ops.GetOps().GetShiftSum();
+
+    auto min_rf_distance = this_min_sum_rf_dist.ComputeWeightBelow(merge.GetResult().GetRoot(), this_min_rf_weight_ops) + shiftsum;
+    auto min_rf_count = this_min_sum_rf_dist.MinWeightCount(merge.GetResult().GetRoot(), this_min_rf_weight_ops);
+
+    auto max_rf_distance = this_max_sum_rf_dist.ComputeWeightBelow(merge.GetResult().GetRoot(), this_max_rf_weight_ops) + shiftsum;
+    auto max_rf_count = this_max_sum_rf_dist.MinWeightCount(merge.GetResult().GetRoot(), this_max_rf_weight_ops);
+
 
     std::cout << "Best parsimony score in DAG: " << minparsimony << "\n";
     std::cout << "Worst parsimony score in DAG: " << maxparsimony << "\n";
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << ntrees
               << "\n";
     std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
-    std::cout << "RF distance: " << rf_distance << "\n";
+    std::cout << "min summed RF distance over trees: " << min_rf_distance << "\n";
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
             << '\t' << merge.GetResult().GetEdgesCount() << '\t' << minparsimony << '\t'
-            << minparsimonytrees << '\t' << maxparsimony << '\t' << rf_distance << '\t' <<
-            time_elapsed() << std::flush;
+            << minparsimonytrees << '\t' << maxparsimony << '\t'
+            << min_rf_distance << '\t'
+            << max_rf_distance << '\t'
+            << min_rf_count << '\t'
+            << max_rf_count << '\t'
+            << time_elapsed() << std::flush;
+    if (write_intermediate_pb) {
+      std::string intermediate_dag_path = "intermediate_MADAG_untrimmed.pb";
+      StoreDAGToProtobuf(merge.GetResult(), intermediate_dag_path);
+    }
   };
   logger(0);
 
@@ -775,18 +847,33 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
     merge.ComputeResultEdgeMutations();
 
-    std::ignore = sample_best_tree;
-    std::ignore = sample_uniformly;
+    SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge.GetResult()};
+    SumRFDistance min_rf_weight_ops{merge, merge};
+    SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist{merge.GetResult()};
+    MaxSumRFDistance max_rf_weight_ops{merge, merge};
 
-    auto sample =
-        sample_best_tree
-            ? sample_uniformly
-                  ? AddMATConversion(
-                        weight.MinWeightUniformSampleTree({}, subtree_node))
-                  : AddMATConversion(weight.MinWeightSampleTree({}, subtree_node))
-        : sample_uniformly ? AddMATConversion(uniform_sampling_weight.UniformSampleTree(
-                                 {}, subtree_node))
-                           : AddMATConversion(weight.SampleTree({}, subtree_node));
+    auto sample = [&]() {
+      switch (sample_method) {
+        case SampleMethod::Random:
+          return AddMATConversion(weight.SampleTree({}, subtree_node));
+        case SampleMethod::UniformRandom:
+          return AddMATConversion(
+              uniform_sampling_weight.UniformSampleTree({}, subtree_node));
+        case SampleMethod::Parsimony:
+          return AddMATConversion(weight.MinWeightSampleTree({}, subtree_node));
+        case SampleMethod::UniformParsimony:
+          return AddMATConversion(weight.MinWeightUniformSampleTree({}, subtree_node));
+        case SampleMethod::MinSumRFDistance:
+          return AddMATConversion(
+              min_sum_rf_dist.SampleTree(min_rf_weight_ops, subtree_node));
+        case SampleMethod::MaxSumRFDistance:
+          return AddMATConversion(
+              max_sum_rf_dist.SampleTree(max_rf_weight_ops, subtree_node));
+        default:
+          std::cerr << "ERROR: Invalid SampleMethod" << std::endl;
+          std::exit(EXIT_FAILURE);
+      }
+    }();
 
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
               << sample.GetNodesCount() << "\n";
@@ -834,7 +921,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::cout << "new node coefficient: " << move_coeff_nodes << "\n";
   std::cout << "parsimony score coefficient: " << move_coeff_pscore << "\n";
   logfile.close();
-  if (final_trim){
+  if (final_trim) {
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{merge.GetResult()};
     merge.ComputeResultEdgeMutations();
     StoreDAGToProtobuf(parsimonyscorer.TrimToMinWeight({}).View(), output_dag_path);
