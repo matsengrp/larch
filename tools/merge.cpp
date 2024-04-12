@@ -78,6 +78,7 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
       StoreDAGToProtobuf(weight.TrimToMinWeight({}).View(), out_path);
     }
   } else {
+    merge.ComputeResultEdgeMutations();
     if (sample_tree) {
       std::cout << "sampling a tree from the merge DAG\n";
         SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
