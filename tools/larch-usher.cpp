@@ -722,18 +722,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   auto logger = [&merge, &logfile, &time_elapsed,
                  &write_intermediate_pb](size_t iteration) {
-    auto get_rf_distance = [](const Merge& merge1, const Merge& merge2) {
-      // merge1 is the DAG we compute the weights for (summing distances to merge2)
-      auto dag1 = merge1.GetResult();
-      SubtreeWeight<SumRFDistance, MergeDAG> rf_count{dag1};
-      // merge2 is the reference DAG
-      SumRFDistance weight_ops{merge2, merge1};
-      ArbitraryInt shift_sum = weight_ops.GetOps().GetShiftSum();
-      auto rf_dist =
-          rf_count.ComputeWeightBelow(dag1.GetRoot(), std::move(weight_ops)) +
-          shift_sum;
-      return rf_dist;
-    };
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{merge.GetResult()};
     SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> maxparsimonyscorer{
         merge.GetResult()};
@@ -746,7 +734,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         maxparsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     SubtreeWeight<TreeCount, MergeDAG> treecount{merge.GetResult()};
     auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-    auto rf_distance = get_rf_distance(merge, merge);
 
     SubtreeWeight<SumRFDistance, MergeDAG> this_min_sum_rf_dist{merge.GetResult()};
     SumRFDistance this_min_rf_weight_ops{merge, merge};
@@ -771,7 +758,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << ntrees
               << "\n";
     std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
-    std::cout << "RF distance: " << rf_distance << "\n";
     std::cout << "min summed RF distance over trees: " << min_rf_distance << "\n";
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
