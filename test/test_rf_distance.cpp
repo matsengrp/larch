@@ -137,6 +137,7 @@ static void test_rf_distance_hand_computed_example() {
 }
 
 static void test_rf_distance_different_weight_ops() {
+  auto dag0_storage = make_base_sample_dag();
   auto dag1_storage = make_sample_dag();
   auto dag2_storage = make_nonintersecting_sample_dag();
   auto dag3_storage = make_sample_dag_with_one_unique_node();
@@ -178,6 +179,7 @@ static void test_rf_distance_different_weight_ops() {
       for (auto ref_id : ref_ids) {
         subvec.push_back(true_dist_map[{compute_id, ref_id}]);
       }
+
       if (rf_dist_type == RFDistanceType::Min) {
         vec.push_back(*std::min_element(subvec.begin(), subvec.end()));
       } else if (rf_dist_type == RFDistanceType::Max) {

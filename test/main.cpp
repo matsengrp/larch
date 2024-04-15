@@ -2,12 +2,29 @@
 #include <set>
 #include <regex>
 #include <chrono>
+#include <sstream>
+#include <set>
 
 #ifdef USE_USHER
 #include <mpi.h>
 #endif
 
 #include "test_common.hpp"
+
+static void get_usage() {
+  std::cout << "Usage:\n";
+  std::cout << "larch-test <regular_expression> <options...>\n";
+  std::cout << "  <regular_expression>   Includes all tests with names matching "
+               "expression.\n";
+  std::cout << "  --range <ids>          Includes all tests with listed IDs "
+               "[e.g. 1,5-10,12,15].\n";
+  std::cout << "  -tag <tag>             Excludes all tests with given tag.\n";
+  std::cout << "  +tag <tag>             Includes all tests with given tag.\n";
+  std::cout << "  --list                 Prints information about all selected tests "
+               "(IDs, tags). They are not executed.\n";
+  std::cout << "  nocatch                Allow exceptions to escape for debugging.\n";
+  std::exit(EXIT_SUCCESS);
+}
 
 static std::vector<Test>& get_all_tests() {
   static std::vector<Test> all_tests{};
@@ -19,6 +36,34 @@ bool add_test(const Test& test) noexcept {
   return true;
 }
 
+std::set<int> parse_range(const std::string& str) {
+  std::ignore = str;
+  std::set<int> numbers;
+  std::istringstream iss(str);
+  // Tokenize the string based on commas and dashes.
+  std::string token;
+  while (std::getline(iss, token, ',')) {
+    std::istringstream tokenStream(token);
+    std::string numberToken;
+    std::vector<int> range;
+    while (std::getline(tokenStream, numberToken, '-')) {
+      int number = std::stoi(numberToken);
+      range.push_back(number);
+    }
+    if (range.size() == 1) {
+      numbers.insert(range[0]);
+    } else if (range.size() == 2) {
+      for (int i = range[0]; i < range[1] + 1; i++) {
+        numbers.insert(i);
+      }
+    } else {
+      Fail("Invalid --range argument.");
+    }
+  }
+
+  return numbers;
+}
+
 int main(int argc, char* argv[]) {
 #ifdef USE_USHER
   int ignored{};
@@ -28,19 +73,20 @@ int main(int argc, char* argv[]) {
   bool opt_list_names = false;
   bool opt_test_range = false;
 
-  std::pair<int, int> range;
+  std::set<int> range;
   std::regex regex{".*"};
   std::set<std::string> include_tags;
   std::set<std::string> exclude_tags;
   for (int i = 1; i < argc; ++i) {
-    if (std::string("nocatch") == argv[i]) {
+    if (std::string("-h") == argv[i]) {
+      get_usage();
+    } else if (std::string("nocatch") == argv[i]) {
       no_catch = true;
     } else if (std::string("--list") == argv[i]) {
       opt_list_names = true;
     } else if (std::string("--range") == argv[i]) {
       opt_test_range = true;
-      range.first = atoi(argv[++i]);
-      range.second = atoi(argv[++i]);
+      range = parse_range(argv[++i]);
     } else if (std::string("+tag") == argv[i]) {
       include_tags.insert(argv[++i]);
     } else if (std::string("-tag") == argv[i]) {
@@ -71,8 +117,7 @@ int main(int argc, char* argv[]) {
       }
       std::smatch match;
       if (std::regex_match(test.name, match, regex)) {
-        if ((!opt_test_range) ||
-            ((test_id >= range.first) && (test_id <= range.second))) {
+        if ((!opt_test_range) || (range.find(test_id) != range.end())) {
           tests.push_back({test_id, test});
           std::cout << "  [" << test_id << "] " << test.name;
           if (not test.tags.empty()) {
@@ -125,8 +170,8 @@ int main(int argc, char* argv[]) {
       } else {
         try {
           test.entry();
-          std::cout << test_header_str << " TEST RESULT: " << test_name_str << " Passed."
-                    << std::endl;
+          std::cout << test_header_str << " TEST RESULT: " << test_name_str
+                    << " Passed." << std::endl;
           test_results.push_back(true);
         } catch (const std::exception& e) {
           failed.push_back({test_id, test});
@@ -137,7 +182,8 @@ int main(int argc, char* argv[]) {
       }
 
       auto diff_time = std::chrono::steady_clock::now() - start_time;
-      auto run_time = double(std::chrono::duration <double, std::milli>(diff_time).count()) / 1000.0;
+      auto run_time =
+          double(std::chrono::duration<double, std::milli>(diff_time).count()) / 1000.0;
       test_runtimes.push_back(run_time);
     }
     std::cout << std::endl;
@@ -153,8 +199,8 @@ int main(int argc, char* argv[]) {
       std::string test_result_str = (test_results[i] ? "PASS" : "FAIL");
       std::string test_runtime_str = std::to_string(test_runtimes[i]) + "s";
 
-      std::cout << "  " << test_id_str << " " << test_result_str
-                << " | " << test_runtime_str << " | " << test_name_str << std::endl;
+      std::cout << "  " << test_id_str << " " << test_result_str << " | "
+                << test_runtime_str << " | " << test_name_str << std::endl;
     }
     std::cout << std::endl;
 
