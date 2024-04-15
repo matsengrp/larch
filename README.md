@@ -14,12 +14,6 @@ To get a recent cmake, download from `https://cmake.org/download/`, for example:
 
 `wget https://github.com/Kitware/CMake/releases/download/v3.23.1/cmake-3.23.1-linux-x86_64.tar.gz`
 
-To setup a conda environment capable of building Larch, use:
-
-`conda create -n larch`
-`conda activate larch`
-`conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib`
-
 Build Environments
 ------------------
 
@@ -33,7 +27,13 @@ To build Singularity image, use the definition provided:
 `singularity build larch-singularity.sif larch-singularity.def`
 `singularity shell larch-singularity.sif --net`
 
-To setup a conda environment capable of building Larch, use the environment
+To setup a conda environment capable of building Larch, use:
+
+`conda create -n larch`
+`conda activate larch`
+`conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib`
+
+To setup a conda environment capable of building Larch including development tools, create `larch-dev` using the environment
 file provided:
 
 `conda env create -f environment.yml`
@@ -47,7 +47,7 @@ Building
 `cmake -DCMAKE_BUILD_TYPE=Debug ..`
 `make -j16`
 
-Build options:
+Cmake build options:
   - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
   - add `-DUSE_ASAN=yes` to enable asan and ubsan.
 
@@ -67,7 +67,7 @@ larch-test options:
 - `--list` produces a list of all available tests, along with an ID number.
 - `--range` runs tests by ID with a string of comma-separated range or single ID arguments [e.g. 1-5,7,9,12-13].
 - `-tag` excludes tests with a given tag.
-- `+tag` finds tests with a given tag.
+- `+tag` includes tests with a given tag.
 - For example, the `-tag "slow"` removes tests which require an long runtime to complete.
 
 Third-party

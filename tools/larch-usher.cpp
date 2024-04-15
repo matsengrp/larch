@@ -746,6 +746,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
         maxparsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
     SubtreeWeight<TreeCount, MergeDAG> treecount{merge.GetResult()};
     auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
+    auto rf_distance = get_rf_distance(merge, merge);
 
     SubtreeWeight<SumRFDistance, MergeDAG> this_min_sum_rf_dist{merge.GetResult()};
     SumRFDistance this_min_rf_weight_ops{merge, merge};
@@ -770,6 +771,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << ntrees
               << "\n";
     std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
+    std::cout << "RF distance: " << rf_distance << "\n";
     std::cout << "min summed RF distance over trees: " << min_rf_distance << "\n";
     logfile << '\n'
             << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
