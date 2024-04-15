@@ -4,7 +4,6 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  # build packages
   - cmake=3.19.6
   - make
   - cxx-compiler
@@ -18,7 +17,7 @@ dependencies:
   - yasm
   - ucx
   - zlib
-  # dev packages
+
   - git
   - mafft
   - python
