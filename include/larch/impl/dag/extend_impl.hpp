@@ -23,16 +23,21 @@ inline constexpr bool ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase>
-typename ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::ViewType
+template <template <typename, typename> typename Base>
+DAGView<typename ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::Self,
+        Base>
 ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::View() {
-  return ViewType{static_cast<Self&>(*this)};
+  return DAGView<Self, Base>{static_cast<Self&>(*this)};
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase>
-typename ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::ConstViewType
+template <template <typename, typename> typename Base>
+DAGView<const typename ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                                        ViewBase>::Self,
+        Base>
 ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::View() const {
-  return ConstViewType{static_cast<const Self&>(*this)};
+  return DAGView<const Self, Base>{static_cast<const Self&>(*this)};
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,

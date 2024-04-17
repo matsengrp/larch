@@ -3,10 +3,9 @@
 #include "larch/mat_view.hpp"
 #include "sample_dag.hpp"
 
-using MATViewStorage =
-    DAGStorage<void, MATNodesContainer, MATEdgesContainer, ExtraStorage<Connections>>;
 using Storage = ExtendStorageType<void, MATViewStorage, Extend::Nodes<CompactGenome>,
-                                  Extend::DAG<ReferenceSequence>>;
+                                  Extend::DAG<ReferenceSequence>, Extend::Empty<>,
+                                  CondensedViewBase>;
 
 template <typename DAGView>
 void test_mat_view_impl(DAGView dag) {
@@ -29,10 +28,14 @@ void test_mat_view_impl(DAGView dag) {
   matview_storage.View().SetMAT(std::addressof(mat));
   auto storage = Storage::Consume(std::move(matview_storage));
   auto mv = storage.View();
+  static_assert(mv.IsCondensed());
   mv.SetReferenceSequence(dag.GetReferenceSequence());
   mv.BuildRootAndLeafs();
   mv.RecomputeCompactGenomes();
   mv.GetRoot().Validate(true, false);
+
+  auto umv = mv.GetUncondensed();
+  static_assert(not umv.IsCondensed());
 
   // check BuildFromMAT
   auto dag_from_mat = AddMATConversion(MergeDAGStorage<>::EmptyDefault());

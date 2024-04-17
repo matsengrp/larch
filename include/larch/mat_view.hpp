@@ -2,6 +2,20 @@
 
 #include "larch/mat_conversion.hpp"
 
+template <typename DAGStorageType, typename DAGViewType>
+struct CondensedViewBase : DefaultViewBase<DAGStorageType, DAGViewType> {
+  struct DAGViewBase : DefaultViewBase<DAGStorageType, DAGViewType>::DAGViewBase {
+    static constexpr inline bool is_condensed = true;
+  };
+};
+
+template <typename DAGStorageType, typename DAGViewType>
+struct UncondensedViewBase : DefaultViewBase<DAGStorageType, DAGViewType> {
+  struct DAGViewBase : DefaultViewBase<DAGStorageType, DAGViewType>::DAGViewBase {
+    static constexpr inline bool is_condensed = false;
+  };
+};
+
 struct MATNodeStorage {
   MOVE_ONLY(MATNodeStorage);
   MATNodeStorage() = default;
@@ -26,6 +40,16 @@ struct ExtraFeatureConstView<MATNodeStorage, CRTP> {
     Assert(mat != nullptr);
     return *mat;
   }
+
+  constexpr static bool IsCondensed() {
+    return CRTP::BaseType::DAGViewBase::is_condensed;
+  }
+
+  auto GetUncondensed() const {
+    static_assert(IsCondensed());
+    auto& dag = static_cast<const CRTP&>(*this);
+    return dag.GetStorage().template View<UncondensedViewBase>();
+  }
 };
 
 struct MATEdgeStorage;
@@ -39,7 +63,7 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
         mat;
     dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>().mat_tree_ =
         mat;
-    size_t ua_node_id = 0;  // mat->get_size_upper();
+    size_t ua_node_id = 0;
     Assert(mat->get_node(ua_node_id) == nullptr);
     dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>().ua_node_id_ =
         NodeId{ua_node_id};
@@ -483,5 +507,5 @@ struct MATEdgesContainer {
   ExtraFeatureStorage<MATEdgeStorage> extra_edge_storage_;
 };
 
-using MATViewStorage =
-    DAGStorage<void, MATNodesContainer, MATEdgesContainer, ExtraStorage<Connections>>;
+using MATViewStorage = DAGStorage<void, MATNodesContainer, MATEdgesContainer,
+                                  ExtraStorage<Connections>, CondensedViewBase>;

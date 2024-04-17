@@ -105,8 +105,10 @@ struct DAGStorage {
              ExtraStorageT&& features_storage);
   MOVE_ONLY(DAGStorage);
 
-  ViewType View();
-  ConstViewType View() const;
+  template <template <typename, typename> typename Base = ViewBase>
+  DAGView<Self, Base> View();
+  template <template <typename, typename> typename Base = ViewBase>
+  DAGView<const Self, Base> View() const;
 
   NodeId AppendNode();
   EdgeId AppendEdge();

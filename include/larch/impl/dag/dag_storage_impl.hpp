@@ -29,20 +29,24 @@ inline constexpr bool DAGStorage<ShortName, NodesContainerT, EdgesContainerT,
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
-typename DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                    ViewBase>::ViewType
+template <template <typename, typename> typename Base>
+DAGView<typename DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                            ViewBase>::Self,
+        Base>
 DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
            ViewBase>::View() {
-  return ViewType{static_cast<Self&>(*this)};
+  return DAGView<Self, Base>{static_cast<Self&>(*this)};
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
-typename DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                    ViewBase>::ConstViewType
+template <template <typename, typename> typename Base>
+DAGView<const typename DAGStorage<ShortName, NodesContainerT, EdgesContainerT,
+                                  ExtraStorageT, ViewBase>::Self,
+        Base>
 DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT, ViewBase>::View()
     const {
-  return ConstViewType{static_cast<const Self&>(*this)};
+  return DAGView<const Self, Base>{static_cast<const Self&>(*this)};
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
