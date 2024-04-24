@@ -24,13 +24,15 @@ Larch can be built utilizing a Singularity container or a Conda environment.
 
 To build Singularity image, use the definition provided:
 
-`singularity build larch-singularity.sif larch-singularity.def`
-`singularity shell larch-singularity.sif --net`
+```shell
+singularity build larch-singularity.sif larch-singularity.def
+singularity shell larch-singularity.sif --net
+```
 
 To setup a conda environment capable of building Larch, use:
 
-`conda create -n larch`
-`conda activate larch`
+`conda create -n larch` \
+`conda activate larch` \
 `conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib`
 
 To setup a conda environment capable of building Larch including development tools, create `larch-dev` using the environment
@@ -41,11 +43,13 @@ file provided:
 Building
 --------
 
-`git submodule update --init --recursive`
-`mkdir build`
-`cd build`
-`cmake -DCMAKE_BUILD_TYPE=Debug ..`
-`make -j16`
+```shell
+git submodule update --init --recursive
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+make -j16
+```
 
 Cmake build options:
   - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
@@ -56,8 +60,10 @@ Running
 
 From the build directory:
 
-`ln -s ../data`
-`./larch-test`
+```shell
+ln -s ../data
+./larch-test
+```
 
 Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
 
