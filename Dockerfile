@@ -2,7 +2,8 @@ FROM ubuntu:22.04
 # FROM continuumio/miniconda3:latest
 
 # OPTIONS
-ARG NUM_THREADS="8"
+ARG NUM_THREADS="4"
+RUN export NUM_THREADS=${NUM_THREADS}
 
 RUN apt -y update \
   && apt -y upgrade

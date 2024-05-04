@@ -3,6 +3,10 @@ include(FetchContent)
 set(Protobuf_USE_STATIC_LIBS ON)
 cmake_policy(SET CMP0026 OLD)
 
+if(NOT DEFINED NUM_THREADS)
+  set(NUM_THREADS, "4")
+endif()
+
 FetchContent_Declare(
   protocolbuffers_protobuf
   GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
@@ -19,33 +23,36 @@ set(Protobuf_ROOT ${protocolbuffers_protobuf_SOURCE_DIR})
 message(STATUS "Setting up protobuf ...")
 execute_process(
   COMMAND
-    ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -D protobuf_BUILD_TESTS=OFF -D protobuf_BUILD_PROTOC_BINARIES=ON -D CMAKE_POSITION_INDEPENDENT_CODE=ON -G "${CMAKE_GENERATOR}" .
+  ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -D protobuf_BUILD_TESTS=OFF -D protobuf_BUILD_PROTOC_BINARIES=ON -D CMAKE_POSITION_INDEPENDENT_CODE=ON -G "${CMAKE_GENERATOR}" .
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${Protobuf_ROOT})
+
 if(result)
   message(FATAL_ERROR "Failed to download protobuf (${result})!")
 endif()
 
 message(STATUS "Building protobuf ...")
 execute_process(
-  COMMAND ${CMAKE_COMMAND} --build . --parallel
+  COMMAND ${CMAKE_COMMAND} --build . --parallel ${NUM_THREADS}
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${Protobuf_ROOT})
+
 if(result)
   message(FATAL_ERROR "Failed to build protobuf (${result})!")
 endif()
 
 message(STATUS "Installing protobuf ...")
 execute_process(
-    COMMAND ${CMAKE_COMMAND} --install . --config ${CMAKE_BUILD_TYPE} --prefix ${Protobuf_ROOT}/install
-RESULT_VARIABLE result
-WORKING_DIRECTORY ${Protobuf_ROOT})
+  COMMAND ${CMAKE_COMMAND} --install . --config ${CMAKE_BUILD_TYPE} --prefix ${Protobuf_ROOT}/install
+  RESULT_VARIABLE result
+  WORKING_DIRECTORY ${Protobuf_ROOT})
+
 if(result)
-    message(FATAL_ERROR "Failed to build protobuf (${result})!")
+  message(FATAL_ERROR "Failed to build protobuf (${result})!")
 endif()
 
-if (NOT EXISTS ${Protobuf_ROOT}/install/lib64)
-  file (CREATE_LINK ${Protobuf_ROOT}/install/lib ${Protobuf_ROOT}/install/lib64 SYMBOLIC)
+if(NOT EXISTS ${Protobuf_ROOT}/install/lib64)
+  file(CREATE_LINK ${Protobuf_ROOT}/install/lib ${Protobuf_ROOT}/install/lib64 SYMBOLIC)
 endif()
 
 find_package(Protobuf CONFIG REQUIRED HINTS ${Protobuf_ROOT}/install/lib64/cmake)
@@ -67,7 +74,7 @@ if(Protobuf_FOUND)
 else()
   message(
     FATAL_ERROR
-      "Protobuf package not found -> specify search path via Protobuf_ROOT variable"
+    "Protobuf package not found -> specify search path via Protobuf_ROOT variable"
   )
 endif()
 
