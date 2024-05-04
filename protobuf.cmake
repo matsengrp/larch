@@ -3,8 +3,8 @@ include(FetchContent)
 set(Protobuf_USE_STATIC_LIBS ON)
 cmake_policy(SET CMP0026 OLD)
 
-if(NOT DEFINED NUM_THREADS)
-  set(NUM_THREADS, "4")
+if(NOT DEFINED CMAKE_NUM_THREADS)
+  set(CMAKE_NUM_THREADS "4")
 endif()
 
 FetchContent_Declare(
@@ -33,7 +33,7 @@ endif()
 
 message(STATUS "Building protobuf ...")
 execute_process(
-  COMMAND ${CMAKE_COMMAND} --build . --parallel ${NUM_THREADS}
+  COMMAND ${CMAKE_COMMAND} --build . --parallel ${CMAKE_NUM_THREADS}
   RESULT_VARIABLE result
   WORKING_DIRECTORY ${Protobuf_ROOT})
 

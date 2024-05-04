@@ -41,7 +41,7 @@ file provided:
 Building
 --------
 
-- Note: If you run against memory limitations during the cmake step, you can regulate number of parallel threads with `export NUM_THREADS="16"` (reduce number as necessary).
+- Note: If you run against memory limitations during the cmake step, you can regulate number of parallel threads with `export CMAKE_NUM_THREADS="16"` (reduce number as necessary).
 
 `git submodule update --init --recursive`
 `mkdir build`

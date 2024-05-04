@@ -2,7 +2,7 @@ FROM ubuntu:22.04
 # FROM continuumio/miniconda3:latest
 
 # OPTIONS
-ARG CMAKE_NUM_THREADS="4"
+ARG NUM_THREADS="4"
 RUN export NUM_THREADS=${NUM_THREADS}
 
 RUN apt -y update \
@@ -21,11 +21,25 @@ RUN apt -y install --no-install-recommends \
   clang-tidy \
   less
 RUN apt -y install --no-install-recommends \
-  build-essential \
   cmake \
-  zlib1g-dev \
-  python3-pip \
-  python3-pytest
+  protobuf-compiler \
+  automake \
+  autoconf \
+  libtool \
+  nasm \
+  yasm
+RUN apt -y install --no-install-recommends \
+  wget \
+  git \
+  ca-certificates \
+  make \
+  g++ \
+  mpi-default-dev \
+  libboost-dev \
+  libboost-program-options-dev \
+  libboost-filesystem-dev \
+  libboost-date-time-dev \
+  libboost-iostreams-dev
 
 # Copy repo
 WORKDIR /app
