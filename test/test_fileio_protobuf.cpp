@@ -37,9 +37,9 @@ static void AssertDAGsEqual(LHS lhs, RHS rhs) {
 
 static void test_loading_tree(std::string_view path, std::string_view refseq_path) {
   MADAGStorage tree0 = LoadTreeFromProtobuf(path, LoadReferenceSequence(refseq_path));
-  StoreTreeToProtobuf(tree0.View(), "temp_tree.pb");
-  MADAGStorage tree1 =
-      LoadTreeFromProtobuf("temp_tree.pb", LoadReferenceSequence(refseq_path));
+  StoreTreeToProtobuf(tree0.View(), test_output_folder + "/temp_tree.pb");
+  MADAGStorage tree1 = LoadTreeFromProtobuf(test_output_folder + "/temp_tree.pb",
+                                            LoadReferenceSequence(refseq_path));
   AssertDAGsEqual(tree0.View(), tree1.View());
 
   fill_static_reference_sequence(tree0.View().GetReferenceSequence());
@@ -61,8 +61,8 @@ static void test_loading_tree(std::string_view path, std::string_view refseq_pat
 
 static void test_loading_dag(std::string_view path) {
   MADAGStorage<> tree0 = LoadDAGFromProtobuf(path);
-  StoreDAGToProtobuf(tree0.View(), "temp_tree.pb");
-  MADAGStorage<> tree1 = LoadDAGFromProtobuf("temp_tree.pb");
+  StoreDAGToProtobuf(tree0.View(), test_output_folder + "/temp_tree.pb");
+  MADAGStorage<> tree1 = LoadDAGFromProtobuf(test_output_folder + "/temp_tree.pb");
   AssertDAGsEqual(tree0.View(), tree1.View());
 
   SubtreeWeight<ParsimonyScore, MADAG> weight(tree0.View());
@@ -81,18 +81,18 @@ static void test_loading_dag(std::string_view path) {
                 test_loading_tree("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
                                   "data/20D_from_fasta/refseq.txt.gz");
               },
-              "Loading: tree 20D_from_fasta"});
+              "Load protobuf: tree 20D_from_fasta"});
 
 [[maybe_unused]] static const auto test_added1 =
     add_test({[] { test_loading_dag("data/20D_from_fasta/full_dag.pb.gz"); },
-              "Loading: dag 20D_from_fasta"});
+              "Load protobuf: dag 20D_from_fasta"});
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[] {
                 test_loading_tree("data/startmat/startmat_no_ancestral.pb.gz",
                                   "data/startmat/refseq.txt.gz");
               },
-              "Loading: tree startmat",
+              "Load protobuf: tree startmat",
               {"slow"}});
 
 // [[maybe_unused]] static const auto test_added3 =
@@ -100,21 +100,21 @@ static void test_loading_dag(std::string_view path) {
 //                 test_loading_tree("data/20B/20B_start_tree_no_ancestral.pb.gz",
 //                                   "data/20B/ref_seq_noancestral.txt.gz");
 //               },
-//               "Loading: tree 20B"});
+//               "Load protobuf: tree 20B"});
 
 // [[maybe_unused]] static const auto test_added4 =
 //     add_test({[] {
 //                 test_loading_tree("data/20C/20C_start_tree_no_ancestral.pb.gz",
 //                                   "data/20C/ref_seq_noancestral.txt.gz");
 //               },
-//               "Loading: tree 20C"});
+//               "Load protobuf: tree 20C"});
 
 [[maybe_unused]] static const auto test_added5 =
     add_test({[] {
                 test_loading_tree("data/AY.103/AY.103_start_tree_no_ancestral.pb.gz",
                                   "data/AY.103/ref_seq_noancestral.txt.gz");
               },
-              "Loading: tree AY.103",
+              "Load protobuf: tree AY.103",
               {"slow"}});
 
 // [[maybe_unused]] static const auto test_added6 = add_test(
@@ -122,4 +122,4 @@ static void test_loading_dag(std::string_view path) {
 //        test_loading_tree("data/B.1.1.529/B.1.1.529_start_tree_no_ancestral.pb.gz",
 //                          "data/B.1.1.529/ref_seq_noancestral.txt.gz");
 //      },
-//      "Loading: tree B.1.1.529"});
+//      "Load protobuf: tree B.1.1.529"});

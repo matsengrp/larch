@@ -242,9 +242,10 @@ larch_executable(larch-test
   test/test_count_trees.cpp
   test/test_dag_completion.cpp
   test/test_dag_trimming.cpp
+  test/test_fileio_dagbin.cpp
+  test/test_fileio_protobuf.cpp
   test/test_larch_usher.cpp
   test/test_lca.cpp
-  test/test_loading.cpp
   test/test_map.cpp
   test/test_mat_conversion.cpp
   test/test_matOptimize.cpp
@@ -258,7 +259,7 @@ larch_executable(larch-test
   test/test_subtree_weight.cpp
   test/test_weight_accum.cpp
   test/test_weight_counter.cpp
-  test/test_write_parsimony.cpp
+  test/test_write_parsimony_protobuf.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 

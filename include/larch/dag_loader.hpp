@@ -9,7 +9,23 @@
 #include "larch/merge/merge.hpp"
 #include "larch/mat_conversion.hpp"
 
+enum class FileFormat { Infer, Dagbin, Protobuf, Json, DebugAll };
+
+const std::vector<std::pair<std::string, FileFormat>> ext_file_format_pairs = {
+    {"dagbin", FileFormat::Dagbin},
+    {"pb", FileFormat::Protobuf},
+    {"json", FileFormat::Json},
+    {"debug-all", FileFormat::DebugAll}};
+
+inline FileFormat InferFileFormat(const std::string_view path);
+
+[[nodiscard]] MADAGStorage<> LoadDAG(std::string_view input_dag_path,
+                                     std::string_view refseq_path,
+                                     FileFormat file_format = FileFormat::Infer);
+
 [[nodiscard]] MADAGStorage<> LoadDAGFromProtobuf(std::string_view path);
+
+[[nodiscard]] MADAGStorage<> LoadDAGFromDagbin(std::string_view path);
 
 [[nodiscard]] MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
                                                   std::string_view reference_sequence);
@@ -38,7 +54,14 @@ void LoadVCFData(MADAGStorage<>& dag_storage, std::string& vcf_path,
                  bool silence_warnings = true);
 
 template <typename DAG>
+void StoreDAG(DAG dag, std::string_view output_dag_path,
+              FileFormat file_format = FileFormat::Infer, bool append_changes = false);
+
+template <typename DAG>
 void StoreDAGToProtobuf(DAG dag, std::string_view path);
+
+template <typename DAG>
+void StoreDAGToDagbin(DAG dag, std::string_view path, bool append_changes = false);
 
 template <typename DAG>
 void StoreTreeToProtobuf(DAG dag, std::string_view path);

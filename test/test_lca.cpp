@@ -1,6 +1,6 @@
 #include "test_common.hpp"
 #include "larch/spr/lca.hpp"
-#include "sample_dag.hpp"
+#include "test_common_dag.hpp"
 
 template <typename DAG>
 static void AssertLCA(DAG dag, size_t n0, size_t n1, size_t lca) {

@@ -31,6 +31,7 @@
 
 #include "larch/dag_loader.hpp"
 #include "larch/newick.hpp"
+#include "larch/dagbin_fileio.hpp"
 
 inline int32_t EncodeBasePB(char base) {
   switch (base) {
@@ -45,6 +46,52 @@ inline int32_t EncodeBasePB(char base) {
     default:
       Fail("Invalid base");
   };
+}
+
+FileFormat InferFileFormat(const std::string_view path) {
+  auto tokens = SplitString(std::string{path}, '.');
+  auto ext = tokens[tokens.size() - 1];
+  if (tokens.size() >= 3 and (ext == "gz" or ext == "gzip")) {
+    ext = tokens[tokens.size() - 2];
+  }
+  auto it = std::find_if(ext_file_format_pairs.begin(), ext_file_format_pairs.end(),
+                         [&ext](const std::pair<std::string, FileFormat> element) {
+                           return element.first == ext;
+                         });
+  if (it != ext_file_format_pairs.end()) {
+    return it->second;
+  }
+  std::cerr << "ERROR: Unable to infer the file format of file '" << path
+            << "'. Recognized file extensions are: pb, dagbin, json." << std::endl;
+  std::exit(EXIT_FAILURE);
+}
+
+template <typename DAG>
+void StoreDAG(const DAG dag, std::string_view output_dag_path, FileFormat file_format,
+              bool append_changes) {
+  if (file_format == FileFormat::Infer) {
+    file_format = InferFileFormat(output_dag_path);
+  }
+  switch (file_format) {
+    case FileFormat::Dagbin:
+      StoreDAGToDagbin(dag, output_dag_path, append_changes);
+      return;
+    case FileFormat::Protobuf:
+      StoreDAGToProtobuf(dag, output_dag_path);
+      return;
+    case FileFormat::DebugAll:
+      StoreDAGToDagbin(dag, std::string{output_dag_path} + ".dagbin", append_changes);
+      StoreDAGToProtobuf(dag, std::string{output_dag_path} + ".pb");
+      return;
+    case FileFormat::Json:
+      std::cerr << "ERROR: Saving to json file not supported '" << output_dag_path
+                << "'." << std::endl;
+      std::exit(EXIT_FAILURE);
+    default:
+      std::cerr << "ERROR: Could not save DAG with unrecognized file format '"
+                << output_dag_path << "'." << std::endl;
+      std::exit(EXIT_FAILURE);
+  }
 }
 
 template <typename DAG>
@@ -79,6 +126,15 @@ void StoreDAGToProtobuf(DAG dag, std::string_view path) {
 
   std::ofstream file{std::string{path}};
   data.SerializeToOstream(&file);
+}
+
+template <typename DAG>
+void StoreDAGToDagbin(DAG dag, std::string_view path, bool append_changes) {
+  if (append_changes) {
+    DagbinFileIO::AppendDAG(dag, path);
+  } else {
+    DagbinFileIO::WriteDAG(dag, path);
+  }
 }
 
 template <typename DAG>

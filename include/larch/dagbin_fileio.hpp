@@ -1,0 +1,92 @@
+#pragma once
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+
+class DagbinFileIO {
+ public:
+  enum class SectionId : char {
+    Header = 'H',
+    RefSeq = 'R',
+    Nodes = 'N',
+    Edges = 'E',
+    CompactGenomes = 'C',
+    Test = 'X'
+  };
+
+  friend std::ostream &operator<<(std::ostream &os, SectionId section_id) {
+    std::cout << "SectionId::" << static_cast<char>(section_id);
+    return os;
+  }
+
+  struct Header {
+    size_t node_count = 0;
+    size_t edge_count = 0;
+    size_t leaf_count = 0;
+  };
+
+  static const size_t batch_size = 250;
+
+  inline static MADAGStorage<> ReadDAG(std::string_view path);
+
+  template <typename DAG>
+  inline static void WriteDAG(DAG dag, std::string_view path);
+
+  template <typename DAG>
+  inline static void AppendDAG(DAG dag, std::string_view path);
+
+ private:
+  template <typename T, typename iostream>
+  inline static T ReadData(iostream &infile);
+
+  template <typename T, typename iostream>
+  inline static void WriteData(iostream &outfile, const T data);
+
+  template <typename iostream>
+  inline static std::string ReadString(iostream &infile);
+
+  template <typename iostream>
+  inline static void WriteString(iostream &outfile, const std::string &str);
+
+  template <typename iostream>
+  inline static std::vector<std::streampos> ReadLinkedList(iostream &infile);
+
+  template <typename iostream>
+  inline static std::vector<std::pair<std::streampos, SectionId>> ReadLabeledLinkedList(
+      iostream &infile);
+
+  template <typename iostream>
+  inline static void WriteLinkedList(iostream &outfile,
+                                     const std::vector<std::streampos> &offsets);
+
+  template <typename iostream, typename DAG>
+  inline static Header ReadHeader(iostream &infile, DAG dag);
+
+  template <typename iostream, typename DAG>
+  inline static void WriteHeader(iostream &outfile, const DAG dag);
+
+  template <typename iostream, typename DAG>
+  inline static void ReadReferenceSequence(iostream &infile, DAG dag);
+
+  template <typename iostream, typename DAG>
+  inline static void WriteReferenceSequence(iostream &outfile, const DAG dag);
+
+  template <typename iostream, typename DAG>
+  inline static void ReadNodes(iostream &infile, DAG dag);
+
+  template <typename iostream, typename DAG>
+  inline static void WriteNodes(iostream &outfile, const DAG dag,
+                                std::optional<size_t> min_id_opt = std::nullopt,
+                                std::optional<size_t> max_id_opt = std::nullopt);
+
+  template <typename iostream, typename DAG>
+  inline static void ReadEdges(iostream &infile, DAG dag);
+
+  template <typename iostream, typename DAG>
+  inline static void WriteEdges(iostream &outfile, const DAG dag,
+                                std::optional<size_t> min_id_opt = std::nullopt,
+                                std::optional<size_t> max_id_opt = std::nullopt);
+};
+
+#include "larch/impl/dagbin_fileio_impl.hpp"

@@ -2,6 +2,108 @@
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 
+// DAG Utilities
+
+[[maybe_unused]] static void dag_info(MADAGStorage<>& dag_storage,
+                                      bool summary_only = true) {
+  auto dag = dag_storage.View();
+  std::cout << "=== DAG_INFO [begin] ===" << std::endl;
+  std::cout << "=== REF_SEQ: " << dag.GetReferenceSequence().size()
+            << " ===" << std::endl;
+  std::cout << "=== NODES: " << dag.GetNodesCount() << " ===" << std::endl;
+  std::cout << "=== EDGES: " << dag.GetEdgesCount() << " ===" << std::endl;
+  std::cout << "=== LEAFS: " << dag.GetLeafsCount() << " ===" << std::endl;
+  if (!summary_only) {
+    std::cout << "=== REF_SEQ: " << dag.GetReferenceSequence().size()
+              << " ===" << std::endl;
+    std::cout << "  " << dag.GetReferenceSequence() << std::endl;
+    std::cout << "=== NODES: " << dag.GetNodesCount() << " ===" << std::endl;
+    for (auto node : dag.GetNodes()) {
+      std::cout << "node: " << node.GetId() << std::endl;
+      std::cout << "  sample_id: " << node.GetSampleId().value_or("<NO_ID>")
+                << std::endl;
+      std::cout << "  leaf_set: " << node.GetLeafsBelow() << std::endl;
+      std::cout << "  children: " << node.GetChildren() << std::endl;
+      std::cout << "  clades: " << node.GetClades() << std::endl;
+    }
+    std::cout << "=== EDGES: " << dag.GetEdgesCount() << " ===" << std::endl;
+    for (auto edge : dag.GetEdges()) {
+      std::cout << "edge: " << edge.GetId() << " [" << edge.GetParent() << " -> "
+                << edge.GetChild() << " | " << edge.GetClade() << "]" << std::endl;
+      std::cout << "  muts: [";
+      for (auto [pos, nucs] : edge.GetEdgeMutations()) {
+        std::cout << "" << nucs.first.ToChar() << pos << nucs.second.ToChar() << ",";
+      }
+      std::cout << "]" << std::endl;
+    }
+  }
+  std::cout << "=== DAG_INFO [end] ===" << std::endl << std::endl;
+}
+
+template <typename DAG1, typename DAG2>
+bool compare_treedags(DAG1 dag1, DAG2 dag2, bool do_print = true) {
+  if (dag1.GetReferenceSequence() != dag2.GetReferenceSequence()) {
+    if (do_print) {
+      std::cout << "DAG_MISMATCH: ref_seq" << std::endl;
+    }
+    return false;
+  }
+  if (dag1.GetNodesCount() != dag2.GetNodesCount()) {
+    if (do_print) {
+      std::cout << "DAG_MISMATCH: node_count" << std::endl;
+    }
+    return false;
+  }
+  if (dag1.GetEdgesCount() != dag2.GetEdgesCount()) {
+    if (do_print) {
+      std::cout << "DAG_MISMATCH: edge_count" << std::endl;
+    }
+    return false;
+  }
+
+  std::unordered_set<CompactGenome> dag1_cgs, dag2_cgs;
+  for (auto node : dag1.GetNodes()) {
+    dag1_cgs.emplace(node.GetCompactGenome().Copy());
+  }
+  for (auto node : dag2.GetNodes()) {
+    dag2_cgs.emplace(node.GetCompactGenome().Copy());
+  }
+  if (dag1_cgs != dag2_cgs) {
+    if (do_print) {
+      std::cout << "DAG_MISMATCH: cgs" << std::endl;
+    }
+    return false;
+  }
+
+  std::vector<EdgeMutations> dag1_ems;
+  std::vector<EdgeMutations> dag2_ems;
+
+  for (auto edge : dag1.GetEdges()) {
+    dag1_ems.emplace_back(edge.GetEdgeMutations().Copy());
+  }
+  for (auto edge : dag2.GetEdges()) {
+    dag2_ems.emplace_back(edge.GetEdgeMutations().Copy());
+  }
+
+  if (not(dag1_ems.empty() or dag2_ems.empty())) {
+    for (auto& em : dag1_ems) {
+      if (std::count(dag2_ems.begin(), dag2_ems.end(), em) !=
+          std::count(dag1_ems.begin(), dag1_ems.end(), em)) {
+        if (do_print) {
+          std::cout << "DAG_MISMATCH: ems" << std::endl;
+        }
+        return false;
+      }
+    }
+  } else if (not(dag1_ems.empty() and dag2_ems.empty())) {
+    if (do_print) {
+      std::cout << "DAG_MISMATCH: ems empty" << std::endl;
+    }
+    return false;
+  }
+  return true;
+}
+
 // Sample DAGs
 
 [[maybe_unused]] static auto make_sample_dag() {
@@ -209,7 +311,8 @@
 
 // `missing_edges` option determines whether to build a complete or incomplete DAG.
 // Complete DAG by default.
-[[maybe_unused]] static auto make_big_sample_dag_topology(bool missing_edges = false) {
+[[maybe_unused]] static auto make_big_sample_dag_topology(
+    bool is_missing_edges = false) {
   MADAGStorage<> dag_storage = MADAGStorage<>::EmptyDefault();
   auto dag = dag_storage.View();
   dag.SetReferenceSequence("GAA");
@@ -223,20 +326,20 @@
   dag.AddEdge({edge_id++}, {16}, {1}, {0});
   dag.AddEdge({edge_id++}, {16}, {14}, {1});
   dag.AddEdge({edge_id++}, {15}, {1}, {0});
-  if (!missing_edges) dag.AddEdge({edge_id++}, {15}, {13}, {1});
+  if (!is_missing_edges) dag.AddEdge({edge_id++}, {15}, {13}, {1});
   dag.AddEdge({edge_id++}, {15}, {12}, {1});
   dag.AddEdge({edge_id++}, {14}, {2}, {0});
   dag.AddEdge({edge_id++}, {14}, {13}, {1});
-  if (!missing_edges) dag.AddEdge({edge_id++}, {14}, {12}, {1});
+  if (!is_missing_edges) dag.AddEdge({edge_id++}, {14}, {12}, {1});
   dag.AddEdge({edge_id++}, {13}, {4}, {0});
   dag.AddEdge({edge_id++}, {13}, {11}, {1});
   dag.AddEdge({edge_id++}, {12}, {3}, {0});
   dag.AddEdge({edge_id++}, {12}, {10}, {1});
   dag.AddEdge({edge_id++}, {11}, {3}, {0});
-  if (!missing_edges) dag.AddEdge({edge_id++}, {11}, {9}, {1});
+  if (!is_missing_edges) dag.AddEdge({edge_id++}, {11}, {9}, {1});
   dag.AddEdge({edge_id++}, {11}, {8}, {1});
   dag.AddEdge({edge_id++}, {10}, {4}, {0});
-  if (!missing_edges) dag.AddEdge({edge_id++}, {10}, {8}, {1});
+  if (!is_missing_edges) dag.AddEdge({edge_id++}, {10}, {8}, {1});
   dag.AddEdge({edge_id++}, {10}, {9}, {1});
   dag.AddEdge({edge_id++}, {9}, {5}, {0});
   dag.AddEdge({edge_id++}, {9}, {6}, {1});

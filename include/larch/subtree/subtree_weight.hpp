@@ -57,7 +57,7 @@ class SubtreeWeight {
   using MutableDAG = typename DAG::MutableType;
   using Node = typename DAG::NodeView;
   using Edge = typename DAG::EdgeView;
-  explicit SubtreeWeight(DAG dag);
+  explicit SubtreeWeight(DAG dag, std::optional<uint32_t> user_seed = std::nullopt);
 
   DAG GetDAG() const;
 
@@ -96,9 +96,9 @@ class SubtreeWeight {
 
   template <typename NodeType, typename EdgesSelector, typename MutableDAGType>
   void ExtractSubset(NodeType input_node, NodeId result_node_id,
-                   const WeightOps& weight_ops, const EdgesSelector& edge_selector,
-                   std::unordered_map<NodeId, NodeId>& mapped_id,
-                   MutableDAGType result);
+                     const WeightOps& weight_ops, const EdgesSelector& edge_selector,
+                     std::unordered_map<NodeId, NodeId>& mapped_id,
+                     MutableDAGType result);
 
   DAG dag_;
 

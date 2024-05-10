@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
       if (std::regex_match(test.name, match, regex)) {
         if ((!opt_test_range) || (range.find(test_id) != range.end())) {
           tests.push_back({test_id, test});
-          std::cout << "  [" << test_id << "] " << test.name;
+          std::cout << "  [" << test_id << "] '" << test.name << "'";
           if (not test.tags.empty()) {
             std::cout << " | Tags: ";
             for (size_t i = 0; i < test.tags.size(); ++i) {

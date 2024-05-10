@@ -71,7 +71,8 @@ static void test_write_protobuf() {
   SubtreeWeight<BinaryParsimonyScore, MADAG> weight{treedag.View()};
   auto sample_tree = weight.SampleTree({});
 
-  StoreTreeToProtobuf(sample_tree.View(), "test_write_protobuf.pb");
+  StoreTreeToProtobuf(sample_tree.View(),
+                      test_output_folder + "/test_write_protobuf.pb");
   compare_treedags(treedag.View(), sample_tree.View());
 
   sample_tree.View().RecomputeCompactGenomes(true);
@@ -89,5 +90,5 @@ static void test_write_protobuf() {
   compare_treedags(treedag.View(), merge.GetResult());
 }
 
-[[maybe_unused]] static const auto test_added_write =
+[[maybe_unused]] static const auto test_added0 =
     add_test({test_write_protobuf, "Write protobuf"});

@@ -1,5 +1,5 @@
 #include "test_common.hpp"
-#include "sample_dag.hpp"
+#include "test_common_dag.hpp"
 #include "larch/dag_loader.hpp"
 
 [[maybe_unused]] static auto build_node_sequence_map(
@@ -75,10 +75,10 @@
 
   bool write_files = false;
   if (write_files) {
-    write_dag_to_file(amb_dag_storage, "_ignore/amb_dag.dot");
-    write_dag_to_file(unamb_dag_storage, "_ignore/unamb_dag.dot");
-    StoreDAGToProtobuf(amb_dag, "_ignore/amb_dag.pb");
-    StoreDAGToProtobuf(unamb_dag, "_ignore/unamb_dag.pb");
+    write_dag_to_file(amb_dag_storage, test_output_folder + "/amb_dag.dot");
+    write_dag_to_file(unamb_dag_storage, test_output_folder + "/unamb_dag.dot");
+    StoreDAGToProtobuf(amb_dag, test_output_folder + "/amb_dag.pb");
+    StoreDAGToProtobuf(unamb_dag, test_output_folder + "/unamb_dag.pb");
   }
 
   // (0) Test spot checks that edges mutations are compatible with adjacent compact

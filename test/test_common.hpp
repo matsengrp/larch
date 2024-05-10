@@ -39,3 +39,45 @@ inline void print_peak_mem() {
     }
   }
 }
+
+inline const std::string test_output_folder = "data/_ignore/";
+
+inline std::pair<std::string, int> run_larch_usher(
+    std::string_view input_dag_path, std::string_view output_dag_path,
+    std::optional<std::string_view> refseq_path = std::nullopt,
+    std::optional<int> iter = std::nullopt,
+    std::optional<std::string_view> other_options = std::nullopt,
+    bool do_print_stdout = true, bool do_print_stderr = false,
+    bool do_print_summary = true) {
+  std::stringstream ss;
+  // ss << "/usr/bin/time ";
+  ss << "./larch-usher ";
+  ss << "-i " << input_dag_path << " ";
+  ss << "-o " << output_dag_path << " ";
+  if (refseq_path.has_value()) {
+    ss << "-r " << refseq_path.value() << " ";
+  }
+  if (iter.has_value()) {
+    ss << "-c " << iter.value() << " ";
+  }
+  if (other_options.has_value()) {
+    ss << other_options.value() << " ";
+  }
+  if (!do_print_stdout) {
+    ss << "> /dev/null ";
+    if (!do_print_stderr) {
+      ss << "2>&1 ";
+    }
+  }
+
+  std::string command = ss.str();
+  if (do_print_summary) {
+    std::cout << ">COMMAND_EXECUTE: \"" << command << "\"" << std::endl;
+  }
+  auto result = std::system(command.c_str());
+  if (do_print_summary) {
+    std::cout << ">COMMAND_RESULT: " << result << " "
+              << (result ? "FAILURE" : "SUCCESS") << std::endl;
+  }
+  return std::make_pair(command, result);
+}
