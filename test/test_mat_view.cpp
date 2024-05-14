@@ -24,7 +24,8 @@ void test_mat_view_impl(DAGView dag) {
   MADAGToDOT(dag, std::cout);
 
   // Create MAT View
-  MATViewStorage matview_storage;
+  MATStorageImpl matview_storage_impl;
+  auto matview_storage = matview_storage_impl.GetCondensed();
   matview_storage.View().SetMAT(std::addressof(mat));
   auto storage = Storage::Consume(std::move(matview_storage));
   auto mv = storage.View();

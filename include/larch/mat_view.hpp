@@ -29,6 +29,7 @@ struct ExtraFeatureStorage<MATNodeStorage> {
   MOVE_ONLY(ExtraFeatureStorage);
   MAT::Tree* mat_tree_ = nullptr;
   NodeId ua_node_id_;
+  std::vector<MAT::Node*> condensed_nodes_;
 };
 
 template <typename CRTP>
@@ -69,6 +70,13 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
         NodeId{ua_node_id};
     dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>().ua_node_id_ =
         NodeId{ua_node_id};
+    auto& cn = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
+                   .condensed_nodes_;
+    for (auto i : mat->condensed_nodes) {
+      for (auto& j : i.second) {
+        cn.push_back(mat->get_node(j));
+      }
+    }
   }
 };
 
@@ -507,5 +515,160 @@ struct MATEdgesContainer {
   ExtraFeatureStorage<MATEdgeStorage> extra_edge_storage_;
 };
 
-using MATViewStorage = DAGStorage<void, MATNodesContainer, MATEdgesContainer,
-                                  ExtraStorage<Connections>, CondensedViewBase>;
+class MATStorageImpl;
+
+template <Component C, bool Condensed>
+struct MATElementsContainerBase {
+  using ElementStorageT =
+      std::conditional_t<C == Component::Node,
+                         std::conditional_t<Condensed, MATNodeStorage, MATNodeStorage>,
+                         std::conditional_t<Condensed, MATEdgeStorage, MATEdgeStorage>>;
+  using FeatureTypes = std::tuple<ElementStorageT>;
+  using AllFeatureTypes = FeatureTypes;
+
+  static constexpr IdContinuity id_continuity = IdContinuity::Dense;
+
+  template <typename Feature>
+  static const bool contains_element_feature =
+      tuple_contains_v<AllFeatureTypes, Feature>;
+
+  template <typename CRTP>
+  struct ConstElementViewBase : FeatureConstView<ElementStorageT, CRTP> {};
+  template <typename CRTP>
+  struct MutableElementViewBase : FeatureMutableView<ElementStorageT, CRTP> {
+    using FeatureMutableView<ElementStorageT, CRTP>::operator=;
+  };
+
+  template <typename CRTP>
+  struct ExtraConstElementViewBase : ExtraFeatureConstView<ElementStorageT, CRTP> {};
+  template <typename CRTP>
+  struct ExtraMutableElementViewBase : ExtraFeatureMutableView<ElementStorageT, CRTP> {
+  };
+
+  MATElementsContainerBase(MATStorageImpl& impl) : impl_{impl} {}
+
+  size_t GetCount() const {
+    Assert(GetMAT().get_size_upper() > 0);
+    return GetMAT().get_size_upper() - 1;
+  }
+
+  Id<C> GetNextAvailableId() const { return {GetCount()}; }
+
+  template <typename Feature>
+  const auto& GetFeatureStorage(Id<C> id) const {
+    if constexpr (C == Component::Node) {
+      // TODO
+    } else {
+      if (features_storage_.empty()) {
+        features_storage_.resize(GetMAT().get_size_upper());
+      }
+      return std::get<Feature>(features_storage_.at(id));
+    }
+  }
+
+  template <typename Feature>
+  auto& GetFeatureStorage(Id<C> id) {
+    if constexpr (C == Component::Node) {
+      // TODO
+    } else {
+      if (features_storage_.empty()) {
+        features_storage_.resize(GetMAT().get_size_upper());
+      }
+      return std::get<Feature>(features_storage_.at(id));
+    }
+  }
+
+  template <typename Feature>
+  auto& GetFeatureExtraStorage() {
+    static_assert(std::is_same_v<Feature, ElementStorageT>);
+    return extra_storage_;
+  }
+
+  template <typename Feature>
+  const auto& GetFeatureExtraStorage() const {
+    static_assert(std::is_same_v<Feature, ElementStorageT>);
+    return extra_storage_;
+  }
+
+  auto All() const {
+    if constexpr (C == Component::Node) {
+      return ranges::views::iota(size_t{0}, GetCount()) |
+             ranges::views::filter([this](size_t i) {
+               return GetMAT().get_node(i) != nullptr or
+                      i == extra_storage_.ua_node_id_.value;
+             }) |
+             ranges::views::transform([](size_t i) -> NodeId { return {i}; });
+    } else {
+      return ranges::views::iota(size_t{0}, GetCount() + 1) |
+             ranges::views::filter([this](size_t i) {
+               return i != extra_storage_.ua_node_id_.value and
+                      GetMAT().get_node(i) != nullptr;
+             }) |
+             ranges::views::transform([](size_t i) -> EdgeId { return {i}; });
+    }
+  }
+
+ private:
+  MAT::Tree& GetMAT() {
+    Assert(extra_storage_.mat_tree_ != nullptr);
+    return *extra_storage_.mat_tree_;
+  }
+
+  const MAT::Tree& GetMAT() const {
+    Assert(extra_storage_.mat_tree_ != nullptr);
+    return *extra_storage_.mat_tree_;
+  }
+
+  MATStorageImpl& impl_;
+  mutable IdContainer<Id<C>, AllFeatureTypes, id_continuity> features_storage_ = {};
+  ExtraFeatureStorage<ElementStorageT> extra_storage_ = {};
+};
+
+class UncondensedNodesContainer
+    : public MATElementsContainerBase<Component::Node, false> {
+ public:
+  UncondensedNodesContainer(MATStorageImpl& impl)
+      : MATElementsContainerBase<Component::Node, false>{impl} {}
+};
+
+class UncondensedEdgesContainer
+    : public MATElementsContainerBase<Component::Edge, false> {
+ public:
+  UncondensedEdgesContainer(MATStorageImpl& impl)
+      : MATElementsContainerBase<Component::Edge, false>{impl} {}
+};
+
+class CondensedNodesContainer : public MATElementsContainerBase<Component::Node, true> {
+ public:
+  CondensedNodesContainer(MATStorageImpl& impl)
+      : MATElementsContainerBase<Component::Node, true>{impl} {}
+};
+
+class CondensedEdgesContainer : public MATElementsContainerBase<Component::Edge, true> {
+ public:
+  CondensedEdgesContainer(MATStorageImpl& impl)
+      : MATElementsContainerBase<Component::Edge, true>{impl} {}
+};
+;
+
+class MATStorageImpl {
+ private:
+  DAGStorage<void, UncondensedNodesContainer, UncondensedEdgesContainer,
+             ExtraStorage<Connections>, UncondensedViewBase>
+      uncondensed_;
+  DAGStorage<void, CondensedNodesContainer, CondensedEdgesContainer,
+             ExtraStorage<Connections>, CondensedViewBase>
+      condensed_;
+
+ public:
+  using UncondensedT = decltype(uncondensed_);
+  using CondensedT = decltype(condensed_);
+
+  MATStorageImpl()
+      : uncondensed_{{*this}, {*this}, {}}, condensed_{{*this}, {*this}, {}} {}
+
+  UncondensedT&& GetUncondensed() { return std::move(uncondensed_); }
+  CondensedT&& GetCondensed() { return std::move(condensed_); }
+};
+
+using MATViewStorage = MATStorageImpl::CondensedT;
