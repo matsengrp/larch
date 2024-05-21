@@ -721,7 +721,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   };
 
   auto logger = [&merge, &logfile, &time_elapsed,
-                 &write_intermediate_pb](size_t iteration) {
+                 &write_intermediate_pb, &output_dag_path](size_t iteration) {
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{merge.GetResult()};
     SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> maxparsimonyscorer{
         merge.GetResult()};
@@ -766,8 +766,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
             << '\t' << max_rf_distance << '\t' << min_rf_count << '\t' << max_rf_count
             << '\t' << time_elapsed() << std::flush;
     if (write_intermediate_pb) {
-      std::string intermediate_dag_path = "intermediate_MADAG_untrimmed.pb";
-      StoreDAGToProtobuf(merge.GetResult(), intermediate_dag_path);
+      StoreDAGToProtobuf(merge.GetResult(), output_dag_path+"_intermediate");
     }
   };
   logger(0);
@@ -870,10 +869,10 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
           return AddMATConversion(weight.MinWeightUniformSampleTree({}, subtree_node));
         case SampleMethod::MinSumRFDistance:
           return AddMATConversion(
-              min_sum_rf_dist.SampleTree(min_rf_weight_ops, subtree_node));
+              min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, subtree_node));
         case SampleMethod::MaxSumRFDistance:
           return AddMATConversion(
-              max_sum_rf_dist.SampleTree(max_rf_weight_ops, subtree_node));
+              max_sum_rf_dist.MinWeightSampleTree(max_rf_weight_ops, subtree_node));
         default:
           std::cerr << "ERROR: Invalid SampleMethod" << std::endl;
           std::exit(EXIT_FAILURE);
@@ -921,6 +920,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     optimized_view.RecomputeCompactGenomes(false);
     merge.AddDAG(optimized_view);
     logger(i + 1);
+    StoreDAGToProtobuf(merge.GetResult(), output_dag_path+"_intermediate");
   }
 
   std::cout << "new node coefficient: " << move_coeff_nodes << "\n";
