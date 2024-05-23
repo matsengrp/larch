@@ -34,7 +34,7 @@
   std::cout << "  -i,--input   Path to input DAG\n";
   std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
                "reference sequence\nif input points to MAT protobuf\n";
-  std::cout << "  -v,--vcf-file   Provide a path to a vcf file containing "
+  std::cout << "  -v,--VCF-input-file   Provide a path to a vcf file containing "
                "ambiguous leaf sequence data\n";
   std::cout << "  -o,--output  Path to output DAG\n";
   std::cout << "  -l,--logpath Path for logging\n";

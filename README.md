@@ -8,11 +8,15 @@ Requirements
 
 For Ubuntu 18.04 LTS the following commands installs the requirements:
 
-`sudo apt install --no-install-recommends git cmake make g++ mpi-default-dev libprotobuf-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-iostreams-dev libboost-date-time-dev protobuf-compiler automake autoconf libtool nasm`
+```shell
+sudo apt install --no-install-recommends git cmake make g++ mpi-default-dev libprotobuf-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-iostreams-dev libboost-date-time-dev protobuf-compiler automake autoconf libtool nasm
+```
 
 To get a recent cmake, download from `https://cmake.org/download/`, for example:
 
-`wget https://github.com/Kitware/CMake/releases/download/v3.23.1/cmake-3.23.1-linux-x86_64.tar.gz`
+```shell
+wget https://github.com/Kitware/CMake/releases/download/v3.23.1/cmake-3.23.1-linux-x86_64.tar.gz
+```
 
 Build Environments
 ------------------
@@ -24,19 +28,25 @@ Larch can be built utilizing a Singularity container or a Conda environment.
 
 To build Singularity image, use the definition provided:
 
-`singularity build larch-singularity.sif larch-singularity.def`
-`singularity shell larch-singularity.sif --net`
+```shell
+singularity build larch-singularity.sif larch-singularity.def
+singularity shell larch-singularity.sif --net
+```
 
 To setup a conda environment capable of building Larch, use:
 
-`conda create -n larch`
-`conda activate larch`
-`conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib`
+```shell
+conda create -n larch
+conda activate larch
+conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib
+```
 
 To setup a conda environment capable of building Larch including development tools, create `larch-dev` using the environment
 file provided:
 
-`conda env create -f environment.yml`
+```shell
+conda env create -f environment.yml
+```
 
 Building
 --------
@@ -51,11 +61,13 @@ Note: If you run against memory limitations during the cmake step, you can regul
 
 To build all from `larch/` directory, run:
 
-`git submodule update --init --recursive`
-`mkdir build`
-`cd build`
-`cmake -DCMAKE_BUILD_TYPE=Debug ..`
-`make -j16`
+```shell
+git submodule update --init --recursive
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+make -j16
+```
 
 Cmake build options:
   - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
@@ -67,9 +79,10 @@ Running
 ### larch-test
 
 From the `larch/build/` directory:
-
-`ln -s ../data`
-`./larch-test`
+```shell
+ln -s ../data
+./larch-test
+```
 
 Passing *nocatch* to the tests executable will allow exceptions to escape, which is useful for debugging. A gdb session can be started with `gdb --args build/larch-test nocatch`.
 
