@@ -53,8 +53,16 @@ Cmake build options:
   - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
   - add `-DUSE_ASAN=yes` to enable asan and ubsan.
 
+There are 4 executables that are built automatically as part of the larch package and provide various methods for exploring tree space and manipulating trees: 
+- `larch-test` is the suite of tests used to validate the various routines.
+- `larch-usher` takes an input tree/DAG and explores tree space through SPR moves.
+- `merge` utility is used to manipulate(e.g. combine, prune)trees/DAGs.
+- `dag2dot` utility writes a provided protobuf file in dot format for easy viewing.
+
 Running
 -------
+
+### larch-test
 
 From the build directory:
 
@@ -71,6 +79,56 @@ larch-test options:
 - `-tag` excludes tests with a given tag.
 - `+tag` includes tests with a given tag.
 - For example, the `-tag "slow"` removes tests which require an long runtime to complete.
+
+### larch-usher
+
+From the build directory:
+
+```shell
+./larch-usher -i ../data/testcase/tree_1.pb.gz -o output_dag.pb -c 10
+```
+This command runs 10 iterations of larch-usher on the provided tree, and writes the final result to the file `output_dag.pb`
+
+larch-usher options:
+- `-i, --input` [REQUIRED] The name of the input tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON).
+- `-o, --output` [REQUIRED] The file path to write the resulting DAG to.
+- `-c, --count` [Default: 1] Number of larch-usher iterations to run.
+- `-r, --MAT-refseq-file` [REQUIRED if provided input file is a MAT protobuf] Reference sequence file.
+- `-v, --VCF-input-file` VCF file containing ambiguous sequence data.
+- `-l,--logpath` [Default: `optimization_log`] Filepath to write log to.
+- `-s,--switch-subtrees` [Default: never] Switch to optimizing subtrees after the specified number of iterations.
+- `--min-subtree-clade-size` [Default: 100] The minimum number of leaves in a subtree sampled for optimization (ignored without option `-s`).
+- `--max-subtree-clade-size` [Default: 1000] The maximum number of leaves in a subtree sampled for optimization (ignored without option `-s`).
+- `--move-coeff-nodes` [Default: 1] New node coefficient for scoring moves. Set to 0 to apply only parsimony-optimal SPR moves.
+- `--move-coeff-pscore` [Default: 1] Parsimony score coefficient for scoring moves. Set to 0 to apply only topologically novel SPR moves.
+- `--sample-method` [Default: `parsimony`] Select method for sampling optimization tree from the DAG. Options are: (`parsimony`, `random`, `rf-minsum`, `rf-maxsum`).
+- `--sample-uniformly` [Default: false] Use a uniform distribution to sample trees for optimization.
+- `--callback-option` [Default: `best-moves`] Specify which SPR moves are chosen and applied. Options are: (`all-moves`, `best-moves-fixed-tree`, `best-moves-treebased`, `best-moves`).
+- `--trim` [Default: false] Trim optimized dag to contain only optimal trees before writing to protobuf.
+- `--keep-fragment-uncollapsed` [Default: false] Do not collapse empty (non-mutation-bearing) edges in the optimization tree.
+- `--quiet` [Default: false] Do not write intermediate protobuf file at each iteration.
+
+### merge
+
+```shell
+./merge -i ../data/testcase/tree1.pb.gz -i ../data/testcase/tree2.pb.gz -d -o merged_trees.pb
+```
+This executable takes a list of protobuf files and merges the resulting DAGs together into one.
+
+merge options:
+- `-i,--input` Input protobuf files.
+- `-o,--output` [Default: `merged.pb`] Save the output to filename.
+- `-r,--refseq` [REQUIRED if input protobufs are MAT protobuf format] Read reference sequence from file.
+- `-d,--dag` Input files are MADAG protobuf format\n";
+- `-t,--trim` Trim output (default trimming method is trim to best parsimony).
+- `--rf` Trim output to minimize RF distance to the provided protobuf.
+- `-s,--sample` Write a sampled single tree from DAG to file, rather than the whole DAG.
+
+### dag2dot
+
+```shell
+./dag2dot -i ../data/testcase/full_dag.pb
+```
 
 Third-party
 -----------
