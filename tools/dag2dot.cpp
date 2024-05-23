@@ -7,7 +7,6 @@
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
   std::cout << "dag2dot -t,--tree-pb file\n";
-  std::cout << "dag2dot [-c,--cgs] -d,--dag-pb file\n";
   std::cout << "dag2dot -j,--dag-json file\n";
   std::cout << "  -t,--tree-pb   Input protobuf tree filename\n";
   std::cout << "  -d,--dag-pb    Input protobuf DAG filename\n";

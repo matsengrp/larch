@@ -41,13 +41,13 @@ file provided:
 Building
 --------
 
-There are 4 executables that are built automatically as part of the larch package and provide various methods for exploring tree space and manipulating trees: 
+There are 4 executables that are built automatically as part of the larch package and provide various methods for exploring tree space and manipulating DAGs/trees: 
 - `larch-test` is the suite of tests used to validate the various routines.
 - `larch-usher` takes an input tree/DAG and explores tree space through SPR moves.
-- `merge` utility is used to manipulate(e.g. combine, prune)trees/DAGs.
+- `merge` utility is used to manipulate(e.g. combine, prune)DAGs/trees.
 - `dag2dot` utility writes a provided protobuf file in dot format for easy viewing.
 
-- Note: If you run against memory limitations during the cmake step, you can regulate number of parallel threads with `export CMAKE_NUM_THREADS="8"` (reduce number as necessary).
+Note: If you run against memory limitations during the cmake step, you can regulate number of parallel threads with `export CMAKE_NUM_THREADS="8"` (reduce number as necessary).
 
 To build all from `larch/` directory, run:
 
@@ -67,6 +67,7 @@ Running
 ### larch-test
 
 From the `larch/build/` directory:
+
 `ln -s ../data`
 `./larch-test`
 
@@ -90,11 +91,11 @@ From the `larch/build/` directory:
 This command runs 10 iterations of larch-usher on the provided tree, and writes the final result to the file `output_dag.pb`
 
 larch-usher options:
-- `-i, --input` [REQUIRED] The name of the input tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON).
-- `-o, --output` [REQUIRED] The file path to write the resulting DAG to.
-- `-c, --count` [Default: 1] Number of larch-usher iterations to run.
-- `-r, --MAT-refseq-file` [REQUIRED if provided input file is a MAT protobuf] Reference sequence file.
-- `-v, --VCF-input-file` VCF file containing ambiguous sequence data.
+- `-i,--input` [REQUIRED] The name of the input tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON).
+- `-o,--output` [REQUIRED] The file path to write the resulting DAG to.
+- `-c,--count` [Default: 1] Number of larch-usher iterations to run.
+- `-r,--MAT-refseq-file` [REQUIRED if provided input file is a MAT protobuf] Reference sequence file.
+- `-v,--VCF-input-file` VCF file containing ambiguous sequence data.
 - `-l,--logpath` [Default: `optimization_log`] Filepath to write log to.
 - `-s,--switch-subtrees` [Default: never] Switch to optimizing subtrees after the specified number of iterations.
 - `--min-subtree-clade-size` [Default: 100] The minimum number of leaves in a subtree sampled for optimization (ignored without option `-s`).
@@ -102,14 +103,14 @@ larch-usher options:
 - `--move-coeff-nodes` [Default: 1] New node coefficient for scoring moves. Set to 0 to apply only parsimony-optimal SPR moves.
 - `--move-coeff-pscore` [Default: 1] Parsimony score coefficient for scoring moves. Set to 0 to apply only topologically novel SPR moves.
 - `--sample-method` [Default: `parsimony`] Select method for sampling optimization tree from the DAG. Options are: (`parsimony`, `random`, `rf-minsum`, `rf-maxsum`).
-- `--sample-uniformly` [Default: false] Use a uniform distribution to sample trees for optimization.
+- `--sample-uniformly` [Default: use natural distribution] Use a uniform distribution to sample trees for optimization.
+- For example, if the sampling method is `parsimony` and `--sample-uniformly` is provided, then a uniform distribution on parsimony-optimal trees is sampled from.
 - `--callback-option` [Default: `best-moves`] Specify which SPR moves are chosen and applied. Options are: (`all-moves`, `best-moves-fixed-tree`, `best-moves-treebased`, `best-moves`).
-- `--trim` [Default: false] Trim optimized dag to contain only optimal trees before writing to protobuf.
-- `--keep-fragment-uncollapsed` [Default: false] Do not collapse empty (non-mutation-bearing) edges in the optimization tree.
-- `--quiet` Do not write intermediate protobuf file at each iteration.
+- `--trim` [Default: do not trim] Trim optimized dag to contain only parsimony-optimal trees before writing to protobuf.
+- `--keep-fragment-uncollapsed` [Default: collapse] Do not collapse empty (non-mutation-bearing) edges in the optimization tree.
+- `--quiet` [Default: write intermediate files] Do not write intermediate protobuf file at each iteration.
 
 ### merge
-
 
 From the `larch/build/` directory:
 ```shell
@@ -123,15 +124,22 @@ merge options:
 - `-r,--refseq` [REQUIRED if input protobufs are MAT protobuf format] Read reference sequence from file.
 - `-d,--dag` Input files are MADAG protobuf format\n";
 - `-t,--trim` Trim output (default trimming method is trim to best parsimony).
-- `--rf` Trim output to minimize RF distance to the provided protobuf.
+- `--rf` Trim output to minimize RF distance to the provided protobuf(Ignored if `-t` flag is not provided).
 - `-s,--sample` Write a sampled single tree from DAG to file, rather than the whole DAG.
 
 ### dag2dot
 
 From the `larch/build/` directory:
 ```shell
-./dag2dot -i ../data/testcase/full_dag.pb
+./dag2dot -d ../data/testcase/full_dag.pb
 ```
+This command writes the provided DAG in dot format to stdout.
+
+dag2dot options:
+- `-t,--tree-pb` Input MAT protobuf filename.
+- `-d,--dag-pb` Input DAG protobuf filename.
+- `-j,--dag-json` Input DAG json filename.
+
 
 Third-party
 -----------
