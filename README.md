@@ -41,7 +41,15 @@ file provided:
 Building
 --------
 
+There are 4 executables that are built automatically as part of the larch package and provide various methods for exploring tree space and manipulating trees: 
+- `larch-test` is the suite of tests used to validate the various routines.
+- `larch-usher` takes an input tree/DAG and explores tree space through SPR moves.
+- `merge` utility is used to manipulate(e.g. combine, prune)trees/DAGs.
+- `dag2dot` utility writes a provided protobuf file in dot format for easy viewing.
+
 - Note: If you run against memory limitations during the cmake step, you can regulate number of parallel threads with `export CMAKE_NUM_THREADS="8"` (reduce number as necessary).
+
+To build all from `larch/` directory, run:
 
 `git submodule update --init --recursive`
 `mkdir build`
@@ -53,19 +61,12 @@ Cmake build options:
   - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
   - add `-DUSE_ASAN=yes` to enable asan and ubsan.
 
-There are 4 executables that are built automatically as part of the larch package and provide various methods for exploring tree space and manipulating trees: 
-- `larch-test` is the suite of tests used to validate the various routines.
-- `larch-usher` takes an input tree/DAG and explores tree space through SPR moves.
-- `merge` utility is used to manipulate(e.g. combine, prune)trees/DAGs.
-- `dag2dot` utility writes a provided protobuf file in dot format for easy viewing.
-
 Running
 -------
 
 ### larch-test
 
-From the build directory:
-
+From the `larch/build/` directory:
 `ln -s ../data`
 `./larch-test`
 
@@ -82,8 +83,7 @@ larch-test options:
 
 ### larch-usher
 
-From the build directory:
-
+From the `larch/build/` directory:
 ```shell
 ./larch-usher -i ../data/testcase/tree_1.pb.gz -o output_dag.pb -c 10
 ```
@@ -106,10 +106,12 @@ larch-usher options:
 - `--callback-option` [Default: `best-moves`] Specify which SPR moves are chosen and applied. Options are: (`all-moves`, `best-moves-fixed-tree`, `best-moves-treebased`, `best-moves`).
 - `--trim` [Default: false] Trim optimized dag to contain only optimal trees before writing to protobuf.
 - `--keep-fragment-uncollapsed` [Default: false] Do not collapse empty (non-mutation-bearing) edges in the optimization tree.
-- `--quiet` [Default: false] Do not write intermediate protobuf file at each iteration.
+- `--quiet` Do not write intermediate protobuf file at each iteration.
 
 ### merge
 
+
+From the `larch/build/` directory:
 ```shell
 ./merge -i ../data/testcase/tree1.pb.gz -i ../data/testcase/tree2.pb.gz -d -o merged_trees.pb
 ```
@@ -126,6 +128,7 @@ merge options:
 
 ### dag2dot
 
+From the `larch/build/` directory:
 ```shell
 ./dag2dot -i ../data/testcase/full_dag.pb
 ```
