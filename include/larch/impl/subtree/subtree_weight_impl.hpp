@@ -88,6 +88,7 @@ SubtreeWeight<WeightOps, DAG>::TrimToMinWeight(const WeightOps& weight_ops) {
       },
       mapped_node,
       result.View());
+  result.View().BuildConnections();
   return result;
 }
 
