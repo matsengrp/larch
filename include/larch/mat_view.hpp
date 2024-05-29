@@ -247,72 +247,6 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {};
 
-struct MATNodesContainer {
-  using FeatureTypes = std::tuple<MATNodeStorage>;
-  using AllFeatureTypes = FeatureTypes;
-
-  static constexpr IdContinuity id_continuity = IdContinuity::Dense;
-
-  template <typename Feature>
-  static const bool contains_element_feature =
-      tuple_contains_v<AllFeatureTypes, Feature>;
-
-  template <typename CRTP>
-  struct ConstElementViewBase : FeatureConstView<MATNodeStorage, CRTP> {};
-  template <typename CRTP>
-  struct MutableElementViewBase : FeatureMutableView<MATNodeStorage, CRTP> {
-    using FeatureMutableView<MATNodeStorage, CRTP>::operator=;
-  };
-
-  template <typename CRTP>
-  struct ExtraConstElementViewBase : ExtraFeatureConstView<MATNodeStorage, CRTP> {};
-  template <typename CRTP>
-  struct ExtraMutableElementViewBase : ExtraFeatureMutableView<MATNodeStorage, CRTP> {};
-
-  MATNodesContainer() = default;
-  MOVE_ONLY(MATNodesContainer);
-
-  size_t GetCount() const { return GetMAT().get_size_upper(); }
-
-  NodeId GetNextAvailableId() const { return {GetCount()}; }
-
-  template <typename Feature>
-  auto& GetFeatureExtraStorage() {
-    static_assert(std::is_same_v<Feature, MATNodeStorage>);
-    return extra_node_storage_;
-  }
-
-  template <typename Feature>
-  const auto& GetFeatureExtraStorage() const {
-    static_assert(std::is_same_v<Feature, MATNodeStorage>);
-    return extra_node_storage_;
-  }
-
-  auto All() const {
-    return ranges::views::iota(size_t{0}, GetCount()) |
-           ranges::views::filter([this](size_t i) {
-             return GetMAT().get_node(i) != nullptr or
-                    i == extra_node_storage_.ua_node_id_.value;
-           }) |
-           ranges::views::transform([](size_t i) -> NodeId { return {i}; });
-  }
-
- private:
-  MAT::Tree& GetMAT() {
-    Assert(extra_node_storage_.mat_tree_ != nullptr);
-    Assert(extra_node_storage_.ua_node_id_.value != NoId);
-    return *extra_node_storage_.mat_tree_;
-  }
-
-  const MAT::Tree& GetMAT() const {
-    Assert(extra_node_storage_.mat_tree_ != nullptr);
-    Assert(extra_node_storage_.ua_node_id_.value != NoId);
-    return *extra_node_storage_.mat_tree_;
-  }
-
-  ExtraFeatureStorage<MATNodeStorage> extra_node_storage_;
-};
-
 struct MATEdgeStorage {
   MOVE_ONLY(MATEdgeStorage);
   MATEdgeStorage() = default;
@@ -431,90 +365,6 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {};
 
-struct MATEdgesContainer {
-  using FeatureTypes = std::tuple<MATEdgeStorage>;
-  using AllFeatureTypes = FeatureTypes;
-
-  static constexpr IdContinuity id_continuity = IdContinuity::Dense;
-
-  template <typename Feature>
-  static const bool contains_element_feature =
-      tuple_contains_v<AllFeatureTypes, Feature>;
-
-  template <typename CRTP>
-  struct ConstElementViewBase : FeatureConstView<MATEdgeStorage, CRTP> {};
-  template <typename CRTP>
-  struct MutableElementViewBase : FeatureMutableView<MATEdgeStorage, CRTP> {
-    using FeatureMutableView<MATEdgeStorage, CRTP>::operator=;
-  };
-
-  template <typename CRTP>
-  struct ExtraConstElementViewBase : ExtraFeatureConstView<MATEdgeStorage, CRTP> {};
-  template <typename CRTP>
-  struct ExtraMutableElementViewBase : ExtraFeatureMutableView<MATEdgeStorage, CRTP> {};
-
-  MATEdgesContainer() = default;
-  MOVE_ONLY(MATEdgesContainer);
-
-  size_t GetCount() const {
-    Assert(GetMAT().get_size_upper() > 0);
-    return GetMAT().get_size_upper() - 1;
-  }
-
-  EdgeId GetNextAvailableId() const { return {GetCount()}; }
-
-  template <typename Feature>
-  const auto& GetFeatureStorage(EdgeId id) const {
-    if (features_storage_.empty()) {
-      features_storage_.resize(GetMAT().get_size_upper());
-    }
-    return std::get<Feature>(features_storage_.at(id));
-  }
-
-  template <typename Feature>
-  auto& GetFeatureStorage(EdgeId id) {
-    if (features_storage_.empty()) {
-      features_storage_.resize(GetMAT().get_size_upper());
-    }
-    return std::get<Feature>(features_storage_.at(id));
-  }
-
-  template <typename Feature>
-  auto& GetFeatureExtraStorage() {
-    static_assert(std::is_same_v<Feature, MATEdgeStorage>);
-    return extra_edge_storage_;
-  }
-
-  template <typename Feature>
-  const auto& GetFeatureExtraStorage() const {
-    static_assert(std::is_same_v<Feature, MATEdgeStorage>);
-    return extra_edge_storage_;
-  }
-
-  auto All() const {
-    return ranges::views::iota(size_t{0}, GetCount() + 1) |
-           ranges::views::filter([this](size_t i) {
-             return i != extra_edge_storage_.ua_node_id_.value and
-                    GetMAT().get_node(i) != nullptr;
-           }) |
-           ranges::views::transform([](size_t i) -> EdgeId { return {i}; });
-  }
-
- private:
-  MAT::Tree& GetMAT() {
-    Assert(extra_edge_storage_.mat_tree_ != nullptr);
-    return *extra_edge_storage_.mat_tree_;
-  }
-
-  const MAT::Tree& GetMAT() const {
-    Assert(extra_edge_storage_.mat_tree_ != nullptr);
-    return *extra_edge_storage_.mat_tree_;
-  }
-
-  mutable IdContainer<EdgeId, AllFeatureTypes, id_continuity> features_storage_;
-  ExtraFeatureStorage<MATEdgeStorage> extra_edge_storage_;
-};
-
 class MATStorageImpl;
 
 template <Component C, bool Condensed>
@@ -548,8 +398,12 @@ struct MATElementsContainerBase {
   MATElementsContainerBase(MATStorageImpl& impl) : impl_{impl} {}
 
   size_t GetCount() const {
-    Assert(GetMAT().get_size_upper() > 0);
-    return GetMAT().get_size_upper() - 1;
+    if constexpr (C == Component::Node) {
+      return GetMAT().get_size_upper();
+    } else {
+      Assert(GetMAT().get_size_upper() > 0);
+      return GetMAT().get_size_upper() - 1;
+    }
   }
 
   Id<C> GetNextAvailableId() const { return {GetCount()}; }

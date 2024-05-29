@@ -32,8 +32,6 @@ class BatchingCallback : public Move_Found_Callback {
   using FragmentType = FragmentStorage<decltype(std::declval<SPRType>().View())>;
 
   // TODO new datatypes
-  using MATViewStorage =
-      DAGStorage<void, MATNodesContainer, MATEdgesContainer, ExtraStorage<Connections>>;
   using NewStorage =
       ExtendStorageType<void, MATViewStorage, Extend::Nodes<CompactGenome>,
                         Extend::DAG<ReferenceSequence>>;
@@ -80,7 +78,7 @@ class BatchingCallback : public Move_Found_Callback {
   // std::unique_ptr<NewReassignedStatesStorage> new_reassigned_states_storage_ =
   //   std::make_unique<NewReassignedStatesStorage>(
   //       AddMappedNodes(AddMATConversion(NewStorage::EmptyDefault())));
-  std::unique_ptr<MATViewStorage> sample_matview_storage_;
+  std::unique_ptr<MATStorageImpl> sample_matview_storage_;
 
   std::atomic<size_t> applied_moves_count_;
   std::shared_mutex mat_mtx_;

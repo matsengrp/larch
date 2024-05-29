@@ -216,9 +216,10 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage(MAT::Tree& tree,
                                                              std::string_view ref_seq) {
   std::ignore = tree;
   std::ignore = ref_seq;
-  sample_matview_storage_ = std::make_unique<MATViewStorage>();
-  sample_matview_storage_->View().SetMAT(std::addressof(tree));
-  auto storage = NewStorage::Consume(std::move(*sample_matview_storage_));
+  sample_matview_storage_ = std::make_unique<MATStorageImpl>();
+  sample_matview_storage_->GetCondensed().View().SetMAT(std::addressof(tree));
+  auto storage =
+      NewStorage::Consume(std::move(sample_matview_storage_->GetCondensed()));
   auto view = storage.View();
   view.SetReferenceSequence(ref_seq);
   view.BuildRootAndLeafs();
