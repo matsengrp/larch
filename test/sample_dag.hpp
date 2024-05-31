@@ -181,3 +181,43 @@
 
   return dag_storage;
 }
+
+[[maybe_unused]] static auto make_condensing_sample_dag_topology() {
+  MADAGStorage<> dag_storage = MADAGStorage<>::EmptyDefault();
+  auto dag = dag_storage.View();
+  dag.SetReferenceSequence("GAA");
+  dag.InitializeNodes(14);
+  size_t edge_id = 0;
+  dag.AddEdge({edge_id++}, {0},  {10}, {0});
+  dag.AddEdge({edge_id++}, {7},  {1},  {0});
+  dag.AddEdge({edge_id++}, {7},  {2},  {1});
+  dag.AddEdge({edge_id++}, {7},  {11}, {2});
+  dag.AddEdge({edge_id++}, {8},  {3},  {0});
+  dag.AddEdge({edge_id++}, {8},  {4},  {1});
+  dag.AddEdge({edge_id++}, {8},  {7},  {2});
+  dag.AddEdge({edge_id++}, {8},  {13}, {3});
+  dag.AddEdge({edge_id++}, {9},  {5},  {0});
+  dag.AddEdge({edge_id++}, {9},  {6},  {1});
+  dag.AddEdge({edge_id++}, {9},  {12}, {2});
+  dag.AddEdge({edge_id++}, {10}, {8},  {0});
+  dag.AddEdge({edge_id++}, {10}, {9},  {1});
+  dag.BuildConnections();
+  return dag_storage;
+}
+
+[[maybe_unused]] static auto make_condensing_ambiguous_sample_dag() {
+  auto amb_dag_storage = make_condensing_sample_dag_topology();
+  auto amb_seq_map = make_sample_ambiguous_sequence_map();
+  amb_seq_map[{2}] = {"TNN"};
+  amb_seq_map[{4}] = {"ANG"};
+  amb_seq_map[{8}] = {"GGG"};
+  amb_seq_map[{10}] = {"GTT"};
+  amb_seq_map[{11}] = {"TGN"};
+  amb_seq_map[{12}] = {"NNT"};
+  amb_seq_map[{13}] = {"NGG"};
+  auto amb_dag = amb_dag_storage.View();
+  amb_dag.SetCompactGenomesFromNodeSequenceMap(amb_seq_map);
+  amb_dag.RecomputeEdgeMutations();
+  return amb_dag_storage;
+}
+
