@@ -9,19 +9,27 @@
 #include "larch/merge/merge.hpp"
 #include "larch/mat_conversion.hpp"
 
-enum class FileFormat { Infer, Dagbin, Protobuf, Json, DebugAll };
+enum class FileFormat {
+  Infer,
+  Dagbin,
+  Protobuf,
+  ProtobufDAG,
+  ProtobufTree,
+  JsonDAG,
+  DebugAll
+};
 
-const std::vector<std::pair<std::string, FileFormat>> ext_file_format_pairs = {
-    {"dagbin", FileFormat::Dagbin},
-    {"pb", FileFormat::Protobuf},
-    {"json", FileFormat::Json},
-    {"debug-all", FileFormat::DebugAll}};
+const std::vector<std::pair<std::string, FileFormat>> file_extension_names = {
+    {"dagbin", FileFormat::Dagbin},        {"pb", FileFormat::Protobuf},
+    {"protobuf", FileFormat::Protobuf},    {"dag-pb", FileFormat::ProtobufDAG},
+    {"tree-pb", FileFormat::ProtobufTree}, {"json", FileFormat::JsonDAG},
+    {"dag-json", FileFormat::JsonDAG},     {"debug-all", FileFormat::DebugAll}};
 
-inline FileFormat InferFileFormat(const std::string_view path);
+inline FileFormat InferFileFormat(std::string_view path);
 
-[[nodiscard]] MADAGStorage<> LoadDAG(std::string_view input_dag_path,
-                                     std::string_view refseq_path,
-                                     FileFormat file_format = FileFormat::Infer);
+[[nodiscard]] MADAGStorage<> LoadDAG(
+    std::string_view input_dag_path, FileFormat file_format = FileFormat::Infer,
+    std::optional<std::string> refseq_path = std::nullopt);
 
 [[nodiscard]] MADAGStorage<> LoadDAGFromProtobuf(std::string_view path);
 

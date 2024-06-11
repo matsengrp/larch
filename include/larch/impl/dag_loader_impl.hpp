@@ -48,21 +48,32 @@ inline int32_t EncodeBasePB(char base) {
   };
 }
 
-FileFormat InferFileFormat(const std::string_view path) {
-  auto tokens = SplitString(std::string{path}, '.');
-  auto ext = tokens[tokens.size() - 1];
-  if (tokens.size() >= 3 and (ext == "gz" or ext == "gzip")) {
-    ext = tokens[tokens.size() - 2];
+inline std::string FilenameFromPath(const std::string path) {
+  int beg_i = int(path.size()) - 1;
+  for (; beg_i >= 0; beg_i--) {
+    if (path[beg_i] == '/') {
+      break;
+    }
   }
-  auto it = std::find_if(ext_file_format_pairs.begin(), ext_file_format_pairs.end(),
-                         [&ext](const std::pair<std::string, FileFormat> element) {
-                           return element.first == ext;
-                         });
-  if (it != ext_file_format_pairs.end()) {
-    return it->second;
+  return path.substr(beg_i, path.size());
+}
+
+FileFormat InferFileFormat(std::string_view path) {
+  auto filename = FilenameFromPath(std::string{path});
+  auto tokens = SplitString(filename, '.');
+  for (int i = int(tokens.size()) - 1; i >= 0; i--) {
+    auto& extension = tokens[i];
+    auto it =
+        std::find_if(file_extension_names.begin(), file_extension_names.end(),
+                     [&extension](const std::pair<std::string, FileFormat> element) {
+                       return element.first == extension;
+                     });
+    if (it != file_extension_names.end()) {
+      return it->second;
+    }
   }
-  std::cerr << "ERROR: Unable to infer the file format of file '" << path
-            << "'. Recognized file extensions are: pb, dagbin, json." << std::endl;
+  std::cerr << "ERROR: Unable to infer the file format of path '" << filename << "'."
+            << std::endl;
   std::exit(EXIT_FAILURE);
 }
 
@@ -76,19 +87,19 @@ void StoreDAG(const DAG dag, std::string_view output_dag_path, FileFormat file_f
     case FileFormat::Dagbin:
       StoreDAGToDagbin(dag, output_dag_path, append_changes);
       return;
-    case FileFormat::Protobuf:
+    case FileFormat::ProtobufDAG:
       StoreDAGToProtobuf(dag, output_dag_path);
       return;
     case FileFormat::DebugAll:
       StoreDAGToDagbin(dag, std::string{output_dag_path} + ".dagbin", append_changes);
-      StoreDAGToProtobuf(dag, std::string{output_dag_path} + ".pb");
+      StoreDAGToProtobuf(dag, std::string{output_dag_path} + ".dagpb");
       return;
-    case FileFormat::Json:
-      std::cerr << "ERROR: Saving to json file not supported '" << output_dag_path
-                << "'." << std::endl;
-      std::exit(EXIT_FAILURE);
+    case FileFormat::JsonDAG:
+    case FileFormat::Protobuf:
+    case FileFormat::ProtobufTree:
     default:
-      std::cerr << "ERROR: Could not save DAG with unrecognized file format '"
+      std::cerr << "ERROR: Could not save DAG to unsupported/unrecognized file format "
+                   "of path '"
                 << output_dag_path << "'." << std::endl;
       std::exit(EXIT_FAILURE);
   }

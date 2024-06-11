@@ -82,10 +82,9 @@
                                          bool use_seed, bool save_both) {
   std::string output_dag_path_no_ext = test_output_folder + "/temp";
   std::string output_dag_path_protobuf = test_output_folder + "/temp.pb";
-  std::string output_dag_path_protobuf_2 = test_output_folder + "/temp.2.pb";
   std::string output_dag_path_dagbin = test_output_folder + "/temp.dagbin";
-  std::string inter_dag_path_protobuf = "intermediate_MADAG_untrimmed.pb";
-  std::string inter_dag_path_dagbin = "intermediate_MADAG_untrimmed.dagbin";
+  std::string inter_dag_path_protobuf = output_dag_path_protobuf + ".intermediate";
+  std::string inter_dag_path_dagbin = output_dag_path_dagbin + ".intermediate";
   std::string other_options = "--thread 1 ";
   if (use_seed) {
     other_options += "--seed 42 ";

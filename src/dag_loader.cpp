@@ -70,24 +70,26 @@ void Parse(T& data, std::string_view path) {
 
 }  // namespace
 
-MADAGStorage<> LoadDAG(std::string_view input_dag_path, std::string_view refseq_path,
-                       FileFormat file_format) {
+MADAGStorage<> LoadDAG(std::string_view input_dag_path, FileFormat file_format,
+                       std::optional<std::string> refseq_path) {
   if (file_format == FileFormat::Infer) {
     file_format = InferFileFormat(input_dag_path);
   }
   switch (file_format) {
     case FileFormat::Dagbin:
       return LoadDAGFromDagbin(input_dag_path);
-    case FileFormat::Protobuf:
-      return refseq_path.empty()
-                 ? LoadDAGFromProtobuf(input_dag_path)
-                 : LoadTreeFromProtobuf(input_dag_path,
-                                        LoadReferenceSequence(refseq_path));
-    case FileFormat::Json:
+    case FileFormat::ProtobufDAG:
+      return LoadDAGFromProtobuf(input_dag_path);
+    case FileFormat::ProtobufTree:
+      return LoadTreeFromProtobuf(
+          input_dag_path,
+          refseq_path.has_value() ? LoadReferenceSequence(refseq_path.value()) : "");
+    case FileFormat::JsonDAG:
       return LoadDAGFromJson(input_dag_path);
     default:
-      std::cerr << "ERROR: Could not load DAG with unrecognized file format '"
-                << input_dag_path << "'." << std::endl;
+      std::cerr
+          << "ERROR: Could not load DAG with unrecognized/unsupported file format '"
+          << input_dag_path << "'." << std::endl;
       std::exit(EXIT_FAILURE);
   }
 }

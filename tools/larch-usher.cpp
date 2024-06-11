@@ -37,16 +37,17 @@
                "ambiguous leaf sequence data\n";
   std::cout << "  -o,--output  Path to output DAG\n";
   std::cout << "  -l,--logpath Path for logging\n";
-  std::cout << "  -c,--count   Number of iterations. Default: 1\n";
+  std::cout << "  -c,--count   Number of iterations. (default: 1)\n";
   std::cout << "  -s,--switch-subtrees          Switch to optimizing subtrees after "
                "the specified "
-               "number of iterations (default never)\n";
+               "number of iterations (default: never)\n";
   std::cout << "  --min-subtree-clade-size      The minimum number of leaves in a "
-               "subtree sampled for optimization (default 100, ignored without option "
+               "subtree sampled for optimization (default: 100, ignored without option "
                "`-s`)\n";
-  std::cout << "  --max-subtree-clade-size      The maximum number of leaves in a "
-               "subtree sampled for optimization (default 1000, ignored without option "
-               "`-s`)\n";
+  std::cout
+      << "  --max-subtree-clade-size      The maximum number of leaves in a "
+         "subtree sampled for optimization (default: 1000, ignored without option "
+         "`-s`)\n";
   std::cout
       << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
   std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
@@ -56,17 +57,17 @@
   std::cout << "  --sample-method      Select method for optimization "
                "[parsimony, random, rf-minsum, rf-maxsum]\n";
   std::cout
-      << "  --callback-option    Callback configuration choice (default merge all "
+      << "  --callback-option    Callback configuration choice (default: merge all "
          "profitable moves) [best-move, best-move-fixed-tree, best-move-treebased, "
          "all-moves]\n";
   std::cout << "  --trim   Trim optimized dag before writing to protobuf\n";
   std::cout
       << "  --keep-fragment-uncollapsed   Optional argument to keep empty fragment "
          "edges\n";
-  std::cout << "  --input-format  Specify input file format. By default, infers based "
-               "on file extension. [pb, dagbin]\n";
-  std::cout << "  --output-format  Specify output file format. By default, infers "
-               "based on file extension. [pb, dagbin]\n";
+  std::cout << "  --input-format  Specify input file format. (default: inferred) "
+               "[dagbin, dag-pb, tree-pb, dag-json]\n";
+  std::cout << "  --output-format  Specify output file format. (default: inferred) "
+               "[dagbin, dag-pb]\n";
   std::cout << "  --seed   Set seed for random number generation.\n";
   std::cout << "  --thread   Set number of cpu threads.\n";
 
@@ -738,23 +739,19 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   if (input_format == FileFormat::Infer) {
     input_format = InferFileFormat(input_dag_path);
+    if (input_format == FileFormat::Protobuf) {
+      input_format =
+          (refseq_path.empty()) ? FileFormat::ProtobufDAG : FileFormat::ProtobufTree;
+    }
   }
   if (output_format == FileFormat::Infer) {
     output_format = InferFileFormat(output_dag_path);
+    if (output_format == FileFormat::Protobuf) {
+      output_format = FileFormat::ProtobufDAG;
+    }
   }
   if (intermediate_dag_path.empty()) {
-    // StoreDAGToProtobuf(merge.GetResult(), output_dag_path + "_intermediate");
     intermediate_dag_path = output_dag_path + ".intermediate";
-    if (output_format != FileFormat::DebugAll) {
-      auto it = std::find_if(
-          ext_file_format_pairs.begin(), ext_file_format_pairs.end(),
-          [output_format](const std::pair<std::string, FileFormat> element) {
-            return element.second == output_format;
-          });
-      if (it != ext_file_format_pairs.end()) {
-        intermediate_dag_path += "." + it->first;
-      }
-    }
   }
 
   RandomNumberGenerator main_rng{user_seed};
@@ -779,7 +776,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   Benchmark load_timer;
   std::cout << "Loading input DAG..." << std::flush;
-  MADAGStorage<> input_dag = LoadDAG(input_dag_path, refseq_path, input_format);
+  MADAGStorage<> input_dag = LoadDAG(input_dag_path, input_format, refseq_path);
   load_timer.stop();
   std::cout << "...loaded: " << load_timer.durationFormat() << std::endl;
 
@@ -1007,6 +1004,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       std::exit(EXIT_FAILURE);
     }
 
+    // TODO: is this store dag call redundant?
     auto optimized_view = optimized_dags.back().first.View();
     optimized_view.RecomputeCompactGenomes(false);
     merge.AddDAG(optimized_view);
