@@ -91,11 +91,15 @@
   }
 
   if (save_both) {
+    inter_dag_path_protobuf = output_dag_path_no_ext + ".intermediate.pb";
+    inter_dag_path_dagbin = output_dag_path_no_ext + ".intermediate.dagbin";
     other_options += " --output-format debug-all";
     auto [command, result] = run_larch_usher(input_dag_path, output_dag_path_no_ext,
                                              std::nullopt, iter, other_options);
     TestAssert((result == 0) && "larch-usher debug-all run failed.");
   } else {
+    inter_dag_path_protobuf = output_dag_path_protobuf + ".intermediate";
+    inter_dag_path_dagbin = output_dag_path_dagbin + ".intermediate";
     auto [command1, result1] = run_larch_usher(input_dag_path, output_dag_path_protobuf,
                                                std::nullopt, iter, other_options);
     TestAssert((result1 == 0) && "larch-usher protobuf run failed.");

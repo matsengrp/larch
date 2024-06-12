@@ -14,11 +14,7 @@ MADAGStorage<> DagbinFileIO::ReadDAG(std::string_view path) {
   auto dag = dag_storage.View();
 
   infile.open(std::string{path}, std::ios::binary);
-  Assert(CheckMagicNumber(infile));
   auto labeled_linked_list = ReadLabeledLinkedList(infile);
-  infile.close();
-  infile.open(std::string{path}, std::ios::binary);
-  auto linked_list = ReadLinkedList(infile);
   infile.close();
 
   auto read_section = [&infile, &dag, &header](SectionId section_id) {
@@ -37,9 +33,6 @@ MADAGStorage<> DagbinFileIO::ReadDAG(std::string_view path) {
         break;
       default:
         Assert(false && "ERROR: Invalid section_id");
-        // std::cerr << "ERROR: Invalid section_id '" << static_cast<char>(section_id)
-        //           << "'" << std::endl;
-        // std::exit(EXIT_FAILURE);
     }
   };
 
@@ -197,6 +190,7 @@ DagbinFileIO::ReadLabeledLinkedList(iostream &infile) {
   SectionId section_id;
   std::streampos section_offset;
   infile.seekg(0, std::ios::beg);
+  Assert(CheckMagicNumber(infile));
   section_offset = infile.tellg();
   while (!infile.eof()) {
     infile.seekg(section_offset);
@@ -248,18 +242,18 @@ void DagbinFileIO::WriteLinkedList(iostream &outfile,
 
 template <typename iostream>
 bool DagbinFileIO::CheckMagicNumber(iostream &infile) {
-  std::ignore = infile;
-  // std::vector<unsigned char> magic_number(MAGIC_NUMBER.size());
-  // infile.read(reinterpret_cast<char *>(magic_number.data()), MAGIC_NUMBER.size());
-  // return (magic_number == MAGIC_NUMBER);
-  return true;
+  // std::ignore = infile;
+  std::vector<unsigned char> magic_number(MAGIC_NUMBER.size());
+  infile.read(reinterpret_cast<char *>(magic_number.data()), MAGIC_NUMBER.size());
+  return (magic_number == MAGIC_NUMBER);
+  // return true;
 }
 
 template <typename iostream>
 void DagbinFileIO::WriteMagicNumber(iostream &outfile) {
-  std::ignore = outfile;
-  // outfile.write(reinterpret_cast<const char *>(MAGIC_NUMBER.data()),
-  //               MAGIC_NUMBER.size());
+  // std::ignore = outfile;
+  outfile.write(reinterpret_cast<const char *>(MAGIC_NUMBER.data()),
+                MAGIC_NUMBER.size());
 }
 
 template <typename iostream, typename DAG>
