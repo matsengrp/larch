@@ -28,9 +28,9 @@
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
-  std::cout << "larch-usher -i,--input file -o,--output file [-m,--matopt file] "
-               "[-c,--count number]\n";
-  std::cout << "  -i,--input   Path to input DAG\n";
+  std::cout
+      << "larch-usher -i,--input infile -o,--output outfile [-c,--count number]\n";
+  std::cout << "  -i,--input   Path to input Tree/DAG\n";
   std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
                "reference sequence\nif input points to MAT protobuf\n";
   std::cout << "  -v,--VCF-input-file   Provide a path to a vcf file containing "
@@ -39,19 +39,18 @@
   std::cout << "  -l,--logpath Path for logging\n";
   std::cout << "  -c,--count   Number of iterations. (default: 1)\n";
   std::cout << "  -s,--switch-subtrees          Switch to optimizing subtrees after "
-               "the specified "
-               "number of iterations (default: never)\n";
+               "the specified number of iterations (default: never)\n";
   std::cout << "  --min-subtree-clade-size      The minimum number of leaves in a "
                "subtree sampled for optimization (default: 100, ignored without option "
                "`-s`)\n";
   std::cout
-      << "  --max-subtree-clade-size      The maximum number of leaves in a "
-         "subtree sampled for optimization (default: 1000, ignored without option "
+      << "  --max-subtree-clade-size      The maximum number of leaves in a subtree "
+         "sampled for optimization (default: 1000, ignored without option "
          "`-s`)\n";
-  std::cout
-      << "  --move-coeff-nodes   New node coefficient for scoring moves. Default: 1\n";
+  std::cout << "  --move-coeff-nodes   New node coefficient for scoring moves. "
+               "(default: 1)\n";
   std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
-               "Default: 1\n";
+               "(default: 1)\n";
   std::cout << "  --sample-any-tree    Sample any tree for optimization, rather than "
                "requiring the sampled tree to maximize parsimony.\n";
   std::cout << "  --sample-method      Select method for optimization "
@@ -68,7 +67,7 @@
                "[dagbin, dag-pb, tree-pb, dag-json]\n";
   std::cout << "  --output-format  Specify output file format. (default: inferred) "
                "[dagbin, dag-pb]\n";
-  std::cout << "  --seed   Set seed for random number generation.\n";
+  std::cout << "  --seed     Set seed for random number generation.\n";
   std::cout << "  --thread   Set number of cpu threads.\n";
 
   std::exit(EXIT_SUCCESS);
@@ -731,11 +730,11 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     Fail();
   }
 
+  bool is_input_dag = refseq_path.empty();
   if (input_format == FileFormat::Infer) {
     input_format = InferFileFormat(input_dag_path);
     if (input_format == FileFormat::Protobuf) {
-      input_format =
-          (refseq_path.empty()) ? FileFormat::ProtobufDAG : FileFormat::ProtobufTree;
+      input_format = is_input_dag ? FileFormat::ProtobufDAG : FileFormat::ProtobufTree;
     }
   }
   if (output_format == FileFormat::Infer) {
@@ -998,12 +997,10 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       std::exit(EXIT_FAILURE);
     }
 
-    // TODO: is this store dag call redundant?
     auto optimized_view = optimized_dags.back().first.View();
     optimized_view.RecomputeCompactGenomes(false);
     merge.AddDAG(optimized_view);
     logger(i + 1);
-    // StoreDAGToProtobuf(merge.GetResult(), output_dag_path + "_intermediate");
   }
 
   std::cout << "new node coefficient: " << move_coeff_nodes << "\n";

@@ -49,11 +49,14 @@ inline std::pair<std::string, int> run_larch_usher(
     std::optional<std::string_view> other_options = std::nullopt,
     bool do_print_stdout = true, bool do_print_stderr = false,
     bool do_print_summary = true) {
+  std::string log_path = test_output_folder + "/optimization_log";
+
   std::stringstream ss;
   // ss << "/usr/bin/time ";
   ss << "./larch-usher ";
   ss << "-i " << input_dag_path << " ";
   ss << "-o " << output_dag_path << " ";
+  ss << "-l " << log_path << " ";
   if (refseq_path.has_value()) {
     ss << "-r " << refseq_path.value() << " ";
   }

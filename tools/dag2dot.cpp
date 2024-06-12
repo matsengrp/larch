@@ -7,11 +7,10 @@
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
   std::cout << "dag2dot -i,--input file\n";
-  std::cout << "  -i,--input     Input filename (format inferred)\n";
-  std::cout << "  -t,--tree-pb   Input protobuf tree filename\n";
-  std::cout << "  -d,--dag-pb    Input protobuf DAG filename\n";
-  std::cout << "  -j,--dag-json  Input json DAG filename\n";
-  std::cout << "  -b,--dagbin    Input dagbin DAG filename\n";
+  std::cout << "  -i,--input       Path to input Tree/DAG\n";
+  std::cout << "  -o,--output      Path to output DOT file (default: \n";
+  std::cout << "  --input-format   Input file format (default: inferred)\n";
+  std::cout << "  --dag/--tree     Specify whether input is a DAG or Tree\n";
   std::exit(EXIT_SUCCESS);
 }
 
@@ -24,7 +23,9 @@ int main(int argc, char** argv) try {
   Arguments args = GetArguments(argc, argv);
 
   std::string input_path;
+  std::string output_path;
   FileFormat input_format = FileFormat::Infer;
+  std::optional<bool> is_input_dag = std::nullopt;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -35,34 +36,21 @@ int main(int argc, char** argv) try {
         Fail();
       }
       input_path = *params.begin();
-    } else if (name == "-t" or name == "--tree-pb") {
+    } else if (name == "-o" or name == "--output") {
+      if (params.empty()) {
+        std::cerr << "Filename not specified.\n";
+        Fail();
+      }
+      output_path = *params.begin();
+    } else if (name == "--input-format") {
       if (params.empty()) {
         std::cerr << "Filename not specified.\n";
         Fail();
       }
       input_format = FileFormat::ProtobufTree;
       input_path = *params.begin();
-    } else if (name == "-d" or name == "--dag-pb") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      input_format = FileFormat::ProtobufDAG;
-      input_path = *params.begin();
-    } else if (name == "-j" or name == "--dag-json") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      input_format = FileFormat::JsonDAG;
-      input_path = *params.begin();
-    } else if (name == "-b" or name == "--dagbin") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      input_format = FileFormat::JsonDAG;
-      input_path = *params.begin();
+    } else if (name == "--dag" or name == "--tree") {
+      is_input_dag = (name == "--dag");
     } else {
       std::cerr << "Unknown argument '" << name << "'.\n";
       Fail();
@@ -76,9 +64,27 @@ int main(int argc, char** argv) try {
   if (input_format == FileFormat::Infer) {
     input_format = InferFileFormat(input_path);
   }
+  if (input_format == FileFormat::Protobuf) {
+    if (is_input_dag.has_value()) {
+      input_format =
+          is_input_dag.value() ? FileFormat::ProtobufDAG : FileFormat::ProtobufTree;
+    } else {
+      std::cerr
+          << "ERROR: When using *.pb protobuf files, please specify --dag or --tree."
+          << std::endl;
+      Fail();
+    }
+  }
 
   auto dag = LoadDAG(input_path, input_format);
-  MADAGToDOT(dag.View(), std::cout);
+
+  if (output_path.empty()) {
+    MADAGToDOT(dag.View(), std::cout);
+  } else {
+    std::ofstream outfile(output_path);
+    MADAGToDOT(dag.View(), outfile);
+    outfile.close();
+  }
 
   return EXIT_SUCCESS;
 } catch (std::exception& e) {

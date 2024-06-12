@@ -243,8 +243,8 @@ static std::string CompactGenomeToString(Node node) {
   return result;
 }
 
-template <typename DAG>
-void MADAGToDOT(DAG dag, std::ostream& out) {
+template <typename DAG, typename iostream>
+void MADAGToDOT(DAG dag, iostream& out) {
   out << "digraph G {\n";
   out << "  forcelabels=true\n";
   out << "  nodesep=1.0\n";
@@ -262,8 +262,8 @@ void MADAGToDOT(DAG dag, std::ostream& out) {
   out << "}\n";
 }
 
-template <typename DAG>
-void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, std::ostream& out) {
+template <typename DAG, typename iostream>
+void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, iostream& out) {
   out << "digraph {\n";
   out << "  forcelabels=true\n";
   out << "  nodesep=1.0\n";

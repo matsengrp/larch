@@ -20,6 +20,7 @@ class DagbinFileIO {
     return os;
   }
 
+  // Magic number is `dagbin`.
   inline static const std::vector<unsigned char> MAGIC_NUMBER = {0x44, 0x41, 0x47,
                                                                  0x42, 0x49, 0x4E};
 
@@ -31,7 +32,8 @@ class DagbinFileIO {
 
   static const size_t batch_size = 250;
 
-  inline static bool IsDagbinFile(std::string_view path);
+  /* Uses magic number to check if file is in dagbin format */
+  inline static bool IsFileDagbinFormat(std::string_view path);
 
   inline static MADAGStorage<> ReadDAG(std::string_view path);
 

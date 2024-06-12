@@ -76,14 +76,15 @@ void StoreDAGToDagbin(DAG dag, std::string_view path, bool append_changes = fals
 template <typename DAG>
 void StoreTreeToProtobuf(DAG dag, std::string_view path);
 
-template <typename DAG>
-void MADAGToDOT(DAG dag, std::ostream& out);
+template <typename DAG, typename iostream>
+void MADAGToDOT(DAG dag, iostream& out);
 
-template <typename DAG>
-void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, std::ostream& out);
+template <typename DAG, typename iostream>
+void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, iostream& out);
 
 std::string ToEdgeMutationsString(const MAT::Node* node);
 
-void MATToDOT(const MAT::Tree& mat, std::ostream& out);
+template <typename iostream>
+void MATToDOT(const MAT::Tree& mat, iostream& out);
 
 #include "larch/impl/dag_loader_impl.hpp"

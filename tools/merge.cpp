@@ -13,19 +13,18 @@
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
-  std::cout << "merge [-r,--refseq file] [-d,--dag] -i,--input infile1 infile2 ... "
+  std::cout << "merge [-r,--refseq file] -i,--input infile1 infile2 ... "
                "[-o,--output outfile]\n";
-  std::cout << "  -i,--input       Paths to input Trees/DAGs.\n";
-  std::cout << "  -o,--output      Path to output Tree/DAG (default: merged.pb)\n";
+  std::cout << "  -i,--input       Paths to input Trees/DAGs\n";
+  std::cout << "  -o,--output      Path to output DAG (default: merged.pb)\n";
   std::cout << "  -r,--refseq      Read reference sequence from Json file\n";
-  std::cout << "  -d,--dag         Input files are DAGs\n";
   std::cout << "  -t,--trim        Trim output (default: best parsimony)\n";
   std::cout << "  --rf             Trim output to minimize RF distance to provided "
-               "protobuf\n";
+               "DAG file\n";
   std::cout << "  -s,--sample      Sample a single tree from DAG\n";
-  std::cout << "  --input-format   List the input file formats (default: inferred).\n";
-  std::cout << "  --output-format  Output file format (default: inferred).\n";
-  std::cout << "  --rf-format      RF file format (default: inferred).\n";
+  std::cout << "  --input-format   List the input file formats (default: inferred)\n";
+  std::cout << "  --output-format  Output file format (default: inferred)\n";
+  std::cout << "  --rf-format      RF file format (default: inferred)\n";
   std::exit(EXIT_SUCCESS);
 }
 
@@ -37,10 +36,9 @@
 
 static void MergeTrees(const std::vector<std::string_view>& input_paths,
                        const std::vector<FileFormat>& input_formats,
-                       std::optional<std::string> refseq_path,
-                       std::string_view output_path, FileFormat output_format,
-                       bool trim, bool sample_tree, std::string rf_path,
-                       FileFormat rf_format) {
+                       std::string refseq_path, std::string_view output_path,
+                       FileFormat output_format, bool trim, bool sample_tree,
+                       std::string rf_path, FileFormat rf_format) {
   std::vector<MADAGStorage<>> trees;
   std::vector<size_t> trees_id;
 
@@ -118,10 +116,9 @@ int main(int argc, char** argv) try {
   std::vector<FileFormat> input_formats;
   std::string output_path = "merged.dagbin";
   FileFormat output_format = FileFormat::Infer;
-  std::optional<std::string> refseq_path = std::nullopt;
+  std::string refseq_path;
   std::string rf_path;
   FileFormat rf_format = FileFormat::Infer;
-  bool dags = false;
   bool trim = false;
   bool sample_tree = false;
 
@@ -142,8 +139,6 @@ int main(int argc, char** argv) try {
         Fail();
       }
       refseq_path = *params.begin();
-    } else if (name == "-d" or name == "--dag") {
-      dags = true;
     } else if (name == "-t" or name == "--trim") {
       trim = true;
     } else if (name == "--rf") {
@@ -196,17 +191,19 @@ int main(int argc, char** argv) try {
     std::cerr << "Specify format for each input.\n";
     Fail();
   }
+
+  bool is_input_dag = refseq_path.empty();
   for (size_t i = 0; i < input_formats.size(); i++) {
     auto& input_format = input_formats.at(i);
     const auto& input_path = input_paths.at(i);
     if (input_format == FileFormat::Infer) {
       input_format = InferFileFormat(input_path);
       if (input_format == FileFormat::Protobuf) {
-        input_format = dags ? FileFormat::ProtobufDAG : FileFormat::ProtobufTree;
+        input_format =
+            is_input_dag ? FileFormat::ProtobufTree : FileFormat::ProtobufDAG;
       }
     }
   }
-
   if (output_format == FileFormat::Infer) {
     output_format = InferFileFormat(output_path);
     if (output_format == FileFormat::Protobuf) {

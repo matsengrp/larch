@@ -95,6 +95,16 @@ larch-test options:
 - `+tag` includes tests with a given tag.
 - For example, the `-tag "slow"` removes tests which require an long runtime to complete.
 
+### file formats
+
+For all tools in this suite, a number of file formats are supported for loading and storing MATs and MADAGs. When passing filepaths as arguments, the file format can be specified with `--input-format/--output-format` options.  Alternatively, the program can infer the file format when filepath contains a recognized file extension.
+
+File format options:
+- `MADAG dagbin` Supported as input and output. `*.dagbin` is the recognized extension.
+- `MADAG protobuf` Supported as input and output. `*.pb_dag` is the recognized extension, or using `*.pb` WITHOUT a `--MAT-refseq-file` option.
+- `MAT protobuf` Supported as input only. `*.pb_tree` is the recognized extension, or using `*.pb` WITH a `--MAT-refseq-file` option.
+- `MADAG json` Supported as input only. `*.json_dag` or `*.json` is the recognized extension.
+
 ### larch-usher
 
 From the `larch/build/` directory:
@@ -104,12 +114,12 @@ From the `larch/build/` directory:
 This command runs 10 iterations of larch-usher on the provided tree, and writes the final result to the file `output_dag.pb`
 
 larch-usher options:
-- `-i,--input` [REQUIRED] The filepath to the input tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON, Dagbin).
-- `-o,--output` [REQUIRED] The filepath to the output tree/DAG (accepted file formats are: MADAG protobuf, Dagbin).
+- `-i,--input` [REQUIRED] Filepath to the input tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON, Dagbin).
+- `-o,--output` [REQUIRED] Filepath to the output tree/DAG (accepted file formats are: MADAG protobuf, Dagbin).
 - `-c,--count` [Default: 1] Number of larch-usher iterations to run.
-- `-r,--MAT-refseq-file` [REQUIRED if provided input file is a MAT protobuf] Reference sequence file.
-- `-v,--VCF-input-file` VCF file containing ambiguous sequence data.
-- `-l,--logpath` [Default: `optimization_log`] Filepath to write log to.
+- `-r,--MAT-refseq-file` [REQUIRED if provided input file is a MAT protobuf] Filepath to json reference sequence.
+- `-v,--VCF-input-file` Filepath to VCF containing ambiguous sequence data.
+- `-l,--logpath` [Default: `optimization_log`] Filepath to write summary log.
 - `-s,--switch-subtrees` [Default: never] Switch to optimizing subtrees after the specified number of iterations.
 - `--min-subtree-clade-size` [Default: 100] The minimum number of leaves in a subtree sampled for optimization (ignored without option `-s`).
 - `--max-subtree-clade-size` [Default: 1000] The maximum number of leaves in a subtree sampled for optimization (ignored without option `-s`).
@@ -122,7 +132,7 @@ larch-usher options:
 - `--trim` [Default: do not trim] Trim optimized dag to contain only parsimony-optimal trees before writing to protobuf.
 - `--keep-fragment-uncollapsed` [Default: collapse] Do not collapse empty (non-mutation-bearing) edges in the optimization tree.
 - `--quiet` [Default: write intermediate files] Do not write intermediate protobuf file at each iteration.
-- `--input-format` [Default: format inferred by file extension] Specify the format of the input file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `dag-json`)
+- `--input-format` [Default: format inferred by file extension] Specify the format of the input file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `json`, `dag-json`)
 - `--output-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`)
 
 ### merge
@@ -134,32 +144,29 @@ From the `larch/build/` directory:
 This executable takes a list of protobuf files and merges the resulting DAGs together into one.
 
 merge options:
-- `-i,--input` The filepath to the input DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON, Dagbin).
-- `-o,--output` [Default: `merged.dagbin`] The filepath to the output DAG (accepted file formats are: MADAG protobuf, Dagbin).
-- `-r,--refseq` [REQUIRED if input protobufs are MAT protobuf format] Read reference sequence from file.
-- `-d,--dag` Input files are MADAG protobuf format.
+- `-i,--input` Filepath to the input Tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON, Dagbin).
+- `-o,--output` [Default: `merged.dagbin`] Filepath to the output Tree/DAG (accepted file formats are: MADAG protobuf, Dagbin).
+- `-r,--MAT-refseq-file` [REQUIRED if input protobufs are MAT protobuf format] Filepath to json reference sequence.
 - `-t,--trim` Trim output (Default trimming method is trim to best parsimony).
 - `--rf` Trim output to minimize RF distance to the provided DAG file (Ignored if `-t` flag is not provided).
 - `-s,--sample` Write a sampled single tree from DAG to file, rather than the whole DAG.
-- `--input-format` [Default: format inferred by file extension] Specify the format of the input file(s). Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `dag-json`)
+- `--input-format` [Default: format inferred by file extension] Specify the format of the input file(s). Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `json`, `dag-json`)
 - `--output-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`)
-- `--rf-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `dag-json`)
+- `--rf-format` [Default: format inferred by file extension] Specify the format of the RF file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `json`, `dag-json`)
 
 ### dag2dot
 
 From the `larch/build/` directory:
 ```shell
-./dag2dot -d ../data/testcase/full_dag.pb
+./dag2dot -i ../data/testcase/full_dag.pb
 ```
 This command writes the provided DAG in dot format to stdout.
 
 dag2dot options:
-- `-i,--input` Input filename (format inferred).
-- `-t,--tree-pb` Input MAT protobuf filename.
-- `-d,--dag-pb` Input DAG protobuf filename.
-- `-j,--dag-json` Input DAG json filename.
-- `-b,--dagbin` Input DAG dagbin filename.
-- `--input-format` [Default: format inferred by file extension] Specify the format of the input file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `dag-json`)
+- `-i,--input` Filepath to the input Tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON, Dagbin).
+- `-o,--output` [Default: DOT written to stdout] Filepath to the output DOT file.
+- `--input-format` [Default: format inferred by file extension] Specify the format of the input file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `json`, `dag-json`)
+- `--dag/--tree` [REQUIRED if file extension is *.pb] Specify whether input file is a DAG or a Tree.
 
 
 Third-party

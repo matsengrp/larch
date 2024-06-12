@@ -371,7 +371,8 @@ std::string ToEdgeMutationsString(const MAT::Node* node) {
   return result + ">";
 }
 
-void MATToDOT(const MAT::Node* node, std::ostream& out,
+template <typename iostream>
+void MATToDOT(const MAT::Node* node, iostream& out,
               std::set<const MAT::Node*> visited) {
   Assert(visited.insert(node).second);
 
@@ -388,7 +389,8 @@ void MATToDOT(const MAT::Node* node, std::ostream& out,
 
 }  // namespace
 
-void MATToDOT(const MAT::Tree& mat, std::ostream& out) {
+template <typename iostream>
+void MATToDOT(const MAT::Tree& mat, iostream& out) {
   out << "digraph {\n";
   out << "  forcelabels=true\n";
   out << "  nodesep=1.0\n";

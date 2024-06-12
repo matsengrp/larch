@@ -8,19 +8,16 @@
                                     const std::string& file2) {
   std::ifstream stream1(file1, std::ios::binary);
   std::ifstream stream2(file2, std::ios::binary);
+  char byte1, byte2;
 
   if (!stream1 || !stream2) {
     return false;
   }
-
-  char byte1, byte2;
-
   while (stream1.get(byte1) && stream2.get(byte2)) {
     if (byte1 != byte2) {
       return false;
     }
   }
-
   if (!stream1.eof() || !stream2.eof()) {
     return false;
   }

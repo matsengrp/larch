@@ -1,5 +1,5 @@
 
-bool DagbinFileIO::IsDagbinFile(std::string_view path) {
+bool DagbinFileIO::IsFileDagbinFormat(std::string_view path) {
   std::ifstream infile;
   infile.open(std::string{path}, std::ios::binary);
   auto is_dagbin_file = CheckMagicNumber(infile);
@@ -242,16 +242,13 @@ void DagbinFileIO::WriteLinkedList(iostream &outfile,
 
 template <typename iostream>
 bool DagbinFileIO::CheckMagicNumber(iostream &infile) {
-  // std::ignore = infile;
   std::vector<unsigned char> magic_number(MAGIC_NUMBER.size());
   infile.read(reinterpret_cast<char *>(magic_number.data()), MAGIC_NUMBER.size());
   return (magic_number == MAGIC_NUMBER);
-  // return true;
 }
 
 template <typename iostream>
 void DagbinFileIO::WriteMagicNumber(iostream &outfile) {
-  // std::ignore = outfile;
   outfile.write(reinterpret_cast<const char *>(MAGIC_NUMBER.data()),
                 MAGIC_NUMBER.size());
 }
