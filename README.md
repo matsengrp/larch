@@ -51,7 +51,7 @@ conda env create -f environment.yml
 Building
 --------
 
-There are 4 executables that are built automatically as part of the larch package and provide various methods for exploring tree space and manipulating DAGs/trees: 
+There are 4 executables that are built automatically as part of the larch package and provide various methods for exploring tree space and manipulating DAGs/trees:
 - `larch-test` is the suite of tests used to validate the various routines.
 - `larch-usher` takes an input tree/DAG and explores tree space through SPR moves.
 - `merge` utility is used to manipulate(e.g. combine, prune)DAGs/trees.
@@ -104,8 +104,8 @@ From the `larch/build/` directory:
 This command runs 10 iterations of larch-usher on the provided tree, and writes the final result to the file `output_dag.pb`
 
 larch-usher options:
-- `-i,--input` [REQUIRED] The name of the input tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON).
-- `-o,--output` [REQUIRED] The file path to write the resulting DAG to.
+- `-i,--input` [REQUIRED] The filepath to the input tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON, Dagbin).
+- `-o,--output` [REQUIRED] The filepath to the output tree/DAG (accepted file formats are: MADAG protobuf, Dagbin).
 - `-c,--count` [Default: 1] Number of larch-usher iterations to run.
 - `-r,--MAT-refseq-file` [REQUIRED if provided input file is a MAT protobuf] Reference sequence file.
 - `-v,--VCF-input-file` VCF file containing ambiguous sequence data.
@@ -122,23 +122,28 @@ larch-usher options:
 - `--trim` [Default: do not trim] Trim optimized dag to contain only parsimony-optimal trees before writing to protobuf.
 - `--keep-fragment-uncollapsed` [Default: collapse] Do not collapse empty (non-mutation-bearing) edges in the optimization tree.
 - `--quiet` [Default: write intermediate files] Do not write intermediate protobuf file at each iteration.
+- `--input-format` [Default: format inferred by file extension] Specify the format of the input file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `dag-json`)
+- `--output-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`)
 
 ### merge
 
 From the `larch/build/` directory:
 ```shell
-./merge -i ../data/testcase/tree1.pb.gz -i ../data/testcase/tree2.pb.gz -d -o merged_trees.pb
+./merge -i ../data/testcase/tree_1.pb.gz -i ../data/testcase/tree_2.pb.gz -d -o merged_trees.pb
 ```
 This executable takes a list of protobuf files and merges the resulting DAGs together into one.
 
 merge options:
-- `-i,--input` Input protobuf files.
-- `-o,--output` [Default: `merged.pb`] Save the output to filename.
+- `-i,--input` The filepath to the input DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON, Dagbin).
+- `-o,--output` [Default: `merged.dagbin`] The filepath to the output DAG (accepted file formats are: MADAG protobuf, Dagbin).
 - `-r,--refseq` [REQUIRED if input protobufs are MAT protobuf format] Read reference sequence from file.
-- `-d,--dag` Input files are MADAG protobuf format\n";
-- `-t,--trim` Trim output (default trimming method is trim to best parsimony).
-- `--rf` Trim output to minimize RF distance to the provided protobuf(Ignored if `-t` flag is not provided).
+- `-d,--dag` Input files are MADAG protobuf format.
+- `-t,--trim` Trim output (Default trimming method is trim to best parsimony).
+- `--rf` Trim output to minimize RF distance to the provided DAG file (Ignored if `-t` flag is not provided).
 - `-s,--sample` Write a sampled single tree from DAG to file, rather than the whole DAG.
+- `--input-format` [Default: format inferred by file extension] Specify the format of the input file(s). Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `dag-json`)
+- `--output-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`)
+- `--rf-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `dag-json`)
 
 ### dag2dot
 
@@ -149,9 +154,12 @@ From the `larch/build/` directory:
 This command writes the provided DAG in dot format to stdout.
 
 dag2dot options:
+- `-i,--input` Input filename (format inferred).
 - `-t,--tree-pb` Input MAT protobuf filename.
 - `-d,--dag-pb` Input DAG protobuf filename.
 - `-j,--dag-json` Input DAG json filename.
+- `-b,--dagbin` Input DAG dagbin filename.
+- `--input-format` [Default: format inferred by file extension] Specify the format of the input file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `dag-json`)
 
 
 Third-party

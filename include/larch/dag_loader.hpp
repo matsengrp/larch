@@ -20,10 +20,12 @@ enum class FileFormat {
 };
 
 const std::vector<std::pair<std::string, FileFormat>> file_extension_names = {
-    {"dagbin", FileFormat::Dagbin},        {"pb", FileFormat::Protobuf},
-    {"protobuf", FileFormat::Protobuf},    {"dag-pb", FileFormat::ProtobufDAG},
-    {"tree-pb", FileFormat::ProtobufTree}, {"json", FileFormat::JsonDAG},
-    {"dag-json", FileFormat::JsonDAG},     {"debug-all", FileFormat::DebugAll}};
+    {"dagbin", FileFormat::Dagbin},        {"protobuf", FileFormat::Protobuf},
+    {"pb", FileFormat::Protobuf},          {"dag-pb", FileFormat::ProtobufDAG},
+    {"pb_dag", FileFormat::ProtobufDAG},   {"tree-pb", FileFormat::ProtobufTree},
+    {"pb_tree", FileFormat::ProtobufTree}, {"json", FileFormat::JsonDAG},
+    {"dag-json", FileFormat::JsonDAG},     {"json_dag", FileFormat::JsonDAG},
+    {"debug-all", FileFormat::DebugAll}};
 
 inline FileFormat InferFileFormat(std::string_view path);
 

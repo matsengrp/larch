@@ -696,12 +696,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       }
       std::string ext{*params.begin()};
       output_format = InferFileFormat(ext);
-    } else if (name == "--intermediate-dag-path") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      intermediate_dag_path = *params.begin();
     } else if (name == "--seed") {
       if (params.empty()) {
         std::cerr << "User seed not specified.\n";
@@ -755,7 +749,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   }
 
   RandomNumberGenerator main_rng{user_seed};
-  std::cout << "Random Seed is: " << main_rng.seed_ << "\n";
+  std::cout << "Random seed: " << main_rng.seed_ << "\n";
 
   std::filesystem::create_directory(logfile_path);
   std::string logfile_name = logfile_path + "/logfile.csv";
@@ -765,7 +759,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       tbb::global_control::max_allowed_parallelism,
       ((thread_count > 0) ? std::min(thread_count, std::thread::hardware_concurrency())
                           : std::thread::hardware_concurrency()));
-  std::cout << "Number of threads: "
+  std::cout << "Thread count: "
             << c.active_value(tbb::global_control::max_allowed_parallelism) << "\n";
 
   std::ofstream logfile;
@@ -778,7 +772,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::cout << "Loading input DAG..." << std::flush;
   MADAGStorage<> input_dag = LoadDAG(input_dag_path, input_format, refseq_path);
   load_timer.stop();
-  std::cout << "...loaded: " << load_timer.durationFormat() << std::endl;
+  std::cout << "...loaded: " << load_timer.durationFormatMs() << std::endl;
 
   input_dag.View().RecomputeCompactGenomes(true);
   LoadVCFData(input_dag, vcf_path);
@@ -1029,10 +1023,10 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     StoreDAG(merge.GetResult(), output_dag_path, output_format);
   }
   save_timer.stop();
-  std::cout << "...saved: " << save_timer.durationFormat() << std::endl;
+  std::cout << "...saved: " << save_timer.durationFormatMs() << std::endl;
 
   total_timer.stop();
-  std::cout << "Total runtime: " << total_timer.durationFormat() << std::endl;
+  std::cout << "Total runtime: " << total_timer.durationFormatMs() << std::endl;
 
   return EXIT_SUCCESS;
 }

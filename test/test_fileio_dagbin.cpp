@@ -1,6 +1,7 @@
 #include "test_common.hpp"
 #include "test_common_dag.hpp"
 
+#include "larch/benchmark.hpp"
 #include "larch/dag_loader.hpp"
 
 [[maybe_unused]] bool compare_files(const std::string& file1,
@@ -78,8 +79,9 @@
              "Using append, loaded Dagbin DAG does not match Complete Big Sample DAG.");
 }
 
-[[maybe_unused]] static void test_dagbin(std::string_view input_dag_path, int iter,
-                                         bool use_seed, bool save_both) {
+[[maybe_unused]] static void test_dagbin_via_larchusher(std::string_view input_dag_path,
+                                                        int iter, bool use_seed,
+                                                        bool save_both) {
   std::string output_dag_path_no_ext = test_output_folder + "/temp";
   std::string output_dag_path_protobuf = test_output_folder + "/temp.pb";
   std::string output_dag_path_dagbin = test_output_folder + "/temp.dagbin";
@@ -113,16 +115,16 @@
   // Check final DAGs
   auto dag_protobuf = LoadDAGFromProtobuf(output_dag_path_protobuf);
   auto dag_dagbin = LoadDAGFromDagbin(output_dag_path_dagbin);
-  // std::cout << "\nFINAL DAGS: " << std::endl;
-  // dag_info(dag_protobuf);
-  // dag_info(dag_dagbin);
+  std::cout << "\nFINAL DAGS: " << std::endl;
+  dag_info(dag_protobuf);
+  dag_info(dag_dagbin);
 
   // Check intermediate DAGs
   auto inter_dag_protobuf = LoadDAGFromProtobuf(inter_dag_path_protobuf);
   auto inter_dag_dagbin = LoadDAGFromDagbin(inter_dag_path_dagbin);
-  // std::cout << "INTER DAGS: " << std::endl;
-  // dag_info(inter_dag_protobuf);
-  // dag_info(inter_dag_dagbin);
+  std::cout << "INTER DAGS: " << std::endl;
+  dag_info(inter_dag_protobuf);
+  dag_info(inter_dag_dagbin);
 
   TestAssert(compare_treedags(dag_protobuf.View(), dag_dagbin.View()) &&
              "larch-usher final DAG: Protobuf and Dagbin do not have same result.");
@@ -131,31 +133,58 @@
       "larch-usher intermediate DAG: Protobuf and Dagbin do not have same result.");
 }
 
+[[maybe_unused]] static void test_dagbin(
+    std::string_view input_dag_path, FileFormat input_format,
+    std::optional<std::string> refseq_path = std::nullopt) {
+  std::string output_dag_path_protobuf = test_output_folder + "/temp.pb";
+  std::string output_dag_path_dagbin = test_output_folder + "/temp.dagbin";
+
+  auto dag = LoadDAG(input_dag_path, input_format, refseq_path);
+
+  Benchmark timer;
+  timer.start();
+  StoreDAG(dag.View(), output_dag_path_protobuf, FileFormat::ProtobufDAG);
+  std::cout << "DAG stored as protobuf in: " << timer.lapFormatUs() << std::endl;
+  timer.start();
+  StoreDAG(dag.View(), output_dag_path_dagbin, FileFormat::Dagbin);
+  std::cout << "DAG stored as dagbin in: " << timer.lapFormatUs() << std::endl;
+
+  timer.start();
+  auto dag_protobuf = LoadDAG(output_dag_path_protobuf, FileFormat::ProtobufDAG);
+  std::cout << "DAG loaded from protobuf in: " << timer.lapFormatUs() << std::endl;
+  timer.start();
+  auto dag_dagbin = LoadDAG(output_dag_path_dagbin, FileFormat::Dagbin);
+  std::cout << "DAG loaded from dagbin in: " << timer.lapFormatUs() << std::endl;
+
+  std::cout << "\nDAG_INFO: " << std::endl;
+  dag_info(dag);
+  dag_info(dag_protobuf);
+  dag_info(dag_dagbin);
+
+  TestAssert(compare_treedags(dag.View(), dag_protobuf.View()) &&
+             "Test dagbin: Original DAG and Protobuf do not have same result.");
+  TestAssert(compare_treedags(dag.View(), dag_dagbin.View()) &&
+             "Test dagbin: Original DAG and Dagbin do not have same result.");
+}
+
 [[maybe_unused]] static const auto test_added0 =
     add_test({test_dagbin_sample_dag, "Load dagbin: Sample DAG"});
 
 const std::string input_dag_path = "data/test_5_trees/full_dag.pb.gz";
 
 [[maybe_unused]] static const auto test_added1 =
-    add_test({[] { test_dagbin(input_dag_path, 0, true, true); },
-              "Load dagbin: test_5_trees, 0 iters, simultaneous write"});
+    add_test({[] { test_dagbin(input_dag_path, FileFormat::ProtobufDAG); },
+              "Load dagbin: test_5_trees"});
 [[maybe_unused]] static const auto test_added2 =
-    add_test({[] { test_dagbin(input_dag_path, 3, true, true); },
+    add_test({[] { test_dagbin_via_larchusher(input_dag_path, 3, true, true); },
               "Load dagbin: test_5_trees, 3 iters, simultaneous write"});
-
 [[maybe_unused]] static const auto test_added3 =
-    add_test({[] { test_dagbin(input_dag_path, 0, true, false); },
-              "Load dagbin: test_5_trees, 0 iters, seeded"});
-[[maybe_unused]] static const auto test_added4 =
-    add_test({[] { test_dagbin(input_dag_path, 3, true, false); },
+    add_test({[] { test_dagbin_via_larchusher(input_dag_path, 3, true, false); },
               "Load dagbin: test_5_trees, 3 iters, seeded"});
 
-// [[maybe_unused]] static const auto test_added5 =
-//     add_test({[] { test_dagbin(input_dag_path, 3, false, false); },
-//               "Load dagbin: test_5_trees, 3 iters, unseeded"});
+const std::string big_input_dag_path = "data/big_test/big_test.pb.gz";
 
-// const std::string big_input_dag_path = "_ignore/big_test.pb";
-
-// [[maybe_unused]] static const auto test_added6 =
-//     add_test({[] { test_dagbin(big_input_dag_path, 0, true, false); },
-//               "Load dagbin: big_test, 0 iters, seeded"});
+[[maybe_unused]] static const auto test_added4 =
+    add_test({[] { test_dagbin(big_input_dag_path, FileFormat::ProtobufDAG); },
+              "Load dagbin: big_test",
+              {"slow"}});

@@ -37,7 +37,7 @@ namespace {
 auto OpenFile(std::string_view path) {
   std::ifstream in{std::string{path}};
   if (!in) {
-    std::cerr << "Failed to open file: " << path << std::endl;
+    std::cerr << "Failed to open file: '" << path << "'." << std::endl;
     Assert(in);
   }
   return in;
@@ -86,6 +86,8 @@ MADAGStorage<> LoadDAG(std::string_view input_dag_path, FileFormat file_format,
           refseq_path.has_value() ? LoadReferenceSequence(refseq_path.value()) : "");
     case FileFormat::JsonDAG:
       return LoadDAGFromJson(input_dag_path);
+    case FileFormat::Protobuf:
+    case FileFormat::DebugAll:
     default:
       std::cerr
           << "ERROR: Could not load DAG with unrecognized/unsupported file format '"

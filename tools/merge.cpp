@@ -37,23 +37,22 @@
 
 static void MergeTrees(const std::vector<std::string_view>& input_paths,
                        const std::vector<FileFormat>& input_formats,
-                       std::string refseq_path, std::string_view output_path,
-                       FileFormat output_format, bool trim, bool sample_tree,
-                       std::string rf_path, FileFormat rf_format) {
+                       std::optional<std::string> refseq_path,
+                       std::string_view output_path, FileFormat output_format,
+                       bool trim, bool sample_tree, std::string rf_path,
+                       FileFormat rf_format) {
   std::vector<MADAGStorage<>> trees;
-  std::vector<size_t> tree_ids;
-  // std::vector<std::pair<size_t, std::string_view>> trees_data;
+  std::vector<size_t> trees_id;
 
   trees.reserve(input_paths.size());
-  tree_ids.reserve(input_paths.size());
-  std::iota(tree_ids.begin(), tree_ids.end(), 1);
   for (size_t i = 0; i < input_paths.size(); ++i) {
+    trees_id.push_back(i);
     trees.push_back(MADAGStorage<>::EmptyDefault());
   }
   std::cout << "Loading trees ";
-  ParallelForEach(tree_ids, [&](auto tree_id) {
-    auto& tree_path = input_paths.at(tree_id);
-    auto& tree_format = input_formats.at(tree_id);
+  ParallelForEach(trees_id, [&](auto tree_id) {
+    const auto tree_path = input_paths.at(tree_id);
+    const auto tree_format = input_formats.at(tree_id);
     std::cout << "." << std::flush;
     trees.at(tree_id) = LoadDAG(tree_path, tree_format, refseq_path);
     trees.at(tree_id).View().RecomputeCompactGenomes();
@@ -119,7 +118,7 @@ int main(int argc, char** argv) try {
   std::vector<FileFormat> input_formats;
   std::string output_path = "merged.dagbin";
   FileFormat output_format = FileFormat::Infer;
-  std::string refseq_path;
+  std::optional<std::string> refseq_path = std::nullopt;
   std::string rf_path;
   FileFormat rf_format = FileFormat::Infer;
   bool dags = false;
@@ -188,7 +187,6 @@ int main(int argc, char** argv) try {
   for (auto input_path : input_paths) {
     std::cout << input_path << " to be merged\n";
   }
-
   if (input_formats.empty()) {
     for (int i = 0; i < int(input_paths.size()); i++) {
       input_formats.push_back(FileFormat::Infer);
@@ -208,14 +206,15 @@ int main(int argc, char** argv) try {
       }
     }
   }
+
   if (output_format == FileFormat::Infer) {
     output_format = InferFileFormat(output_path);
     if (output_format == FileFormat::Protobuf) {
       output_format = FileFormat::ProtobufDAG;
     }
   }
-  if (rf_format == FileFormat::Infer) {
-    rf_format = InferFileFormat(output_path);
+  if (!rf_path.empty() and rf_format == FileFormat::Infer) {
+    rf_format = InferFileFormat(rf_path);
     if (rf_format == FileFormat::Protobuf) {
       rf_format = FileFormat::ProtobufDAG;
     }

@@ -10,9 +10,10 @@
 #endif
 
 #include "test_common.hpp"
+#include "larch/benchmark.hpp"
 
 static void get_usage() {
-  std::cout << "Usage:\n";
+  std::cout << "Msage:\n";
   std::cout << "larch-test <regular_expression> <options...>\n";
   std::cout << "  <regular_expression>   Includes all tests with names matching "
                "expression.\n";
@@ -142,15 +143,16 @@ int main(int argc, char* argv[]) {
 
   {
     std::vector<bool> test_results;
-    std::vector<double> test_runtimes;
+    std::vector<long int> test_runtimes;
     std::vector<std::pair<int, Test>> failed;
+    Benchmark timer;
 
     size_t ran = 0;
     const auto num_tests = tests.size();
     std::cout << "RUNNING " << num_tests << " TEST(S) ..." << std::endl;
     for (auto& [test_id, test] : tests) {
       ++ran;
-      auto start_time = std::chrono::steady_clock::now();
+      timer.start();
 
       std::string run_number_str =
           "  (" + std::to_string(ran) + " of " + std::to_string(num_tests) + ")";
@@ -181,10 +183,8 @@ int main(int argc, char* argv[]) {
         }
       }
 
-      auto diff_time = std::chrono::steady_clock::now() - start_time;
-      auto run_time =
-          double(std::chrono::duration<double, std::milli>(diff_time).count()) / 1000.0;
-      test_runtimes.push_back(run_time);
+      timer.stop();
+      test_runtimes.push_back(timer.durationMs());
     }
     std::cout << std::endl;
 
@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
       std::string test_name_str = "'" + test.name + "'";
       std::string test_header_str = run_number_str + " " + test_id_str;
       std::string test_result_str = (test_results[i] ? "PASS" : "FAIL");
-      std::string test_runtime_str = std::to_string(test_runtimes[i]) + "s";
+      std::string test_runtime_str = timer.formatMs(test_runtimes[i]);
 
       std::cout << "  " << test_id_str << " " << test_result_str << " | "
                 << test_runtime_str << " | " << test_name_str << std::endl;

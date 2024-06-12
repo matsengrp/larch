@@ -52,10 +52,11 @@ inline std::string FilenameFromPath(const std::string path) {
   int beg_i = int(path.size()) - 1;
   for (; beg_i >= 0; beg_i--) {
     if (path[beg_i] == '/') {
-      break;
+      beg_i += 1;
+      return path.substr(beg_i, path.size());
     }
   }
-  return path.substr(beg_i, path.size());
+  return path.substr(0, path.size());
 }
 
 FileFormat InferFileFormat(std::string_view path) {
@@ -92,7 +93,7 @@ void StoreDAG(const DAG dag, std::string_view output_dag_path, FileFormat file_f
       return;
     case FileFormat::DebugAll:
       StoreDAGToDagbin(dag, std::string{output_dag_path} + ".dagbin", append_changes);
-      StoreDAGToProtobuf(dag, std::string{output_dag_path} + ".dagpb");
+      StoreDAGToProtobuf(dag, std::string{output_dag_path} + ".pb");
       return;
     case FileFormat::JsonDAG:
     case FileFormat::Protobuf:
