@@ -20,6 +20,9 @@ class DagbinFileIO {
     return os;
   }
 
+  inline static const std::vector<unsigned char> MAGIC_NUMBER = {0x44, 0x41, 0x47,
+                                                                 0x42, 0x49, 0x4E};
+
   struct Header {
     size_t node_count = 0;
     size_t edge_count = 0;
@@ -27,6 +30,8 @@ class DagbinFileIO {
   };
 
   static const size_t batch_size = 250;
+
+  inline static bool IsDagbinFile(std::string_view path);
 
   inline static MADAGStorage<> ReadDAG(std::string_view path);
 
@@ -59,6 +64,12 @@ class DagbinFileIO {
   template <typename iostream>
   inline static void WriteLinkedList(iostream &outfile,
                                      const std::vector<std::streampos> &offsets);
+
+  template <typename iostream>
+  inline static bool CheckMagicNumber(iostream &infile);
+
+  template <typename iostream>
+  inline static void WriteMagicNumber(iostream &outfile);
 
   template <typename iostream, typename DAG>
   inline static Header ReadHeader(iostream &infile, DAG dag);

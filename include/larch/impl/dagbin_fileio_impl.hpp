@@ -1,4 +1,12 @@
 
+bool DagbinFileIO::IsDagbinFile(std::string_view path) {
+  std::ifstream infile;
+  infile.open(std::string{path}, std::ios::binary);
+  auto is_dagbin_file = CheckMagicNumber(infile);
+  infile.close();
+  return is_dagbin_file;
+}
+
 MADAGStorage<> DagbinFileIO::ReadDAG(std::string_view path) {
   std::ifstream infile;
   std::optional<Header> header = std::nullopt;
@@ -6,6 +14,7 @@ MADAGStorage<> DagbinFileIO::ReadDAG(std::string_view path) {
   auto dag = dag_storage.View();
 
   infile.open(std::string{path}, std::ios::binary);
+  Assert(CheckMagicNumber(infile));
   auto labeled_linked_list = ReadLabeledLinkedList(infile);
   infile.close();
   infile.open(std::string{path}, std::ios::binary);
@@ -13,7 +22,6 @@ MADAGStorage<> DagbinFileIO::ReadDAG(std::string_view path) {
   infile.close();
 
   auto read_section = [&infile, &dag, &header](SectionId section_id) {
-    std::string test_str;
     switch (section_id) {
       case SectionId::Header:
         header = ReadHeader(infile, dag);
@@ -27,18 +35,16 @@ MADAGStorage<> DagbinFileIO::ReadDAG(std::string_view path) {
       case SectionId::Edges:
         ReadEdges(infile, dag);
         break;
-      case SectionId::Test:
-        test_str = ReadString(infile);
-        std::cout << ">>> READ test: '" << test_str << "'" << std::endl;
-        break;
       default:
-        std::cerr << "ERROR: Invalid section_id '" << static_cast<char>(section_id)
-                  << "'" << std::endl;
-        std::exit(EXIT_FAILURE);
+        Assert(false && "ERROR: Invalid section_id");
+        // std::cerr << "ERROR: Invalid section_id '" << static_cast<char>(section_id)
+        //           << "'" << std::endl;
+        // std::exit(EXIT_FAILURE);
     }
   };
 
   infile.open(std::string{path}, std::ios::binary);
+  Assert(CheckMagicNumber(infile));
   for (auto [section_begpos, section_id] : labeled_linked_list) {
     Assert(section_id == ReadData<SectionId>(infile));
     auto section_endpos = ReadData<std::streampos>(infile);
@@ -70,6 +76,9 @@ template <typename DAG>
 void DagbinFileIO::WriteDAG(DAG dag, std::string_view path) {
   std::ofstream outfile(std::string{path}, std::ios::binary);
   std::vector<std::streampos> offsets;
+
+  // write magic number
+  WriteMagicNumber(outfile);
 
   // write header
   offsets.push_back(outfile.tellp());
@@ -113,6 +122,7 @@ void DagbinFileIO::AppendDAG(DAG dag, std::string_view path) {
 
   // Read old header
   file.seekg(0, std::ios::beg);
+  Assert(CheckMagicNumber(file));
   auto section_id = ReadData<SectionId>(file);
   auto section_offset = ReadData<std::streampos>(file);
   Assert(section_id == SectionId::Header);
@@ -120,6 +130,7 @@ void DagbinFileIO::AppendDAG(DAG dag, std::string_view path) {
 
   // Overwrite header
   file.seekp(0, std::ios::beg);
+  WriteMagicNumber(file);
   WriteData(file, section_id);
   WriteData(file, section_offset);
   WriteHeader(file, dag);
@@ -208,6 +219,7 @@ std::vector<std::streampos> DagbinFileIO::ReadLinkedList(iostream &infile) {
 
   std::streampos section_offset;
   infile.seekg(0, std::ios::beg);
+  Assert(CheckMagicNumber(infile));
   section_offset = infile.tellg();
   while (!infile.eof()) {
     offsets.push_back(section_offset);
@@ -232,6 +244,22 @@ void DagbinFileIO::WriteLinkedList(iostream &outfile,
   }
 
   outfile.seekp(start_pos);
+}
+
+template <typename iostream>
+bool DagbinFileIO::CheckMagicNumber(iostream &infile) {
+  std::ignore = infile;
+  // std::vector<unsigned char> magic_number(MAGIC_NUMBER.size());
+  // infile.read(reinterpret_cast<char *>(magic_number.data()), MAGIC_NUMBER.size());
+  // return (magic_number == MAGIC_NUMBER);
+  return true;
+}
+
+template <typename iostream>
+void DagbinFileIO::WriteMagicNumber(iostream &outfile) {
+  std::ignore = outfile;
+  // outfile.write(reinterpret_cast<const char *>(MAGIC_NUMBER.data()),
+  //               MAGIC_NUMBER.size());
 }
 
 template <typename iostream, typename DAG>

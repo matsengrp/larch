@@ -10,7 +10,6 @@
   std::ifstream stream2(file2, std::ios::binary);
 
   if (!stream1 || !stream2) {
-    // Failed to open one of the files
     return false;
   }
 
@@ -18,18 +17,14 @@
 
   while (stream1.get(byte1) && stream2.get(byte2)) {
     if (byte1 != byte2) {
-      // Files differ
       return false;
     }
   }
 
-  // Check if both streams reached EOF
   if (!stream1.eof() || !stream2.eof()) {
-    // One file is longer than the other
     return false;
   }
 
-  // Files are identical
   return true;
 }
 
@@ -38,13 +33,16 @@
   std::string dagbin_path = test_output_folder + "/sample_dag.dagbin";
 
   auto sample_dag = make_sample_dag();
-  // dag_info(sample_dag);
+  dag_info(sample_dag);
 
   // Compare read/write dag protobuf vs dagbin
+  std::cout << "store dags..." << std::endl;
   StoreDAGToProtobuf(sample_dag.View(), protobuf_path);
-  auto sample_dag_from_protobuf = LoadDAGFromProtobuf(protobuf_path);
   StoreDAGToDagbin(sample_dag.View(), dagbin_path);
+  std::cout << "load dags..." << std::endl;
+  auto sample_dag_from_protobuf = LoadDAGFromProtobuf(protobuf_path);
   auto sample_dag_from_dagbin = LoadDAGFromDagbin(dagbin_path);
+  std::cout << "compare dags..." << std::endl;
   TestAssert(compare_treedags(sample_dag_from_dagbin.View(),
                               sample_dag_from_protobuf.View()) &&
              "Loading Sample DAG via Protobuf and Dagbin do not have the same result.");
