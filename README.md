@@ -97,7 +97,7 @@ larch-test options:
 
 ### file formats
 
-For all tools in this suite, a number of file formats are supported for loading and storing MATs and MADAGs. When passing filepaths as arguments, the file format can be specified with `--input-format/--output-format` options.  Alternatively, the program can infer the file format when filepath contains a recognized file extension.
+For all tools in this suite, a number of file formats are supported for loading and storing MATs and MADAGs. When passing filepaths as arguments, the file format can be explicitly specified with `--input-format/--output-format` options.  Alternatively, the program can infer the file format when filepath contains a recognized file extension.
 
 File format options:
 - `MADAG dagbin` Supported as input and output. `*.dagbin` is the recognized extension.

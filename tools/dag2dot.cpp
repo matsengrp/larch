@@ -8,7 +8,8 @@
   std::cout << "Usage:\n";
   std::cout << "dag2dot -i,--input file\n";
   std::cout << "  -i,--input       Path to input Tree/DAG\n";
-  std::cout << "  -o,--output      Path to output DOT file (default: \n";
+  std::cout << "  -o,--output      Path to output DOT file (default: DOT written to "
+               "stdout)\n";
   std::cout << "  --input-format   Input file format (default: inferred)\n";
   std::cout << "  --dag/--tree     Specify whether input is a DAG or Tree\n";
   std::exit(EXIT_SUCCESS);

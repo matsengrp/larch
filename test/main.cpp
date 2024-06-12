@@ -13,7 +13,7 @@
 #include "larch/benchmark.hpp"
 
 static void get_usage() {
-  std::cout << "Msage:\n";
+  std::cout << "Usage:\n";
   std::cout << "larch-test <regular_expression> <options...>\n";
   std::cout << "  <regular_expression>   Includes all tests with names matching "
                "expression.\n";

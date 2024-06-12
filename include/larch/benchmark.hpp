@@ -2,7 +2,6 @@
 
 #include <chrono>
 
-// template <typename time_scale>
 class Benchmark {
  public:
   using TimePoint = decltype(std::chrono::high_resolution_clock::now());

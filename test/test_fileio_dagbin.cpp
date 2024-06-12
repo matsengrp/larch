@@ -33,13 +33,10 @@
   dag_info(sample_dag);
 
   // Compare read/write dag protobuf vs dagbin
-  std::cout << "store dags..." << std::endl;
   StoreDAGToProtobuf(sample_dag.View(), protobuf_path);
   StoreDAGToDagbin(sample_dag.View(), dagbin_path);
-  std::cout << "load dags..." << std::endl;
   auto sample_dag_from_protobuf = LoadDAGFromProtobuf(protobuf_path);
   auto sample_dag_from_dagbin = LoadDAGFromDagbin(dagbin_path);
-  std::cout << "compare dags..." << std::endl;
   TestAssert(compare_treedags(sample_dag_from_dagbin.View(),
                               sample_dag_from_protobuf.View()) &&
              "Loading Sample DAG via Protobuf and Dagbin do not have the same result.");
