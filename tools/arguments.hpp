@@ -43,8 +43,12 @@ inline auto FormatUsage(
 
   os << "Options:\n";
   for (const auto& [flag, desc] : flag_desc_pairs) {
-    os << "  " << std::left << std::setw(static_cast<int>(max_flag_width) + 2) << flag;
-    os << desc << "\n";
+    const auto lines = SplitString(desc, '\n');
+    for (size_t i = 0; i < lines.size(); i++) {
+      os << "  " << std::left << std::setw(static_cast<int>(max_flag_width) + 2)
+         << ((i == 0) ? flag : "");
+      os << ((i == 0) ? "" : "  ") << lines[i] << "\n";
+    }
   }
 
   return os.str();

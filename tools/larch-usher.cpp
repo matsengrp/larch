@@ -27,50 +27,55 @@
 #include <tbb/global_control.h>
 
 [[noreturn]] static void Usage() {
-  std::string program_desc =
+  const std::string program_desc =
       "larch-usher: tool for exploring tree space of DAG/tree through SPR moves";
 
-  std::vector<std::string> usage_examples = {
+  const std::vector<std::string> usage_examples = {
       {"larch-usher -i,--input FILE -o,--output FILE [-c,--count NUMBER]"}};
 
-  std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
-      {"-i,--input", "Path to input DAG/Tree file (REQUIRED)"},
-      {"-o,--output", "Path to output DAG file (REQUIRED)"},
-      {"-r,--MAT-refseq-file",
+  const std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
+      {"-i,--input FILE", "Path to input DAG/Tree file (REQUIRED)"},
+      {"-o,--output FILE", "Path to output DAG file (REQUIRED)"},
+      {"-r,--MAT-refseq-file FILE",
        "Path to json reference sequence file (REQUIRED if input file is a MAT "
        "protobuf)"},
-      {"-v,--VCF-input-file",
+      {"-v,--VCF-input-file FILE",
        "Path to VCF file, containing ambiguous leaf sequence data"},
-      {"-s,--switch-subtrees",
+      {"-c,--count NUMBER", "Number of iterations (default: 1)"},
+      {"-s,--switch-subtrees NUMBER",
        "Switch to optimizing subtrees after the specified number of iterations "
        "(default: never)"},
-      {"--min-subtree-clade-size",
-       "The minimum number of leaves in a subtree sampled for optimization (default: "
-       "100, ignored without option `-s`)"},
-      {"--max-subtree-clade-size",
-       "The maximum number of leaves in a subtree sampled for optimization "
+      {"--min-subtree-clade-size NUMBER",
+       "The minimum number of leaves in a subtree sampled for optimization \n"
+       "(default: 100, ignored without option `-s`)"},
+      {"--max-subtree-clade-size NUMBER",
+       "The maximum number of leaves in a subtree sampled for optimization \n"
        "(default: 1000, ignored without option `-s`)"},
-      {"--move-coeff-nodes", "New node coefficient for scoring moves (default: 1)"},
-      {"--move-coeff-pscore",
+      {"--move-coeff-nodes NUMBER",
+       "New node coefficient for scoring moves (default: 1)"},
+      {"--move-coeff-pscore NUMBER",
        "Parsimony score coefficient for scoring moves (default: 1)"},
       {"--sample-any-tree",
        "Sample any tree for optimization, rather than requiring the sampled tree to "
        "maximize parsimony"},
-      {"--sample-method",
-       "Select method for optimization [parsimony, random, rf-minsum, rf-maxsum]"},
-      {"--callback-option",
-       "Callback configuration choice (default: merge all profitable moves) "
+      {"--sample-method OPTION",
+       "Select tree sampling method for optimization (default: max parsimony)\n"
+       "[parsimony, random, rf-minsum, rf-maxsum]"},
+      {"--callback-option OPTION",
+       "Callback configuration choice (default: merge all profitable moves) \n"
        "[best-move, best-move-fixed-tree, best-move-treebased, all-moves]"},
       {"--trim", "Trim optimized DAG after final iteration"},
       {"--keep-fragment-uncollapsed",
        "Keep empty fragment edges rather than collapsing them"},
-      {"--input-format",
-       "Specify input file format (default: inferred) [dagbin, dag-pb, tree-pb, "
-       "dag-json]"},
-      {"--output-format",
-       "Specify output file format (default: inferred) [dagbin, dag-pb]"},
-      {"--seed", "Set seed for random number generation"},
-      {"--thread", "Set number of cpu threads"}};
+      {"--input-format OPTION",
+       "Specify input file format (default: inferred) \n"
+       "[dagbin, dag-pb, tree-pb, dag-json]"},
+      {"--output-format OPTION",
+       "Specify output file format (default: inferred) \n"
+       "[dagbin, dag-pb]"},
+      {"--seed NUMBER", "Set seed for random number generation (default: random)"},
+      {"--thread NUMBER",
+       "Set number of cpu threads (default: max allowed by system)"}};
 
   std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
 

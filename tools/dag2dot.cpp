@@ -8,14 +8,14 @@
   std::string program_desc = "dag2dot: tool for converting DAG/tree file to DOT file";
 
   std::vector<std::string> usage_examples = {
-      {"dag2dot -i,--input INFILE [-o,--output OUTFILE]"}};
+      {"dag2dot -i,--input FILE [-o,--output FILE]"}};
 
   std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
-      {"-i,--input", "Path to input DAG/Tree file"},
-      {"-o,--output", "Path to output DOT file (default: DOT written to stdout)"},
-      {"--input-format",
-       "Specify input file format (default: inferred) [dagbin, dag-pb, tree-pb, "
-       "dag-json]"},
+      {"-i,--input FILE", "Path to input DAG/Tree file"},
+      {"-o,--output FILE", "Path to output DOT file (default: DOT written to stdout)"},
+      {"--input-format OPTION",
+       "Specify input file format (default: inferred) \n"
+       "[dagbin, dag-pb, tree-pb, dag-json]"},
       {"--dag/--tree", "Specify whether protobuf input is a DAG or Tree"}};
 
   std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
