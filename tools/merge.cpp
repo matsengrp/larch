@@ -13,16 +13,18 @@
 
 [[noreturn]] static void Usage() {
   std::cout << "Usage:\n";
-  std::cout << "merge [-r,--refseq file] [-d,--dag] -i,--input file1 file2 ... "
-               "[-o,--output filename]\n";
-  std::cout << "  -i,--input     List of input files\n";
-  std::cout << "  -o,--output    Save the output to filename (default is merged.pb)\n";
-  std::cout << "  -r,--refseq    Read reference sequence from Json file\n";
-  std::cout << "  -d,--dag       Input files are DAGs\n";
-  std::cout << "  -t,--trim      Trim output(default to best parsimony)\n";
-  std::cout << "  --rf           Trim output to minimize RF distance to provided protobuf\n";
-  std::cout << "  -s,--sample    Sample a single tree from DAG\n";
-
+  std::cout << "merge [-r,--refseq file] -i,--input infile1 infile2 ... "
+               "[-o,--output outfile]\n";
+  std::cout << "  -i,--input       Paths to input Trees/DAGs\n";
+  std::cout << "  -o,--output      Path to output DAG (default: merged.pb)\n";
+  std::cout << "  -r,--refseq      Read reference sequence from Json file\n";
+  std::cout << "  -t,--trim        Trim output (default: best parsimony)\n";
+  std::cout << "  --rf             Trim output to minimize RF distance to provided "
+               "DAG file\n";
+  std::cout << "  -s,--sample      Sample a single tree from DAG\n";
+  std::cout << "  --input-format   List the input file formats (default: inferred)\n";
+  std::cout << "  --output-format  Output file format (default: inferred)\n";
+  std::cout << "  --rf-format      RF file format (default: inferred)\n";
   std::exit(EXIT_SUCCESS);
 }
 
@@ -32,31 +34,28 @@
   std::exit(EXIT_FAILURE);
 }
 
-static int MergeTrees(const std::vector<std::string_view>& paths,
-                      std::string_view refseq_json_path, std::string_view out_path,
-                      bool dags, bool trim, bool sample_tree, std::string rf_file_path) {
+static void MergeTrees(const std::vector<std::string_view>& input_paths,
+                       const std::vector<FileFormat>& input_formats,
+                       std::string refseq_path, std::string_view output_path,
+                       FileFormat output_format, bool trim, bool sample_tree,
+                       std::string rf_path, FileFormat rf_format) {
   std::vector<MADAGStorage<>> trees;
-  std::string reference_sequence = "";
-  if (not refseq_json_path.empty()) {
-    reference_sequence = std::string{LoadReferenceSequence(refseq_json_path)};
-  }
+  std::vector<size_t> trees_id;
 
-  trees.reserve(paths.size());
-  std::vector<std::pair<size_t, std::string_view>> paths_idx;
-  for (size_t i = 0; i < paths.size(); ++i) {
+  trees.reserve(input_paths.size());
+  for (size_t i = 0; i < input_paths.size(); ++i) {
+    trees_id.push_back(i);
     trees.push_back(MADAGStorage<>::EmptyDefault());
-    paths_idx.emplace_back(i, paths.at(i));
   }
   std::cout << "Loading trees ";
-  ParallelForEach(paths_idx, [&](auto path_idx) {
+  ParallelForEach(trees_id, [&](auto tree_id) {
+    const auto tree_path = input_paths.at(tree_id);
+    const auto tree_format = input_formats.at(tree_id);
     std::cout << "." << std::flush;
-    trees.at(path_idx.first) =
-        dags ? LoadDAGFromProtobuf(path_idx.second)
-             : LoadTreeFromProtobuf(path_idx.second, reference_sequence);
-    trees.at(path_idx.first).View().RecomputeCompactGenomes();
+    trees.at(tree_id) = LoadDAG(tree_path, tree_format, refseq_path);
+    trees.at(tree_id).View().RecomputeCompactGenomes();
   });
-  std::cout << " done."
-            << "\n";
+  std::cout << " done.\n";
 
   Benchmark merge_time;
   Merge merge(trees.front().View().GetReferenceSequence());
@@ -66,22 +65,25 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
   merge_time.stop();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
 
-  std::cout << "DAG leave(without trimming): " << merge.GetResult().GetLeafsCount() << "\n";
-  std::cout << "DAG nodes(without trimming): " << merge.GetResult().GetNodesCount() << "\n";
-  std::cout << "DAG edges(without trimming): " << merge.GetResult().GetEdgesCount() << "\n";
+  std::cout << "DAG leave(without trimming): " << merge.GetResult().GetLeafsCount()
+            << "\n";
+  std::cout << "DAG nodes(without trimming): " << merge.GetResult().GetNodesCount()
+            << "\n";
+  std::cout << "DAG edges(without trimming): " << merge.GetResult().GetEdgesCount()
+            << "\n";
 
   merge.ComputeResultEdgeMutations();
   if (trim) {
-    if (rf_file_path == "none") {
+    if (rf_path.empty()) {
       SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
       if (sample_tree) {
         std::cout << "sampling a tree from the minweight options\n";
-        StoreDAGToProtobuf(weight.MinWeightSampleTree({}).View(), out_path);
+        StoreDAG(weight.MinWeightSampleTree({}).View(), output_path, output_format);
       } else {
-        StoreDAGToProtobuf(weight.TrimToMinWeight({}).View(), out_path);
+        StoreDAG(weight.TrimToMinWeight({}).View(), output_path, output_format);
       }
     } else {
-      auto tree = dags ? LoadDAGFromProtobuf(rf_file_path) : LoadTreeFromProtobuf(rf_file_path, reference_sequence);
+      auto tree = LoadDAG(rf_path, rf_format, refseq_path);
       Merge comparetree(tree.View().GetReferenceSequence());
       comparetree.AddDAG(tree.View());
       comparetree.ComputeResultEdgeMutations();
@@ -89,31 +91,34 @@ static int MergeTrees(const std::vector<std::string_view>& paths,
       SumRFDistance min_rf_weight_ops{comparetree, merge};
       if (sample_tree) {
         std::cout << "sampling a tree from the minweight options\n";
-        StoreDAGToProtobuf(min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, {}).View(), out_path);
+        StoreDAG(min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, {}).View(),
+                 output_path, output_format);
       } else {
-        StoreDAGToProtobuf(min_sum_rf_dist.TrimToMinWeight(min_rf_weight_ops).View(), out_path);
+        StoreDAG(min_sum_rf_dist.TrimToMinWeight(min_rf_weight_ops).View(), output_path,
+                 output_format);
       }
     }
   } else {
     if (sample_tree) {
       std::cout << "sampling a tree from the merge DAG\n";
-        SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
-        StoreDAGToProtobuf(weight.SampleTree({}).View(), out_path);
+      SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
+      StoreDAG(weight.SampleTree({}).View(), output_path, output_format);
     } else {
-        StoreDAGToProtobuf(merge.GetResult(), out_path);
+      StoreDAG(merge.GetResult(), output_path, output_format);
     }
   }
-  return EXIT_SUCCESS;
 }
 
 int main(int argc, char** argv) try {
   Arguments args = GetArguments(argc, argv);
 
-  std::vector<std::string_view> input_filenames;
-  std::string result_filename = "merged.pb";
-  std::string refseq_filename;
-  std::string rf_filename = "none";
-  bool dags = false;
+  std::vector<std::string_view> input_paths;
+  std::vector<FileFormat> input_formats;
+  std::string output_path = "merged.dagbin";
+  FileFormat output_format = FileFormat::Infer;
+  std::string refseq_path;
+  std::string rf_path;
+  FileFormat rf_format = FileFormat::Infer;
   bool trim = false;
   bool sample_tree = false;
 
@@ -121,21 +126,19 @@ int main(int argc, char** argv) try {
     if (name == "-h" or name == "--help") {
       Usage();
     } else if (name == "-i" or name == "--input") {
-      ranges::actions::push_back(input_filenames, params);
+      ranges::actions::push_back(input_paths, params);
     } else if (name == "-o" or name == "--output") {
       if (params.empty()) {
         std::cerr << "Specify result file name.\n";
         Fail();
       }
-      result_filename = *params.begin();
+      output_path = *params.begin();
     } else if (name == "-r" or name == "--refseq") {
       if (params.empty()) {
         std::cerr << "Specify reference sequence Json file name.\n";
         Fail();
       }
-      refseq_filename = *params.begin();
-    } else if (name == "-d" or name == "--dag") {
-      dags = true;
+      refseq_path = *params.begin();
     } else if (name == "-t" or name == "--trim") {
       trim = true;
     } else if (name == "--rf") {
@@ -143,21 +146,80 @@ int main(int argc, char** argv) try {
         std::cerr << "Specify rf-trim protobuf file name.\n";
         Fail();
       }
-      rf_filename = *params.begin();
+      rf_path = *params.begin();
     } else if (name == "-s" or name == "--sample") {
       sample_tree = true;
+    } else if (name == "--input-format") {
+      if (params.empty()) {
+        std::cerr << "Specify input formats.\n";
+        Fail();
+      }
+      for (auto param : params) {
+        input_formats.push_back(InferFileFormat(param));
+      }
+    } else if (name == "--output-format") {
+      if (params.empty()) {
+        std::cerr << "Specify output format.\n";
+        Fail();
+      }
+      output_format = InferFileFormat(*params.begin());
+    } else if (name == "--rf-format") {
+      if (params.empty()) {
+        std::cerr << "Specify output format.\n";
+        Fail();
+      }
+      rf_format = InferFileFormat(*params.begin());
+    } else {
+      std::cerr << "Unknown argument '" << name << "'.\n";
+      Fail();
     }
   }
 
-  if (input_filenames.size() < 1) {
+  if (input_paths.size() < 1) {
     std::cerr << "Specify at least one input file names.\n";
     Fail();
   }
-  for (auto pth: input_filenames){
-    std::cout << pth << "  to be merged\n";
+  for (auto input_path : input_paths) {
+    std::cout << input_path << " to be merged\n";
+  }
+  if (input_formats.empty()) {
+    for (int i = 0; i < int(input_paths.size()); i++) {
+      input_formats.push_back(FileFormat::Infer);
+    }
+  }
+  if (input_paths.size() != input_formats.size()) {
+    std::cerr << "Specify format for each input.\n";
+    Fail();
   }
 
-  return MergeTrees(input_filenames, refseq_filename, result_filename, dags, trim, sample_tree, rf_filename);
+  bool is_input_dag = refseq_path.empty();
+  for (size_t i = 0; i < input_formats.size(); i++) {
+    auto& input_format = input_formats.at(i);
+    const auto& input_path = input_paths.at(i);
+    if (input_format == FileFormat::Infer) {
+      input_format = InferFileFormat(input_path);
+      if (input_format == FileFormat::Protobuf) {
+        input_format =
+            is_input_dag ? FileFormat::ProtobufTree : FileFormat::ProtobufDAG;
+      }
+    }
+  }
+  if (output_format == FileFormat::Infer) {
+    output_format = InferFileFormat(output_path);
+    if (output_format == FileFormat::Protobuf) {
+      output_format = FileFormat::ProtobufDAG;
+    }
+  }
+  if (!rf_path.empty() and rf_format == FileFormat::Infer) {
+    rf_format = InferFileFormat(rf_path);
+    if (rf_format == FileFormat::Protobuf) {
+      rf_format = FileFormat::ProtobufDAG;
+    }
+  }
+
+  MergeTrees(input_paths, input_formats, refseq_path, output_path, output_format, trim,
+             sample_tree, rf_path, rf_format);
+  return EXIT_SUCCESS;
 } catch (std::exception& e) {
   std::cerr << "Uncaught exception: " << e.what() << std::endl;
   std::terminate();

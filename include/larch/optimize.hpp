@@ -449,10 +449,12 @@ inline size_t optimize_inner_loop(
         std::chrono::steady_clock::time_point::max(),
     std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now(),
     bool log_moves = false, int iteration = 1, std::string intermediate_template = "",
-    std::string intermediate_pb_base_name = "", std::string intermediate_nwk_out = "") {
+    std::string intermediate_pb_base_name = "", std::string intermediate_nwk_out = "",
+    std::optional<uint32_t> user_seed = std::nullopt) {
   Assert(not nodes_to_search.empty());
-  std::random_device rnd;
-  std::mt19937 gen(rnd());
+  std::random_device random_device;
+  auto rand = user_seed.value_or(random_device());
+  std::mt19937 gen(rand);
   std::uniform_int_distribution<size_t> dist(0, nodes_to_search.size() - 1);
   std::mutex random_mtx;
   auto random_node = [&] {

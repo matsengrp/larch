@@ -9,7 +9,33 @@
 #include "larch/merge/merge.hpp"
 #include "larch/mat_conversion.hpp"
 
+enum class FileFormat {
+  Infer,
+  Dagbin,
+  Protobuf,
+  ProtobufDAG,
+  ProtobufTree,
+  JsonDAG,
+  DebugAll
+};
+
+const std::vector<std::pair<std::string, FileFormat>> file_extension_names = {
+    {"dagbin", FileFormat::Dagbin},        {"protobuf", FileFormat::Protobuf},
+    {"pb", FileFormat::Protobuf},          {"dag-pb", FileFormat::ProtobufDAG},
+    {"pb_dag", FileFormat::ProtobufDAG},   {"tree-pb", FileFormat::ProtobufTree},
+    {"pb_tree", FileFormat::ProtobufTree}, {"json", FileFormat::JsonDAG},
+    {"dag-json", FileFormat::JsonDAG},     {"json_dag", FileFormat::JsonDAG},
+    {"debug-all", FileFormat::DebugAll}};
+
+inline FileFormat InferFileFormat(std::string_view path);
+
+[[nodiscard]] MADAGStorage<> LoadDAG(
+    std::string_view input_dag_path, FileFormat file_format = FileFormat::Infer,
+    std::optional<std::string> refseq_path = std::nullopt);
+
 [[nodiscard]] MADAGStorage<> LoadDAGFromProtobuf(std::string_view path);
+
+[[nodiscard]] MADAGStorage<> LoadDAGFromDagbin(std::string_view path);
 
 [[nodiscard]] MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
                                                   std::string_view reference_sequence);
@@ -38,19 +64,27 @@ void LoadVCFData(MADAGStorage<>& dag_storage, std::string& vcf_path,
                  bool silence_warnings = true);
 
 template <typename DAG>
+void StoreDAG(DAG dag, std::string_view output_dag_path,
+              FileFormat file_format = FileFormat::Infer, bool append_changes = false);
+
+template <typename DAG>
 void StoreDAGToProtobuf(DAG dag, std::string_view path);
+
+template <typename DAG>
+void StoreDAGToDagbin(DAG dag, std::string_view path, bool append_changes = false);
 
 template <typename DAG>
 void StoreTreeToProtobuf(DAG dag, std::string_view path);
 
-template <typename DAG>
-void MADAGToDOT(DAG dag, std::ostream& out);
+template <typename DAG, typename iostream>
+void MADAGToDOT(DAG dag, iostream& out);
 
-template <typename DAG>
-void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, std::ostream& out);
+template <typename DAG, typename iostream>
+void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, iostream& out);
 
 std::string ToEdgeMutationsString(const MAT::Node* node);
 
-void MATToDOT(const MAT::Tree& mat, std::ostream& out);
+template <typename iostream>
+void MATToDOT(const MAT::Tree& mat, iostream& out);
 
 #include "larch/impl/dag_loader_impl.hpp"

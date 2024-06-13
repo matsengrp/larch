@@ -1,7 +1,7 @@
 #include "larch/rf_distance.hpp"
 
 #include "test_common.hpp"
-#include "sample_dag.hpp"
+#include "test_common_dag.hpp"
 #include "larch/subtree/subtree_weight.hpp"
 #include "larch/dag_loader.hpp"
 

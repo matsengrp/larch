@@ -5,12 +5,15 @@
 struct SumRFDistance;
 
 template <typename WeightOps, typename DAG>
-SubtreeWeight<WeightOps, DAG>::SubtreeWeight(DAG dag)
+SubtreeWeight<WeightOps, DAG>::SubtreeWeight(DAG dag,
+                                             std::optional<uint32_t> random_seed)
     : dag_{dag},
       cached_weights_(dag_.GetNodesCount()),
       cached_subtree_counts_(dag_.GetNodesCount()),
-      cached_min_weight_edges_(dag_.GetNodesCount()),
-      random_generator_{random_device_()} {}
+      cached_min_weight_edges_(dag_.GetNodesCount()) {
+  auto rand = random_seed.value_or(random_device_());
+  random_generator_ = std::mt19937{rand};
+}
 
 template <typename WeightOps, typename DAG>
 DAG SubtreeWeight<WeightOps, DAG>::GetDAG() const {
@@ -86,8 +89,7 @@ SubtreeWeight<WeightOps, DAG>::TrimToMinWeight(const WeightOps& weight_ops) {
       [this](Node node, CladeIdx clade_idx) {
         return cached_min_weight_edges_.at(node.GetId().value).at(clade_idx.value);
       },
-      mapped_node,
-      result.View());
+      mapped_node, result.View());
   result.View().BuildConnections();
   return result;
 }
@@ -300,12 +302,10 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTree(NodeType input_node,
 
 template <typename WeightOps, typename DAG>
 template <typename NodeType, typename EdgesSelector, typename MutableDAGType>
-void SubtreeWeight<WeightOps, DAG>::ExtractSubset(NodeType input_node,
-                                                NodeId result_node_id,
-                                                const WeightOps& weight_ops,
-                                                const EdgesSelector& edge_selector,
-                                                std::unordered_map<NodeId, NodeId>& mapped_id,
-                                                MutableDAGType result) {
+void SubtreeWeight<WeightOps, DAG>::ExtractSubset(
+    NodeType input_node, NodeId result_node_id, const WeightOps& weight_ops,
+    const EdgesSelector& edge_selector, std::unordered_map<NodeId, NodeId>& mapped_id,
+    MutableDAGType result) {
   ComputeWeightBelow(input_node, weight_ops);
   auto result_node = result.Get(result_node_id);
   if constexpr (decltype(result_node)::template contains_feature<MappedNodes>) {
@@ -323,7 +323,7 @@ void SubtreeWeight<WeightOps, DAG>::ExtractSubset(NodeType input_node,
     std::ignore = clade_idx;
     auto input_edges = edge_selector(input_node, clade_idx);
 
-    for (auto edge_id: input_edges) {
+    for (auto edge_id : input_edges) {
       auto input_edge = input_node.GetDAG().Get(edge_id);
       auto input_node_child = input_edge.GetChild();
 
@@ -338,7 +338,7 @@ void SubtreeWeight<WeightOps, DAG>::ExtractSubset(NodeType input_node,
             result.AppendEdge(result_node_id, result_child_id, clade_idx);
         result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
         ExtractSubset(input_node_child, result_child_id, weight_ops, edge_selector,
-                    mapped_id, result);
+                      mapped_id, result);
         mapped_id.insert({input_node_child.GetId(), result_child_id});
       }
     }

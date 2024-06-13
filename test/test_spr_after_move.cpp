@@ -5,7 +5,7 @@
 #include "larch/subtree/parsimony_score.hpp"
 #include "larch/spr/spr_view.hpp"
 #include "larch/spr/lca.hpp"
-#include "sample_dag.hpp"
+#include "test_common_dag.hpp"
 
 // #include <tbb/global_control.h>
 
@@ -264,7 +264,6 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
                                                     bool write_dot_files = false) {
   std::ofstream os;
   std::string output_filename;
-  std::string output_folder = "_ignore/";
   std::string output_ext = ".dot";
 
   auto dag_storage = AddMATConversion(make_sample_dag());
@@ -275,7 +274,7 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
   auto child_counts = get_child_counts(dag);
 
   if (write_dot_files) {
-    output_filename = output_folder + dag_name + output_ext;
+    output_filename = test_output_folder + dag_name + output_ext;
     std::cout << ">> WRITE DOTFILE: " << output_filename << std::endl;
     os.open(output_filename);
     MADAGToDOT(dag, os);
@@ -307,7 +306,7 @@ bool is_valid_spr_move(Node src_node, Node dest_node) {
         if (write_dot_files) {
           std::cout << "SRC: NodeId::" << src_node.GetId().value
                     << ", DEST: NodeId::" << dest_node.GetId().value << std::endl;
-          output_filename = output_folder + dag_name + "." +
+          output_filename = test_output_folder + dag_name + "." +
                             std::to_string(src_node.GetId().value) + "_" +
                             std::to_string(dest_node.GetId().value) + output_ext;
           std::cout << ">> WRITE DOTFILE [post]: " << output_filename << std::endl;

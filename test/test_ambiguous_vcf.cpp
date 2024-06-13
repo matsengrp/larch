@@ -1,5 +1,5 @@
 #include "test_common.hpp"
-#include "sample_dag.hpp"
+#include "test_common_dag.hpp"
 
 #include "larch/dag_loader.hpp"
 #include "larch/spr/spr_view.hpp"
@@ -314,13 +314,16 @@ void test_vcf_reading() {
 }
 
 [[maybe_unused]] void test_vcf_with_larch_usher() {
-  std::string command =
-      "./larch-usher -i data/test_ambiguous_vcf/unamb_mat.pb -r "
-      "data/test_ambiguous_vcf/sample_reference_sequence.fasta -o "
-      "test_larch_usher_output.pb -c 2 -v "
-      "data/test_ambiguous_vcf/SampleDAG_unique_ambiguous_leafs.vcf ";
+  std::string input_dag_path = "data/test_ambiguous_vcf/unamb_mat.pb";
+  std::string output_dag_path = test_output_folder + "/test_larch_usher_output.pb";
+  std::string refseq_path = "data/test_ambiguous_vcf/sample_reference_sequence.fasta";
+  int iter = 2;
+  std::string vcf_option =
+      "-v data/test_ambiguous_vcf/SampleDAG_unique_ambiguous_leafs.vcf";
 
-  TestAssert(0 == std::system(command.c_str()));
+  auto [command, result] =
+      run_larch_usher(input_dag_path, output_dag_path, refseq_path, iter, vcf_option);
+  TestAssert(0 == result);
 }
 
 [[maybe_unused]] static const auto test_added0 =
@@ -331,8 +334,8 @@ void test_vcf_reading() {
 
 [[maybe_unused]] static const auto test_added2 = add_test(
     {[]() { test_vcf_compatible(); },
-     "Loading VCFs with Ambiguities on a DAG and check pendant edge Mutations "});
+     "Loading VCFs with Ambiguities on a DAG and check pendant edge Mutations"});
 
 [[maybe_unused]] static const auto test_added3 =
     add_test({[]() { test_vcf_with_larch_usher(); },
-              "Loading VCFs with Ambiguities and running with MatOptimize "});
+              "Loading VCFs with Ambiguities and running with MatOptimize"});
