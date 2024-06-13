@@ -54,7 +54,7 @@ Building
 There are 4 executables that are built automatically as part of the larch package and provide various methods for exploring tree space and manipulating DAGs/trees:
 - `larch-test` is the suite of tests used to validate the various routines.
 - `larch-usher` takes an input tree/DAG and explores tree space through SPR moves.
-- `merge` utility is used to manipulate(e.g. combine, prune)DAGs/trees.
+- `merge` utility is used to manipulate(e.g. combine, prune) DAGs/trees.
 - `dag2dot` utility writes a provided protobuf file in dot format for easy viewing.
 
 Note: If you run against memory limitations during the cmake step, you can regulate number of parallel threads with `export CMAKE_NUM_THREADS="8"` (reduce number as necessary).

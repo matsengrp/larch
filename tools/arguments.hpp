@@ -2,6 +2,8 @@
 
 #include <string_view>
 #include <initializer_list>
+#include <iostream>
+#include <iomanip>
 
 #include "larch/common.hpp"
 
@@ -17,3 +19,33 @@ inline auto GetArguments(int argc, char** argv) {
 }
 
 using Arguments = decltype(GetArguments(0, nullptr));
+
+inline auto FormatUsage(
+    const std::string& program_desc, const std::vector<std::string>& usage_examples,
+    const std::vector<std::pair<std::string, std::string>>& flag_desc_pairs) {
+  std::stringstream os;
+
+  if (!program_desc.empty()) {
+    os << program_desc << "\n\n";
+  }
+
+  os << "Usage:\n";
+  for (const auto& usage_example : usage_examples) {
+    os << "  " << usage_example << "\n";
+  }
+  os << "\n";
+
+  size_t max_flag_width = 0;
+  for (const auto& [flag, desc] : flag_desc_pairs) {
+    std::ignore = desc;
+    max_flag_width = std::max(max_flag_width, flag.size());
+  }
+
+  os << "Options:\n";
+  for (const auto& [flag, desc] : flag_desc_pairs) {
+    os << "  " << std::left << std::setw(static_cast<int>(max_flag_width) + 2) << flag;
+    os << desc << "\n";
+  }
+
+  return os.str();
+}

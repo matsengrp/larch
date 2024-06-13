@@ -27,48 +27,52 @@
 #include <tbb/global_control.h>
 
 [[noreturn]] static void Usage() {
-  std::cout << "Usage:\n";
-  std::cout
-      << "larch-usher -i,--input infile -o,--output outfile [-c,--count number]\n";
-  std::cout << "  -i,--input   Path to input Tree/DAG\n";
-  std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
-               "reference sequence\nif input points to MAT protobuf\n";
-  std::cout << "  -v,--VCF-input-file   Provide a path to a vcf file containing "
-               "ambiguous leaf sequence data\n";
-  std::cout << "  -o,--output  Path to output DAG\n";
-  std::cout << "  -l,--logpath Path for logging\n";
-  std::cout << "  -c,--count   Number of iterations. (default: 1)\n";
-  std::cout << "  -s,--switch-subtrees          Switch to optimizing subtrees after "
-               "the specified number of iterations (default: never)\n";
-  std::cout << "  --min-subtree-clade-size      The minimum number of leaves in a "
-               "subtree sampled for optimization (default: 100, ignored without option "
-               "`-s`)\n";
-  std::cout
-      << "  --max-subtree-clade-size      The maximum number of leaves in a subtree "
-         "sampled for optimization (default: 1000, ignored without option "
-         "`-s`)\n";
-  std::cout << "  --move-coeff-nodes   New node coefficient for scoring moves. "
-               "(default: 1)\n";
-  std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
-               "(default: 1)\n";
-  std::cout << "  --sample-any-tree    Sample any tree for optimization, rather than "
-               "requiring the sampled tree to maximize parsimony.\n";
-  std::cout << "  --sample-method      Select method for optimization "
-               "[parsimony, random, rf-minsum, rf-maxsum]\n";
-  std::cout
-      << "  --callback-option    Callback configuration choice (default: merge all "
-         "profitable moves) [best-move, best-move-fixed-tree, best-move-treebased, "
-         "all-moves]\n";
-  std::cout << "  --trim   Trim optimized dag before writing to protobuf\n";
-  std::cout
-      << "  --keep-fragment-uncollapsed   Optional argument to keep empty fragment "
-         "edges\n";
-  std::cout << "  --input-format  Specify input file format. (default: inferred) "
-               "[dagbin, dag-pb, tree-pb, dag-json]\n";
-  std::cout << "  --output-format  Specify output file format. (default: inferred) "
-               "[dagbin, dag-pb]\n";
-  std::cout << "  --seed     Set seed for random number generation.\n";
-  std::cout << "  --thread   Set number of cpu threads.\n";
+  std::string program_desc =
+      "larch-usher: tool for exploring tree space of DAG/tree through SPR moves";
+
+  std::vector<std::string> usage_examples = {
+      {"larch-usher -i,--input FILE -o,--output FILE [-c,--count NUMBER]"}};
+
+  std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
+      {"-i,--input", "Path to input DAG/Tree file (REQUIRED)"},
+      {"-o,--output", "Path to output DAG file (REQUIRED)"},
+      {"-r,--MAT-refseq-file",
+       "Path to json reference sequence file (REQUIRED if input file is a MAT "
+       "protobuf)"},
+      {"-v,--VCF-input-file",
+       "Path to VCF file, containing ambiguous leaf sequence data"},
+      {"-s,--switch-subtrees",
+       "Switch to optimizing subtrees after the specified number of iterations "
+       "(default: never)"},
+      {"--min-subtree-clade-size",
+       "The minimum number of leaves in a subtree sampled for optimization (default: "
+       "100, ignored without option `-s`)"},
+      {"--max-subtree-clade-size",
+       "The maximum number of leaves in a subtree sampled for optimization "
+       "(default: 1000, ignored without option `-s`)"},
+      {"--move-coeff-nodes", "New node coefficient for scoring moves (default: 1)"},
+      {"--move-coeff-pscore",
+       "Parsimony score coefficient for scoring moves (default: 1)"},
+      {"--sample-any-tree",
+       "Sample any tree for optimization, rather than requiring the sampled tree to "
+       "maximize parsimony"},
+      {"--sample-method",
+       "Select method for optimization [parsimony, random, rf-minsum, rf-maxsum]"},
+      {"--callback-option",
+       "Callback configuration choice (default: merge all profitable moves) "
+       "[best-move, best-move-fixed-tree, best-move-treebased, all-moves]"},
+      {"--trim", "Trim optimized DAG after final iteration"},
+      {"--keep-fragment-uncollapsed",
+       "Keep empty fragment edges rather than collapsing them"},
+      {"--input-format",
+       "Specify input file format (default: inferred) [dagbin, dag-pb, tree-pb, "
+       "dag-json]"},
+      {"--output-format",
+       "Specify output file format (default: inferred) [dagbin, dag-pb]"},
+      {"--seed", "Set seed for random number generation"},
+      {"--thread", "Set number of cpu threads"}};
+
+  std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
 
   std::exit(EXIT_SUCCESS);
 }

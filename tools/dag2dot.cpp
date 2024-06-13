@@ -5,13 +5,21 @@
 #include "larch/dag_loader.hpp"
 
 [[noreturn]] static void Usage() {
-  std::cout << "Usage:\n";
-  std::cout << "dag2dot -i,--input file\n";
-  std::cout << "  -i,--input       Path to input Tree/DAG\n";
-  std::cout << "  -o,--output      Path to output DOT file (default: DOT written to "
-               "stdout)\n";
-  std::cout << "  --input-format   Input file format (default: inferred)\n";
-  std::cout << "  --dag/--tree     Specify whether input is a DAG or Tree\n";
+  std::string program_desc = "dag2dot: tool for converting DAG/tree file to DOT file";
+
+  std::vector<std::string> usage_examples = {
+      {"dag2dot -i,--input INFILE [-o,--output OUTFILE]"}};
+
+  std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
+      {"-i,--input", "Path to input DAG/Tree file"},
+      {"-o,--output", "Path to output DOT file (default: DOT written to stdout)"},
+      {"--input-format",
+       "Specify input file format (default: inferred) [dagbin, dag-pb, tree-pb, "
+       "dag-json]"},
+      {"--dag/--tree", "Specify whether protobuf input is a DAG or Tree"}};
+
+  std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
+
   std::exit(EXIT_SUCCESS);
 }
 
@@ -45,7 +53,7 @@ int main(int argc, char** argv) try {
       output_path = *params.begin();
     } else if (name == "--input-format") {
       if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
+        std::cerr << "Format not specified.\n";
         Fail();
       }
       input_format = FileFormat::ProtobufTree;

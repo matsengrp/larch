@@ -10,20 +10,27 @@
 #endif
 
 #include "test_common.hpp"
+#include "../tools/arguments.hpp"
 #include "larch/benchmark.hpp"
 
 static void get_usage() {
-  std::cout << "Usage:\n";
-  std::cout << "larch-test <regular_expression> <options...>\n";
-  std::cout << "  <regular_expression>   Includes all tests with names matching "
-               "expression.\n";
-  std::cout << "  --range <ids>          Includes all tests with listed IDs "
-               "[e.g. 1,5-10,12,15].\n";
-  std::cout << "  -tag <tag>             Excludes all tests with given tag.\n";
-  std::cout << "  +tag <tag>             Includes all tests with given tag.\n";
-  std::cout << "  --list                 Prints information about all selected tests "
-               "(IDs, tags). They are not executed.\n";
-  std::cout << "  nocatch                Allow exceptions to escape for debugging.\n";
+  std::string program_desc = "larch-test: test suite for larch-usher";
+
+  std::vector<std::string> usage_examples = {
+      {"larch-test <REGULAR_EXPRESSION> [options...]"}};
+
+  std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
+      {"<REGULAR_EXPRESSION>", "Includes all tests with names matching expression."},
+      {"--range <ids>", "Includes all tests with listed IDs. [e.g. 1,5-10,12,15]"},
+      {"-tag <tag>", "Excludes all tests with given tag."},
+      {"+tag <tag>", "Include all tests with given tag."},
+      {"--list",
+       "Prints information about all selected tests (IDs, tags). They are not "
+       "executed."},
+      {"nocatch", "Allow exceptions to escape for debugging."}};
+
+  std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
+
   std::exit(EXIT_SUCCESS);
 }
 

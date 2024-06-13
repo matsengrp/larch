@@ -12,19 +12,33 @@
 #include "larch/benchmark.hpp"
 
 [[noreturn]] static void Usage() {
-  std::cout << "Usage:\n";
-  std::cout << "merge [-r,--refseq file] -i,--input infile1 infile2 ... "
-               "[-o,--output outfile]\n";
-  std::cout << "  -i,--input       Paths to input Trees/DAGs\n";
-  std::cout << "  -o,--output      Path to output DAG (default: merged.pb)\n";
-  std::cout << "  -r,--refseq      Read reference sequence from Json file\n";
-  std::cout << "  -t,--trim        Trim output (default: best parsimony)\n";
-  std::cout << "  --rf             Trim output to minimize RF distance to provided "
-               "DAG file\n";
-  std::cout << "  -s,--sample      Sample a single tree from DAG\n";
-  std::cout << "  --input-format   List the input file formats (default: inferred)\n";
-  std::cout << "  --output-format  Output file format (default: inferred)\n";
-  std::cout << "  --rf-format      RF file format (default: inferred)\n";
+  std::string program_desc =
+      "merge: tool for manipulating (e.g. combining, pruning) DAGs/trees";
+
+  std::vector<std::string> usage_examples = {
+      {"merge [-r,--refseq FILE] -i,--input FILE1 FILE2 ... [-o,--output FILE]"}};
+
+  std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
+      {"-i,--input", "Path to input DAG/Tree file (REQUIRED)"},
+      {"-o,--output", "Path to output DAG file (default: `merged.dagbin`)"},
+      {"-r,--MAT-refseq-file",
+       "Path to json reference sequence file (REQUIRED if input file is a MAT "
+       "protobuf)"},
+      {"-t,--trim", "Trim output (default: best parsimony)"},
+      {"--rf", "Trim output to minimize RF distance to provided DAG file"},
+      {"-s,--sample", "Sample a single tree from DAG"},
+      {"--input-format",
+       "Specify input file formats (default: inferred) [dagbin, dag-pb, tree-pb, "
+       "dag-json]"},
+      {"--output-format",
+       "Specify output file format (default: inferred) [dagbin, dag-pb]"},
+      {"--rf-format",
+       "Specify RF file formats (default: inferred) [dagbin, dag-pb, tree-pb, "
+       "dag-json]"},
+  };
+
+  std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
+
   std::exit(EXIT_SUCCESS);
 }
 
