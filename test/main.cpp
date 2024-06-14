@@ -20,14 +20,16 @@ static void get_usage() {
       {"larch-test <REGULAR_EXPRESSION> [options...]"}};
 
   std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
-      {"<REGULAR_EXPRESSION>", "Includes all tests with names matching expression."},
-      {"--range <ids>", "Includes all tests with listed IDs. [e.g. 1,5-10,12,15]"},
-      {"-tag <tag>", "Excludes all tests with given tag."},
-      {"+tag <tag>", "Include all tests with given tag."},
+      {"<REGULAR_EXPRESSION>", "Includes all tests with names matching expression"},
+      {"--range INT",
+       "Includes all tests within range of listed IDs \n"
+       "[e.g. 1,5-10,12,15]"},
+      {"-tag STRING", "Excludes all tests with given tag"},
+      {"+tag STRING", "Include all tests with given tag"},
       {"--list",
-       "Prints information about all selected tests (IDs, tags). They are not "
-       "executed."},
-      {"nocatch", "Allow exceptions to escape for debugging."}};
+       "Prints information about all selected tests (IDs, tags), but does not run "
+       "them"},
+      {"nocatch", "Allow exceptions to escape for debugging"}};
 
   std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
 

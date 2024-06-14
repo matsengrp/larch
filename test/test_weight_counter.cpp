@@ -17,25 +17,33 @@ Counter make_counter(const std::vector<ParsimonyScore::Weight> inweights) {
   return Counter(inweights, {});
 }
 
-template <typename T>
-std::string to_string(T& inobject) {
-  std::ostringstream result;
-  result << inobject;
-  return result.str();
-}
+// template <typename T>
+// std::string to_string(T& inobject) {
+//   std::ostringstream result;
+//   result << inobject;
+//   return result.str();
+// }
 
-template std::string to_string(Count&);
-template std::string to_string(size_t&);
+// template std::string to_string(Count&);
+// template std::string to_string(size_t&);
 
 static void test_counter_add(Counter lhs, Counter rhs, Counter expected_counter) {
   Counter result = lhs + rhs;
+
+  std::cout << "lhs = " << lhs << "\n";
+  std::cout << "rhs = " << rhs << "\n";
+  std::cout << "(lhs + rhs) = " << result << "\n";
+
   TestAssert(result == expected_counter);
 }
 
 static void test_counter_multiply(Counter lhs, Counter rhs, Counter expected_counter) {
-  /* std::cout << lhs << "\n"; */
-  /* std::cout << rhs << "\n"; */
   Counter result = lhs * rhs;
+
+  std::cout << "lhs = " << lhs << "\n";
+  std::cout << "rhs = " << rhs << "\n";
+  std::cout << "(lhs * rhs) = " << result << "\n";
+
   TestAssert(result == expected_counter);
 }
 

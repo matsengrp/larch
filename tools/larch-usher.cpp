@@ -31,7 +31,7 @@
       "larch-usher: tool for exploring tree space of DAG/tree through SPR moves";
 
   const std::vector<std::string> usage_examples = {
-      {"larch-usher -i,--input FILE -o,--output FILE [-c,--count NUMBER]"}};
+      {"larch-usher -i,--input FILE -o,--output FILE [-c,--count INT]"}};
 
   const std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
       {"-i,--input FILE", "Path to input DAG/Tree file (REQUIRED)"},
@@ -41,23 +41,25 @@
        "(REQUIRED if input file is a MAT protobuf)"},
       {"-v,--VCF-input-file FILE",
        "Path to VCF file, containing ambiguous leaf sequence data"},
-      {"-c,--count NUMBER", "Number of iterations (default: 1)"},
-      {"-s,--switch-subtrees NUMBER",
+      {"-c,--count INT", "Number of iterations (default: 1)"},
+      {"-s,--switch-subtrees INT",
        "Switch to optimizing subtrees after the specified number of iterations \n"
        "(default: never)"},
-      {"--min-subtree-clade-size NUMBER",
+      {"--min-subtree-clade-size INT",
        "The minimum number of leaves in a subtree sampled for optimization \n"
        "(default: 100, ignored without option `-s`)"},
-      {"--max-subtree-clade-size NUMBER",
+      {"--max-subtree-clade-size INT",
        "The maximum number of leaves in a subtree sampled for optimization \n"
        "(default: 1000, ignored without option `-s`)"},
-      {"--move-coeff-nodes NUMBER",
-       "New node coefficient for scoring moves (default: 1)"},
-      {"--move-coeff-pscore NUMBER",
+      {"--move-coeff-nodes INT", "New node coefficient for scoring moves (default: 1)"},
+      {"--move-coeff-pscore INT",
        "Parsimony score coefficient for scoring moves (default: 1)"},
       {"--sample-any-tree",
        "Sample any tree for optimization, rather than requiring the sampled tree \n"
        "to maximize parsimony"},
+      {"--sample-uniformly",
+       "Use a uniform distribution to sample trees for optimization, rather than \n"
+       "a natural distribution"},
       {"--sample-method OPTION",
        "Select tree sampling method for optimization (default: max parsimony)\n"
        "[parsimony, random, rf-minsum, rf-maxsum]"},
@@ -66,16 +68,15 @@
        "[best-move, best-move-fixed-tree, best-move-treebased, all-moves]"},
       {"--trim", "Trim optimized DAG after final iteration"},
       {"--keep-fragment-uncollapsed",
-       "Keep empty fragment edges rather than collapsing them"},
+       "Keep empty fragment edges, rather than collapsing them"},
       {"--input-format OPTION",
        "Specify input file format (default: inferred) \n"
        "[dagbin, dag-pb, tree-pb, dag-json]"},
       {"--output-format OPTION",
        "Specify output file format (default: inferred) \n"
        "[dagbin, dag-pb]"},
-      {"--seed NUMBER", "Set seed for random number generation (default: random)"},
-      {"--thread NUMBER",
-       "Set number of cpu threads (default: max allowed by system)"}};
+      {"--seed INT", "Set seed for random number generation (default: random)"},
+      {"--thread INT", "Set number of cpu threads (default: max allowed by system)"}};
 
   std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
 
@@ -778,27 +779,27 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   Benchmark load_timer;
   std::cout << "Loading input DAG..." << std::flush;
-  MADAGStorage<> input_dag = LoadDAG(input_dag_path, input_format, refseq_path);
+  MADAGStorage<> input_dag_storage = LoadDAG(input_dag_path, input_format, refseq_path);
+  auto input_dag = input_dag_storage.View();
   load_timer.stop();
   std::cout << "...loaded: " << load_timer.durationFormatMs() << std::endl;
 
-  input_dag.View().RecomputeCompactGenomes(true);
-  LoadVCFData(input_dag, vcf_path);
-  auto input_dag_view = input_dag.View();
+  input_dag.RecomputeCompactGenomes(true);
+  LoadVCFData(input_dag_storage, vcf_path);
   // if the DAG is from a DAG protobuf file, then it needs to be equipped with
   // SampleIds
   if (vcf_path.empty()) {
-    input_dag_view.SampleIdsFromCG();
+    input_dag.SampleIdsFromCG();
   }
-  Merge merge{input_dag_view.GetReferenceSequence()};
-  merge.AddDAG(input_dag_view);
+  Merge merge{input_dag.GetReferenceSequence()};
+  merge.AddDAG(input_dag);
   std::vector<
       std::pair<decltype(AddMATConversion(MADAGStorage<>::EmptyDefault())), MAT::Tree>>
       optimized_dags;
   merge.ComputeResultEdgeMutations();
 
   Benchmark log_timer;
-  auto logger = [&merge, &logfile, &log_timer, &intermediate_dag_path,
+  auto logger = [&input_dag, &merge, &logfile, &log_timer, &intermediate_dag_path,
                  &write_intermediate_dag, &output_format, &main_rng](size_t iteration) {
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{
         merge.GetResult(), main_rng.GenerateSeed()};
@@ -814,6 +815,17 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     SubtreeWeight<TreeCount, MergeDAG> treecount{merge.GetResult(),
                                                  main_rng.GenerateSeed()};
     auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
+
+    SubtreeWeight<WeightAccumulator<ParsimonyScore>, MergeDAG> parsimonycount(
+        merge.GetResult());
+    auto parsimonycounts =
+        parsimonycount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
+    std::cout << "All parsimony scores in DAG:\n" << parsimonycounts << "\n";
+    Count total_count = 0;
+    for (const auto& score_count : parsimonycounts.GetWeights()) {
+      total_count += score_count.second;
+    }
+    std::cout << "Total parsimony scores: " << total_count << std::endl;
 
     SubtreeWeight<SumRFDistance, MergeDAG> this_min_sum_rf_dist{
         merge.GetResult(), main_rng.GenerateSeed()};
