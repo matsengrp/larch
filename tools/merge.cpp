@@ -19,22 +19,22 @@
       {"merge [-r,--refseq FILE] -i,--input FILE1 FILE2 ... [-o,--output FILE]"}};
 
   std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
-      {"-i,--input FILE...", "Paths to input DAG/Tree files (REQUIRED)"},
+      {"-i,--input FILE [...]", "Paths to input DAG/Tree files (REQUIRED)"},
       {"-o,--output FILE", "Path to output DAG file (default: `merged.dagbin`)"},
       {"-r,--MAT-refseq-file FILE",
-       "Path to json reference sequence file (REQUIRED if input file is a MAT "
-       "protobuf)"},
+       "Path to json reference sequence file \n"
+       "(REQUIRED if input file is a MAT protobuf)"},
       {"-t,--trim", "Trim output (default: best parsimony)"},
       {"--rf FILE", "Trim output to minimize RF distance to provided DAG file"},
       {"-s,--sample", "Sample a single tree from DAG"},
-      {"--input-format OPTION",
+      {"--input-format OPTION [...]",
        "Specify input file formats (default: inferred) \n"
        "[dagbin, dag-pb, tree-pb, dag-json]"},
       {"--output-format OPTION",
        "Specify output file format (default: inferred) \n"
        "[dagbin, dag-pb]"},
       {"--rf-format OPTION",
-       "Specify RF file formats (default: inferred) \n"
+       "Specify RF file format (default: inferred) \n"
        "[dagbin, dag-pb, tree-pb, dag-json]"},
   };
 

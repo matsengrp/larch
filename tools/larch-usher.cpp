@@ -37,13 +37,13 @@
       {"-i,--input FILE", "Path to input DAG/Tree file (REQUIRED)"},
       {"-o,--output FILE", "Path to output DAG file (REQUIRED)"},
       {"-r,--MAT-refseq-file FILE",
-       "Path to json reference sequence file (REQUIRED if input file is a MAT "
-       "protobuf)"},
+       "Path to json reference sequence file \n"
+       "(REQUIRED if input file is a MAT protobuf)"},
       {"-v,--VCF-input-file FILE",
        "Path to VCF file, containing ambiguous leaf sequence data"},
       {"-c,--count NUMBER", "Number of iterations (default: 1)"},
       {"-s,--switch-subtrees NUMBER",
-       "Switch to optimizing subtrees after the specified number of iterations "
+       "Switch to optimizing subtrees after the specified number of iterations \n"
        "(default: never)"},
       {"--min-subtree-clade-size NUMBER",
        "The minimum number of leaves in a subtree sampled for optimization \n"
@@ -56,8 +56,8 @@
       {"--move-coeff-pscore NUMBER",
        "Parsimony score coefficient for scoring moves (default: 1)"},
       {"--sample-any-tree",
-       "Sample any tree for optimization, rather than requiring the sampled tree to "
-       "maximize parsimony"},
+       "Sample any tree for optimization, rather than requiring the sampled tree \n"
+       "to maximize parsimony"},
       {"--sample-method OPTION",
        "Select tree sampling method for optimization (default: max parsimony)\n"
        "[parsimony, random, rf-minsum, rf-maxsum]"},
