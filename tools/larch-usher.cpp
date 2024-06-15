@@ -560,7 +560,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   FileFormat output_format = FileFormat::Infer;
   SampleMethod sample_method = SampleMethod::Parsimony;
   bool sample_uniformly = false;
-  size_t count = 1;
+  size_t iter_count = 1;
   unsigned int thread_count = 0;
   int move_coeff_nodes = 1;
   int move_coeff_pscore = 1;
@@ -591,10 +591,10 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       output_dag_path = *params.begin();
     } else if (name == "-c" or name == "--count") {
       if (params.empty()) {
-        std::cerr << "Count not specified.\n";
+        std::cerr << "Iteration count not specified.\n";
         Fail();
       }
-      count = static_cast<size_t>(ParseNumber(*params.begin()));
+      iter_count = static_cast<size_t>(ParseNumber(*params.begin()));
     } else if (name == "-s" or name == "--switch-subtrees") {
       if (params.empty()) {
         std::cerr << "Subtree count not specified.\n";
@@ -801,31 +801,50 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   Benchmark log_timer;
   auto logger = [&input_dag, &merge, &logfile, &log_timer, &intermediate_dag_path,
                  &write_intermediate_dag, &output_format, &main_rng](size_t iteration) {
-    SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{
-        merge.GetResult(), main_rng.GenerateSeed()};
-    SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> maxparsimonyscorer{
-        merge.GetResult(), main_rng.GenerateSeed()};
-    merge.ComputeResultEdgeMutations();
-    auto minparsimony =
-        parsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-    auto minparsimonytrees =
-        parsimonyscorer.MinWeightCount(merge.GetResult().GetRoot(), {});
-    auto maxparsimony =
-        maxparsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-    SubtreeWeight<TreeCount, MergeDAG> treecount{merge.GetResult(),
-                                                 main_rng.GenerateSeed()};
-    auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
+    // SubtreeWeight<TreeCount, MergeDAG> tree_counter{merge.GetResult(),
+    //                                                 main_rng.GenerateSeed()};
+    // auto tree_count = tree_counter.ComputeWeightBelow(merge.GetResult().GetRoot(),
+    // {});
 
-    SubtreeWeight<WeightAccumulator<ParsimonyScore>, MergeDAG> parsimonycount(
-        merge.GetResult());
-    auto parsimonycounts =
-        parsimonycount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-    std::cout << "All parsimony scores in DAG:\n" << parsimonycounts << "\n";
-    Count total_count = 0;
-    for (const auto& score_count : parsimonycounts.GetWeights()) {
-      total_count += score_count.second;
-    }
-    std::cout << "Total parsimony scores: " << total_count << std::endl;
+    auto scorecount_compare = [](const auto& lhs, const auto& rhs) {
+      return lhs.first < rhs.first;
+    };
+
+    SubtreeWeight<WeightAccumulator<ParsimonyScore>, MergeDAG> parsimony_counter{
+        merge.GetResult()};
+    auto parsimony_counts = parsimony_counter.ComputeWeightBelow(
+        merge.GetResult().GetRoot(), WeightAccumulator{ParsimonyScore{}});
+
+    auto best_parsimony_data =
+        *std::min_element(parsimony_counts.GetWeights().begin(),
+                          parsimony_counts.GetWeights().end(), scorecount_compare);
+    auto worst_parsimony_data =
+        *std::max_element(parsimony_counts.GetWeights().begin(),
+                          parsimony_counts.GetWeights().end(), scorecount_compare);
+    std::cout << "parsimony: " << best_parsimony_data.first << " "
+              << worst_parsimony_data.first << std::endl;
+
+    SubtreeWeight<WeightAccumulator<SumRFDistance>, MergeDAG> sum_rf_dist_counter{
+        merge.GetResult()};
+    SumRFDistance sum_rf_dist_weight_ops{merge, merge, main_rng.GenerateSeed()};
+    auto sum_rf_dist_counts = sum_rf_dist_counter.ComputeWeightBelow(
+        merge.GetResult().GetRoot(), WeightAccumulator{sum_rf_dist_weight_ops});
+    auto shift_sum = sum_rf_dist_weight_ops.GetOps().GetShiftSum();
+    // for (auto& score_count : sum_rf_dist_counts.GetWeights()) {
+    //   score_count += shift_sum;
+    // }
+
+    auto min_sum_rf_dist_data =
+        *std::min_element(sum_rf_dist_counts.GetWeights().begin(),
+                          sum_rf_dist_counts.GetWeights().end(), scorecount_compare);
+    min_sum_rf_dist_data.first += shift_sum;
+    auto max_sum_rf_dist_data =
+        *std::max_element(sum_rf_dist_counts.GetWeights().begin(),
+                          sum_rf_dist_counts.GetWeights().end(), scorecount_compare);
+    max_sum_rf_dist_data.first += shift_sum;
+    // std::cout << "all_sum_rf_dist:\n" << sum_rf_dist_counts << std::endl;
+    std::cout << "sum_rf_dist: " << min_sum_rf_dist_data.first << " "
+              << max_sum_rf_dist_data.first << " " << shift_sum << std::endl;
 
     SubtreeWeight<SumRFDistance, MergeDAG> this_min_sum_rf_dist{
         merge.GetResult(), main_rng.GenerateSeed()};
@@ -846,18 +865,37 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
                                                             this_max_rf_weight_ops);
 
     log_timer.stop();
-    std::cout << "Best parsimony score in DAG: " << minparsimony << "\n";
-    std::cout << "Worst parsimony score in DAG: " << maxparsimony << "\n";
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << ntrees
-              << "\n";
-    std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
+
+    // // Parsimony
+    // std::cout << "All parsimony scores in DAG:\n" << parsimony_counts << "\n";
+    // std::cout << "Best parsimony score in DAG: " << best_parsimony_data.first <<
+    // "\n"; std::cout << "Worst parsimony score in DAG: " << worst_parsimony_data.first
+    // << "\n";
+    // // Trees
+    // std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << tree_count
+    //           << "\n";
+    // std::cout << "Optimal trees in DAG: " << best_parsimony_data.second << "\n";
+    // RF distance
+    // std::cout << "All sum RF scores over trees:\n" << sum_rf_dist_counts << "\n";
     std::cout << "min summed RF distance over trees: " << min_rf_distance << "\n";
-    logfile << '\n'
-            << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
-            << '\t' << merge.GetResult().GetEdgesCount() << '\t' << minparsimony << '\t'
-            << minparsimonytrees << '\t' << maxparsimony << '\t' << min_rf_distance
-            << '\t' << max_rf_distance << '\t' << min_rf_count << '\t' << max_rf_count
-            << '\t' << log_timer.durationS() << std::flush;
+    std::cout << "max summed RF distance over trees: " << max_rf_distance << "\n";
+    // // std::cout << "*min summed RF distance over trees: " <<
+    // min_sum_rf_dist_data.first
+    // //           << "\n";
+    // // std::cout << "*max summed RF distance over trees: " <<
+    // max_sum_rf_dist_data.first
+    // //           << "\n";
+
+    // logfile << '\n'
+    //         << iteration << '\t' << tree_count << '\t'
+    //         << merge.GetResult().GetNodesCount() << '\t'
+    //         << merge.GetResult().GetEdgesCount() << '\t' << best_parsimony_data.first
+    //         << '\t' << best_parsimony_data.second << '\t' <<
+    //         worst_parsimony_data.first
+    //         << '\t' << min_rf_distance << '\t' << max_rf_distance << '\t'
+    //         << min_rf_count << '\t' << max_rf_count << '\t' << log_timer.durationS()
+    //         << std::flush;
+
     if (write_intermediate_dag) {
       bool append_changes = (iteration > 0);
       StoreDAG(merge.GetResult(), intermediate_dag_path, output_format, append_changes);
@@ -866,9 +904,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   logger(0);
 
   bool subtrees = false;
-  for (size_t i = 0; i < count; ++i) {
-    std::cout << "############ Beginning optimize loop " << std::to_string(i)
-              << " #######\n";
+  for (size_t i = 0; i < iter_count; ++i) {
+    std::cout << "############ Beginning optimize loop " << i << " #######\n";
 
     subtrees = (i >= switch_subtrees);
     merge.ComputeResultEdgeMutations();

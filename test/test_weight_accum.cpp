@@ -1,6 +1,7 @@
 #include "larch/subtree/subtree_weight.hpp"
 #include "larch/subtree/parsimony_score.hpp"
 #include "larch/subtree/weight_accumulator.hpp"
+#include "larch/rf_distance.hpp"
 
 #include <iostream>
 #include <string_view>
@@ -14,11 +15,7 @@ using Weight = typename WeightAccumulator<ParsimonyScore>::Weight;
 
 static void test_weight_accum(MADAG dag, Weight expected_scores) {
   SubtreeWeight<WeightAccumulator<ParsimonyScore>, MADAG> parsimonycount(dag);
-
   Weight scores = parsimonycount.ComputeWeightBelow(dag.GetRoot(), {});
-
-  // SubtreeWeight<TreeCount, MADAG> treecount{dag.GetRoot()};
-  // auto ntrees = treecount.ComputeWeightBelow(dag.GetRoot(), {});
 
   std::cout << "parsimony score counts:\n";
   std::cout << " " << std::right << std::setw(7) << "score";
