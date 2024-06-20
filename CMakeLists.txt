@@ -271,8 +271,8 @@ if(${USE_USHER})
   )
 endif()
 
-larch_executable(merge
-  tools/merge.cpp)
+larch_executable(dag-util
+  tools/dag-util.cpp)
 
 larch_executable(dag2dot
   tools/dag2dot.cpp)

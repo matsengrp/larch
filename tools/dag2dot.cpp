@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "arguments.hpp"
+#include "tools_common.hpp"
 #include "larch/dag_loader.hpp"
 
 [[noreturn]] static void Usage() {
@@ -23,11 +23,6 @@
   std::exit(EXIT_SUCCESS);
 }
 
-[[noreturn]] static void Fail() {
-  std::cerr << "Run with -h or --help to see usage.\n";
-  std::exit(EXIT_FAILURE);
-}
-
 int main(int argc, char** argv) try {
   Arguments args = GetArguments(argc, argv);
 
@@ -40,25 +35,15 @@ int main(int argc, char** argv) try {
     if (name == "-h" or name == "--help") {
       Usage();
     } else if (name == "-i" or name == "--input") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      input_path = *params.begin();
+      ParseOption(name, params, input_path);
     } else if (name == "-o" or name == "--output") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      output_path = *params.begin();
+      ParseOption(name, params, output_path);
     } else if (name == "--input-format") {
-      if (params.empty()) {
-        std::cerr << "Format not specified.\n";
-        Fail();
-      }
-      input_format = FileFormat::ProtobufTree;
-      input_path = *params.begin();
+      std::string temp;
+      ParseOption(name, params, temp);
+      input_format = InferFileFormat(temp);
     } else if (name == "--dag" or name == "--tree") {
+      ParseOption<false>(name, params, is_input_dag);
       is_input_dag = (name == "--dag");
     } else {
       std::cerr << "Unknown argument '" << name << "'.\n";

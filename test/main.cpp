@@ -10,7 +10,7 @@
 #endif
 
 #include "test_common.hpp"
-#include "../tools/arguments.hpp"
+#include "../tools/tools_common.hpp"
 #include "larch/benchmark.hpp"
 
 static void get_usage() {

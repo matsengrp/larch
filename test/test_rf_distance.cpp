@@ -8,7 +8,7 @@
 enum class RFDistanceType { Min, MinSum, Max, MaxSum };
 
 [[maybe_unused]] static auto get_rf_distance(
-    Merge& comp_merge1, Merge& ref_merge2,
+    const Merge& comp_merge1, const Merge& ref_merge2,
     RFDistanceType rf_dist_type = RFDistanceType::MinSum, bool print_info = true) {
   // comp_merge1 is the DAG we compute the weights for (summing distances to ref_merge2)
   // ref_merge2 is the reference DAG.

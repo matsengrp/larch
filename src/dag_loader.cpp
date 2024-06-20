@@ -75,25 +75,28 @@ MADAGStorage<> LoadDAG(std::string_view input_dag_path, FileFormat file_format,
   if (file_format == FileFormat::Infer) {
     file_format = InferFileFormat(input_dag_path);
   }
-  switch (file_format) {
-    case FileFormat::Dagbin:
-      return LoadDAGFromDagbin(input_dag_path);
-    case FileFormat::ProtobufDAG:
-      return LoadDAGFromProtobuf(input_dag_path);
-    case FileFormat::ProtobufTree:
-      return LoadTreeFromProtobuf(
-          input_dag_path,
-          refseq_path.has_value() ? LoadReferenceSequence(refseq_path.value()) : "");
-    case FileFormat::JsonDAG:
-      return LoadDAGFromJson(input_dag_path);
-    case FileFormat::Protobuf:
-    case FileFormat::DebugAll:
-    default:
-      std::cerr
-          << "ERROR: Could not load DAG with unrecognized/unsupported file format '"
-          << input_dag_path << "'." << std::endl;
-      std::exit(EXIT_FAILURE);
-  }
+  auto load_dag = [&]() {
+    switch (file_format) {
+      case FileFormat::Dagbin:
+        return LoadDAGFromDagbin(input_dag_path);
+      case FileFormat::ProtobufDAG:
+        return LoadDAGFromProtobuf(input_dag_path);
+      case FileFormat::ProtobufTree:
+        return LoadTreeFromProtobuf(
+            input_dag_path,
+            refseq_path.has_value() ? LoadReferenceSequence(refseq_path.value()) : "");
+      case FileFormat::JsonDAG:
+        return LoadDAGFromJson(input_dag_path);
+      case FileFormat::Protobuf:
+      case FileFormat::DebugAll:
+      default:
+        std::cerr
+            << "ERROR: Could not load DAG with unrecognized/unsupported file format '"
+            << input_dag_path << "'." << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+  };
+  return load_dag();
 }
 
 MADAGStorage<> LoadDAGFromDagbin(std::string_view path) {
