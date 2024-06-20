@@ -102,7 +102,6 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
 
     if (do_print_parsimony) {
       // Compute all Parsimony Scores
-
       SubtreeWeight<WeightAccumulator<BinaryParsimonyScore>, MergeDAG> parsimony_scorer{
           merge.GetResult()};
       auto all_parsimony_results = parsimony_scorer.ComputeWeightBelow(
@@ -124,7 +123,6 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
 
     if (do_print_rf_distance) {
       // Compute all Sum RF Distances
-
       SubtreeWeight<WeightAccumulator<SumRFDistance>, MergeDAG> sum_rf_dist_scorer{
           merge.GetResult()};
       SumRFDistance sum_rf_dist_weight_ops{merge, merge};
