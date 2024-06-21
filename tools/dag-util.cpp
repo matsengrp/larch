@@ -211,14 +211,14 @@ int main(int argc, char** argv) try {
       ParseOption<false>(name, params, input_paths, -1);
       ranges::actions::push_back(input_paths, params);
     } else if (name == "-o" or name == "--output") {
-      ParseOption(name, params, output_path);
+      ParseOption(name, params, output_path, 1);
     } else if (name == "-r" or name == "--refseq") {
-      ParseOption(name, params, refseq_path);
+      ParseOption(name, params, refseq_path, 1);
     } else if (name == "-t" or name == "--trim") {
       ParseOption<false>(name, params, trim, 0);
       trim = true;
     } else if (name == "--rf") {
-      ParseOption(name, params, rf_path);
+      ParseOption(name, params, rf_path, 1);
     } else if (name == "-s" or name == "--sample") {
       ParseOption<false>(name, params, sample_tree, 0);
       sample_tree = true;
@@ -242,11 +242,11 @@ int main(int argc, char** argv) try {
       }
     } else if (name == "--output-format") {
       std::string temp;
-      ParseOption(name, params, temp);
+      ParseOption(name, params, temp, 1);
       output_format = InferFileFormat(temp);
     } else if (name == "--rf-format") {
       std::string temp;
-      ParseOption(name, params, temp);
+      ParseOption(name, params, temp, 1);
       rf_format = InferFileFormat(temp);
     } else {
       std::cerr << "Unknown argument '" << name << "'.\n";

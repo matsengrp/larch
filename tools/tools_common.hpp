@@ -82,18 +82,20 @@ T parse(const std::string& str) {
 // If number of params can vary including zero, use req_num_params = -2.
 template <bool do_parse = true, typename Params, typename ParamType>
 inline void ParseOption(std::string_view name, const Params& params_in,
-                        ParamType& params_out, const int req_num_params = 1) {
+                        ParamType& params_out, const int req_num_params) {
   auto num_params = std::distance(params_in.begin(), params_in.end());
+  static_assert(req_num_params >= -2, "Invalid number for req_num_params");
   if (req_num_params >= 0) {
     if (num_params != req_num_params) {
-      std::cerr << "Incorrect number of params for `" << name << "` option (expected "
-                << req_num_params << ", got " << num_params << ").\n";
+      std::cerr << "ERROR: Incorrect number of params for `" << name
+                << "` option (expected " << req_num_params << ", got " << num_params
+                << ").\n";
       std::exit(EXIT_FAILURE);
     }
   } else if (req_num_params == -1) {
     if (num_params == 0) {
-      std::cerr << "Incorrect number of params for `" << name
-                << "` options.  Must be nonzero.\n";
+      std::cerr << "ERROR: Incorrect number of params for `" << name
+                << "` options.  Must be non-zero.\n";
       std::exit(EXIT_FAILURE);
     }
   }

@@ -35,12 +35,12 @@ int main(int argc, char** argv) try {
     if (name == "-h" or name == "--help") {
       Usage();
     } else if (name == "-i" or name == "--input") {
-      ParseOption(name, params, input_path);
+      ParseOption(name, params, input_path, 1);
     } else if (name == "-o" or name == "--output") {
-      ParseOption(name, params, output_path);
+      ParseOption(name, params, output_path, 1);
     } else if (name == "--input-format") {
       std::string temp;
-      ParseOption(name, params, temp);
+      ParseOption(name, params, temp, 1);
       input_format = InferFileFormat(temp);
     } else if (name == "--dag" or name == "--tree") {
       ParseOption<false>(name, params, is_input_dag, 0);

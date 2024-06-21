@@ -577,26 +577,26 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     if (name == "-h" or name == "--help") {
       Usage();
     } else if (name == "-i" or name == "--input") {
-      ParseOption(name, params, input_dag_path);
+      ParseOption(name, params, input_dag_path, 1);
     } else if (name == "-o" or name == "--output") {
-      ParseOption(name, params, output_dag_path);
+      ParseOption(name, params, output_dag_path, 1);
     } else if (name == "-c" or name == "--count") {
-      ParseOption(name, params, iter_count);
+      ParseOption(name, params, iter_count, 1);
     } else if (name == "-s" or name == "--switch-subtrees") {
-      ParseOption(name, params, switch_subtrees);
+      ParseOption(name, params, switch_subtrees, 1);
     } else if (name == "-l" or name == "--logpath") {
-      ParseOption(name, params, logfile_path);
+      ParseOption(name, params, logfile_path, 1);
     } else if (name == "--move-coeff-pscore") {
-      ParseOption(name, params, move_coeff_pscore);
+      ParseOption(name, params, move_coeff_pscore, 1);
     } else if (name == "--min-subtree-clade-size") {
-      ParseOption(name, params, min_subtree_clade_size);
+      ParseOption(name, params, min_subtree_clade_size, 1);
     } else if (name == "--max-subtree-clade-size") {
-      ParseOption(name, params, max_subtree_clade_size);
+      ParseOption(name, params, max_subtree_clade_size, 1);
     } else if (name == "--move-coeff-nodes") {
-      ParseOption(name, params, move_coeff_nodes);
+      ParseOption(name, params, move_coeff_nodes, 1);
     } else if (name == "--sample-method") {
       std::string temp;
-      ParseOption(name, params, temp);
+      ParseOption(name, params, temp, 1);
       if (temp == "random") {
         sample_method = SampleMethod::Random;
       } else if (temp == "parsimony") {
@@ -617,12 +617,12 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       ParseOption<false>(name, params, sample_uniformly, 0);
       sample_uniformly = true;
     } else if (name == "-r" or name == "--MAT-refseq-file") {
-      ParseOption(name, params, refseq_path);
+      ParseOption(name, params, refseq_path, 1);
     } else if (name == "-v" or name == "--VCF-input-file") {
-      ParseOption(name, params, vcf_path);
+      ParseOption(name, params, vcf_path, 1);
     } else if (name == "--callback-option") {
       std::string temp;
-      ParseOption(name, params, temp);
+      ParseOption(name, params, temp, 1);
       if (temp == "best-moves") {
         callback_config = CallbackMethod::BestMoves;
       } else if (temp == "best-moves-fixed-tree") {
@@ -644,25 +644,25 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       write_intermediate_dag = false;
     } else if (name == "--inter-save") {
       uint temp;
-      ParseOption(name, params, temp);
+      ParseOption(name, params, temp, 1);
       write_intermediate_every_x_iters = temp;
     } else if (name == "--trim") {
       ParseOption<false>(name, params, final_trim, 0);
       final_trim = true;
     } else if (name == "--input-format") {
       std::string temp;
-      ParseOption(name, params, temp);
+      ParseOption(name, params, temp, 1);
       input_format = InferFileFormat(temp);
     } else if (name == "--output-format") {
       std::string temp;
-      ParseOption(name, params, temp);
+      ParseOption(name, params, temp, 1);
       output_format = InferFileFormat(temp);
     } else if (name == "--seed") {
       uint32_t temp;
-      ParseOption(name, params, temp);
+      ParseOption(name, params, temp, 1);
       user_seed = temp;
     } else if (name == "--thread") {
-      ParseOption(name, params, thread_count);
+      ParseOption(name, params, thread_count, 1);
     } else {
       std::cerr << "Unknown argument '" << name << "'.\n";
       Fail();
