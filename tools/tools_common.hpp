@@ -84,7 +84,6 @@ template <bool do_parse = true, typename Params, typename ParamType>
 inline void ParseOption(std::string_view name, const Params& params_in,
                         ParamType& params_out, const int req_num_params) {
   auto num_params = std::distance(params_in.begin(), params_in.end());
-  static_assert(req_num_params >= -2, "Invalid number for req_num_params");
   if (req_num_params >= 0) {
     if (num_params != req_num_params) {
       std::cerr << "ERROR: Incorrect number of params for `" << name

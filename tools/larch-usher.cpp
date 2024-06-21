@@ -749,6 +749,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
                  &write_intermediate_dag, &write_intermediate_every_x_iters,
                  &output_format, &main_rng](size_t iteration) {
     std::cout << "############ Logging for iteration " << iteration << " #######\n";
+    merge_dag.ComputeResultEdgeMutations();
+
     // Tree count
     SubtreeWeight<TreeCount, MergeDAG> tree_counter{merge_dag.GetResult(),
                                                     main_rng.GenerateSeed()};
