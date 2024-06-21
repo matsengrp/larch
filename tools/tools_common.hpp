@@ -108,10 +108,8 @@ inline void ParseOption(std::string_view name, const Params& params_in,
     else if constexpr (std::is_same<std::string, ParamType>::value or
                        std::is_integral<ParamType>::value or
                        std::is_floating_point<ParamType>::value) {
-      for (const auto& param : params_in) {
-        params_out = parse<ParamType>(std::string{param});
-        return;
-      }
+      params_out = parse<ParamType>(std::string{*params_in.begin()});
+      return;
     }
     // vectors
     else if constexpr (is_vector<ParamType>::value) {
@@ -133,62 +131,19 @@ inline void ParseOption(std::string_view name, const Params& params_in,
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-// DAG Info (Parsimony scores, RF Distance scores, etc.)
+// // DAG Info (Parsimony scores, RF Distance scores, etc.)
 
-// enum class DAGScoreType {
-//   MinParsimony,
-//   MaxParsimony,
-//   MinSumRFDistance,
-//   MaxSumRFDistance
-// };
+// // Helper to detect weight accumulator types
+// template <typename T>
+// struct is_accumulator : std::false_type {};
+// template <typename T>
+// struct is_accumulator<WeightAccumulator<T>> : std::true_type {};
 
 // template <typename DAG, typename WeightOps>
-// auto DAG_GetAllScores(DAG dag, WeightOps weight_ops = {}) {
-//   SumRFDistance sum_rf_dist_weight_ops{merge, merge};
-//   SubtreeWeight<WeightAccumulator<SumRFDistance>, DAG> sum_rf_dist_counter{
-//       merge.GetResult()};
-//   auto sum_rf_dist_counts = sum_rf_dist_counter.ComputeWeightBelow(
-//       merge.GetResult().GetRoot(), WeightAccumulator{sum_rf_dist_weight_ops});
-//   using Weights = decltype(sum_rf_dist_counts.GetWeights());
-//   Weights all_sum_rf_dist_data{sum_rf_dist_counts.GetWeights()};
-
-//   auto shift_sum = sum_rf_dist_weight_ops.GetOps().GetShiftSum();
-//   for (auto& score_count : all_sum_rf_dist_data) {
-//     score_count.first += shift_sum;
+// auto DAG_GetWeights(DAG dag, WeightOps weight_ops = {}) {
+//   SubtreeWeight<WeightOps, DAG> dag_scorer{dag, weight_ops};
+//   if constexpr (!is_accumulator<WeightOps>::value) {
+//   } else {
+//     using AccWeightOps = WeightOps::WeightOps;
 //   }
-
-//   auto min_sum_rf_dist_data =
-//       *std::min_element(sum_rf_dist_counts.GetWeights().begin(),
-//                         sum_rf_dist_counts.GetWeights().end(), scorecount_compare);
-//   auto max_sum_rf_dist_data =
-//       *std::max_element(sum_rf_dist_counts.GetWeights().begin(),
-//                         sum_rf_dist_counts.GetWeights().end(), scorecount_compare);
-
-//   return {all_sum_rf_dist_data, min_sum_rf_dist_data, max_sum_rf_dist_data};
-// }
-
-// template <typename DAG>
-// auto DAG_GetScore(DAG dag, WeightOps weight_ops = {}) {
-//   SubtreeWeight<SumRFDistance, DAG> min_sum_rf_dist{dag.GetResult()};
-//   SumRFDistance min_rf_weight_ops{dag, dag};
-//   SubtreeWeight<MaxSumRFDistance, DAG> max_sum_rf_dist{dag.GetResult()};
-//   MaxSumRFDistance max_rf_weight_ops{merge, merge};
-//   auto shiftsum = min_rf_weight_ops.GetOps().GetShiftSum();
-
-//   auto min_rf_distance =
-//   min_sum_rf_dist.ComputeWeightBelow(merge.GetResult().GetRoot(),
-//                                                             min_rf_weight_ops) +
-//                          shiftsum;
-//   auto min_rf_count =
-//       min_sum_rf_dist.MinWeightCount(merge.GetResult().GetRoot(),
-//       min_rf_weight_ops);
-//   auto max_rf_distance =
-//   max_sum_rf_dist.ComputeWeightBelow(merge.GetResult().GetRoot(),
-//                                                             max_rf_weight_ops) +
-//                          shiftsum;
-//   auto max_rf_count =
-//       max_sum_rf_dist.MinWeightCount(merge.GetResult().GetRoot(),
-//       max_rf_weight_ops);
-
-//   return {min_rf_distance, min_rf_count, max_rf_distance, max_rf_count};
 // }

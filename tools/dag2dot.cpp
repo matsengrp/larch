@@ -43,7 +43,7 @@ int main(int argc, char** argv) try {
       ParseOption(name, params, temp);
       input_format = InferFileFormat(temp);
     } else if (name == "--dag" or name == "--tree") {
-      ParseOption<false>(name, params, is_input_dag);
+      ParseOption<false>(name, params, is_input_dag, 0);
       is_input_dag = (name == "--dag");
     } else {
       std::cerr << "Unknown argument '" << name << "'.\n";

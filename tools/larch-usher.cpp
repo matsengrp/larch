@@ -832,8 +832,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge_dag.GetResult(),
                                                          main_rng.GenerateSeed()};
-    SubtreeWeight<TreeCount, MergeDAG> uniform_sampling_weight{merge_dag.GetResult(),
-                                                               main_rng.GenerateSeed()};
+
     // choose root node for subtree (if sampling a subtree)
     auto subtree_node = [&]() -> std::optional<NodeId> {
       if (subtrees) {
@@ -903,8 +902,10 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
     merge_dag.ComputeResultEdgeMutations();
 
-    auto sample = [&merge_dag, &sample_method, &weight, &uniform_sampling_weight,
-                   &subtree_node, &main_rng]() {
+    auto sample_tree = [&merge_dag, &sample_method, &weight, &subtree_node,
+                        &main_rng]() {
+      SubtreeWeight<TreeCount, MergeDAG> uniform_sampling_weight{
+          merge_dag.GetResult(), main_rng.GenerateSeed()};
       SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge_dag.GetResult(),
                                                              main_rng.GenerateSeed()};
       SumRFDistance min_rf_weight_ops{merge_dag, merge_dag, main_rng.GenerateSeed()};
@@ -912,63 +913,62 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
           merge_dag.GetResult(), main_rng.GenerateSeed()};
       MaxSumRFDistance max_rf_weight_ops{merge_dag, merge_dag, main_rng.GenerateSeed()};
 
-      switch (sample_method) {
-        case SampleMethod::Random:
-          return AddMATConversion(weight.SampleTree({}, subtree_node));
-        case SampleMethod::UniformRandom:
-          return AddMATConversion(
-              uniform_sampling_weight.UniformSampleTree({}, subtree_node));
-        case SampleMethod::Parsimony:
-          return AddMATConversion(weight.MinWeightSampleTree({}, subtree_node));
-        case SampleMethod::UniformParsimony:
-          return AddMATConversion(weight.MinWeightUniformSampleTree({}, subtree_node));
-        case SampleMethod::MinSumRFDistance:
-          return AddMATConversion(
-              min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, subtree_node));
-        case SampleMethod::MaxSumRFDistance:
-          return AddMATConversion(
-              max_sum_rf_dist.MinWeightSampleTree(max_rf_weight_ops, subtree_node));
-        default:
-          std::cerr << "ERROR: Invalid SampleMethod" << std::endl;
-          std::exit(EXIT_FAILURE);
+      if (sample_method == SampleMethod::Random) {
+        return AddMATConversion(weight.SampleTree({}, subtree_node));
+      } else if (sample_method == SampleMethod::UniformRandom) {
+        return AddMATConversion(
+            uniform_sampling_weight.UniformSampleTree({}, subtree_node));
+      } else if (sample_method == SampleMethod::Parsimony) {
+        return AddMATConversion(weight.MinWeightSampleTree({}, subtree_node));
+      } else if (sample_method == SampleMethod::UniformParsimony) {
+        return AddMATConversion(weight.MinWeightUniformSampleTree({}, subtree_node));
+      } else if (sample_method == SampleMethod::MinSumRFDistance) {
+        return AddMATConversion(
+            min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, subtree_node));
+      } else if (sample_method == SampleMethod::MaxSumRFDistance) {
+        return AddMATConversion(
+            max_sum_rf_dist.MinWeightSampleTree(max_rf_weight_ops, subtree_node));
+      } else {
+        std::cerr << "ERROR: Invalid SampleMethod" << std::endl;
+        std::exit(EXIT_FAILURE);
       }
     }();
 
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
               << sample.GetNodesCount() << "\n";
     MAT::Tree mat;
-    sample.View().GetRoot().Validate(true);
-    sample.View().BuildMAT(mat);
-    check_edge_mutations(sample.View().Const());
+    sample_tree.View().GetRoot().Validate(true);
+    sample_tree.View().BuildMAT(mat);
+    check_edge_mutations(sample_tree.View().Const());
 
     if (callback_config == CallbackMethod::AllMoves) {
-      Merge_All_Moves_Found_Callback callback{merge_dag, sample.View(),
+      Merge_All_Moves_Found_Callback callback{merge_dag, sample_tree.View(),
                                               collapse_empty_fragment_edges};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), callback, callback, callback));
+          optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesFixedTree) {
       Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback callback{
           merge_dag,
-          sample.View(),
+          sample_tree.View(),
           {move_coeff_nodes, move_coeff_pscore},
           collapse_empty_fragment_edges};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), callback, callback, callback));
+          optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesTreeBased) {
       Treebased_Move_Found_Callback callback{merge_dag,
-                                             sample.View(),
+                                             sample_tree.View(),
                                              {move_coeff_nodes, move_coeff_pscore},
                                              collapse_empty_fragment_edges};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), callback, callback, callback));
+          optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMoves) {
       Merge_All_Profitable_Moves_Found_Callback callback{
           merge_dag,
-          sample.View(),
+          sample_tree.View(),
           {move_coeff_nodes, move_coeff_pscore},
           collapse_empty_fragment_edges};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), callback, callback, callback));
+          optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else {
       std::cerr << "ERROR: Invalid CallbackMethod" << std::endl;
       std::exit(EXIT_FAILURE);
