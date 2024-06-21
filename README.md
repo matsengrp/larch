@@ -53,9 +53,9 @@ Building
 
 There are 4 executables that are built automatically as part of the larch package and provide various methods for exploring tree space and manipulating DAGs/trees:
 - `larch-test` is the suite of tests used to validate the various routines.
-- `larch-usher` takes an input tree/DAG and explores tree space through SPR moves.
-- `merge` utility is used to manipulate(e.g. combine, prune) DAGs/trees.
-- `dag2dot` utility writes a provided protobuf file in dot format for easy viewing.
+- `larch-usher` is a tool that takes an input tree/DAG and explores tree space through SPR moves.
+- `dag-util` is a utility that manipulates (e.g. merge, prune) or inspects DAGs/trees.
+- `dag2dot` is a utility that writes a DAG to a DOT file format for easier viewing.
 
 Note: If you run against memory limitations during the cmake step, you can regulate number of parallel threads with `export CMAKE_NUM_THREADS="8"` (reduce number as necessary).
 
@@ -135,21 +135,24 @@ larch-usher options:
 - `--input-format` [Default: format inferred by file extension] Specify the format of the input file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `json`, `dag-json`)
 - `--output-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`)
 
-### merge
+### dag-util
 
 From the `larch/build/` directory:
 ```shell
-./merge -i ../data/testcase/tree_1.pb.gz -i ../data/testcase/tree_2.pb.gz -d -o merged_trees.pb
+./dag-util -i ../data/testcase/tree_1.pb.gz -i ../data/testcase/tree_2.pb.gz -o merged_trees.pb
 ```
 This executable takes a list of protobuf files and merges the resulting DAGs together into one.
 
 merge options:
 - `-i,--input` Filepath to the input Tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON, Dagbin).
-- `-o,--output` [Default: `merged.dagbin`] Filepath to the output Tree/DAG (accepted file formats are: MADAG protobuf, Dagbin).
+- `-o,--output` [Default: does not print output] Filepath to the output Tree/DAG (accepted file formats are: MADAG protobuf, Dagbin).
 - `-r,--MAT-refseq-file` [REQUIRED if input protobufs are MAT protobuf format] Filepath to json reference sequence.
 - `-t,--trim` Trim output (Default trimming method is trim to best parsimony).
 - `--rf` Trim output to minimize RF distance to the provided DAG file (Ignored if `-t` flag is not provided).
 - `-s,--sample` Write a sampled single tree from DAG to file, rather than the whole DAG.
+- `--dag-info` Print stats about the DAG (tree count, all parsimony scores, all RF distances)
+- `--parsimony` Print all parsimony scores.
+- `--sum-rf-distance` Print all sum RF distances.
 - `--input-format` [Default: format inferred by file extension] Specify the format of the input file(s). Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `json`, `dag-json`)
 - `--output-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`)
 - `--rf-format` [Default: format inferred by file extension] Specify the format of the RF file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `json`, `dag-json`)

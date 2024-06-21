@@ -198,7 +198,7 @@ struct RFDistance : SumRFDistance {
   explicit RFDistance(const Merge& reference_dag, const Merge& compute_dag,
                       std::optional<uint32_t> user_seed = std::nullopt)
       : SumRFDistance{reference_dag, compute_dag, user_seed} {
-    // Assert(reference_dag.GetResult().IsTree());
+    Assert(reference_dag.GetResult().IsTree());
     // now behave exactly like SumRFDistance
   }
 };
@@ -223,7 +223,7 @@ struct MaxRFDistance : MaxSumRFDistance {
   explicit MaxRFDistance(const Merge& reference_dag, const Merge& compute_dag,
                          std::optional<uint32_t> user_seed = std::nullopt)
       : MaxSumRFDistance{reference_dag, compute_dag, user_seed} {
-    // Assert(reference_dag.GetResult().IsTree());
+    Assert(reference_dag.GetResult().IsTree());
     // now behave exactly like MaxSumRFDistance
   }
 };

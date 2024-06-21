@@ -14,7 +14,7 @@
 
 [[noreturn]] static void Usage() {
   std::string program_desc =
-      "dag-util: general utility tool for manipulating (e.g. combining, pruning) or "
+      "dag-util: General utility for manipulating (e.g. combining, pruning) or "
       "inspecting DAGs/trees";
 
   std::vector<std::string> usage_examples = {
@@ -22,7 +22,8 @@
 
   std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
       {"-i,--input FILE [...]", "Paths to input DAG/Tree files (REQUIRED)"},
-      {"-o,--output FILE", "Path to output DAG file (default: does save result DAG)"},
+      {"-o,--output FILE",
+       "Path to output DAG file (default: does not save result DAG)"},
       {"-r,--MAT-refseq-file FILE",
        "Path to json reference sequence file \n"
        "(REQUIRED if input file is a MAT protobuf)"},
@@ -68,7 +69,6 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
     const auto tree_path = input_paths.at(tree_id);
     const auto tree_format = input_formats.at(tree_id);
     std::cout << " . " << std::flush;
-    // std::cout << "...loading=" << tree_path << "... " << std::flush;
     trees.at(tree_id) = LoadDAG(tree_path, tree_format, refseq_path);
     trees.at(tree_id).View().RecomputeCompactGenomes();
   });
