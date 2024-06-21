@@ -898,18 +898,11 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     merge.ComputeResultEdgeMutations();
 
     auto sample_tree = [&merge, &sample_method, &weight, &subtree_node, &main_rng]() {
-      SubtreeWeight<TreeCount, MergeDAG> uniform_sampling_weight{
-          merge.GetResult(), main_rng.GenerateSeed()};
-      SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge.GetResult(),
-                                                             main_rng.GenerateSeed()};
-      SumRFDistance min_rf_weight_ops{merge, merge, main_rng.GenerateSeed()};
-      SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist{
-          merge.GetResult(), main_rng.GenerateSeed()};
-      MaxSumRFDistance max_rf_weight_ops{merge, merge, main_rng.GenerateSeed()};
-
       if (sample_method == SampleMethod::Random) {
         return AddMATConversion(weight.SampleTree({}, subtree_node));
       } else if (sample_method == SampleMethod::UniformRandom) {
+        SubtreeWeight<TreeCount, MergeDAG> uniform_sampling_weight{
+            merge.GetResult(), main_rng.GenerateSeed()};
         return AddMATConversion(
             uniform_sampling_weight.UniformSampleTree({}, subtree_node));
       } else if (sample_method == SampleMethod::Parsimony) {
@@ -917,9 +910,15 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       } else if (sample_method == SampleMethod::UniformParsimony) {
         return AddMATConversion(weight.MinWeightUniformSampleTree({}, subtree_node));
       } else if (sample_method == SampleMethod::MinSumRFDistance) {
+        SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge.GetResult(),
+                                                               main_rng.GenerateSeed()};
+        SumRFDistance min_rf_weight_ops{merge, merge};
         return AddMATConversion(
             min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, subtree_node));
       } else if (sample_method == SampleMethod::MaxSumRFDistance) {
+        SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist{
+            merge.GetResult(), main_rng.GenerateSeed()};
+        MaxSumRFDistance max_rf_weight_ops{merge, merge};
         return AddMATConversion(
             max_sum_rf_dist.MinWeightSampleTree(max_rf_weight_ops, subtree_node));
       } else {
