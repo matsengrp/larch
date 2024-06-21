@@ -63,19 +63,19 @@
       {"--sample-uniformly",
        "Use a uniform distribution to sample trees for optimization, rather than \n"
        "a natural distribution"},
-      {"--sample-method OPTION",
+      {"--sample-method ENUM",
        "Select tree sampling method for optimization (default: max parsimony)\n"
        "[parsimony, random, rf-minsum, rf-maxsum]"},
-      {"--callback-option OPTION",
+      {"--callback-option ENUM",
        "Callback configuration choice (default: merge all profitable moves) \n"
        "[best-move, best-move-fixed-tree, best-move-treebased, all-moves]"},
       {"--trim", "Trim optimized DAG after final iteration"},
       {"--keep-fragment-uncollapsed",
        "Keep empty fragment edges, rather than collapsing them"},
-      {"--input-format OPTION",
+      {"--input-format ENUM",
        "Specify input file format (default: inferred) \n"
        "[dagbin, dag-pb, tree-pb, dag-json]"},
-      {"--output-format OPTION",
+      {"--output-format ENUM",
        "Specify output file format (default: inferred) \n"
        "[dagbin, dag-pb]"},
       {"--seed INT", "Set seed for random number generation (default: random)"},

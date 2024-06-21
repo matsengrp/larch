@@ -33,13 +33,13 @@
       {"--dag-info", "Print DAG info (parsimony scores, sum RF distances)"},
       {"--parsimony", "Print all DAG parsimony scores"},
       {"--sum-rf-distance", "Print all DAG sum RF distances"},
-      {"--input-format OPTION [...]",
+      {"--input-format ENUM [...]",
        "Specify input file formats (default: inferred) \n"
        "[dagbin, dag-pb, tree-pb, dag-json]"},
-      {"--output-format OPTION",
+      {"--output-format ENUM",
        "Specify output file format (default: inferred) \n"
        "[dagbin, dag-pb]"},
-      {"--rf-format OPTION",
+      {"--rf-format ENUM",
        "Specify RF file format (default: inferred) \n"
        "[dagbin, dag-pb, tree-pb, dag-json]"},
   };

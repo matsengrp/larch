@@ -13,7 +13,7 @@
   std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
       {"-i,--input FILE", "Path to input DAG/Tree file (REQUIRED)"},
       {"-o,--output FILE", "Path to output DOT file (default: DOT written to stdout)"},
-      {"--input-format OPTION",
+      {"--input-format ENUM",
        "Specify input file format (default: inferred) \n"
        "[dagbin, dag-pb, tree-pb, dag-json]"},
       {"--dag/--tree", "Specify whether protobuf input is a DAG or Tree"}};
