@@ -606,7 +606,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       } else if (temp == "rf-maxsum") {
         sample_method = SampleMethod::MaxSumRFDistance;
       } else {
-        std::cerr << "ERROR: Unknown --sample-method argument '" << temp << "'"
+        std::cerr << "ERROR: Unknown `--sample-method` option '" << temp << "`."
                   << std::endl;
         Fail();
       }
@@ -632,7 +632,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       } else if (temp == "all-moves") {
         callback_config = CallbackMethod::AllMoves;
       } else {
-        std::cerr << "ERROR: Unknown --callback-option argument '" << temp << "'"
+        std::cerr << "ERROR: Unknown `--callback-option` option `" << temp << "`."
                   << std::endl;
         Fail();
       }
@@ -737,57 +737,51 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   if (vcf_path.empty()) {
     input_dag.SampleIdsFromCG();
   }
-  Merge merge_dag{input_dag.GetReferenceSequence()};
-  merge_dag.AddDAG(input_dag);
+  Merge merge{input_dag.GetReferenceSequence()};
+  merge.AddDAG(input_dag);
   std::vector<
       std::pair<decltype(AddMATConversion(MADAGStorage<>::EmptyDefault())), MAT::Tree>>
       optimized_dags;
-  merge_dag.ComputeResultEdgeMutations();
+  merge.ComputeResultEdgeMutations();
 
   Benchmark log_timer;
-  auto logger = [&input_dag, &merge_dag, &logfile, &log_timer, &intermediate_dag_path,
+  auto logger = [&input_dag, &merge, &logfile, &log_timer, &intermediate_dag_path,
                  &write_intermediate_dag, &write_intermediate_every_x_iters,
                  &output_format, &main_rng](size_t iteration) {
     std::cout << "############ Logging for iteration " << iteration << " #######\n";
-    merge_dag.ComputeResultEdgeMutations();
+    merge.ComputeResultEdgeMutations();
 
+    const auto root_node = merge.GetResult().GetRoot();
     // Tree count
-    SubtreeWeight<TreeCount, MergeDAG> tree_counter{merge_dag.GetResult(),
-                                                    main_rng.GenerateSeed()};
-    auto tree_count =
-        tree_counter.ComputeWeightBelow(merge_dag.GetResult().GetRoot(), {});
+    SubtreeWeight<TreeCount, MergeDAG> tree_counter{merge.GetResult()};
+    auto tree_count = tree_counter.ComputeWeightBelow(root_node, {});
     // Min Parsimony score
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> min_parsimony_scorer{
-        merge_dag.GetResult()};
-    auto min_parsimony_score =
-        min_parsimony_scorer.ComputeWeightBelow(merge_dag.GetResult().GetRoot(), {});
-    auto min_parsimony_count =
-        min_parsimony_scorer.MinWeightCount(merge_dag.GetResult().GetRoot(), {});
+        merge.GetResult()};
+    auto min_parsimony_score = min_parsimony_scorer.ComputeWeightBelow(root_node, {});
+    auto min_parsimony_count = min_parsimony_scorer.MinWeightCount(root_node, {});
     // Max Parsimony score
     SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> max_parsimony_scorer{
-        merge_dag.GetResult()};
-    auto max_parsimony_score = max_parsimony_scorer.ComputeWeightBelow(
-        merge_dag.GetResult().GetRoot(), MaxBinaryParsimonyScore{});
+        merge.GetResult()};
+    auto max_parsimony_score = max_parsimony_scorer.ComputeWeightBelow(root_node, {});
     // Min Sum RF Distance
-    SumRFDistance min_sum_rf_dist_weight_ops{merge_dag, merge_dag};
+    SumRFDistance min_sum_rf_dist_weight_ops{merge, merge};
     auto min_shift_sum = min_sum_rf_dist_weight_ops.GetOps().GetShiftSum();
-    SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist_scorer{
-        merge_dag.GetResult()};
+    SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist_scorer{merge.GetResult()};
     auto min_sum_rf_distance = min_sum_rf_dist_scorer.ComputeWeightBelow(
-        merge_dag.GetResult().GetRoot(), min_sum_rf_dist_weight_ops);
+        root_node, min_sum_rf_dist_weight_ops);
     min_sum_rf_distance += min_shift_sum;
-    auto min_sum_rf_count = min_sum_rf_dist_scorer.MinWeightCount(
-        merge_dag.GetResult().GetRoot(), min_sum_rf_dist_weight_ops);
+    auto min_sum_rf_count =
+        min_sum_rf_dist_scorer.MinWeightCount(root_node, min_sum_rf_dist_weight_ops);
     // Max Sum RF Distance
-    MaxSumRFDistance max_sum_rf_dist_weight_ops{merge_dag, merge_dag};
+    MaxSumRFDistance max_sum_rf_dist_weight_ops{merge, merge};
     auto max_shift_sum = max_sum_rf_dist_weight_ops.GetOps().GetShiftSum();
-    SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist_scorer{
-        merge_dag.GetResult()};
+    SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist_scorer{merge.GetResult()};
     auto max_sum_rf_distance = max_sum_rf_dist_scorer.ComputeWeightBelow(
-        merge_dag.GetResult().GetRoot(), max_sum_rf_dist_weight_ops);
+        root_node, max_sum_rf_dist_weight_ops);
     max_sum_rf_distance += max_shift_sum;
-    auto max_sum_rf_count = max_sum_rf_dist_scorer.MinWeightCount(
-        merge_dag.GetResult().GetRoot(), max_sum_rf_dist_weight_ops);
+    auto max_sum_rf_count =
+        max_sum_rf_dist_scorer.MinWeightCount(root_node, max_sum_rf_dist_weight_ops);
 
     log_timer.stop();
 
@@ -801,17 +795,16 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
     logfile << '\n'
             << iteration << '\t' << tree_count << '\t'
-            << merge_dag.GetResult().GetNodesCount() << '\t'
-            << merge_dag.GetResult().GetEdgesCount() << '\t' << min_parsimony_score
-            << '\t' << min_parsimony_count << '\t' << max_parsimony_score << '\t'
+            << merge.GetResult().GetNodesCount() << '\t'
+            << merge.GetResult().GetEdgesCount() << '\t' << min_parsimony_score << '\t'
+            << min_parsimony_count << '\t' << max_parsimony_score << '\t'
             << min_sum_rf_distance << '\t' << max_sum_rf_distance << '\t'
             << min_sum_rf_count << '\t' << max_sum_rf_count << '\t'
             << log_timer.durationS() << std::flush;
 
     if (write_intermediate_dag) {
       bool append_changes = (iteration > 0);
-      StoreDAG(merge_dag.GetResult(), intermediate_dag_path, output_format,
-               append_changes);
+      StoreDAG(merge.GetResult(), intermediate_dag_path, output_format, append_changes);
       if (write_intermediate_every_x_iters.has_value() and
           (iteration % write_intermediate_every_x_iters.value() == 0)) {
         std::string intermediate_dag_path_final =
@@ -830,9 +823,9 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     std::cout << "############ Beginning optimize loop " << i << " #######\n";
 
     subtrees = (i >= switch_subtrees);
-    merge_dag.ComputeResultEdgeMutations();
+    merge.ComputeResultEdgeMutations();
 
-    SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge_dag.GetResult(),
+    SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult(),
                                                          main_rng.GenerateSeed()};
 
     // choose root node for subtree (if sampling a subtree)
@@ -847,7 +840,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
             visited.insert(start_node);
             bool is_root = node_instance.IsUA();
 
-            size_t clade_size = merge_dag.GetResultNodeLabels()
+            size_t clade_size = merge.GetResultNodeLabels()
                                     .at(node_instance.GetId())
                                     .GetLeafSet()
                                     ->ParentCladeSize();
@@ -902,18 +895,17 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       return std::nullopt;
     }();
 
-    merge_dag.ComputeResultEdgeMutations();
+    merge.ComputeResultEdgeMutations();
 
-    auto sample_tree = [&merge_dag, &sample_method, &weight, &subtree_node,
-                        &main_rng]() {
+    auto sample_tree = [&merge, &sample_method, &weight, &subtree_node, &main_rng]() {
       SubtreeWeight<TreeCount, MergeDAG> uniform_sampling_weight{
-          merge_dag.GetResult(), main_rng.GenerateSeed()};
-      SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge_dag.GetResult(),
+          merge.GetResult(), main_rng.GenerateSeed()};
+      SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge.GetResult(),
                                                              main_rng.GenerateSeed()};
-      SumRFDistance min_rf_weight_ops{merge_dag, merge_dag, main_rng.GenerateSeed()};
+      SumRFDistance min_rf_weight_ops{merge, merge, main_rng.GenerateSeed()};
       SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist{
-          merge_dag.GetResult(), main_rng.GenerateSeed()};
-      MaxSumRFDistance max_rf_weight_ops{merge_dag, merge_dag, main_rng.GenerateSeed()};
+          merge.GetResult(), main_rng.GenerateSeed()};
+      MaxSumRFDistance max_rf_weight_ops{merge, merge, main_rng.GenerateSeed()};
 
       if (sample_method == SampleMethod::Random) {
         return AddMATConversion(weight.SampleTree({}, subtree_node));
@@ -944,20 +936,20 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     check_edge_mutations(sample_tree.View().Const());
 
     if (callback_config == CallbackMethod::AllMoves) {
-      Merge_All_Moves_Found_Callback callback{merge_dag, sample_tree.View(),
+      Merge_All_Moves_Found_Callback callback{merge, sample_tree.View(),
                                               collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesFixedTree) {
       Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback callback{
-          merge_dag,
+          merge,
           sample_tree.View(),
           {move_coeff_nodes, move_coeff_pscore},
           collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesTreeBased) {
-      Treebased_Move_Found_Callback callback{merge_dag,
+      Treebased_Move_Found_Callback callback{merge,
                                              sample_tree.View(),
                                              {move_coeff_nodes, move_coeff_pscore},
                                              collapse_empty_fragment_edges};
@@ -965,7 +957,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMoves) {
       Merge_All_Profitable_Moves_Found_Callback callback{
-          merge_dag,
+          merge,
           sample_tree.View(),
           {move_coeff_nodes, move_coeff_pscore},
           collapse_empty_fragment_edges};
@@ -978,7 +970,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
     auto optimized_view = optimized_dags.back().first.View();
     optimized_view.RecomputeCompactGenomes(false);
-    merge_dag.AddDAG(optimized_view);
+    merge.AddDAG(optimized_view);
     logger(i + 1);
   }
 
@@ -991,12 +983,12 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::cout << "Saving final DAG..." << std::flush;
   if (final_trim) {
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{
-        merge_dag.GetResult(), main_rng.GenerateSeed()};
-    merge_dag.ComputeResultEdgeMutations();
+        merge.GetResult(), main_rng.GenerateSeed()};
+    merge.ComputeResultEdgeMutations();
     StoreDAG(parsimonyscorer.TrimToMinWeight({}).View(), output_dag_path,
              output_format);
   } else {
-    StoreDAG(merge_dag.GetResult(), output_dag_path, output_format);
+    StoreDAG(merge.GetResult(), output_dag_path, output_format);
   }
   save_timer.stop();
   std::cout << "...saved: " << save_timer.durationFormatMs() << std::endl;

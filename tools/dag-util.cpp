@@ -95,17 +95,17 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
     auto scorecount_compare = [](const auto& lhs, const auto& rhs) {
       return lhs.first < rhs.first;
     };
+    auto root_node = merge.GetResult().GetRoot();
 
     SubtreeWeight<TreeCount, MergeDAG> tree_counter{merge.GetResult()};
-    auto tree_count = tree_counter.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
+    auto tree_count = tree_counter.ComputeWeightBelow(root_node, {});
     std::cout << "tree_count: " << tree_count << std::endl;
 
     if (do_print_parsimony) {
       // Compute all Parsimony Scores
       SubtreeWeight<WeightAccumulator<BinaryParsimonyScore>, MergeDAG> parsimony_scorer{
           merge.GetResult()};
-      auto all_parsimony_results = parsimony_scorer.ComputeWeightBelow(
-          merge.GetResult().GetRoot(), WeightAccumulator{BinaryParsimonyScore{}});
+      auto all_parsimony_results = parsimony_scorer.ComputeWeightBelow(root_node, {});
       const auto& all_parsimony_scores = all_parsimony_results.GetWeights();
 
       auto min_parsimony_score = *std::min_element(
@@ -126,8 +126,8 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
       SubtreeWeight<WeightAccumulator<SumRFDistance>, MergeDAG> sum_rf_dist_scorer{
           merge.GetResult()};
       SumRFDistance sum_rf_dist_weight_ops{merge, merge};
-      auto all_sum_rf_dist_results = sum_rf_dist_scorer.ComputeWeightBelow(
-          merge.GetResult().GetRoot(), WeightAccumulator{sum_rf_dist_weight_ops});
+      auto all_sum_rf_dist_results =
+          sum_rf_dist_scorer.ComputeWeightBelow(root_node, {sum_rf_dist_weight_ops});
       auto all_sum_rf_dist_scores = all_sum_rf_dist_results.GetWeights().Copy();
       auto shift_sum = sum_rf_dist_weight_ops.GetOps().GetShiftSum();
       for (auto& score_count : all_sum_rf_dist_scores) {
