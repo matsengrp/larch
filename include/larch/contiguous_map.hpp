@@ -172,3 +172,13 @@ class ContiguousMap {
 
   storage_type data_;
 };
+
+template <typename K, typename V>
+inline std::ostream& operator<<(std::ostream& os, const ContiguousMap<K, V>& map) {
+  os << "{ ";
+  for (const auto& [key, value] : map) {
+    os << key << ": " << value << ", ";
+  }
+  os << "}";
+  return os;
+}

@@ -105,3 +105,13 @@ class ContiguousSet {
   ContiguousSet(const ContiguousSet&) = default;
   storage_type data_;
 };
+
+template <typename T>
+inline std::ostream& operator<<(std::ostream& os, const ContiguousSet<T>& set) {
+  os << "{ ";
+  for (const auto& element : set) {
+    os << element << ", ";
+  }
+  os << "}";
+  return os;
+}

@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 
 #include "larch/dag_loader.hpp"
 #include "larch/spr/spr_view.hpp"

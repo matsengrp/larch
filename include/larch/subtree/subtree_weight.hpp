@@ -7,15 +7,16 @@ the weight type, including at least the values of this example struct:
 
 struct ExampleWeightOps {
   using Weight = size_t;  // Provide any weight type
-  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);  // The value assigned to
-each leaf node inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);  // The
-value assigned to each edge
+  // The value assigned to each leaf node
+  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
+  // The value assigned to each edge
+  inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
   // Describes how to aggregate weights for alternative subtrees below a clade.
   // The returned pair contains the aggregated weight (for example, the optimal
   // one), and a vector containing indices for optimal weights in the input
   // vector. If optimality is undefined, all indices should be returned.
   inline std::pair<Weight, std::vector<size_t>>
-WithinCladeAccumOptimum(std::vector<Weight>);
+  WithinCladeAccumOptimum(std::vector<Weight>);
   // Describes how to aggregate weights of subtrees below different child clades
   inline Weight BetweenClades(std::vector<Weight>);
   // Describes how to aggregate the weight of a subtree below a node, and the

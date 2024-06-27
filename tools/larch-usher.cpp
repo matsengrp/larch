@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#include "arguments.hpp"
+#include "tools_common.hpp"
 #include "larch/dag_loader.hpp"
 #include "larch/subtree/subtree_weight.hpp"
 #include "larch/subtree/weight_accumulator.hpp"
@@ -27,55 +27,63 @@
 #include <tbb/global_control.h>
 
 [[noreturn]] static void Usage() {
-  std::cout << "Usage:\n";
-  std::cout
-      << "larch-usher -i,--input infile -o,--output outfile [-c,--count number]\n";
-  std::cout << "  -i,--input   Path to input Tree/DAG\n";
-  std::cout << "  -r,--MAT-refseq-file   Provide a path to a file containing a "
-               "reference sequence\nif input points to MAT protobuf\n";
-  std::cout << "  -v,--VCF-input-file   Provide a path to a vcf file containing "
-               "ambiguous leaf sequence data\n";
-  std::cout << "  -o,--output  Path to output DAG\n";
-  std::cout << "  -l,--logpath Path for logging\n";
-  std::cout << "  -c,--count   Number of iterations. (default: 1)\n";
-  std::cout << "  -s,--switch-subtrees          Switch to optimizing subtrees after "
-               "the specified number of iterations (default: never)\n";
-  std::cout << "  --min-subtree-clade-size      The minimum number of leaves in a "
-               "subtree sampled for optimization (default: 100, ignored without option "
-               "`-s`)\n";
-  std::cout
-      << "  --max-subtree-clade-size      The maximum number of leaves in a subtree "
-         "sampled for optimization (default: 1000, ignored without option "
-         "`-s`)\n";
-  std::cout << "  --move-coeff-nodes   New node coefficient for scoring moves. "
-               "(default: 1)\n";
-  std::cout << "  --move-coeff-pscore  Parsimony score coefficient for scoring moves. "
-               "(default: 1)\n";
-  std::cout << "  --sample-any-tree    Sample any tree for optimization, rather than "
-               "requiring the sampled tree to maximize parsimony.\n";
-  std::cout << "  --sample-method      Select method for optimization "
-               "[parsimony, random, rf-minsum, rf-maxsum]\n";
-  std::cout
-      << "  --callback-option    Callback configuration choice (default: merge all "
-         "profitable moves) [best-move, best-move-fixed-tree, best-move-treebased, "
-         "all-moves]\n";
-  std::cout << "  --trim   Trim optimized dag before writing to protobuf\n";
-  std::cout
-      << "  --keep-fragment-uncollapsed   Optional argument to keep empty fragment "
-         "edges\n";
-  std::cout << "  --input-format  Specify input file format. (default: inferred) "
-               "[dagbin, dag-pb, tree-pb, dag-json]\n";
-  std::cout << "  --output-format  Specify output file format. (default: inferred) "
-               "[dagbin, dag-pb]\n";
-  std::cout << "  --seed     Set seed for random number generation.\n";
-  std::cout << "  --thread   Set number of cpu threads.\n";
+  const std::string program_desc =
+      "larch-usher: tool for exploring tree space of DAG/tree through SPR moves";
+
+  const std::vector<std::string> usage_examples = {
+      {"larch-usher -i,--input FILE -o,--output FILE [-c,--count INT]"}};
+
+  const std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
+      {"-i,--input FILE", "Path to input DAG/Tree file (REQUIRED)"},
+      {"-o,--output FILE", "Path to output DAG file (REQUIRED)"},
+      {"-r,--MAT-refseq-file FILE",
+       "Path to json reference sequence file \n"
+       "(REQUIRED if input file is a MAT protobuf)"},
+      {"-v,--VCF-input-file FILE",
+       "Path to VCF file, containing ambiguous leaf sequence data"},
+      {"-c,--count INT", "Number of iterations (default: 1)"},
+      {"--inter-save INT",
+       "Saves a new intermediate DAG file once every given number of iterations \n"
+       "(default: no intermediate DAG files saved)"},
+      {"-s,--switch-subtrees INT",
+       "Switch to optimizing subtrees after the specified number of iterations \n"
+       "(default: never)"},
+      {"--min-subtree-clade-size INT",
+       "The minimum number of leaves in a subtree sampled for optimization \n"
+       "(default: 100, ignored without option `-s`)"},
+      {"--max-subtree-clade-size INT",
+       "The maximum number of leaves in a subtree sampled for optimization \n"
+       "(default: 1000, ignored without option `-s`)"},
+      {"--move-coeff-nodes INT", "New node coefficient for scoring moves (default: 1)"},
+      {"--move-coeff-pscore INT",
+       "Parsimony score coefficient for scoring moves (default: 1)"},
+      {"--sample-any-tree",
+       "Sample any tree for optimization, rather than requiring the sampled tree \n"
+       "to maximize parsimony"},
+      {"--sample-uniformly",
+       "Use a uniform distribution to sample trees for optimization, rather than \n"
+       "a natural distribution"},
+      {"--sample-method ENUM",
+       "Select tree sampling method for optimization (default: max parsimony)\n"
+       "[parsimony, random, rf-minsum, rf-maxsum]"},
+      {"--callback-option ENUM",
+       "Callback configuration choice (default: merge all profitable moves) \n"
+       "[best-move, best-move-fixed-tree, best-move-treebased, all-moves]"},
+      {"--trim", "Trim optimized DAG after final iteration"},
+      {"--keep-fragment-uncollapsed",
+       "Keep empty fragment edges, rather than collapsing them"},
+      {"--input-format ENUM",
+       "Specify input file format (default: inferred) \n"
+       "[dagbin, dag-pb, tree-pb, dag-json]"},
+      {"--output-format ENUM",
+       "Specify output file format (default: inferred) \n"
+       "[dagbin, dag-pb]"},
+      {"--seed INT", "Set seed for random number generation (default: random)"},
+      {"--thread INT", "Set number of cpu threads (default: max allowed by system)"}};
+
+  std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
 
   std::exit(EXIT_SUCCESS);
-}
-
-[[noreturn]] static void Fail() {
-  std::cerr << "Run with -h or --help to see usage.\n";
-  std::exit(EXIT_FAILURE);
 }
 
 void check_edge_mutations(MADAG madag);
@@ -546,11 +554,12 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string vcf_path;
   CallbackMethod callback_config = CallbackMethod::BestMoves;
   bool write_intermediate_dag = true;
+  std::optional<uint> write_intermediate_every_x_iters = std::nullopt;
   FileFormat input_format = FileFormat::Infer;
   FileFormat output_format = FileFormat::Infer;
   SampleMethod sample_method = SampleMethod::Parsimony;
   bool sample_uniformly = false;
-  size_t count = 1;
+  size_t iter_count = 1;
   unsigned int thread_count = 0;
   int move_coeff_nodes = 1;
   int move_coeff_pscore = 1;
@@ -568,145 +577,92 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     if (name == "-h" or name == "--help") {
       Usage();
     } else if (name == "-i" or name == "--input") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      input_dag_path = *params.begin();
+      ParseOption(name, params, input_dag_path, 1);
     } else if (name == "-o" or name == "--output") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      output_dag_path = *params.begin();
+      ParseOption(name, params, output_dag_path, 1);
     } else if (name == "-c" or name == "--count") {
-      if (params.empty()) {
-        std::cerr << "Count not specified.\n";
-        Fail();
-      }
-      count = static_cast<size_t>(ParseNumber(*params.begin()));
+      ParseOption(name, params, iter_count, 1);
     } else if (name == "-s" or name == "--switch-subtrees") {
-      if (params.empty()) {
-        std::cerr << "Subtree count not specified.\n";
-        Fail();
-      }
-      switch_subtrees = static_cast<size_t>(ParseNumber(*params.begin()));
+      ParseOption(name, params, switch_subtrees, 1);
     } else if (name == "-l" or name == "--logpath") {
-      if (params.empty()) {
-        std::cerr << "log path name not specified.\n";
-        Fail();
-      }
-      logfile_path = *params.begin();
+      ParseOption(name, params, logfile_path, 1);
     } else if (name == "--move-coeff-pscore") {
-      if (params.empty()) {
-        std::cerr << "parsimony score move coefficient not specified\n";
-        Fail();
-      }
-      move_coeff_pscore = ParseNumber(*params.begin());
+      ParseOption(name, params, move_coeff_pscore, 1);
     } else if (name == "--min-subtree-clade-size") {
-      if (params.empty()) {
-        std::cerr << "minimum subtree clade size not specified\n";
-        Fail();
-      }
-      min_subtree_clade_size = static_cast<size_t>(ParseNumber(*params.begin()));
+      ParseOption(name, params, min_subtree_clade_size, 1);
     } else if (name == "--max-subtree-clade-size") {
-      if (params.empty()) {
-        std::cerr << "maximum subtree clade size not specified\n";
-        Fail();
-      }
-      max_subtree_clade_size = static_cast<size_t>(ParseNumber(*params.begin()));
+      ParseOption(name, params, max_subtree_clade_size, 1);
     } else if (name == "--move-coeff-nodes") {
-      if (params.empty()) {
-        std::cerr << "parsimony score move coefficient not specified\n";
-        Fail();
-      }
-      move_coeff_nodes = ParseNumber(*params.begin());
+      ParseOption(name, params, move_coeff_nodes, 1);
     } else if (name == "--sample-method") {
-      if (params.empty()) {
-        std::cerr << "sample-method not specified\n";
-        Fail();
-      }
-      auto arg = *params.begin();
-      if (arg == "random") {
+      std::string temp;
+      ParseOption(name, params, temp, 1);
+      if (temp == "random") {
         sample_method = SampleMethod::Random;
-      } else if (arg == "parsimony") {
+      } else if (temp == "parsimony") {
         sample_method = SampleMethod::Parsimony;
-      } else if (arg == "rf-minsum") {
+      } else if (temp == "rf-minsum") {
         sample_method = SampleMethod::MinSumRFDistance;
-      } else if (arg == "rf-maxsum") {
+      } else if (temp == "rf-maxsum") {
         sample_method = SampleMethod::MaxSumRFDistance;
       } else {
-        std::cerr << "ERROR: Unknown --sample-method argument '" << arg << "'"
+        std::cerr << "ERROR: Unknown `--sample-method` option '" << temp << "`."
                   << std::endl;
         Fail();
       }
     } else if (name == "--sample-any-tree") {
+      ParseOption<false>(name, params, sample_method, 0);
       sample_method = SampleMethod::Random;
     } else if (name == "--sample-uniformly") {
+      ParseOption<false>(name, params, sample_uniformly, 0);
       sample_uniformly = true;
     } else if (name == "-r" or name == "--MAT-refseq-file") {
-      if (params.empty()) {
-        std::cerr << "Mutation annotated tree refsequence fasta path not specified.\n";
-        Fail();
-      }
-      refseq_path = *params.begin();
+      ParseOption(name, params, refseq_path, 1);
     } else if (name == "-v" or name == "--VCF-input-file") {
-      if (params.empty()) {
-        std::cerr << "VCF file path not specified.\n";
-        Fail();
-      }
-      vcf_path = *params.begin();
+      ParseOption(name, params, vcf_path, 1);
     } else if (name == "--callback-option") {
-      if (params.empty()) {
-        std::cerr << "callback-option not specified\n";
-        Fail();
-      }
-      auto arg = *params.begin();
-      if (arg == "best-moves") {
+      std::string temp;
+      ParseOption(name, params, temp, 1);
+      if (temp == "best-moves") {
         callback_config = CallbackMethod::BestMoves;
-      } else if (arg == "best-moves-fixed-tree") {
+      } else if (temp == "best-moves-fixed-tree") {
         callback_config = CallbackMethod::BestMovesFixedTree;
-      } else if (arg == "best-moves-treebased") {
+      } else if (temp == "best-moves-treebased") {
         callback_config = CallbackMethod::BestMovesTreeBased;
-      } else if (arg == "all-moves") {
+      } else if (temp == "all-moves") {
         callback_config = CallbackMethod::AllMoves;
       } else {
-        std::cerr << "ERROR: Unknown --callback-option argument '" << arg << "'"
+        std::cerr << "ERROR: Unknown `--callback-option` option `" << temp << "`."
                   << std::endl;
         Fail();
       }
     } else if (name == "--keep-fragment-uncollapsed") {
+      ParseOption<false>(name, params, collapse_empty_fragment_edges, 0);
       collapse_empty_fragment_edges = false;
     } else if (name == "--quiet") {
+      ParseOption<false>(name, params, write_intermediate_dag, 0);
       write_intermediate_dag = false;
+    } else if (name == "--inter-save") {
+      uint temp;
+      ParseOption(name, params, temp, 1);
+      write_intermediate_every_x_iters = temp;
     } else if (name == "--trim") {
+      ParseOption<false>(name, params, final_trim, 0);
       final_trim = true;
     } else if (name == "--input-format") {
-      if (params.empty()) {
-        std::cerr << "File format not specified.\n";
-        Fail();
-      }
-      std::string ext{*params.begin()};
-      input_format = InferFileFormat(ext);
+      std::string temp;
+      ParseOption(name, params, temp, 1);
+      input_format = InferFileFormat(temp);
     } else if (name == "--output-format") {
-      if (params.empty()) {
-        std::cerr << "File format not specified.\n";
-        Fail();
-      }
-      std::string ext{*params.begin()};
-      output_format = InferFileFormat(ext);
+      std::string temp;
+      ParseOption(name, params, temp, 1);
+      output_format = InferFileFormat(temp);
     } else if (name == "--seed") {
-      if (params.empty()) {
-        std::cerr << "User seed not specified.\n";
-        Fail();
-      }
-      user_seed = static_cast<uint32_t>(ParseNumber(*params.begin()));
+      uint32_t temp;
+      ParseOption(name, params, temp, 1);
+      user_seed = temp;
     } else if (name == "--thread") {
-      if (params.empty()) {
-        std::cerr << "Thread count not specified.\n";
-        Fail();
-      }
-      thread_count = static_cast<unsigned int>(ParseNumber(*params.begin()));
+      ParseOption(name, params, thread_count, 1);
     } else {
       std::cerr << "Unknown argument '" << name << "'.\n";
       Fail();
@@ -769,93 +725,109 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   Benchmark load_timer;
   std::cout << "Loading input DAG..." << std::flush;
-  MADAGStorage<> input_dag = LoadDAG(input_dag_path, input_format, refseq_path);
+  MADAGStorage<> input_dag_storage = LoadDAG(input_dag_path, input_format, refseq_path);
+  auto input_dag = input_dag_storage.View();
   load_timer.stop();
   std::cout << "...loaded: " << load_timer.durationFormatMs() << std::endl;
 
-  input_dag.View().RecomputeCompactGenomes(true);
-  LoadVCFData(input_dag, vcf_path);
-  auto input_dag_view = input_dag.View();
+  input_dag.RecomputeCompactGenomes(true);
+  LoadVCFData(input_dag_storage, vcf_path);
   // if the DAG is from a DAG protobuf file, then it needs to be equipped with
   // SampleIds
   if (vcf_path.empty()) {
-    input_dag_view.SampleIdsFromCG();
+    input_dag.SampleIdsFromCG();
   }
-  Merge merge{input_dag_view.GetReferenceSequence()};
-  merge.AddDAG(input_dag_view);
+  Merge merge{input_dag.GetReferenceSequence()};
+  merge.AddDAG(input_dag);
   std::vector<
       std::pair<decltype(AddMATConversion(MADAGStorage<>::EmptyDefault())), MAT::Tree>>
       optimized_dags;
   merge.ComputeResultEdgeMutations();
 
   Benchmark log_timer;
-  auto logger = [&merge, &logfile, &log_timer, &intermediate_dag_path,
-                 &write_intermediate_dag, &output_format, &main_rng](size_t iteration) {
-    SubtreeWeight<BinaryParsimonyScore, MergeDAG> parsimonyscorer{
-        merge.GetResult(), main_rng.GenerateSeed()};
-    SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> maxparsimonyscorer{
-        merge.GetResult(), main_rng.GenerateSeed()};
+  auto logger = [&input_dag, &merge, &logfile, &log_timer, &intermediate_dag_path,
+                 &write_intermediate_dag, &write_intermediate_every_x_iters,
+                 &output_format, &main_rng](size_t iteration) {
+    std::cout << "############ Logging for iteration " << iteration << " #######\n";
     merge.ComputeResultEdgeMutations();
-    auto minparsimony =
-        parsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-    auto minparsimonytrees =
-        parsimonyscorer.MinWeightCount(merge.GetResult().GetRoot(), {});
-    auto maxparsimony =
-        maxparsimonyscorer.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
-    SubtreeWeight<TreeCount, MergeDAG> treecount{merge.GetResult(),
-                                                 main_rng.GenerateSeed()};
-    auto ntrees = treecount.ComputeWeightBelow(merge.GetResult().GetRoot(), {});
 
-    SubtreeWeight<SumRFDistance, MergeDAG> this_min_sum_rf_dist{
-        merge.GetResult(), main_rng.GenerateSeed()};
-    SumRFDistance this_min_rf_weight_ops{merge, merge, main_rng.GenerateSeed()};
-    SubtreeWeight<MaxSumRFDistance, MergeDAG> this_max_sum_rf_dist{
-        merge.GetResult(), main_rng.GenerateSeed()};
-    MaxSumRFDistance this_max_rf_weight_ops{merge, merge, main_rng.GenerateSeed()};
-    auto shiftsum = this_min_rf_weight_ops.GetOps().GetShiftSum();
-    auto min_rf_distance = this_min_sum_rf_dist.ComputeWeightBelow(
-                               merge.GetResult().GetRoot(), this_min_rf_weight_ops) +
-                           shiftsum;
-    auto min_rf_count = this_min_sum_rf_dist.MinWeightCount(merge.GetResult().GetRoot(),
-                                                            this_min_rf_weight_ops);
-    auto max_rf_distance = this_max_sum_rf_dist.ComputeWeightBelow(
-                               merge.GetResult().GetRoot(), this_max_rf_weight_ops) +
-                           shiftsum;
-    auto max_rf_count = this_max_sum_rf_dist.MinWeightCount(merge.GetResult().GetRoot(),
-                                                            this_max_rf_weight_ops);
+    const auto root_node = merge.GetResult().GetRoot();
+    // Tree count
+    SubtreeWeight<TreeCount, MergeDAG> tree_counter{merge.GetResult()};
+    auto tree_count = tree_counter.ComputeWeightBelow(root_node, {});
+    // Min Parsimony score
+    SubtreeWeight<BinaryParsimonyScore, MergeDAG> min_parsimony_scorer{
+        merge.GetResult()};
+    auto min_parsimony_score = min_parsimony_scorer.ComputeWeightBelow(root_node, {});
+    auto min_parsimony_count = min_parsimony_scorer.MinWeightCount(root_node, {});
+    // Max Parsimony score
+    SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> max_parsimony_scorer{
+        merge.GetResult()};
+    auto max_parsimony_score = max_parsimony_scorer.ComputeWeightBelow(root_node, {});
+    // Min Sum RF Distance
+    SumRFDistance min_sum_rf_dist_weight_ops{merge, merge};
+    auto min_shift_sum = min_sum_rf_dist_weight_ops.GetOps().GetShiftSum();
+    SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist_scorer{merge.GetResult()};
+    auto min_sum_rf_distance = min_sum_rf_dist_scorer.ComputeWeightBelow(
+        root_node, min_sum_rf_dist_weight_ops);
+    min_sum_rf_distance += min_shift_sum;
+    auto min_sum_rf_count =
+        min_sum_rf_dist_scorer.MinWeightCount(root_node, min_sum_rf_dist_weight_ops);
+    // Max Sum RF Distance
+    MaxSumRFDistance max_sum_rf_dist_weight_ops{merge, merge};
+    auto max_shift_sum = max_sum_rf_dist_weight_ops.GetOps().GetShiftSum();
+    SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist_scorer{merge.GetResult()};
+    auto max_sum_rf_distance = max_sum_rf_dist_scorer.ComputeWeightBelow(
+        root_node, max_sum_rf_dist_weight_ops);
+    max_sum_rf_distance += max_shift_sum;
+    auto max_sum_rf_count =
+        max_sum_rf_dist_scorer.MinWeightCount(root_node, max_sum_rf_dist_weight_ops);
 
     log_timer.stop();
-    std::cout << "Best parsimony score in DAG: " << minparsimony << "\n";
-    std::cout << "Worst parsimony score in DAG: " << maxparsimony << "\n";
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << ntrees
+
+    std::cout << "Min parsimony score in DAG: " << min_parsimony_score << "\n";
+    std::cout << "Max parsimony score in DAG: " << max_parsimony_score << "\n";
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << tree_count
               << "\n";
-    std::cout << "Optimal trees in DAG: " << minparsimonytrees << "\n";
-    std::cout << "min summed RF distance over trees: " << min_rf_distance << "\n";
+    std::cout << "Optimal trees in DAG: " << min_parsimony_count << "\n";
+    std::cout << "Min summed RF distance over trees: " << min_sum_rf_distance << "\n";
+    std::cout << "Max summed RF distance over trees: " << max_sum_rf_distance << "\n";
+
     logfile << '\n'
-            << iteration << '\t' << ntrees << '\t' << merge.GetResult().GetNodesCount()
-            << '\t' << merge.GetResult().GetEdgesCount() << '\t' << minparsimony << '\t'
-            << minparsimonytrees << '\t' << maxparsimony << '\t' << min_rf_distance
-            << '\t' << max_rf_distance << '\t' << min_rf_count << '\t' << max_rf_count
-            << '\t' << log_timer.durationS() << std::flush;
+            << iteration << '\t' << tree_count << '\t'
+            << merge.GetResult().GetNodesCount() << '\t'
+            << merge.GetResult().GetEdgesCount() << '\t' << min_parsimony_score << '\t'
+            << min_parsimony_count << '\t' << max_parsimony_score << '\t'
+            << min_sum_rf_distance << '\t' << max_sum_rf_distance << '\t'
+            << min_sum_rf_count << '\t' << max_sum_rf_count << '\t'
+            << log_timer.durationS() << std::flush;
+
     if (write_intermediate_dag) {
       bool append_changes = (iteration > 0);
       StoreDAG(merge.GetResult(), intermediate_dag_path, output_format, append_changes);
+      if (write_intermediate_every_x_iters.has_value() and
+          (iteration % write_intermediate_every_x_iters.value() == 0)) {
+        std::string intermediate_dag_path_final =
+            intermediate_dag_path + "." + std::to_string(iteration);
+        std::cout << "############ Saving intermediate DAG file to: "
+                  << intermediate_dag_path_final << std::endl;
+        std::filesystem::copy_file(intermediate_dag_path, intermediate_dag_path_final,
+                                   std::filesystem::copy_options::overwrite_existing);
+      }
     }
   };
   logger(0);
 
   bool subtrees = false;
-  for (size_t i = 0; i < count; ++i) {
-    std::cout << "############ Beginning optimize loop " << std::to_string(i)
-              << " #######\n";
+  for (size_t i = 0; i < iter_count; ++i) {
+    std::cout << "############ Beginning optimize loop " << i << " #######\n";
 
     subtrees = (i >= switch_subtrees);
     merge.ComputeResultEdgeMutations();
 
     SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult(),
                                                          main_rng.GenerateSeed()};
-    SubtreeWeight<TreeCount, MergeDAG> uniform_sampling_weight{merge.GetResult(),
-                                                               main_rng.GenerateSeed()};
+
     // choose root node for subtree (if sampling a subtree)
     auto subtree_node = [&]() -> std::optional<NodeId> {
       if (subtrees) {
@@ -925,73 +897,71 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
     merge.ComputeResultEdgeMutations();
 
-    SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge.GetResult(),
-                                                           main_rng.GenerateSeed()};
-    SumRFDistance min_rf_weight_ops{merge, merge, main_rng.GenerateSeed()};
-    SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist{merge.GetResult(),
-                                                              main_rng.GenerateSeed()};
-    MaxSumRFDistance max_rf_weight_ops{merge, merge, main_rng.GenerateSeed()};
-
-    auto sample = [&sample_method, &weight, &uniform_sampling_weight, &subtree_node,
-                   &min_sum_rf_dist, &min_rf_weight_ops, &max_sum_rf_dist,
-                   &max_rf_weight_ops]() {
-      switch (sample_method) {
-        case SampleMethod::Random:
-          return AddMATConversion(weight.SampleTree({}, subtree_node));
-        case SampleMethod::UniformRandom:
-          return AddMATConversion(
-              uniform_sampling_weight.UniformSampleTree({}, subtree_node));
-        case SampleMethod::Parsimony:
-          return AddMATConversion(weight.MinWeightSampleTree({}, subtree_node));
-        case SampleMethod::UniformParsimony:
-          return AddMATConversion(weight.MinWeightUniformSampleTree({}, subtree_node));
-        case SampleMethod::MinSumRFDistance:
-          return AddMATConversion(
-              min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, subtree_node));
-        case SampleMethod::MaxSumRFDistance:
-          return AddMATConversion(
-              max_sum_rf_dist.MinWeightSampleTree(max_rf_weight_ops, subtree_node));
-        default:
-          std::cerr << "ERROR: Invalid SampleMethod" << std::endl;
-          std::exit(EXIT_FAILURE);
+    auto sample_tree = [&merge, &sample_method, &weight, &subtree_node, &main_rng]() {
+      if (sample_method == SampleMethod::Random) {
+        return AddMATConversion(weight.SampleTree({}, subtree_node));
+      } else if (sample_method == SampleMethod::UniformRandom) {
+        SubtreeWeight<TreeCount, MergeDAG> uniform_sampling_weight{
+            merge.GetResult(), main_rng.GenerateSeed()};
+        return AddMATConversion(
+            uniform_sampling_weight.UniformSampleTree({}, subtree_node));
+      } else if (sample_method == SampleMethod::Parsimony) {
+        return AddMATConversion(weight.MinWeightSampleTree({}, subtree_node));
+      } else if (sample_method == SampleMethod::UniformParsimony) {
+        return AddMATConversion(weight.MinWeightUniformSampleTree({}, subtree_node));
+      } else if (sample_method == SampleMethod::MinSumRFDistance) {
+        SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge.GetResult(),
+                                                               main_rng.GenerateSeed()};
+        SumRFDistance min_rf_weight_ops{merge, merge};
+        return AddMATConversion(
+            min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, subtree_node));
+      } else if (sample_method == SampleMethod::MaxSumRFDistance) {
+        SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist{
+            merge.GetResult(), main_rng.GenerateSeed()};
+        MaxSumRFDistance max_rf_weight_ops{merge, merge};
+        return AddMATConversion(
+            max_sum_rf_dist.MinWeightSampleTree(max_rf_weight_ops, subtree_node));
+      } else {
+        std::cerr << "ERROR: Invalid SampleMethod" << std::endl;
+        std::exit(EXIT_FAILURE);
       }
     }();
 
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
-              << sample.GetNodesCount() << "\n";
+              << sample_tree.GetNodesCount() << "\n";
     MAT::Tree mat;
-    sample.View().GetRoot().Validate(true);
-    sample.View().BuildMAT(mat);
-    check_edge_mutations(sample.View().Const());
+    sample_tree.View().GetRoot().Validate(true);
+    sample_tree.View().BuildMAT(mat);
+    check_edge_mutations(sample_tree.View().Const());
 
     if (callback_config == CallbackMethod::AllMoves) {
-      Merge_All_Moves_Found_Callback callback{merge, sample.View(),
+      Merge_All_Moves_Found_Callback callback{merge, sample_tree.View(),
                                               collapse_empty_fragment_edges};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), callback, callback, callback));
+          optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesFixedTree) {
       Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback callback{
           merge,
-          sample.View(),
+          sample_tree.View(),
           {move_coeff_nodes, move_coeff_pscore},
           collapse_empty_fragment_edges};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), callback, callback, callback));
+          optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesTreeBased) {
       Treebased_Move_Found_Callback callback{merge,
-                                             sample.View(),
+                                             sample_tree.View(),
                                              {move_coeff_nodes, move_coeff_pscore},
                                              collapse_empty_fragment_edges};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), callback, callback, callback));
+          optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMoves) {
       Merge_All_Profitable_Moves_Found_Callback callback{
           merge,
-          sample.View(),
+          sample_tree.View(),
           {move_coeff_nodes, move_coeff_pscore},
           collapse_empty_fragment_edges};
       optimized_dags.push_back(
-          optimize_dag_direct(sample.View(), callback, callback, callback));
+          optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else {
       std::cerr << "ERROR: Invalid CallbackMethod" << std::endl;
       std::exit(EXIT_FAILURE);

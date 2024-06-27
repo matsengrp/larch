@@ -6,14 +6,20 @@ using simpler-to-define binary operations.
 values in the following example struct:
 
 struct ExampleBinaryOperatorWeightOps {
-  using Weight = size_t;  // Provide any weight type you like
-  constexpr static Weight Identity = 0;  // The identity element under Combine
-  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);  // The value assigned to
-a leaf node inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);  // The value
-assigned to an edge inline bool Compare(Weight lhs, Weight rhs);  // The ordering
-operator: is lhs 'better than' rhs inline bool CompareEqual(Weight lhs, Weight rhs);  //
-A custom implemented equality inline Weight Combine(Weight lhs, Weight rhs);  // A
-binary operation that respects ordering, e.g. '+'
+  // Provide any weight type you like
+  using Weight = size_t;
+  // The identity element under Combine
+  constexpr static Weight Identity = 0;
+  // The value assigned to a leaf
+  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
+  // The value assigned to an edge
+  node inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
+  // The ordering operator: is lhs 'better than' rhs
+  inline bool Compare(Weight lhs, Weight rhs);
+  // A custom implemented equality
+  inline bool CompareEqual(Weight lhs, Weight rhs);
+  // A binary operation that respects ordering, e.g. '+'
+  inline Weight Combine(Weight lhs, Weight rhs);
 };
 
  */

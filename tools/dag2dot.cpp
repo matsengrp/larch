@@ -1,23 +1,26 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "arguments.hpp"
+#include "tools_common.hpp"
 #include "larch/dag_loader.hpp"
 
 [[noreturn]] static void Usage() {
-  std::cout << "Usage:\n";
-  std::cout << "dag2dot -i,--input file\n";
-  std::cout << "  -i,--input       Path to input Tree/DAG\n";
-  std::cout << "  -o,--output      Path to output DOT file (default: DOT written to "
-               "stdout)\n";
-  std::cout << "  --input-format   Input file format (default: inferred)\n";
-  std::cout << "  --dag/--tree     Specify whether input is a DAG or Tree\n";
-  std::exit(EXIT_SUCCESS);
-}
+  std::string program_desc = "dag2dot: tool for converting DAG/tree file to DOT file";
 
-[[noreturn]] static void Fail() {
-  std::cerr << "Run with -h or --help to see usage.\n";
-  std::exit(EXIT_FAILURE);
+  std::vector<std::string> usage_examples = {
+      {"dag2dot -i,--input FILE [-o,--output FILE]"}};
+
+  std::vector<std::pair<std::string, std::string>> flag_desc_pairs = {
+      {"-i,--input FILE", "Path to input DAG/Tree file (REQUIRED)"},
+      {"-o,--output FILE", "Path to output DOT file (default: DOT written to stdout)"},
+      {"--input-format ENUM",
+       "Specify input file format (default: inferred) \n"
+       "[dagbin, dag-pb, tree-pb, dag-json]"},
+      {"--dag/--tree", "Specify whether protobuf input is a DAG or Tree"}};
+
+  std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
+
+  std::exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char** argv) try {
@@ -32,25 +35,15 @@ int main(int argc, char** argv) try {
     if (name == "-h" or name == "--help") {
       Usage();
     } else if (name == "-i" or name == "--input") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      input_path = *params.begin();
+      ParseOption(name, params, input_path, 1);
     } else if (name == "-o" or name == "--output") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      output_path = *params.begin();
+      ParseOption(name, params, output_path, 1);
     } else if (name == "--input-format") {
-      if (params.empty()) {
-        std::cerr << "Filename not specified.\n";
-        Fail();
-      }
-      input_format = FileFormat::ProtobufTree;
-      input_path = *params.begin();
+      std::string temp;
+      ParseOption(name, params, temp, 1);
+      input_format = InferFileFormat(temp);
     } else if (name == "--dag" or name == "--tree") {
+      ParseOption<false>(name, params, is_input_dag, 0);
       is_input_dag = (name == "--dag");
     } else {
       std::cerr << "Unknown argument '" << name << "'.\n";
