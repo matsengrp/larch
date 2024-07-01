@@ -32,7 +32,8 @@ struct ExtraFeatureStorage<MATNodeStorage> {
   MOVE_ONLY(ExtraFeatureStorage);
   MAT::Tree* mat_tree_ = nullptr;
   NodeId ua_node_id_;
-  std::map<NodeId, std::vector<MAT::Node*>> condensed_nodes_;
+  std::map<NodeId, std::vector<std::string>> condensed_nodes_;
+  std::map<std::string, MAT::Node*> reversed_condensed_nodes_;
   size_t condensed_nodes_count_ = 0;
 };
 
@@ -77,13 +78,13 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
     for (auto& [i, j] : mat->condensed_nodes) {
       auto& nodes = cn[NodeId{i}];
       for (auto& k : j) {
-        auto* node = mat->get_node(k);
-        Assert(node != nullptr);
-        nodes.push_back(node);
+        nodes.push_back(k);
+        node_storage.reversed_condensed_nodes_.insert_or_assign(k, mat->get_node(i));
       }
       node_storage.condensed_nodes_count_ += nodes.size();
     }
     edge_storage.condensed_nodes_ = node_storage.condensed_nodes_;
+    edge_storage.reversed_condensed_nodes_ = node_storage.reversed_condensed_nodes_;
     edge_storage.condensed_nodes_count_ = node_storage.condensed_nodes_count_;
   }
 };
@@ -272,7 +273,8 @@ struct ExtraFeatureStorage<MATEdgeStorage> {
   MOVE_ONLY(ExtraFeatureStorage);
   MAT::Tree* mat_tree_ = nullptr;
   NodeId ua_node_id_;
-  std::map<NodeId, std::vector<MAT::Node*>> condensed_nodes_;
+  std::map<NodeId, std::vector<std::string>> condensed_nodes_;
+  std::map<std::string, MAT::Node*> reversed_condensed_nodes_;
   size_t condensed_nodes_count_ = 0;
 };
 
@@ -285,8 +287,13 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     }
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
     if (mat_node == nullptr) {
-      auto i = storage.condensed_nodes_.find(NodeId{dag_edge.GetId().value});
-      Assert(i != storage.condensed_nodes_.end());
+      // SEGFAULT ERROR HERE: there is a segfault with dag_edge.GetChild() call
+      auto cn_id_iter = storage.condensed_nodes_.find(dag_edge.GetChild().GetId());
+      Assert(cn_id_iter != storage.condensed_nodes_.end());
+      auto condensed_mat_node_str = storage.condensed_nodes_.at(dag_edge.GetChild().GetId());
+      auto condensed_mat_node = storage.reversed_condensed_nodes_.at(condensed_mat_node_str.front());
+      Assert(condensed_mat_node->parent != nullptr);
+      return dag_edge.GetDAG().Get(NodeId{condensed_mat_node->parent->node_id});
       // TODO return parent
     }
     Assert(mat_node->parent != nullptr);
