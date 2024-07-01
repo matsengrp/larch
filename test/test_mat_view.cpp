@@ -77,11 +77,12 @@ void test_condensed_mat_view() {
   std::cout << "\n\nDAG view\n";
   MADAGToDOT(dag_storage.View(), std::cout);
 
-  // optimal labelings for MAT (this disambiguates the leaf nodes so they can be condensed)
-  // NOTE: ordinarily, reassign_states optimizes internal node labels and collapses any 
-  // empty edges, which means that the topology and internal node labels can also change,
-  // but this sample dag is handpicked so that only the leaf cgs will change with reassign_states.
-  // This means that we can therefore compare the uncondensed to the condensed MATs
+  // optimal labelings for MAT (this disambiguates the leaf nodes so they can be
+  // condensed) NOTE: ordinarily, reassign_states optimizes internal node labels and
+  // collapses any empty edges, which means that the topology and internal node labels
+  // can also change, but this sample dag is handpicked so that only the leaf cgs will
+  // change with reassign_states. This means that we can therefore compare the
+  // uncondensed to the condensed MATs
   Original_State_t origin_states;
   check_samples(mat.root, origin_states, &mat);
   reassign_states(mat, origin_states);
@@ -102,7 +103,7 @@ void test_condensed_mat_view() {
   mv.BuildRootAndLeafs();
   mv.RecomputeCompactGenomes();
 
-  // ERROR: fails with "node_count == dag.GetNodesCount()" 
+  // ERROR: fails with "node_count == dag.GetNodesCount()"
   // in ....include/larch/impl/dag/neighbors_impl.hpp:254
   // mv.GetRoot().Validate(true, false);
 
@@ -116,8 +117,7 @@ void test_condensed_mat_view() {
   std::cout << "\n\nUnondensed MAT view\n";
   MADAGToDOT(merge_umv.View(), std::cout);
 
-
-  // ERROR: fails with "node_count == dag.GetNodesCount()" 
+  // ERROR: fails with "node_count == dag.GetNodesCount()"
   // in ....include/larch/impl/dag/neighbors_impl.hpp:254
   // umv.GetRoot().Validate(true, false);
 
@@ -128,6 +128,10 @@ void test_condensed_mat_view() {
   merge_mv.View().SampleIdsFromCG();
   std::cout << "\n\nCondensed MAT view\n";
   MADAGToDOT(merge_mv.View(), std::cout);
+
+  std::cout << "DAG edge count:" << dag_storage.View().GetEdgesCount() << "\n";
+  std::cout << "UMV edge count:" << merge_umv.View().GetEdgesCount() << "\n";
+  std::cout << "MMV edge count:" << merge_mv.View().GetEdgesCount() << "\n";
 
   // TODO: check that mat and mat_view(condensed=True) are equal
 }
@@ -165,4 +169,3 @@ void test_sample_dag() {
               "MATView: startmat"});
 [[maybe_unused]] static const auto test_added2 =
     add_test({[]() { test_condensed_mat_view(); }, "MATView: condensing"});
-

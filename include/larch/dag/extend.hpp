@@ -179,7 +179,9 @@ struct ExtendDAGStorage {
   template <typename CRTP>
   struct ConstDAGViewBase : ExtraStorageType::template Base<FeatureConstView, CRTP>,
                             OnNodes::template ExtraConstView<Self, CRTP>,
-                            OnEdges::template ExtraConstView<Self, CRTP> {};
+                            OnEdges::template ExtraConstView<Self, CRTP>
+
+  {};
   template <typename CRTP>
   struct MutableDAGViewBase : ExtraStorageType::template Base<FeatureMutableView, CRTP>,
                               OnNodes::template ExtraMutableView<Self, CRTP>,
