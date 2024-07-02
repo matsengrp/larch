@@ -288,10 +288,11 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
     if (mat_node == nullptr) {
       // SEGFAULT ERROR HERE: there is a segfault with dag_edge.GetChild() call
-      auto cn_id_iter = storage.condensed_nodes_.find(dag_edge.GetChild().GetId());
+      auto cn_id_iter = storage.condensed_nodes_.find(dag_edge.GetChildId());
       Assert(cn_id_iter != storage.condensed_nodes_.end());
-      auto condensed_mat_node_str = storage.condensed_nodes_.at(dag_edge.GetChild().GetId());
-      auto condensed_mat_node = storage.reversed_condensed_nodes_.at(condensed_mat_node_str.front());
+      auto condensed_mat_node_str = storage.condensed_nodes_.at(dag_edge.GetChildId());
+      auto condensed_mat_node =
+          storage.reversed_condensed_nodes_.at(condensed_mat_node_str.front());
       Assert(condensed_mat_node->parent != nullptr);
       return dag_edge.GetDAG().Get(NodeId{condensed_mat_node->parent->node_id});
       // TODO return parent
@@ -335,7 +336,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
   auto GetChildId() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();
-    return NodeId{mat_node->node_id};
+    return NodeId{dag_edge.GetId().value};
   }
 
   std::pair<NodeId, NodeId> GetNodeIds() const {
