@@ -369,6 +369,17 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   const EdgeMutations& GetEdgeMutations() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();
     auto& storage = dag_edge.template GetFeatureStorage<MATEdgeStorage>();
+    auto& id_storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+
+    if (mat_node == nullptr) {
+      auto cn_id_str = id_storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
+      Assert(cn_id_str != id_storage.node_id_to_sampleid_map_.end());
+      auto condensed_mat_node_str = id_storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
+      auto condensed_mat_node_iter =
+          id_storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
+      Assert(condensed_mat_node_iter != id_storage.reversed_condensed_nodes_.end());
+      mat_node = id_storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
+    }
     if (storage.mutations_.empty()) {
       storage.mutations_ = EdgeMutations{
           mat_node->mutations |
