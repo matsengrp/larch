@@ -34,6 +34,7 @@ struct ExtraFeatureStorage<MATNodeStorage> {
   NodeId ua_node_id_;
   std::map<NodeId, std::vector<std::string>> condensed_nodes_;
   std::map<std::string, MAT::Node*> reversed_condensed_nodes_;
+  std::map<NodeId, std::string> node_id_to_sampleid_map_;
   size_t condensed_nodes_count_ = 0;
 };
 
@@ -71,20 +72,26 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
     node_storage.mat_tree_ = mat;
     edge_storage.mat_tree_ = mat;
     size_t ua_node_id = 0;
+    size_t last_uncondensed_node_id = mat->breadth_first_expansion().size();
     Assert(mat->get_node(ua_node_id) == nullptr);
     node_storage.ua_node_id_ = NodeId{ua_node_id};
     edge_storage.ua_node_id_ = NodeId{ua_node_id};
     auto& cn = node_storage.condensed_nodes_;
     for (auto& [i, j] : mat->condensed_nodes) {
       auto& nodes = cn[NodeId{i}];
+      auto uncondensed_dag_nodes_id = NodeId{i};
       for (auto& k : j) {
         nodes.push_back(k);
         node_storage.reversed_condensed_nodes_.insert_or_assign(k, mat->get_node(i));
+        uncondensed_dag_nodes_id = NodeId{last_uncondensed_node_id};
+        node_storage.node_id_to_sampleid_map_.insert_or_assign(uncondensed_dag_nodes_id, k);
+        ++last_uncondensed_node_id;
       }
       node_storage.condensed_nodes_count_ += nodes.size();
     }
     edge_storage.condensed_nodes_ = node_storage.condensed_nodes_;
     edge_storage.reversed_condensed_nodes_ = node_storage.reversed_condensed_nodes_;
+    edge_storage.node_id_to_sampleid_map_ = node_storage.node_id_to_sampleid_map_;
     edge_storage.condensed_nodes_count_ = node_storage.condensed_nodes_count_;
   }
 };
@@ -275,6 +282,7 @@ struct ExtraFeatureStorage<MATEdgeStorage> {
   NodeId ua_node_id_;
   std::map<NodeId, std::vector<std::string>> condensed_nodes_;
   std::map<std::string, MAT::Node*> reversed_condensed_nodes_;
+  std::map<NodeId, std::string> node_id_to_sampleid_map_;
   size_t condensed_nodes_count_ = 0;
 };
 
@@ -287,15 +295,16 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     }
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
     if (mat_node == nullptr) {
-      // SEGFAULT ERROR HERE: there is a segfault with dag_edge.GetChild() call
-      auto cn_id_iter = storage.condensed_nodes_.find(dag_edge.GetChildId());
-      Assert(cn_id_iter != storage.condensed_nodes_.end());
-      auto condensed_mat_node_str = storage.condensed_nodes_.at(dag_edge.GetChildId());
-      auto condensed_mat_node =
-          storage.reversed_condensed_nodes_.at(condensed_mat_node_str.front());
+      auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
+      Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
+      auto condensed_mat_node_str = storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
+      auto condensed_mat_node_iter =
+          storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
+      Assert(condensed_mat_node_iter != storage.reversed_condensed_nodes_.end());
+      auto& condensed_mat_node =
+          storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
       Assert(condensed_mat_node->parent != nullptr);
       return dag_edge.GetDAG().Get(NodeId{condensed_mat_node->parent->node_id});
-      // TODO return parent
     }
     Assert(mat_node->parent != nullptr);
     return dag_edge.GetDAG().Get(NodeId{mat_node->parent->node_id});
