@@ -315,7 +315,10 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     if (is_ua) {
       return dag_edge.GetDAG().Get(NodeId{mat.root->node_id});
     }
-    return dag_edge.GetDAG().Get(NodeId{mat_node->node_id});
+    if (mat_node != nullptr) {
+      return dag_edge.GetDAG().Get(NodeId{mat_node->node_id});
+    }
+    return dag_edge.GetDAG().Get(dag_edge.GetChildId());
   }
 
   CladeIdx GetClade() const {
