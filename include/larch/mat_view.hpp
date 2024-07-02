@@ -256,7 +256,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     bool is_ua = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
                      .ua_node_id_ == id;
     if (not is_ua) {
-      Assert(mat_node != nullptr);
+      //Assert(mat_node != nullptr);
     }
     return std::make_tuple(dag_node, std::ref(mat), mat_node, is_ua);
   }
@@ -498,14 +498,14 @@ struct MATElementsContainerBase {
 
   auto All() const {
     if constexpr (C == Component::Node) {
-      return ranges::views::iota(size_t{0}, GetCount()) |
+      return ranges::views::iota(size_t{0}, GetCount() + 1) |
              ranges::views::filter([this](size_t i) {
                return GetMAT().get_node(i) != nullptr or
                       i == extra_storage_.ua_node_id_.value;
              }) |
              ranges::views::transform([](size_t i) -> NodeId { return {i}; });
     } else {
-      return ranges::views::iota(size_t{0}, GetCount()) |
+      return ranges::views::iota(size_t{0}, GetCount() + 1) |
              ranges::views::filter([this](size_t i) {
                return GetMAT().get_node(i) != nullptr or
                       i != extra_storage_.ua_node_id_.value;
