@@ -84,7 +84,8 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
         nodes.push_back(k);
         node_storage.reversed_condensed_nodes_.insert_or_assign(k, mat->get_node(i));
         uncondensed_dag_nodes_id = NodeId{last_uncondensed_node_id};
-        node_storage.node_id_to_sampleid_map_.insert_or_assign(uncondensed_dag_nodes_id, k);
+        node_storage.node_id_to_sampleid_map_.insert_or_assign(uncondensed_dag_nodes_id,
+                                                               k);
         ++last_uncondensed_node_id;
       }
       node_storage.condensed_nodes_count_ += nodes.size();
@@ -256,7 +257,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     bool is_ua = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
                      .ua_node_id_ == id;
     if (not is_ua) {
-      //Assert(mat_node != nullptr);
+      // Assert(mat_node != nullptr);
     }
     return std::make_tuple(dag_node, std::ref(mat), mat_node, is_ua);
   }
@@ -297,7 +298,8 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     if (mat_node == nullptr) {
       auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
       Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
-      auto condensed_mat_node_str = storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
+      auto condensed_mat_node_str =
+          storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
       auto condensed_mat_node_iter =
           storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
       Assert(condensed_mat_node_iter != storage.reversed_condensed_nodes_.end());
@@ -377,7 +379,8 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     if (mat_node == nullptr) {
       auto cn_id_str = id_storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
       Assert(cn_id_str != id_storage.node_id_to_sampleid_map_.end());
-      auto condensed_mat_node_str = id_storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
+      auto condensed_mat_node_str =
+          id_storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
       auto condensed_mat_node_iter =
           id_storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
       Assert(condensed_mat_node_iter != id_storage.reversed_condensed_nodes_.end());
@@ -452,8 +455,9 @@ struct MATElementsContainerBase {
       Assert(count > 0);
       count -= 1;
     }
-    if constexpr (not Condensed) {
-      count += extra_storage_.condensed_nodes_count_;
+    if constexpr (Condensed) {
+      Assert(count > extra_storage_.condensed_nodes_count_);
+      count -= extra_storage_.condensed_nodes_count_;
     }
     return count;
   }

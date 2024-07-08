@@ -105,7 +105,7 @@ void test_condensed_mat_view() {
 
   // ERROR: fails with "node_count == dag.GetNodesCount()"
   // in ....include/larch/impl/dag/neighbors_impl.hpp:254
-  // mv.GetRoot().Validate(true, false);
+  mv.GetRoot().Validate(true, false);
 
   // ERROR: This MATView should look like the DAG view, since it's uncondensed.
   auto umv = mv.GetUncondensed();

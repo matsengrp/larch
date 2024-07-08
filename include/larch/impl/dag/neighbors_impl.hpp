@@ -251,6 +251,11 @@ void ValidateImpl(Node node, StorageValidator&& storage,
     for ([[maybe_unused]] auto i : dag.GetNodes()) {
       ++node_count;
     }
+
+    if (node_count != dag.GetNodesCount()) {
+      std::cout << "node_count: " << node_count
+                << "  dag.GetNodesCount(): " << dag.GetNodesCount() << "\n";
+    }
     Assert(node_count == dag.GetNodesCount());
     size_t edge_count = 0;
     for ([[maybe_unused]] auto i : dag.GetEdges()) {
