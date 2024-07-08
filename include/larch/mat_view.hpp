@@ -502,18 +502,35 @@ struct MATElementsContainerBase {
   }
 
   auto All() const {
+    size_t iota_max = GetCount() + 1;
+    if constexpr (Condensed) {
+      iota_max = GetCount() + extra_storage_.condensed_nodes_count_ - extra_storage_.condensed_nodes_.size() + 1;
+    }
     if constexpr (C == Component::Node) {
-      return ranges::views::iota(size_t{0}, GetCount() + extra_storage_.condensed_nodes_count_ - extra_storage_.condensed_nodes_.size() + 1) |
+      return ranges::views::iota(size_t{0}, iota_max) |
              ranges::views::filter([this](size_t i) {
+               if constexpr (Condensed) {
+                 return GetMAT().get_node(i) != nullptr or
+                        i == extra_storage_.ua_node_id_.value;
+               }
                return GetMAT().get_node(i) != nullptr or
-                      i == extra_storage_.ua_node_id_.value;
+                      i == extra_storage_.ua_node_id_.value or
+                      (extra_storage_.node_id_to_sampleid_map_.find(NodeId{i}) !=
+                       extra_storage_.node_id_to_sampleid_map_.end());
              }) |
              ranges::views::transform([](size_t i) -> NodeId { return {i}; });
     } else {
-      return ranges::views::iota(size_t{0}, GetCount() + extra_storage_.condensed_nodes_count_ - extra_storage_.condensed_nodes_.size() + 1) |
+      return ranges::views::iota(size_t{0}, iota_max) |
              ranges::views::filter([this](size_t i) {
-               return GetMAT().get_node(i) != nullptr and
-                      i != extra_storage_.ua_node_id_.value;
+               if constexpr (Condensed) {
+                 return GetMAT().get_node(i) != nullptr and
+                        i != extra_storage_.ua_node_id_.value;
+               }
+               return (GetMAT().get_node(i) != nullptr and
+                      i != extra_storage_.ua_node_id_.value) or
+                      (extra_storage_.node_id_to_sampleid_map_.find(NodeId{i}) !=
+                       extra_storage_.node_id_to_sampleid_map_.end());
+
              }) |
              ranges::views::transform([](size_t i) -> EdgeId { return {i}; });
     }

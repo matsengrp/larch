@@ -101,25 +101,42 @@ void test_condensed_mat_view() {
   static_assert(mv.IsCondensed());
   mv.SetReferenceSequence(dag.GetReferenceSequence());
   mv.BuildRootAndLeafs();
-  mv.RecomputeCompactGenomes();
-
-  // ERROR: fails with "node_count == dag.GetNodesCount()"
-  // in ....include/larch/impl/dag/neighbors_impl.hpp:254
   mv.GetRoot().Validate(true, false);
 
-  // ERROR: This MATView should look like the DAG view, since it's uncondensed.
+  // ERROR: calling RecomputeCompactGenomes gives an error message:
+  // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'
+  // umv.RecomputeCompactGenomes(true);
+
+  for (auto n: mv.GetNodes()) {
+    std::cout << "node " << n << "... " << n.GetId().value << "\n" << std::flush;
+  }
+  for (auto e: mv.GetEdges()) {
+    std::cout << "edge " << e << e.GetChildId() << "\n" << std::flush;
+  }
+
   auto umv = mv.GetUncondensed();
   static_assert(not umv.IsCondensed());
   auto merge_umv =
       ExtendDAGStorage<void, decltype(umv), Extend::Nodes<SampleId>, Extend::Empty<>,
                        Extend::Empty<>, DefaultViewBase>::FromView(umv);
+
+  // ERROR: the output from GetNodes() and GetEdges() should be uncondensed, but instead it is condensed.
+  for (auto n: umv.GetNodes()) {
+    std::cout << "node " << n << "... " << n.GetId().value << "\n" << std::flush;
+  }
+  for (auto e: umv.GetEdges()) {
+    std::cout << "edge " << e << e.GetChildId() << "\n" << std::flush;
+  }
+
+  // ERROR: calling RecomputeCompactGenomes gives an error message:
+  // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'
+  // umv.RecomputeCompactGenomes(true);
+
   merge_umv.View().SampleIdsFromCG();
   std::cout << "\n\nUnondensed MAT view\n";
   MADAGToDOT(merge_umv.View(), std::cout);
 
-  // ERROR: fails with "node_count == dag.GetNodesCount()"
-  // in ....include/larch/impl/dag/neighbors_impl.hpp:254
-  // umv.GetRoot().Validate(true, false);
+  umv.GetRoot().Validate(true, false);
 
   // TODO: check that dag and mat_view(condensed=False) are equal
   auto merge_mv =
