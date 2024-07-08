@@ -409,7 +409,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     auto& mat = dag.GetMAT();
     Assert(id.value < mat.get_size_upper());
     MAT::Node* mat_node = mat.get_node(id.value);
-    bool is_ua = (mat.root == mat_node);
+    bool is_ua = (mat.root->node_id == mat_node->node_id);
     return std::make_tuple(dag_edge, std::ref(mat), mat_node, is_ua);
   }
 };
@@ -512,7 +512,7 @@ struct MATElementsContainerBase {
     } else {
       return ranges::views::iota(size_t{0}, GetCount() + extra_storage_.condensed_nodes_count_ - extra_storage_.condensed_nodes_.size() + 1) |
              ranges::views::filter([this](size_t i) {
-               return GetMAT().get_node(i) != nullptr or
+               return GetMAT().get_node(i) != nullptr and
                       i != extra_storage_.ua_node_id_.value;
              }) |
              ranges::views::transform([](size_t i) -> EdgeId { return {i}; });
