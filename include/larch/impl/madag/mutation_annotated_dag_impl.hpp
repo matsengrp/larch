@@ -110,8 +110,12 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
   using Node = typename decltype(dag)::NodeView;
   using Edge = typename decltype(dag)::EdgeView;
 
+  auto max_id = dag.GetNodesCount();
+  for (auto node: dag.GetNodes()) {
+    max_id = max_id > node.GetId().value ? max_id : node.GetId().value;
+  }
   std::vector<CompactGenome> new_cgs;
-  new_cgs.resize(dag.GetNodesCount());
+  new_cgs.resize(max_id + 1);
   auto ComputeCG = [&new_cgs, dag](auto& self, Node for_node) {
     CompactGenome& compact_genome = new_cgs.at(for_node.GetId().value);
     if (for_node.IsUA()) {
@@ -127,7 +131,6 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
     const CompactGenome& parent = new_cgs.at(edge.GetParentId().value);
     compact_genome.AddParentEdge(mutations, parent, dag.GetReferenceSequence());
   };
-
   for (Node node : dag.GetNodes()) {
     if (recompute_leaves || !node.IsLeaf()) {
       ComputeCG(ComputeCG, node);
