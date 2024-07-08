@@ -261,6 +261,10 @@ void ValidateImpl(Node node, StorageValidator&& storage,
     for ([[maybe_unused]] auto i : dag.GetEdges()) {
       ++edge_count;
     }
+    if (edge_count != dag.GetEdgesCount()) {
+      std::cout << "edge_count: " << edge_count
+                << "  dag.GetEdgesCount(): " << dag.GetEdgesCount() << "\n" << std::flush;
+    }
     Assert(edge_count == dag.GetEdgesCount());
     if (not allow_dag) {
       constexpr IdContinuity id_continuity =

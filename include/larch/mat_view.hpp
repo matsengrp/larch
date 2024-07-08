@@ -458,6 +458,7 @@ struct MATElementsContainerBase {
     if constexpr (Condensed) {
       Assert(count > extra_storage_.condensed_nodes_count_);
       count -= extra_storage_.condensed_nodes_count_;
+      count += extra_storage_.condensed_nodes_.size();
     }
     return count;
   }
@@ -502,14 +503,14 @@ struct MATElementsContainerBase {
 
   auto All() const {
     if constexpr (C == Component::Node) {
-      return ranges::views::iota(size_t{0}, GetCount() + 1) |
+      return ranges::views::iota(size_t{0}, GetCount() + extra_storage_.condensed_nodes_count_ - extra_storage_.condensed_nodes_.size() + 1) |
              ranges::views::filter([this](size_t i) {
                return GetMAT().get_node(i) != nullptr or
                       i == extra_storage_.ua_node_id_.value;
              }) |
              ranges::views::transform([](size_t i) -> NodeId { return {i}; });
     } else {
-      return ranges::views::iota(size_t{0}, GetCount() + 1) |
+      return ranges::views::iota(size_t{0}, GetCount() + extra_storage_.condensed_nodes_count_ - extra_storage_.condensed_nodes_.size() + 1) |
              ranges::views::filter([this](size_t i) {
                return GetMAT().get_node(i) != nullptr or
                       i != extra_storage_.ua_node_id_.value;
