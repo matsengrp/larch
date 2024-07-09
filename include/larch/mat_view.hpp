@@ -99,21 +99,38 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
     node_storage.mat_tree_ = mat;
     edge_storage.mat_tree_ = mat;
     size_t ua_node_id = 0;
-    size_t last_uncondensed_node_id = mat->breadth_first_expansion().size();
+    size_t num_nodes = mat->get_size_upper();
     Assert(mat->get_node(ua_node_id) == nullptr);
     node_storage.ua_node_id_ = NodeId{ua_node_id};
     edge_storage.ua_node_id_ = NodeId{ua_node_id};
     auto& cn = node_storage.condensed_nodes_;
+
+    size_t last_uncondensed_node_id = 1;
+    for (size_t ict = 1; ict < num_nodes + 1; ict++) {
+      if (mat->get_node(ict) == nullptr) {
+        last_uncondensed_node_id = ict;
+        break;
+      }
+    }
     for (auto& [i, j] : mat->condensed_nodes) {
       auto& nodes = cn[NodeId{i}];
       auto uncondensed_dag_nodes_id = NodeId{i};
       for (auto& k : j) {
         nodes.push_back(k);
         node_storage.reversed_condensed_nodes_.insert_or_assign(k, mat->get_node(i));
-        uncondensed_dag_nodes_id = NodeId{last_uncondensed_node_id};
+        if (k != j.front()) {
+          uncondensed_dag_nodes_id = NodeId{last_uncondensed_node_id};
+          last_uncondensed_node_id++;
+          for (size_t ict = last_uncondensed_node_id; ict < num_nodes + 1; ict++) {
+            if (mat->get_node(ict) == nullptr) {
+              break;
+            } else {
+              last_uncondensed_node_id++;
+            }
+          }
+        }
         node_storage.node_id_to_sampleid_map_.insert_or_assign(uncondensed_dag_nodes_id,
                                                                k);
-        ++last_uncondensed_node_id;
       }
       node_storage.condensed_nodes_count_ += nodes.size();
     }
@@ -436,7 +453,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     auto& mat = dag.GetMAT();
     Assert(id.value < mat.get_size_upper());
     MAT::Node* mat_node = mat.get_node(id.value);
-    bool is_ua = (mat.root->node_id == mat_node->node_id);
+    bool is_ua = mat_node != nullptr ? (mat.root->node_id == mat_node->node_id) : false;
     // auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
     // bool is_ua = (storage.ua_node_id_.value == id.value);
     return std::make_tuple(dag_edge, std::ref(mat), mat_node, is_ua);

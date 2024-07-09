@@ -76,6 +76,8 @@ void test_condensed_mat_view() {
 
   std::cout << "\n\nDAG view\n";
   MADAGToDOT(dag_storage.View(), std::cout);
+  std::cout << "\n\nMAT\n";
+  MATToDOT(mat, std::cout);
 
   // optimal labelings for MAT (this disambiguates the leaf nodes so they can be
   // condensed) NOTE: ordinarily, reassign_states optimizes internal node labels and
@@ -92,6 +94,9 @@ void test_condensed_mat_view() {
   mat.condense_leaves(condense_arg);
   mat.fix_node_idx();
 
+  std::cout << "\n\nCondensed MAT\n";
+  MATToDOT(mat, std::cout);
+
   // create a MATView from the condensed MAT
   MATStorageImpl matview_storage_impl;
   auto matview_storage = matview_storage_impl.GetCondensed();
@@ -105,14 +110,7 @@ void test_condensed_mat_view() {
 
   // ERROR: calling RecomputeCompactGenomes gives an error message:
   // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'
-  // umv.RecomputeCompactGenomes(true);
-
-  for (auto n: mv.GetNodes()) {
-    std::cout << "node " << n << "... " << n.GetId().value << "\n" << std::flush;
-  }
-  for (auto e: mv.GetEdges()) {
-    std::cout << "edge " << e << e.GetChildId() << "\n" << std::flush;
-  }
+  // mv.RecomputeCompactGenomes(true);
 
   auto umv = mv.GetUncondensed();
   static_assert(not umv.IsCondensed());
@@ -120,20 +118,12 @@ void test_condensed_mat_view() {
       ExtendDAGStorage<void, decltype(umv), Extend::Nodes<SampleId>, Extend::Empty<>,
                        Extend::Empty<>, DefaultViewBase>::FromView(umv);
 
-  // ERROR: the output from GetNodes() and GetEdges() should be uncondensed, but instead it is condensed.
-  for (auto n: umv.GetNodes()) {
-    std::cout << "node " << n << "... " << n.GetId().value << "\n" << std::flush;
-  }
-  for (auto e: umv.GetEdges()) {
-    std::cout << "edge " << e << e.GetChildId() << "\n" << std::flush;
-  }
-
   // ERROR: calling RecomputeCompactGenomes gives an error message:
   // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'
   // umv.RecomputeCompactGenomes(true);
 
   merge_umv.View().SampleIdsFromCG();
-  std::cout << "\n\nUnondensed MAT view\n";
+  std::cout << "\n\nUncondensed MAT view\n";
   MADAGToDOT(merge_umv.View(), std::cout);
 
   umv.GetRoot().Validate(true, false);
