@@ -79,16 +79,18 @@ void DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
+template <typename VT>
 size_t DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
                   ViewBase>::GetNodesCount() const {
-  return nodes_container_.GetCount();
+  return nodes_container_.template GetCount<VT>();
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
+template <typename VT>
 size_t DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
                   ViewBase>::GetEdgesCount() const {
-  return edges_container_.GetCount();
+  return edges_container_.template GetCount<VT>();
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,

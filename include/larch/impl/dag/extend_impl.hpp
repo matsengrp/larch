@@ -72,6 +72,7 @@ void ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::AddEdge(
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase>
+template <typename VT>
 size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetNodesCount()
     const {
   return GetTarget().GetNodesCount();
@@ -79,6 +80,7 @@ size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetNodes
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase>
+template <typename VT>
 size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetEdgesCount()
     const {
   return GetTarget().GetEdgesCount();
@@ -86,14 +88,16 @@ size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetEdges
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase>
+template <typename VT>
 auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetNodes() const {
-  return GetTarget().GetStorage().GetNodes();
+  return GetTarget().GetStorage().template GetNodes<VT>();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase>
+template <typename VT>
 auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetEdges() const {
-  return GetTarget().GetStorage().GetEdges();
+  return GetTarget().GetStorage().template GetEdges<VT>();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,

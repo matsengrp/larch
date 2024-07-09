@@ -85,12 +85,12 @@ ElementView<Component::Edge, DAGView<Storage, Base>> DAGView<Storage, Base>::App
 
 template <typename Storage, template <typename, typename> typename Base>
 size_t DAGView<Storage, Base>::GetNodesCount() const {
-  return GetStorage().GetNodesCount();
+  return GetStorage().template GetNodesCount<DAGView>();
 }
 
 template <typename Storage, template <typename, typename> typename Base>
 size_t DAGView<Storage, Base>::GetEdgesCount() const {
-  return GetStorage().GetEdgesCount();
+  return GetStorage().template GetEdgesCount<DAGView>();
 }
 
 template <typename Storage, template <typename, typename> typename Base>
@@ -100,12 +100,12 @@ bool DAGView<Storage, Base>::empty() const {
 
 template <typename Storage, template <typename, typename> typename Base>
 auto DAGView<Storage, Base>::GetNodes() const {
-  return GetStorage().GetNodes() | Transform::ToNodes(DAGView{*this});
+  return GetStorage().template GetNodes<DAGView>() | Transform::ToNodes(DAGView{*this});
 }
 
 template <typename Storage, template <typename, typename> typename Base>
 auto DAGView<Storage, Base>::GetEdges() const {
-  return GetStorage().GetEdges() | Transform::ToEdges(DAGView{*this});
+  return GetStorage().template GetEdges<DAGView>() | Transform::ToEdges(DAGView{*this});
 }
 
 template <typename Storage, template <typename, typename> typename Base>

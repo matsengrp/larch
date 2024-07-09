@@ -116,10 +116,18 @@ struct DAGStorage {
   void AddNode(NodeId id);
   void AddEdge(EdgeId id);
 
-  auto GetNodes() const { return nodes_container_.All(); }
-  auto GetEdges() const { return edges_container_.All(); }
+  template <typename VT>
+  auto GetNodes() const {
+    return nodes_container_.template All<VT>();
+  }
+  template <typename VT>
+  auto GetEdges() const {
+    return edges_container_.template All<VT>();
+  }
 
+  template <typename VT>
   size_t GetNodesCount() const;
+  template <typename VT>
   size_t GetEdgesCount() const;
 
   template <Component C>

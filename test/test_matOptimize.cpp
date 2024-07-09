@@ -184,7 +184,7 @@ static void test_matOptimize(std::string_view input_dag_path,
     auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
     MAT::Tree mat;
     sample.View().BuildMAT(mat);
-    std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
+    std::cout << "Sample nodes count: " << sample.View().GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
     int move_coeff_nodes = 1;
     int move_coeff_pscore = 1;

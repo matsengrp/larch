@@ -220,7 +220,9 @@ struct ExtendDAGStorage {
   void AddNode(NodeId id);
   void AddEdge(EdgeId id);
 
+  template <typename VT>
   size_t GetNodesCount() const;
+  template <typename VT>
   size_t GetEdgesCount() const;
 
   template <Component C>
@@ -228,7 +230,9 @@ struct ExtendDAGStorage {
     return GetTarget().template GetNextAvailableId<C>();
   }
 
+  template <typename VT>
   auto GetNodes() const;
+  template <typename VT>
   auto GetEdges() const;
 
   void InitializeNodes(size_t size);

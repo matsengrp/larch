@@ -146,20 +146,23 @@ void OverlayDAGStorage<ShortName, Target, ViewBase>::AddEdge(EdgeId id) {
 
 template <typename ShortName, typename Target,
           template <typename, typename> typename ViewBase>
+template <typename VT>
 size_t OverlayDAGStorage<ShortName, Target, ViewBase>::GetNodesCount() const {
   return GetTarget().GetNodesCount() + added_node_storage_.size();
 }
 
 template <typename ShortName, typename Target,
           template <typename, typename> typename ViewBase>
+template <typename VT>
 size_t OverlayDAGStorage<ShortName, Target, ViewBase>::GetEdgesCount() const {
   return GetTarget().GetEdgesCount() + added_edge_storage_.size();
 }
 
 template <typename ShortName, typename Target,
           template <typename, typename> typename ViewBase>
+template <typename VT>
 auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetNodes() const {
-  auto target_nodes = GetTarget().GetStorage().GetNodes();
+  auto target_nodes = GetTarget().GetStorage().template GetNodes<VT>();
   auto first_added = GetTarget().GetNextAvailableNodeId();
   auto added_nodes =
       ranges::views::indices(first_added.value,
@@ -170,8 +173,9 @@ auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetNodes() const {
 
 template <typename ShortName, typename Target,
           template <typename, typename> typename ViewBase>
+template <typename VT>
 auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetEdges() const {
-  auto target_edges = GetTarget().GetStorage().GetEdges();
+  auto target_edges = GetTarget().GetStorage().template GetEdges<VT>();
   auto first_added = GetTarget().GetNextAvailableEdgeId();
   auto added_edges =
       ranges::views::indices(first_added.value,

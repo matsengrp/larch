@@ -12,6 +12,7 @@ inline constexpr bool ElementsContainer<C, ElementStorageT, IdCont,
 
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
+template <typename VT>
 size_t ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetCount() const {
   return elements_storage_.size();
 }
@@ -19,7 +20,7 @@ size_t ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetCount() co
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
 Id<C> ElementsContainer<C, ElementStorageT, IdCont, Features...>::Append() {
-  Id<C> result{GetCount()};
+  Id<C> result{GetCount<void>()};
   elements_storage_.push_back({});
   features_storage_.push_back({});
   return result;
