@@ -12,12 +12,39 @@ struct UncondensedViewBase : DefaultViewBase<DAGStorageType, DAGViewType> {
   static constexpr inline bool is_condensed = false;
 };
 
+namespace {
+
 template <typename T, typename = void>
-struct CheckIsCondensed : std::false_type {};
+struct CheckIsCondensedHelper : std::false_type {};
+
+template <typename Storage, template <typename, typename> typename Base>
+struct CheckIsCondensedHelper<
+    DAGView<Storage, Base>,
+    std::void_t<decltype(DAGView<Storage, Base>::BaseType::is_condensed)>>
+    : std::true_type {};
+
+template <typename T, typename = void>
+struct CheckIsCondensedExtendedHelper : std::false_type {};
+
+template <typename Storage, template <typename, typename> typename Base>
+struct CheckIsCondensedExtendedHelper<
+    DAGView<Storage, Base>,
+    std::void_t<decltype(DAGView<Storage, Base>::StorageType::TargetView::BaseType::
+                             is_condensed)>> : std::true_type {};
+
+}  // namespace
+
+template <typename T, typename = void>
+struct CheckIsCondensed;
 
 template <typename T>
-struct CheckIsCondensed<T, std::void_t<decltype(T::BaseType::is_condensed)>>
+struct CheckIsCondensed<T, std::enable_if_t<CheckIsCondensedHelper<T>::value>>
     : std::bool_constant<T::BaseType::is_condensed> {};
+
+template <typename T>
+struct CheckIsCondensed<T, std::enable_if_t<CheckIsCondensedExtendedHelper<T>::value and
+                                            not CheckIsCondensedHelper<T>::value>>
+    : std::bool_constant<T::StorageType::TargetView::BaseType::is_condensed> {};
 
 struct MATNodeStorage {
   MOVE_ONLY(MATNodeStorage);
@@ -410,6 +437,8 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     Assert(id.value < mat.get_size_upper());
     MAT::Node* mat_node = mat.get_node(id.value);
     bool is_ua = (mat.root->node_id == mat_node->node_id);
+    // auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+    // bool is_ua = (storage.ua_node_id_.value == id.value);
     return std::make_tuple(dag_edge, std::ref(mat), mat_node, is_ua);
   }
 };
