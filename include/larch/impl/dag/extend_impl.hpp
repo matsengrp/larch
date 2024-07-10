@@ -75,7 +75,7 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
 template <typename VT>
 size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetNodesCount()
     const {
-  return GetTarget().GetNodesCount();
+  return GetTarget().GetStorage().template GetNodesCount<VT>();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
@@ -83,7 +83,7 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
 template <typename VT>
 size_t ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::GetEdgesCount()
     const {
-  return GetTarget().GetEdgesCount();
+  return GetTarget().GetStorage().template GetEdgesCount<VT>();
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
