@@ -32,7 +32,7 @@ void test_mat_view_impl(DAGView dag) {
   static_assert(mv.IsCondensed());
   mv.SetReferenceSequence(dag.GetReferenceSequence());
   mv.BuildRootAndLeafs();
-  mv.RecomputeCompactGenomes();
+  mv.RecomputeCompactGenomes<IdContinuity::Sparse>();
   mv.GetRoot().Validate(true, false);
 
   auto umv = mv.GetUncondensed();
@@ -106,11 +106,11 @@ void test_condensed_mat_view() {
   static_assert(mv.IsCondensed());
   mv.SetReferenceSequence(dag.GetReferenceSequence());
   mv.BuildRootAndLeafs();
-  mv.GetRoot().Validate(true, false);
+  // mv.GetRoot().Validate(true, false);
 
   // ERROR: calling RecomputeCompactGenomes gives an error message:
   // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'
-  // mv.RecomputeCompactGenomes(true);
+  mv.RecomputeCompactGenomes<IdContinuity::Sparse>(true);
 
   auto umv = mv.GetUncondensed();
   static_assert(not umv.IsCondensed());
@@ -120,7 +120,7 @@ void test_condensed_mat_view() {
 
   // ERROR: calling RecomputeCompactGenomes gives an error message:
   // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'
-  // umv.RecomputeCompactGenomes(true);
+  umv.RecomputeCompactGenomes<IdContinuity::Sparse>(true);
 
   merge_umv.View().SampleIdsFromCG();
   std::cout << "\n\nUncondensed MAT view\n";

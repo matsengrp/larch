@@ -52,6 +52,7 @@ struct FeatureMutableView<ReferenceSequence, CRTP, Tag> {
   void SetCompactGenomesFromNodeMutationMap(NodeMutMap&& node_mutation_map) const;
   void UpdateCompactGenomesFromNodeMutationMap(NodeMutMap&& node_mutation_map) const;
   void AddUA(const EdgeMutations& mutations_at_root) const;
+  template <IdContinuity Cont = IdContinuity::Dense>
   void RecomputeCompactGenomes(bool recompute_leaves = true) const;
   void SampleIdsFromCG(bool coerce = false) const;
   void RecomputeEdgeMutations() const;
