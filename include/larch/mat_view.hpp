@@ -220,6 +220,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       return 1;
     }
     if constexpr (CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
+      Assert(mat_node != nullptr);
       return mat_node->children.size();
     }
     // if current node is condensed, then it's a leaf node;
@@ -257,17 +258,18 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     };
     std::vector<size_t> child_node_ids;
     if (is_ua) {
-      child_node_ids.push_back(0);
-
+    } else if (mat_node == nullptr) {
     } else {
       // TODO: break this up into cases for uncondensed/condensed views for efficiency
       auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
       for (auto * c: mat_node->children) {
         auto c_node_id = c->node_id;
-        auto cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
-        if (cn_id_iter != storage.condensed_nodes_.end()) {
-          for (auto cn_str: storage.condensed_nodes_.at(NodeId{c_node_id})) {
-            child_node_ids.push_back(storage.sampleid_to_mat_node_id_map_.at(cn_str));
+        if constexpr (CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
+          auto cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
+          if (cn_id_iter != storage.condensed_nodes_.end()) {
+            for (auto cn_str: storage.condensed_nodes_.at(NodeId{c_node_id})) {
+              child_node_ids.push_back(storage.sampleid_to_mat_node_id_map_.at(cn_str));
+            }
           }
         } else {
           child_node_ids.push_back(c_node_id);
@@ -294,10 +296,11 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
         auto& condensed_mat_node =
             storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
         Assert(condensed_mat_node->parent != nullptr);
-        EdgeId parent{condensed_mat_node->parent == nullptr ? mat.root->node_id : condensed_mat_node->node_id};
+        EdgeId parent{condensed_mat_node->parent == nullptr ? mat.root->node_id : dag_node.GetId().value};
         return typename decltype(dag)::EdgeView{dag, parent};
       }
     }
+    Assert(mat_node != nullptr);
     EdgeId parent{mat_node->parent == nullptr ? mat.root->node_id : mat_node->node_id};
     return typename decltype(dag)::EdgeView{dag, parent};
   }
@@ -472,6 +475,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
       Assert(condensed_mat_node->parent != nullptr);
       return dag_edge.GetDAG().Get(NodeId{condensed_mat_node->parent->node_id});
     }
+    Assert(mat_node != nullptr);
     Assert(mat_node->parent != nullptr);
     return dag_edge.GetDAG().Get(NodeId{mat_node->parent->node_id});
   }
@@ -494,6 +498,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
       return result;
     }
     if constexpr(CheckIsCondensed<decltype(dag_edge.GetDAG())>::value) {
+      Assert(mat_node != nullptr);
       Assert(mat_node->parent != nullptr);
       for (auto* i : mat_node->parent->children) {
         if (i == mat_node) {
@@ -514,6 +519,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
         Assert(condensed_mat_node_iter != storage.reversed_condensed_nodes_.end());
         mat_node = storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
       }
+      Assert(mat_node != nullptr);
       Assert(mat_node->parent != nullptr);
 
       for (auto * c: mat_node->parent->children) {
@@ -604,6 +610,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
       Assert(condensed_mat_node_iter != id_storage.reversed_condensed_nodes_.end());
       mat_node = id_storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
     }
+    Assert(mat_node != nullptr);
     if (storage.mutations_.empty()) {
       storage.mutations_ = EdgeMutations{
           mat_node->mutations |
@@ -682,7 +689,8 @@ struct MATElementsContainerBase {
     return count;
   }
 
-  Id<C> GetNextAvailableId() const { return {GetCount()}; }
+  template <typename VT>
+  Id<C> GetNextAvailableId() const { return {GetCount<VT>()}; }
 
   template <typename Feature>
   const auto& GetFeatureStorage(Id<C> id) const {
