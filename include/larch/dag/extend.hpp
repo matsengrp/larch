@@ -16,7 +16,8 @@ namespace Extend {
 template <typename... Fs>
 struct Nodes {
   using FeatureTypes = std::tuple<Fs...>;
-  using Storage = std::vector<std::tuple<Fs...>>;
+  template <IdContinuity Cont>
+  using Storage = IdContainer<NodeId, std::tuple<Fs...>, Cont>;
   using ExtraStorage = std::tuple<ExtraFeatureStorage<Fs>...>;
   template <typename Self, typename CRTP>
   struct ConstView : FeatureConstView<Fs, CRTP>... {};
@@ -34,10 +35,11 @@ struct Nodes {
       tuple_contains_v<std::tuple<Fs...>, Feature>;
 };
 
-template <typename... Fs>
+template </*IdContinuity Cont, */ typename... Fs>
 struct Edges {
   using FeatureTypes = std::tuple<Fs...>;
-  using Storage = std::vector<std::tuple<Fs...>>;
+  template <IdContinuity Cont>
+  using Storage = IdContainer<EdgeId, std::tuple<Fs...>, Cont>;
   using ExtraStorage = std::tuple<ExtraFeatureStorage<Fs>...>;
   template <typename Self, typename CRTP>
   struct ConstView : FeatureConstView<Fs, CRTP>... {};
@@ -88,7 +90,8 @@ struct Empty {
  * Adds new features to an existing DAG. See `namespace Extend` for more info.
  */
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2, template <typename, typename> typename ViewBase>
+          typename Arg2, template <typename, typename> typename ViewBase,
+          IdContinuity Cont>
 struct ExtendDAGStorage {
  public:
   constexpr static const Component component = Component::DAG;
@@ -276,8 +279,8 @@ struct ExtendDAGStorage {
   auto GetTarget() const;
 
   Target target_;
-  typename OnNodes::Storage additional_node_features_storage_;
-  typename OnEdges::Storage additional_edge_features_storage_;
+  typename OnNodes::Storage<Cont> additional_node_features_storage_;
+  typename OnEdges::Storage<Cont> additional_edge_features_storage_;
   typename OnDAG::Storage additional_dag_features_storage_;
   typename OnNodes::ExtraStorage additional_node_extra_features_storage_;
   typename OnEdges::ExtraStorage additional_edge_extra_features_storage_;
@@ -286,25 +289,25 @@ struct ExtendDAGStorage {
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
           template <typename, typename> typename ViewBase = DefaultViewBase>
-using ExtendStorageType =
-    ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>;
+using ExtendStorageType = ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
+                                           ViewBase, IdContinuity::Dense>;
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
           template <typename, typename> typename ViewBase = DefaultViewBase,
           typename = std::enable_if_t<Target::role == Role::Storage>>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase> AddExtend(
-    Target&& target) {
-  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::Consume(
-      std::move(target));
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, IdContinuity::Dense>
+AddExtend(Target&& target) {
+  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                          IdContinuity::Dense>::Consume(std::move(target));
 }
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
           template <typename, typename> typename ViewBase = DefaultViewBase,
           typename = std::enable_if_t<Target::role == Role::View>>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase> AddExtend(
-    const Target& target) {
-  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase>::FromView(
-      target);
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, IdContinuity::Dense>
+AddExtend(const Target& target) {
+  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                          IdContinuity::Dense>::FromView(target);
 }

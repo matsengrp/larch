@@ -44,9 +44,9 @@ void test_mat_view_impl(DAGView dag) {
   dag_from_mat.View().GetRoot().Validate(true);
   check_MAT_MADAG_Eq(mat, dag_from_mat.View());
 
-  auto merge_mv =
-      ExtendDAGStorage<void, decltype(mv), Extend::Nodes<SampleId>, Extend::Empty<>,
-                       Extend::Empty<>, DefaultViewBase>::FromView(mv);
+  auto merge_mv = ExtendDAGStorage<void, decltype(mv), Extend::Nodes<SampleId>,
+                                   Extend::Empty<>, Extend::Empty<>, DefaultViewBase,
+                                   IdContinuity::Sparse>::FromView(mv);
   merge_mv.View().SampleIdsFromCG();
   Merge merge(mv.GetReferenceSequence());
 
@@ -114,9 +114,9 @@ void test_condensed_mat_view() {
 
   auto umv = mv.GetUncondensed();
   static_assert(not umv.IsCondensed());
-  auto merge_umv =
-      ExtendDAGStorage<void, decltype(umv), Extend::Nodes<SampleId>, Extend::Empty<>,
-                       Extend::Empty<>, DefaultViewBase>::FromView(umv);
+  auto merge_umv = ExtendDAGStorage<void, decltype(umv), Extend::Nodes<SampleId>,
+                                    Extend::Empty<>, Extend::Empty<>, DefaultViewBase,
+                                    IdContinuity::Sparse>::FromView(umv);
 
   // ERROR: calling RecomputeCompactGenomes gives an error message:
   // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'
@@ -129,9 +129,9 @@ void test_condensed_mat_view() {
   umv.GetRoot().Validate(true, false);
 
   // TODO: check that dag and mat_view(condensed=False) are equal
-  auto merge_mv =
-      ExtendDAGStorage<void, decltype(mv), Extend::Nodes<SampleId>, Extend::Empty<>,
-                       Extend::Empty<>, DefaultViewBase>::FromView(mv);
+  auto merge_mv = ExtendDAGStorage<void, decltype(mv), Extend::Nodes<SampleId>,
+                                   Extend::Empty<>, Extend::Empty<>, DefaultViewBase,
+                                   IdContinuity::Sparse>::FromView(mv);
   merge_mv.View().SampleIdsFromCG();
   std::cout << "\n\nCondensed MAT view\n";
   MADAGToDOT(merge_mv.View(), std::cout);
