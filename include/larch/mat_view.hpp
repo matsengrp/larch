@@ -132,14 +132,16 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
         }
         node_storage.node_id_to_sampleid_map_.insert_or_assign(uncondensed_dag_nodes_id,
                                                                k);
-        node_storage.sampleid_to_mat_node_id_map_.insert_or_assign(k, uncondensed_dag_nodes_id.value);
+        node_storage.sampleid_to_mat_node_id_map_.insert_or_assign(
+            k, uncondensed_dag_nodes_id.value);
       }
       node_storage.condensed_nodes_count_ += nodes.size();
     }
     edge_storage.condensed_nodes_ = node_storage.condensed_nodes_;
     edge_storage.reversed_condensed_nodes_ = node_storage.reversed_condensed_nodes_;
     edge_storage.node_id_to_sampleid_map_ = node_storage.node_id_to_sampleid_map_;
-    edge_storage.sampleid_to_mat_node_id_map_ = node_storage.sampleid_to_mat_node_id_map_;
+    edge_storage.sampleid_to_mat_node_id_map_ =
+        node_storage.sampleid_to_mat_node_id_map_;
     edge_storage.condensed_nodes_count_ = node_storage.condensed_nodes_count_;
   }
 };
@@ -170,21 +172,21 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   auto GetClade(CladeIdx clade) const {
     auto [dag_node, mat, mat_node, is_ua] = access();
     size_t node_id = mat.root->node_id;
-    if constexpr(CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
+    if constexpr (CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
       if (not is_ua) {
         Assert(mat_node != nullptr);
         node_id = mat_node->children.at(clade.value)->node_id;
       }
     } else {
       if (not is_ua) {
-        Assert(mat_node != nullptr)
+        Assert(mat_node != nullptr);
         size_t ctr = 0;
         auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
-        for (auto * c: mat_node->children) {
+        for (auto* c : mat_node->children) {
           auto c_node_id = c->node_id;
           auto cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
           if (cn_id_iter != storage.condensed_nodes_.end()) {
-            for (auto cn_str: storage.condensed_nodes_.at(NodeId{c_node_id})) {
+            for (auto cn_str : storage.condensed_nodes_.at(NodeId{c_node_id})) {
               if (ctr == clade.value) {
                 node_id = storage.sampleid_to_mat_node_id_map_.at(cn_str);
                 break;
@@ -227,11 +229,11 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     if (mat_node == nullptr) {
       return 0;
     }
-    //TODO: add case for uncondensed nodes
-    // something like this, only better:
+    // TODO: add case for uncondensed nodes
+    //  something like this, only better:
     auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
     size_t ct = 0;
-    for (auto * c: mat_node->children) {
+    for (auto* c : mat_node->children) {
       auto c_node_id = c->node_id;
       auto cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
       if (cn_id_iter != storage.condensed_nodes_.end()) {
@@ -262,12 +264,12 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     } else {
       // TODO: break this up into cases for uncondensed/condensed views for efficiency
       auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
-      for (auto * c: mat_node->children) {
+      for (auto* c : mat_node->children) {
         auto c_node_id = c->node_id;
         if constexpr (CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
           auto cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
           if (cn_id_iter != storage.condensed_nodes_.end()) {
-            for (auto cn_str: storage.condensed_nodes_.at(NodeId{c_node_id})) {
+            for (auto cn_str : storage.condensed_nodes_.at(NodeId{c_node_id})) {
               child_node_ids.push_back(storage.sampleid_to_mat_node_id_map_.at(cn_str));
             }
           }
@@ -296,7 +298,8 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
         auto& condensed_mat_node =
             storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
         Assert(condensed_mat_node->parent != nullptr);
-        EdgeId parent{condensed_mat_node->parent == nullptr ? mat.root->node_id : dag_node.GetId().value};
+        EdgeId parent{condensed_mat_node->parent == nullptr ? mat.root->node_id
+                                                            : dag_node.GetId().value};
         return typename decltype(dag)::EdgeView{dag, parent};
       }
     }
@@ -382,12 +385,12 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       return false;
     }
     size_t node_value = node.value;
-    // if the NodeId in question is one that has been condensed, we need to match the value of its reference condensed node value to the MAT's condensed counterpart
+    // if the NodeId in question is one that has been condensed, we need to match the
+    // value of its reference condensed node value to the MAT's condensed counterpart
     auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
     auto cn_id_str = storage.node_id_to_sampleid_map_.find(node);
     if (cn_id_str != storage.node_id_to_sampleid_map_.end()) {
-      auto condensed_mat_node_str =
-          storage.node_id_to_sampleid_map_.at(node);
+      auto condensed_mat_node_str = storage.node_id_to_sampleid_map_.at(node);
       auto condensed_mat_node =
           storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
       node_value = condensed_mat_node->node_id;
@@ -449,7 +452,7 @@ struct ExtraFeatureStorage<MATEdgeStorage> {
   std::map<NodeId, std::vector<std::string>> condensed_nodes_;
   std::map<std::string, MAT::Node*> reversed_condensed_nodes_;
   std::map<NodeId, std::string> node_id_to_sampleid_map_;
-  std::map<std::string, size_t>sampleid_to_mat_node_id_map_;
+  std::map<std::string, size_t> sampleid_to_mat_node_id_map_;
   size_t condensed_nodes_count_ = 0;
 };
 
@@ -497,7 +500,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     if (is_ua) {
       return result;
     }
-    if constexpr(CheckIsCondensed<decltype(dag_edge.GetDAG())>::value) {
+    if constexpr (CheckIsCondensed<decltype(dag_edge.GetDAG())>::value) {
       Assert(mat_node != nullptr);
       Assert(mat_node->parent != nullptr);
       for (auto* i : mat_node->parent->children) {
@@ -507,7 +510,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
         ++result.value;
       }
     } else {
-    // if it's an edge above a condensed node
+      // if it's an edge above a condensed node
       auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
       if (mat_node == nullptr) {
         auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
@@ -522,14 +525,14 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
       Assert(mat_node != nullptr);
       Assert(mat_node->parent != nullptr);
 
-      for (auto * c: mat_node->parent->children) {
+      for (auto* c : mat_node->parent->children) {
         auto c_node_id = c->node_id;
         if (c_node_id == dag_edge.GetId().value) {
           return result;
         }
         auto cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
         if (cn_id_iter != storage.condensed_nodes_.end()) {
-          for (auto cn_str: storage.condensed_nodes_.at(NodeId{c_node_id})) {
+          for (auto cn_str : storage.condensed_nodes_.at(NodeId{c_node_id})) {
             auto current_id = storage.sampleid_to_mat_node_id_map_.at(cn_str);
             if (current_id == dag_edge.GetChildId().value) {
               return result;
@@ -653,7 +656,7 @@ struct MATElementsContainerBase {
   using FeatureTypes = std::tuple<ElementStorageT>;
   using AllFeatureTypes = FeatureTypes;
 
-  static constexpr IdContinuity id_continuity = IdContinuity::Dense;
+  static constexpr IdContinuity id_continuity = IdContinuity::Sparse;
 
   template <typename Feature>
   static const bool contains_element_feature =
@@ -690,7 +693,9 @@ struct MATElementsContainerBase {
   }
 
   template <typename VT>
-  Id<C> GetNextAvailableId() const { return {GetCount<VT>()}; }
+  Id<C> GetNextAvailableId() const {
+    return {GetCount<VT>()};
+  }
 
   template <typename Feature>
   const auto& GetFeatureStorage(Id<C> id) const {

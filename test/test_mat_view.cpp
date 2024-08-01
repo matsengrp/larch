@@ -106,7 +106,8 @@ void test_condensed_mat_view() {
   static_assert(mv.IsCondensed());
   mv.SetReferenceSequence(dag.GetReferenceSequence());
   mv.BuildRootAndLeafs();
-  // mv.GetRoot().Validate(true, false);
+
+  mv.GetRoot().Validate(true, false);
 
   // ERROR: calling RecomputeCompactGenomes gives an error message:
   // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'
@@ -135,10 +136,6 @@ void test_condensed_mat_view() {
   merge_mv.View().SampleIdsFromCG();
   std::cout << "\n\nCondensed MAT view\n";
   MADAGToDOT(merge_mv.View(), std::cout);
-
-  std::cout << "DAG edge count:" << dag_storage.View().GetEdgesCount() << "\n";
-  std::cout << "UMV edge count:" << merge_umv.View().GetEdgesCount() << "\n";
-  std::cout << "MMV edge count:" << merge_mv.View().GetEdgesCount() << "\n";
 
   // TODO: check that mat and mat_view(condensed=True) are equal
 }

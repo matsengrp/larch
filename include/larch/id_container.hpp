@@ -66,7 +66,13 @@ class IdContainer {
 
   bool empty() const { return data_.empty(); }
 
-  size_t size() const { return data_.size(); }
+  size_t size() const {
+    if constexpr (Cont == IdContinuity::Dense) {
+      return data_.size();
+    } else {
+      return std::max(init_size_, data_.size());
+    }
+  }
 
   iterator begin() { return data_.begin(); }
 
@@ -115,7 +121,12 @@ class IdContainer {
     if constexpr (Cont == IdContinuity::Dense) {
       return data_.at(key.value);
     } else {
-      return data_.at(key);
+      if (key.value < init_size_) {
+        static const T empty{};
+        return empty;
+      } else {
+        return data_.at(key);
+      }
     }
   }
 
@@ -123,7 +134,11 @@ class IdContainer {
     if constexpr (Cont == IdContinuity::Dense) {
       return data_.at(key.value);
     } else {
-      return data_.at(key);
+      if (key.value < init_size_) {
+        return data_[key];
+      } else {
+        return data_.at(key);
+      }
     }
   }
 
@@ -140,13 +155,19 @@ class IdContainer {
   }
 
   void resize(size_t size) {
-    static_assert(Cont == IdContinuity::Dense);
-    data_.resize(size);
+    if constexpr (Cont == IdContinuity::Dense) {
+      data_.resize(size);
+    } else {
+      init_size_ = size;
+    }
   }
 
   void push_back(T&& value) {
-    static_assert(Cont == IdContinuity::Dense);
-    data_.push_back(std::forward<T>(value));
+    if constexpr (Cont == IdContinuity::Dense) {
+      data_.push_back(std::forward<T>(value));
+    } else {
+      data_[Id{init_size_++}] = value;
+    }
   }
 
   T* At(Id key) {
@@ -158,7 +179,11 @@ class IdContainer {
     } else {
       auto it = data_.find(key);
       if (it == data_.end()) {
-        return nullptr;
+        if (key.value < init_size_) {
+          return std::addressof(data_[key.value]);
+        } else {
+          return nullptr;
+        }
       }
       return std::addressof(*it);
     }
@@ -173,6 +198,9 @@ class IdContainer {
     } else {
       auto it = data_.find(key);
       if (it == data_.end()) {
+        if (key.value >= init_size_) {
+          Fail("Out of bounds");
+        }
         return nullptr;
       }
       return std::addressof(*it);
@@ -182,4 +210,5 @@ class IdContainer {
  private:
   IdContainer(const IdContainer&) = default;
   storage_type data_;
+  size_t init_size_ = 0;
 };

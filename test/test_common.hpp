@@ -29,6 +29,20 @@ bool add_test(const Test& test) noexcept;
     }                                                                       \
   }
 
+#define TestThrow(x)                                                       \
+  {                                                                        \
+    bool caught = false;                                                   \
+    try {                                                                  \
+      (x);                                                                 \
+    } catch (...) {                                                        \
+      caught = true;                                                       \
+    }                                                                      \
+    if (not caught) {                                                      \
+      throw std::runtime_error("TestThrow failed: \"" #x "\" in " __FILE__ \
+                               ":" TOSTRING(__LINE__));                    \
+    }                                                                      \
+  }
+
 inline void print_peak_mem() {
   std::ifstream str{"/proc/self/status"};
   std::string line;

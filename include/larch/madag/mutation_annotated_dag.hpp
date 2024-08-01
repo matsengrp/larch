@@ -70,7 +70,7 @@ struct LongNameOf<MADAGStorage<Target, ViewBase>> {
       ExtendDAGStorage<MADAGStorage<Target>, Target,
                        Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
                        Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>,
-                       ViewBase, IdContinuity::Dense>;
+                       ViewBase, IdContinuity::Sparse>; // TODO change to Dense
 };
 
 template <typename Target, template <typename, typename> typename ViewBase>

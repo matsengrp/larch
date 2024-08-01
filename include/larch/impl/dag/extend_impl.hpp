@@ -49,7 +49,12 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           IdContinuity Cont>
 NodeId
 ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, Cont>::AppendNode() {
-  additional_node_features_storage_.push_back({});
+  if constexpr (Cont == IdContinuity::Dense) {
+    additional_node_features_storage_.push_back({});
+  } else {
+    std::ignore =
+        additional_node_features_storage_[GetNextAvailableId<Component::Node>()];
+  }
   return GetTarget().AppendNode().GetId();
 }
 
@@ -58,7 +63,12 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           IdContinuity Cont>
 EdgeId
 ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, Cont>::AppendEdge() {
-  additional_edge_features_storage_.push_back({});
+  if constexpr (Cont == IdContinuity::Dense) {
+    additional_edge_features_storage_.push_back({});
+  } else {
+    std::ignore =
+        additional_edge_features_storage_[GetNextAvailableId<Component::Edge>()];
+  }
   return GetTarget().AppendEdge().GetId();
 }
 
@@ -280,10 +290,8 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
 ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, Cont>::ExtendDAGStorage(
     Target&& target)
     : target_{std::forward<Target>(target)} {
-  if constexpr (Cont == IdContinuity::Dense) {
-    additional_node_features_storage_.resize(GetTarget().GetNodesCount());
-    additional_edge_features_storage_.resize(GetTarget().GetEdgesCount());
-  }
+  additional_node_features_storage_.resize(GetTarget().GetNodesCount());
+  additional_edge_features_storage_.resize(GetTarget().GetEdgesCount());
 }
 
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,

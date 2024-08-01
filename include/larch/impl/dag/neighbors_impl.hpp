@@ -263,7 +263,8 @@ void ValidateImpl(Node node, StorageValidator&& storage,
     }
     if (edge_count != dag.GetEdgesCount()) {
       std::cout << "edge_count: " << edge_count
-                << "  dag.GetEdgesCount(): " << dag.GetEdgesCount() << "\n" << std::flush;
+                << "  dag.GetEdgesCount(): " << dag.GetEdgesCount() << "\n"
+                << std::flush;
     }
     Assert(edge_count == dag.GetEdgesCount());
     if (not allow_dag) {

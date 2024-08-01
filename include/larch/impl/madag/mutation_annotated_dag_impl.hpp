@@ -116,13 +116,8 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
     max_id = max_id > node.GetId().value ? max_id : node.GetId().value;
   }
   IdContainer<NodeId, CompactGenome, Cont> new_cgs;
-  if constexpr (Cont == IdContinuity::Dense) {
-    new_cgs.resize(max_id + 1);
-  }
+  new_cgs.resize(max_id + 1);
   auto ComputeCG = [&new_cgs, dag](auto& self, Node for_node) {
-    if constexpr (Cont == IdContinuity::Sparse) {
-      new_cgs[for_node.GetId()];
-    }
     CompactGenome& compact_genome = new_cgs.at(for_node.GetId());
     if (for_node.IsUA()) {
       compact_genome = {};

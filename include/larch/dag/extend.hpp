@@ -289,25 +289,28 @@ struct ExtendDAGStorage {
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
           template <typename, typename> typename ViewBase = DefaultViewBase>
+// TODO pass IdContinuity
 using ExtendStorageType = ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
-                                           ViewBase, IdContinuity::Dense>;
+                                           ViewBase, IdContinuity::Sparse>;
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
           template <typename, typename> typename ViewBase = DefaultViewBase,
           typename = std::enable_if_t<Target::role == Role::Storage>>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, IdContinuity::Dense>
+// TODO pass IdContinuity
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, IdContinuity::Sparse>
 AddExtend(Target&& target) {
   return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                          IdContinuity::Dense>::Consume(std::move(target));
+                          IdContinuity::Sparse>::Consume(std::move(target));
 }
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
           template <typename, typename> typename ViewBase = DefaultViewBase,
           typename = std::enable_if_t<Target::role == Role::View>>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, IdContinuity::Dense>
+// TODO pass IdContinuity
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, IdContinuity::Sparse>
 AddExtend(const Target& target) {
   return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                          IdContinuity::Dense>::FromView(target);
+                          IdContinuity::Sparse>::FromView(target);
 }
