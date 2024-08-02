@@ -251,34 +251,98 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 
     using Edge = typename decltype(dag)::EdgeView;
 
-    auto child_edge = [dag, dag_node, is_ua](const size_t i) {
-      if (is_ua) {
-        return Edge{dag, EdgeId{dag_node.GetFirstChild().GetId().value}};
-      } else {
-        return Edge{dag, EdgeId{i}};
-      }
-    };
-    std::vector<size_t> child_node_ids;
-    if (is_ua) {
-    } else if (mat_node == nullptr) {
-    } else {
-      // TODO: break this up into cases for uncondensed/condensed views for efficiency
-      auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
-      for (auto* c : mat_node->children) {
-        auto c_node_id = c->node_id;
-        if constexpr (CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
-          auto cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
-          if (cn_id_iter != storage.condensed_nodes_.end()) {
-            for (auto cn_str : storage.condensed_nodes_.at(NodeId{c_node_id})) {
-              child_node_ids.push_back(storage.sampleid_to_mat_node_id_map_.at(cn_str));
+    struct Iter {
+      Iter(MAT::Node* mn, const ExtraFeatureStorage<MATNodeStorage>& stor)
+          : mat_node{mn}, storage{stor}, child_iter{mat_node->children.end()} {}
+
+      void advance() {
+        if (done) {
+          return;
+        }
+
+        if (child_iter == mat_node->children.end()) {
+          // initialize
+          child_iter = mat_node->children.begin();
+          Assert(child_iter != mat_node->children.end());
+          cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
+          cn_str = cn_id_iter != storage.condensed_nodes_.end()
+                       ? cn_id_iter->second.begin()
+                       : decltype(cn_str){};
+          if (cn_id_iter == storage.condensed_nodes_.end() or
+              cn_str == cn_id_iter->second.end()) {
+            c_node_id = mat_node->node_id;
+          } else {
+            c_node_id = storage.sampleid_to_mat_node_id_map_.at(*cn_str);
+          }
+          return;
+        }
+
+        if (not advance_condensed()) {
+          if (not advance_child()) {
+            done = true;
+          } else {
+            cn_str = cn_id_iter->second.begin();
+            if (cn_str == cn_id_iter->second.end()) {
+              done = true;
             }
           }
-        } else {
-          child_node_ids.push_back(c_node_id);
+        }
+        if (not done) {
+          c_node_id = storage.sampleid_to_mat_node_id_map_.at(*cn_str);
         }
       }
-    }
-    return child_node_ids | ranges::views::transform(child_edge);
+
+      MAT::Node* const mat_node;
+      const ExtraFeatureStorage<MATNodeStorage>& storage;
+      decltype(mat_node->children.begin()) child_iter;
+      decltype(storage.condensed_nodes_.begin()) cn_id_iter = {};
+      decltype(cn_id_iter->second.begin()) cn_str = {};
+      size_t c_node_id = NoId;
+      bool done = false;
+
+     private:
+      bool advance_condensed() {
+        if (cn_id_iter == storage.condensed_nodes_.end()) {
+          return false;
+        }
+        if (cn_str == cn_id_iter->second.end()) {
+          return false;
+        }
+        return ++cn_str != cn_id_iter->second.end();
+      }
+
+      bool advance_child() {
+        if (child_iter == mat_node->children.end()) {
+          return false;
+        }
+        return ++child_iter != mat_node->children.end();
+      }
+    };
+
+    return ranges::views::iota(size_t{0}) |
+           ranges::views::take_while([is_ua, mat_node](size_t) {
+             if (is_ua or mat_node == nullptr or mat_node->children.empty()) {
+               return false;
+             } else {
+               return true;
+             }
+           }) |
+           ranges::views::transform(
+               [i = Iter{mat_node,
+                         dag_node.template GetFeatureExtraStorage<MATNodeStorage>()}](
+                   size_t) mutable -> const Iter& {
+                 i.advance();
+                 return i;
+               }) |
+           ranges::views::take_while([](auto& i) { return not i.done; }) |
+           ranges::views::transform([is_ua, dag_node](auto& i) {
+             if (is_ua) {
+               return Edge{dag_node.GetDAG(),
+                           EdgeId{dag_node.GetFirstChild().GetId().value}};
+             } else {
+               return Edge{dag_node.GetDAG(), EdgeId{i.c_node_id}};
+             }
+           });
   }
 
   auto GetSingleParent() const {
