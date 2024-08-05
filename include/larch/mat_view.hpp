@@ -252,46 +252,63 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     using Edge = typename decltype(dag)::EdgeView;
 
     struct Iter {
-      Iter(MAT::Node* mn, const ExtraFeatureStorage<MATNodeStorage>& stor)
-          : mat_node{mn}, storage{stor}, child_iter{mat_node->children.end()} {}
+      Iter(bool cond, MAT::Node* mn, const ExtraFeatureStorage<MATNodeStorage>& stor)
+          : condensed{cond}, mat_node{mn}, storage{stor}, child_iter{[mn] {
+              return mn != nullptr ? mn->children.end() : decltype(child_iter){};
+            }()} {}
 
       void advance() {
+        Assert(mat_node != nullptr);
         if (done) {
           return;
         }
 
         if (child_iter == mat_node->children.end()) {
           // initialize
-          child_iter = mat_node->children.begin();
-          Assert(child_iter != mat_node->children.end());
-          cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
-          cn_str = cn_id_iter != storage.condensed_nodes_.end()
-                       ? cn_id_iter->second.begin()
-                       : decltype(cn_str){};
-          if (cn_id_iter == storage.condensed_nodes_.end() or
-              cn_str == cn_id_iter->second.end()) {
-            c_node_id = mat_node->node_id;
+          if (condensed) {
+            child_iter = mat_node->children.begin();
+            c_node_id = (*child_iter)->node_id;
           } else {
-            c_node_id = storage.sampleid_to_mat_node_id_map_.at(*cn_str);
+            child_iter = mat_node->children.begin();
+            Assert(child_iter != mat_node->children.end());
+            cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
+            cn_str = cn_id_iter != storage.condensed_nodes_.end()
+                         ? cn_id_iter->second.begin()
+                         : decltype(cn_str){};
+            if (cn_id_iter == storage.condensed_nodes_.end() or
+                cn_str == cn_id_iter->second.end()) {
+              c_node_id = mat_node->node_id;
+            } else {
+              c_node_id = storage.sampleid_to_mat_node_id_map_.at(*cn_str);
+            }
           }
           return;
         }
 
-        if (not advance_condensed()) {
-          if (not advance_child()) {
-            done = true;
+        if (condensed) {
+          if (++child_iter != mat_node->children.end()) {
+            c_node_id = (*child_iter)->node_id;
           } else {
-            cn_str = cn_id_iter->second.begin();
-            if (cn_str == cn_id_iter->second.end()) {
+            done = true;
+          }
+        } else {
+          if (not advance_condensed()) {
+            if (not advance_child()) {
               done = true;
+            } else {
+              cn_str = cn_id_iter->second.begin();
+              if (cn_str == cn_id_iter->second.end()) {
+                done = true;
+              }
             }
           }
-        }
-        if (not done) {
-          c_node_id = storage.sampleid_to_mat_node_id_map_.at(*cn_str);
+          if (not done) {
+            c_node_id = storage.sampleid_to_mat_node_id_map_.at(*cn_str);
+          }
         }
       }
 
+      const bool condensed;
       MAT::Node* const mat_node;
       const ExtraFeatureStorage<MATNodeStorage>& storage;
       decltype(mat_node->children.begin()) child_iter;
@@ -328,10 +345,12 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
              }
            }) |
            ranges::views::transform(
-               [i = Iter{mat_node,
+               [i = Iter{CheckIsCondensed<decltype(dag)>::value, mat_node,
                          dag_node.template GetFeatureExtraStorage<MATNodeStorage>()}](
                    size_t) mutable -> const Iter& {
-                 i.advance();
+                 if (i.mat_node != nullptr) {
+                   i.advance();
+                 }
                  return i;
                }) |
            ranges::views::take_while([](auto& i) { return not i.done; }) |
