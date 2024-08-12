@@ -290,18 +290,18 @@ template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
           template <typename, typename> typename ViewBase = DefaultViewBase>
 // TODO pass IdContinuity
-using ExtendStorageType = ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2,
-                                           ViewBase, IdContinuity::Sparse>;
+using ExtendStorageType =
+    ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, DefIdCont>;
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
           template <typename, typename> typename ViewBase = DefaultViewBase,
           typename = std::enable_if_t<Target::role == Role::Storage>>
 // TODO pass IdContinuity
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, IdContinuity::Sparse>
-AddExtend(Target&& target) {
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, DefIdCont> AddExtend(
+    Target&& target) {
   return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                          IdContinuity::Sparse>::Consume(std::move(target));
+                          DefIdCont>::Consume(std::move(target));
 }
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
@@ -309,8 +309,8 @@ template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           template <typename, typename> typename ViewBase = DefaultViewBase,
           typename = std::enable_if_t<Target::role == Role::View>>
 // TODO pass IdContinuity
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, IdContinuity::Sparse>
-AddExtend(const Target& target) {
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, DefIdCont> AddExtend(
+    const Target& target) {
   return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                          IdContinuity::Sparse>::FromView(target);
+                          DefIdCont>::FromView(target);
 }

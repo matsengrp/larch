@@ -66,11 +66,10 @@ struct MADAGStorage;
 
 template <typename Target, template <typename, typename> typename ViewBase>
 struct LongNameOf<MADAGStorage<Target, ViewBase>> {
-  using type =
-      ExtendDAGStorage<MADAGStorage<Target>, Target,
-                       Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
-                       Extend::Edges<EdgeMutations>, Extend::DAG<ReferenceSequence>,
-                       ViewBase, IdContinuity::Sparse>; // TODO change to Dense
+  using type = ExtendDAGStorage<MADAGStorage<Target>, Target,
+                                Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
+                                Extend::Edges<EdgeMutations>,
+                                Extend::DAG<ReferenceSequence>, ViewBase, DefIdCont>;
 };
 
 template <typename Target, template <typename, typename> typename ViewBase>

@@ -12,7 +12,9 @@ enum class IdContinuity { Dense, Sparse };
 
 enum class Ordering { Ordered, Unordered };
 
-template <typename Id, typename T, IdContinuity Cont = IdContinuity::Dense,
+static inline constexpr IdContinuity DefIdCont = IdContinuity::Dense;
+
+template <typename Id, typename T, IdContinuity Cont = DefIdCont,
           Ordering Ord = Ordering::Ordered>
 class IdContainer {
   static constexpr auto storage_type_helper = [] {
