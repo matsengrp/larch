@@ -79,7 +79,9 @@
        "Specify output file format (default: inferred) \n"
        "[dagbin, dag-pb]"},
       {"--seed INT", "Set seed for random number generation (default: random)"},
-      {"--thread INT", "Set number of cpu threads (default: max allowed by system)"}};
+      {"--thread INT", "Set number of cpu threads (default: max allowed by system)"},
+      {"-T,--max-time", "Exit after fixed runtime(in minutes)\n"},
+      {"-S,--autodetect-stoptime", "Set program to exit after parsimony improvement plateaus\n"}};
 
   std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
 
@@ -569,6 +571,11 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   bool uniform_subtree_root = false;
   bool collapse_empty_fragment_edges = true;
   bool final_trim = false;
+  bool plateau_stopping_condition = false;
+  size_t current_parsimony_change_window_size = 0;
+  size_t last_parsimony_change_window_size = 1;
+  size_t current_best_parsimony = -1;
+  size_t time_limit = -1;
   std::optional<uint32_t> user_seed = std::nullopt;
 
   Benchmark total_timer;
@@ -663,6 +670,14 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       user_seed = temp;
     } else if (name == "--thread") {
       ParseOption(name, params, thread_count, 1);
+    } else if (name == "-T" or name == "--max-time") {
+      if (params.empty()) {
+        std::cerr << "Runtime limit not specified.\n";
+        Fail();
+      }
+      time_limit = ParseNumber(*params.begin());
+    } else if (name == "-S" or name == "--autodetect-stoptime") {
+      plateau_stopping_condition = true;
     } else {
       std::cerr << "Unknown argument '" << name << "'.\n";
       Fail();
@@ -815,8 +830,9 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
                                    std::filesystem::copy_options::overwrite_existing);
       }
     }
+    return min_parsimony_score;
   };
-  logger(0);
+  current_best_parsimony = logger(0);
 
   bool subtrees = false;
   for (size_t i = 0; i < iter_count; ++i) {
@@ -970,7 +986,24 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     auto optimized_view = optimized_dags.back().first.View();
     optimized_view.RecomputeCompactGenomes(false);
     merge.AddDAG(optimized_view);
-    logger(i + 1);
+    auto this_parsimony = logger(i + 1);
+    if (time_limit > 0) {
+      total_timer.stop();
+      if (size_t(total_timer.durationFloorMinutes()) >= time_limit) {
+        std::cout << "Exiting early due to time limit\n";
+        break;
+      }
+    }
+    if (plateau_stopping_condition) {
+      if (this_parsimony < current_best_parsimony) {
+        last_parsimony_change_window_size = current_parsimony_change_window_size + 1;
+        current_parsimony_change_window_size = 0;
+        iter_count = i + 1 + 2*last_parsimony_change_window_size;
+        current_best_parsimony = this_parsimony;
+      } else {
+        current_parsimony_change_window_size++;
+      }
+    }
   }
 
   std::cout << "new node coefficient: " << move_coeff_nodes << "\n";
@@ -997,3 +1030,4 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   return EXIT_SUCCESS;
 }
+
