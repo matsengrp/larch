@@ -38,6 +38,8 @@ class Benchmark {
   inline std::string durationFormatMs() const;
   inline std::string durationFormatS() const;
 
+  inline auto durationFloorMinutes() const;
+
   template <typename time_scale>
   inline static std::string format(long int ticks);
   inline static std::string formatUs(long int ticks);
@@ -47,6 +49,8 @@ class Benchmark {
  private:
   TimePoint start_;
   TimePoint stop_;
+  bool isStarted_ = false;
+  bool isStopped_ = false;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -57,13 +61,19 @@ Benchmark::Benchmark(bool start_on_init) {
   }
 }
 
-void Benchmark::start() { start_ = std::chrono::high_resolution_clock::now(); }
+void Benchmark::start() { start_ = std::chrono::high_resolution_clock::now(); isStarted_ = true;}
 
-void Benchmark::stop() { stop_ = std::chrono::high_resolution_clock::now(); }
+void Benchmark::stop() { stop_ = std::chrono::high_resolution_clock::now(); isStopped_ = true;}
 
 template <typename time_scale>
 auto Benchmark::duration() const {
-  return std::chrono::duration_cast<time_scale>(stop_ - start_).count();
+  if (isStarted_) {
+    if (isStopped_) {
+      return std::chrono::duration_cast<time_scale>(stop_ - start_).count();
+    }
+    return std::chrono::duration_cast<time_scale>(std::chrono::high_resolution_clock::now() - start_).count();
+  }
+  return std::chrono::duration_cast<time_scale>(start_ - start_).count();
 }
 
 auto Benchmark::durationUs() const { return duration<std::chrono::microseconds>(); }
@@ -146,3 +156,13 @@ std::string Benchmark::formatMs(long int ticks) {
 std::string Benchmark::formatS(long int ticks) {
   return format<std::chrono::seconds>(ticks);
 }
+auto Benchmark::durationFloorMinutes() const {
+  if (isStarted_) {
+    if (isStopped_) {
+      return std::chrono::duration_cast<std::chrono::minutes>(stop_ - start_).count();
+    }
+    return std::chrono::duration_cast<std::chrono::minutes>(std::chrono::high_resolution_clock::now() - start_).count();
+  }
+  return std::chrono::duration_cast<std::chrono::minutes>(start_ - start_).count();
+}
+

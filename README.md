@@ -134,6 +134,8 @@ larch-usher options:
 - `--quiet` [Default: write intermediate files] Do not write intermediate protobuf file at each iteration.
 - `--input-format` [Default: format inferred by file extension] Specify the format of the input file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `json`, `dag-json`)
 - `--output-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`)
+- `-S` Enable smart stopping: larch-usher will terminate when parsimony improvement ceases to occur.
+- `-T` specify a hard time limit after which larch-usher will terminate.
 
 ### dag-util
 
@@ -143,7 +145,7 @@ From the `larch/build/` directory:
 ```
 This executable takes a list of protobuf files and merges the resulting DAGs together into one.
 
-merge options:
+dag-util options:
 - `-i,--input` Filepath to the input Tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON, Dagbin).
 - `-o,--output` [Default: does not print output] Filepath to the output Tree/DAG (accepted file formats are: MADAG protobuf, Dagbin).
 - `-r,--MAT-refseq-file` [REQUIRED if input protobufs are MAT protobuf format] Filepath to json reference sequence.
