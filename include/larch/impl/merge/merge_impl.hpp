@@ -83,7 +83,8 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   ResultDAG().InitializeEdges(result_edges_.size());
   idxs.resize(added_edges.size());
   std::iota(idxs.begin(), idxs.end(), 0);
-  ParallelForEach(idxs, [&](size_t i) { BuildResult(i, added_edges, edge_id); });
+  SeqForEach(  // FIXME ParallelForEach
+      idxs, [&](size_t i) { BuildResult(i, added_edges, edge_id); });  // FIXME parallel
 
   if (was_empty) {
     ResultDAG().BuildConnections();
