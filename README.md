@@ -33,19 +33,16 @@ singularity build larch-singularity.sif larch-singularity.def
 singularity shell larch-singularity.sif --net
 ```
 
-To setup a conda environment capable of building Larch, use:
-
-```shell
-conda create -n larch
-conda activate larch
-conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib
-```
-
-To setup a conda environment capable of building Larch including development tools, create `larch-dev` using the environment
-file provided:
+To setup a conda environment capable of building Larch, create `larch` using the standard environment file provided:
 
 ```shell
 conda env create -f environment.yml
+```
+
+To setup a conda environment capable of building Larch including development tools, create `larch-dev` using the development environment file provided:
+
+```shell
+conda env create -f environment-dev.yml
 ```
 
 Building

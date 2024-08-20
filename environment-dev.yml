@@ -1,9 +1,10 @@
-name: larch
+name: larch-dev
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
+  # larch
   - cmake=3.19.6
   - make
   - cxx-compiler
@@ -17,3 +18,16 @@ dependencies:
   - yasm
   - ucx
   - zlib
+  # development
+  - git
+  - mafft
+  - python
+  - rsync
+  - wget
+  - openssh
+  - gdb
+  - bzip2
+  - backports.lzma
+  - protobuf=3.12.3
+  # conda packaging
+  - conda-build
