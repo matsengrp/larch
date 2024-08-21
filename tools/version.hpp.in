@@ -1,0 +1,5 @@
+#pragma once
+
+#define VERSION_NUMBER "@VERSION_NUMBER@"
+#define GIT_COMMIT_HASH "@GIT_COMMIT_HASH@"
+#define GIT_COMMIT_DATE "@GIT_COMMIT_DATE@"

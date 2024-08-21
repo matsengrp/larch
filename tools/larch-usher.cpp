@@ -583,6 +583,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
       Usage();
+    } else if (name == "--version") {
+      Version();
     } else if (name == "-i" or name == "--input") {
       ParseOption(name, params, input_dag_path, 1);
     } else if (name == "-o" or name == "--output") {

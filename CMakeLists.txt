@@ -181,6 +181,8 @@ function(larch_executable PRODUCT)
   target_compile_options(${PRODUCT} PRIVATE ${STRICT_WARNINGS})
   larch_link_opts(${PRODUCT})
   target_link_libraries(${PRODUCT} PUBLIC larch)
+
+  include(${CMAKE_SOURCE_DIR}/version.cmake)
 endfunction()
 
 add_library(larch
