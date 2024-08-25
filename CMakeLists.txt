@@ -16,11 +16,13 @@ if(USE_USHER)
   FetchContent_Declare(oneTBB-src
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
     GIT_TAG 2019_U9
+    GIT_PROGRESS true
   )
   FetchContent_MakeAvailable(oneTBB-src)
 
   include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
   tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
+
   find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
   find_package(MPI REQUIRED)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
@@ -85,6 +87,12 @@ if(${USE_HTSLIB})
     INSTALL_COMMAND make install
   )
 endif()
+
+add_custom_target(generate_version_h ALL
+  COMMAND cd ${CMAKE_SOURCE_DIR} && ${CMAKE_COMMAND} -P version.cmake
+  COMMENT "Generating version.hpp with version information"
+  VERBATIM
+)
 
 find_package(ZLIB)
 
@@ -181,8 +189,7 @@ function(larch_executable PRODUCT)
   target_compile_options(${PRODUCT} PRIVATE ${STRICT_WARNINGS})
   larch_link_opts(${PRODUCT})
   target_link_libraries(${PRODUCT} PUBLIC larch)
-
-  include(${CMAKE_SOURCE_DIR}/version.cmake)
+  add_dependencies(${PRODUCT} generate_version_h)
 endfunction()
 
 add_library(larch
@@ -273,11 +280,11 @@ if(${USE_USHER})
   )
 endif()
 
-larch_executable(dag-util
-  tools/dag-util.cpp)
+larch_executable(larch-dagutil
+  tools/larch-dagutil.cpp)
 
-larch_executable(dag2dot
-  tools/dag2dot.cpp)
+larch_executable(larch-dag2dot
+  tools/larch-dag2dot.cpp)
 
 if(${USE_USHER})
   larch_executable(larch-usher

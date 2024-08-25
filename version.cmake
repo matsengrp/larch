@@ -1,5 +1,8 @@
-set(VERSION_FILE "${CMAKE_SOURCE_DIR}/VERSION")
-file(READ "${VERSION_FILE}" VERSION_NUMBER)
+# set the version from VERSION file, and the build commit and date from git repo
+
+message(STATUS "cmake source directory ${CMAKE_SOURCE_DIR}")
+
+file(READ "${CMAKE_SOURCE_DIR}/VERSION" VERSION_NUMBER)
 string(STRIP "${VERSION_NUMBER}" VERSION_NUMBER)
 
 execute_process(
@@ -17,7 +20,7 @@ execute_process(
 )
 
 configure_file(
-    "${CMAKE_SOURCE_DIR}/tools/version.hpp.in"
-    "${CMAKE_SOURCE_DIR}/tools/version.hpp"
+    "tools/version.hpp.in"
+    "tools/version.hpp"
     @ONLY
 )

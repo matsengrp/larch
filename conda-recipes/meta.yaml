@@ -1,0 +1,104 @@
+# {{% set name = "larch" %}}
+# {{% set full_name = "larch-usher" %}}
+# {{% set version = "0.1" %}}
+
+package:
+  name: larch
+  version: "0.1"
+
+source:
+  git_url: https://github.com/matsengrp/larch.git
+  git_rev: conda-packaging
+  git_submodules: true
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - cmake=3.19.6
+    - make
+    # - cxx-compiler
+    - openmpi
+    - openmpi-mpicc
+    - openmpi-mpicxx
+    - boost-cpp=1.76
+    - automake
+    - autoconf
+    - libtool
+    - yasm
+    - ucx
+    - zlib
+
+    - gcc
+    - gxx
+    - binutils
+    - binutils_impl_linux-64
+    - binutils_linux-64
+    - gdb
+    - libstdcxx-ng
+    - libgcc-ng
+    - libgomp
+    - libgfortran-ng
+    - libgfortran5
+    - libedit
+    - libffi
+    - expat
+    - libuuid
+    - libiconv
+    - libzlib
+    - perl
+    - gettext
+    - libasprintf
+    - libtool
+    - kernel-headers_linux-64
+    - rdma-core
+    - openssl
+    - keyutils
+
+  run:
+    - openmpi
+    - openmpi-mpicc
+    - openmpi-mpicxx
+    - boost-cpp=1.76
+    - ucx
+    - zlib
+
+    - binutils
+    - binutils_impl_linux-64
+    - binutils_linux-64
+    - gdb
+    - libstdcxx-ng
+    - libgcc-ng
+    - libgomp
+    - libgfortran-ng
+    - libgfortran5
+    - libedit
+    - libffi
+    - expat
+    - libuuid
+    - libiconv
+    - libzlib
+    - perl
+    - gettext
+    - libasprintf
+    - libtool
+    - kernel-headers_linux-64
+    - rdma-core
+    - openssl
+    - keyutils
+
+# test:
+#   commands:
+#     - larch-usher --version
+
+about:
+  home: https://github.com/matsengrp/larch
+  license: GNU General Public License
+  license_family: GPL
+  # license_file: LICENSE.txt
+  summary: 'Tool for exploring tree space of DAG/tree through SPR moves'
+  description: |
+    Tool for exploring tree space of DAG/tree through SPR moves
+  doc_url: https://github.com/matsengrp/larch/blob/main/README.md
+  dev_url: https://github.com/matsengrp/larch

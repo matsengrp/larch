@@ -10,7 +10,7 @@ dependencies:
   - openmpi
   - openmpi-mpicc
   - openmpi-mpicxx
-  - boost-cpp
+  - boost-cpp=1.76
   - automake
   - autoconf
   - libtool
