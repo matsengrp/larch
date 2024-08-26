@@ -4,7 +4,7 @@ set(Protobuf_USE_STATIC_LIBS ON)
 cmake_policy(SET CMP0026 OLD)
 
 if(NOT DEFINED CMAKE_NUM_THREADS)
-  set(CMAKE_NUM_THREADS "16")
+  set(CMAKE_NUM_THREADS "8")
 endif()
 
 FetchContent_Declare(
