@@ -7,9 +7,7 @@ package:
   version: "0.1"
 
 source:
-  git_url: https://github.com/matsengrp/larch.git
-  git_rev: conda-packaging
-  git_submodules: true
+  path: .
 
 build:
   number: 0
@@ -96,7 +94,7 @@ about:
   home: https://github.com/matsengrp/larch
   license: GNU General Public License
   license_family: GPL
-  # license_file: LICENSE.txt
+  license_file: LICENSE.txt
   summary: 'Tool for exploring tree space of DAG/tree through SPR moves'
   description: |
     Tool for exploring tree space of DAG/tree through SPR moves
