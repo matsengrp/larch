@@ -96,7 +96,7 @@ about:
   home: https://github.com/matsengrp/larch
   license: GNU General Public License
   license_family: GPL
-  license_file: LICENSE.txt
+  # license_file: LICENSE.txt
   summary: 'Tool for exploring tree space of DAG/tree through SPR moves'
   description: |
     Tool for exploring tree space of DAG/tree through SPR moves
