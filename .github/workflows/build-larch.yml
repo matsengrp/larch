@@ -21,7 +21,7 @@ jobs:
       - name: Create conda env
         run: |
           source ~/miniconda/etc/profile.d/conda.sh
-          conda env create -f environment.yml
+          conda env create -f environment-dev.yml
       - name: Build (cmake step)
         run: |
           source ~/miniconda/etc/profile.d/conda.sh

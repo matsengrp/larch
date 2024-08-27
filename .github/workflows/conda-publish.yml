@@ -17,15 +17,16 @@ jobs:
         run: |
           curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh > Miniconda3-latest-Linux-x86_64.sh
           bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/miniconda
-          ~/miniconda/bin/conda update -n base -c defaults conda conda-build anaconda-client
-      - name: Build with conda-build
+          ~/miniconda/bin/conda update -n base -c defaults conda
+      - name: Install conda-build
         run: |
-          conda-build .
-          mkdir conda-build-test
-          cd conda-build-test
-          ln -s ../data
-          larch-usher --version
-      # - name: Export to conda channel
-      #   run: |
-      #     anaconda login
+          source ~/miniconda/etc/profile.d/conda.sh
+          conda env create -f environment-dev.yml
+      - name: Build Conda package
+        run: conda-build . --output-folder=./conda-bld
+      - name: Upload Conda package to Anaconda Cloud
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          anaconda upload --all ./conda-bld/*
 

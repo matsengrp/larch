@@ -31,3 +31,4 @@ dependencies:
   - protobuf=3.12.3
   # conda packaging
   - conda-build
+  - anaconda-client
