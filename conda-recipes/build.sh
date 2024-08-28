@@ -10,7 +10,7 @@ cd build
 echo "Build directory contents:"
 ls -l
 
-cmake -DCMAKE_BUILD_TYPE=Release -DUSE_USHER=1 ..
+cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_USHER=1 ..
 make
 
 mkdir -p $PREFIX/lib
