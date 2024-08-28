@@ -9,7 +9,7 @@ Requirements
 For Ubuntu 18.04 LTS the following commands installs the requirements:
 
 ```shell
-sudo apt install --no-install-recommends git cmake make g++ mpi-default-dev libprotobuf-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-iostreams-dev libboost-date-time-dev protobuf-compiler automake autoconf libtool nasm
+sudo apt install --no-install-recommends git git-lfs cmake make g++ mpi-default-dev libprotobuf-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-iostreams-dev libboost-date-time-dev protobuf-compiler automake autoconf libtool nasm
 ```
 
 To get a recent cmake, download from `https://cmake.org/download/`, for example:

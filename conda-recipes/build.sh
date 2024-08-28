@@ -1,17 +1,11 @@
 #!/bin/bash
 
-echo "Current directory: $(pwd)"
-ls -l
-
 rm -rf build
-
-mkdir -p build
+mkdir build
 cd build
-echo "Build directory contents:"
-ls -l
 
-cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_USHER=1 ..
-make
+cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE:-"Release"} -DUSE_USHER=1 ..
+make -j${NUM_THREADS:-"1"}
 
 mkdir -p $PREFIX/lib
 cp $(find . -name *.so*) $PREFIX/lib/

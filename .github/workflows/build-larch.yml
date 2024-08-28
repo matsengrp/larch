@@ -1,4 +1,5 @@
-name: Build larch and run tests
+name: Build larch on linux and run tests
+
 on:
   workflow_dispatch:
 
@@ -13,17 +14,17 @@ jobs:
       - name: Prepare build environment
         run: |
           sudo apt-get update
-          sudo apt-get install build-essential cmake zlib1g-dev python3-pip python3-pytest
+          sudo apt-get install build-essential zlib1g-dev python3-pip python3-pytest git git-lfs
       - name: Set up Conda
         uses: conda-incubator/setup-miniconda@v2
         with:
           auto-activate-base: false
       - name: Create conda env
         run: |
-          conda env create -f environment.yml
+          conda env create -f environment-dev.yml
       - name: Build (cmake step)
         run: |
-          conda activate larch-devmake 
+          conda activate larch-dev
           cd build
           export CMAKE_NUM_THREADS="8"
           cmake -DCMAKE_BUILD_TYPE=Debug ..
@@ -31,7 +32,7 @@ jobs:
         run: |
           conda activate larch-dev
           cd build
-          make -j20
+          make -j8
           ln -s ../data
       - name: Run tests
         run: |

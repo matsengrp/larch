@@ -18,6 +18,7 @@ dependencies:
   - yasm
   - ucx
   - zlib
+  - git-lfs
   # development
   - git
   - mafft

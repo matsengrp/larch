@@ -1,20 +1,22 @@
-
 {% set name = "larch" %}
 {% set version = environ.get('VERSION', '0.0.0') %}
 {% set git_rev = environ.get('GIT_COMMIT', 'main') %}
+{% set git_src = environ.get('GIT_SRC', 'remote') %}
 
 package:
   name: {{ name }}
   version: {{ version }}
 
 source:
+  {% if git_src == 'local' %}
   # method 1: use local repo
-  # path: ../
+  path: ../
+  {% else %}
   # method 2: use online repo
-  git_url: git@github.com:matsengrp/larch.git
-  # git_rev: {{ git_rev }}
-  git_rev: main
+  git_url: https://github.com/matsengrp/larch.git
+  git_rev: {{ git_rev }}
   git_submodules: true
+  {% endif %}
 
 build:
   number: 0
@@ -35,6 +37,7 @@ requirements:
     - yasm
     - ucx
     - zlib
+    - git-lfs
 
     - gcc
     - gxx
@@ -70,35 +73,45 @@ requirements:
     - ucx
     - zlib
 
-    - binutils
-    - binutils_impl_linux-64
-    - binutils_linux-64
-    - gdb
-    - libstdcxx-ng
-    - libgcc-ng
-    - libgomp
-    - libgfortran-ng
-    - libgfortran5
-    - libedit
-    - libffi
-    - expat
-    - libuuid
-    - libiconv
-    - libzlib
-    - perl
-    - gettext
-    - libasprintf
-    - libtool
-    - kernel-headers_linux-64
-    - rdma-core
-    - openssl
-    - keyutils
+    # - binutils
+    # - binutils_impl_linux-64
+    # - binutils_linux-64
+    # - gdb
+    # - libstdcxx-ng
+    # - libgcc-ng
+    # - libgomp
+    # - libgfortran-ng
+    # - libgfortran5
+    # - libedit
+    # - libffi
+    # - expat
+    # - libuuid
+    # - libiconv
+    # - libzlib
+    # - perl
+    # - gettext
+    # - libasprintf
+    # - libtool
+    # - kernel-headers_linux-64
+    # - rdma-core
+    # - openssl
+    # - keyutils
+  
+  host:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
 
 test:
   commands:
     - larch-usher --version
-    - ln -s ${SRC_DIR}/data 
-    - larch-test -tag slow
+    # - ln -s ${SRC_DIR}/data 
+    # - larch-test -tag slow
+
+extra:
+  system:
+    apt:
+      - git
+      - git-lfs
 
 about:
   home: https://github.com/matsengrp/larch
