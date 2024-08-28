@@ -280,10 +280,10 @@ if(${USE_USHER})
   )
 endif()
 
-larch_executable(larch-dagutil
+larch_executable(dag-util
   tools/larch-dagutil.cpp)
 
-larch_executable(larch-dag2dot
+larch_executable(dag2dot
   tools/larch-dag2dot.cpp)
 
 if(${USE_USHER})

@@ -16,14 +16,9 @@ if(GIT_TAG_VERSION)
 else()
     file(READ "${CMAKE_SOURCE_DIR}/VERSION" VERSION_NUMBER)
     string(STRIP "${VERSION_NUMBER}" VERSION_NUMBER)
-    set(VERSION_NUMBER "${VERSION_NUMBER}-dev")
+    set(VERSION_NUMBER "v${VERSION_NUMBER}")
     message("using version from VERSION file: ${VERSION_NUMBER}")
 endif()
-
-# get version from VERSION file
-# file(READ "${CMAKE_SOURCE_DIR}/VERSION" VERSION_NUMBER)
-# string(STRIP "${VERSION_NUMBER}" VERSION_NUMBER)
-# set(VERSION_NUMBER "${VERSION_NUMBER}")
 
 # get git hash
 execute_process(
@@ -41,7 +36,7 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# configure version file
+# output version details to file
 configure_file(
     "tools/version.hpp.in"
     "tools/version.hpp"

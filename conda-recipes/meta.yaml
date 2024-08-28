@@ -1,21 +1,17 @@
+
 {% set name = "larch" %}
-{% set full_name = "larch-usher" %}
-{% set version = "0.1-beta" %}
-# {% set version = "0.1" %}
+{% set version = environ.get('VERSION', '0.0.0') %}
 
 package:
   name: {{ name }}
   version: {{ version }}
 
 source:
-  # path: "."
-  git_url: https://github.com/matsengrp/larch.git
-  # git_rev: conda-packaging
-  git-rev: main
-  git_submodules: true
+  path: ../
 
 build:
   number: 0
+  skip: true # [win]
 
 requirements:
   build:
@@ -94,6 +90,8 @@ requirements:
 test:
   commands:
     - larch-usher --version
+    - ln -s ${SRC_DIR}/data 
+    - larch-test -tag slow
 
 about:
   home: https://github.com/matsengrp/larch
