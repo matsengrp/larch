@@ -9,11 +9,11 @@ package:
 
 source:
   # method 1: use local repo
-  # path: ../
+  path: ../
   # method 2: use online repo
-  git_url: git@github.com:matsengrp/larch.git
-  git_rev: {{ git_rev }}
-  git_submodules: true
+  # git_url: git@github.com:matsengrp/larch.git
+  # git_rev: {{ git_rev }}
+  # git_submodules: true
 
 build:
   number: 0
