@@ -1,6 +1,7 @@
 name: Build larch and run tests
 on:
   workflow_dispatch:
+    
 jobs:
   build-larch:
     runs-on: ubuntu-latest
