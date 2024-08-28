@@ -26,13 +26,13 @@ jobs:
         run: |
           conda activate larch-dev
           cd build
-          export CMAKE_NUM_THREADS="8"
+          export CMAKE_NUM_THREADS="4"
           cmake -DCMAKE_BUILD_TYPE=Debug ..
       - name: Build (make step)
         run: |
           conda activate larch-dev
           cd build
-          make -j8
+          make -j4
           ln -s ../data
       - name: Run tests
         run: |

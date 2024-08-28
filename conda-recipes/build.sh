@@ -5,7 +5,7 @@ mkdir build
 cd build
 
 cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE:-"Release"} -DUSE_USHER=1 ..
-make -j${NUM_THREADS:-"1"}
+make -j${NUM_THREADS:-"4"}
 
 mkdir -p $PREFIX/lib
 cp $(find . -name *.so*) $PREFIX/lib/
