@@ -7,3 +7,5 @@ tags
 .kak*
 cscope.*
 *.code-workspace
+
+tools/version.hpp
