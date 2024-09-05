@@ -107,7 +107,7 @@ void test_condensed_mat_view() {
   mv.SetReferenceSequence(dag.GetReferenceSequence());
   mv.BuildRootAndLeafs();
 
-  // FIXME mv.GetRoot().Validate(true, false);
+  mv.GetRoot().Validate(true, false);
 
   // ERROR: calling RecomputeCompactGenomes gives an error message:
   // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'

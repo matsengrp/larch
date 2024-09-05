@@ -169,7 +169,7 @@ void ValidateImpl(Node node, StorageValidator&& storage,
   if (node.IsUA()) {
     // Assert(dag.HaveUA());
     Assert(node.GetId() == dag.GetRoot());
-  } else {
+  } else if (allow_dag) {
     size_t children_count = 0;
     for ([[maybe_unused]] auto child : node.GetChildren()) {
       ++children_count;

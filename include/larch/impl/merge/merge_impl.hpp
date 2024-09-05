@@ -32,8 +32,10 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   // });
 #endif
 
-  constexpr IdContinuity id_continuity = std::remove_reference_t<decltype(dags.at(
-      0))>::template id_continuity<Component::Node>;
+  constexpr IdContinuity id_continuity = IdContinuity::Sparse;
+  // FIXME constexpr IdContinuity id_continuity =
+  // std::remove_reference_t<decltype(dags.at(
+  //     0))>::template id_continuity<Component::Node>;
   std::vector<IdContainer<NodeId, NodeLabel, id_continuity, Ordering::Ordered>>
       dags_labels;
   dags_labels.resize(dags.size());
@@ -41,8 +43,9 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   ParallelForEach(idxs,
                   [&](size_t i) { MergeCompactGenomes(i, dags, below, dags_labels); });
 
-  ParallelForEach(idxs,
-                  [&](size_t i) { ComputeLeafSets(i, dags, below, dags_labels); });
+  SeqForEach(idxs, [&](size_t i) {
+    ComputeLeafSets(i, dags, below, dags_labels);
+  });  // FIXME Parallel
 
 #ifndef NDEBUG
   ParallelForEach(idxs, [&](size_t i) {
@@ -218,8 +221,8 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
   auto dag = GetFullDAG(dags.at(i));
   NodeLabelsContainer& labels = dags_labels.at(i);
   labels.reserve(dag.GetNodesCount());
-  using ComputedLSType =
-      IdContainer<NodeId, LeafSet, IdContinuity::Dense, Ordering::Ordered>;
+  using ComputedLSType = IdContainer<NodeId, LeafSet, IdContinuity::Sparse,
+                                     Ordering::Ordered>;  // FIXME Dense
   ComputedLSType computed_ls = LeafSet::ComputeLeafSets<ComputedLSType>(dag, labels);
   for (auto node : dag.GetNodes()) {
     if (below.value != NoId and node.IsUA()) {

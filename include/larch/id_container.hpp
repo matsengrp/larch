@@ -168,9 +168,9 @@ class IdContainer {
     } else {
       auto it = data_.find(key);
       if (it == data_.end()) {
-        return std::addressof(data_[key.value]);
+        return std::addressof(data_[key]);
       }
-      return std::addressof(*it);
+      return std::addressof(it->second);
     }
   }
 
@@ -186,7 +186,7 @@ class IdContainer {
         Fail("Out of bounds for sparse IDs");
         return nullptr;
       }
-      return std::addressof(*it);
+      return std::addressof(it->second);
     }
   }
 
