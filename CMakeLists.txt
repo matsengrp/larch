@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(larch)
 
-option(USE_USHER "Use matOptimize" yes)
-
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
@@ -10,12 +8,28 @@ endif()
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
-include(FetchContent)
+option(USE_USHER "Use matOptimize" yes)
 
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+    if(USE_USHER)
+        set(TBB_VERSION "2019_U9")
+    else()
+        set(TBB_VERSION "v2021.11.0")
+    endif()
+elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    set(TBB_VERSION "2020_U3")
+else()
+    message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
+message("cmake system architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+message("using usher: ${USE_USHER}")
+
+include(FetchContent)
 if(USE_USHER)
   FetchContent_Declare(oneTBB-src
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-    GIT_TAG 2019_U9
+    GIT_TAG ${TBB_VERSION}
     GIT_PROGRESS true
   )
   FetchContent_MakeAvailable(oneTBB-src)
@@ -29,7 +43,7 @@ if(USE_USHER)
 else()
   FetchContent_Declare(oneTBB
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-    GIT_TAG v2021.11.0
+    GIT_TAG ${TBB_VERSION}
     GIT_SHALLOW true
     GIT_PROGRESS true
     UPDATE_DISCONNECTED true
