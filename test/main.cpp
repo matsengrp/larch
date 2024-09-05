@@ -4,6 +4,8 @@
 #include <chrono>
 #include <sstream>
 #include <set>
+#include <filesystem>
+#include <cassert>
 
 #ifdef USE_USHER
 #include <mpi.h>
@@ -82,6 +84,8 @@ int main(int argc, char* argv[]) {
   bool no_catch = false;
   bool opt_list_names = false;
   bool opt_test_range = false;
+
+  assert(std::filesystem::exists("./data/") && "Test data folder './data' not found!");
 
   std::set<int> range;
   std::regex regex{".*"};

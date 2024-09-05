@@ -127,7 +127,7 @@ static void test_rf_distance_hand_computed_example() {
   merge1.AddDAGs(std::vector{dag1});
   Merge merge2(dag1.GetReferenceSequence());
   merge2.AddDAGs(std::vector{dag1, dag2});
-  auto true_dist = dag1.GetEdgesCount() + dag2.GetEdgesCount() -
+  [[maybe_unused]] auto true_dist = dag1.GetEdgesCount() + dag2.GetEdgesCount() -
                    dag1.GetLeafs().size() - dag2.GetLeafs().size() - 2;
   Assert(get_rf_distance(merge1, merge2) == true_dist);
 
@@ -169,7 +169,7 @@ static void test_rf_distance_different_weight_ops() {
   true_dist_map[{2, 3}] = true_dist_map[{3, 2}] = 7;
 
   // Use hand-computed distances to find rf-distance types on merged MADAGs.
-  auto compute_true_dist = [&](std::vector<int> compute_ids, std::vector<int> ref_ids,
+  [[maybe_unused]] auto compute_true_dist = [&](std::vector<int> compute_ids, std::vector<int> ref_ids,
                                RFDistanceType rf_dist_type, bool do_print = false) {
     ArbitraryInt total = 0;
     std::vector<ArbitraryInt> vec;

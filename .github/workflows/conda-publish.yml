@@ -1,4 +1,4 @@
-name: Build larch and publish to Anaconda Cloud
+name: Build larch on linux and publish to Anaconda Cloud
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ jobs:
       - name: Prepare build environment
         run: |
           sudo apt-get update
-          sudo apt-get install build-essential cmake zlib1g-dev python3-pip python3-pytest
+          sudo apt-get install build-essential zlib1g-dev python3-pip python3-pytest git git-lfs
       - name: Set up Conda
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -23,11 +23,20 @@ jobs:
         run: |
           conda env update -f environment-dev.yml
           conda activate larch-dev
-      - name: Build Conda package
+      - name: Build conda package
         run: |
           conda activate larch-dev
           export VERSION=$(cat ./VERSION)
-          conda-build . --output-folder=./conda-bld
+          conda-build . --output-folder=./build-conda
+      - name: Test conda package
+        run: |
+          conda create -n larch-conda
+          conda activate larch-conda
+          conda install --use-local larch
+          mkdir build-test
+          cd build-test 
+          ln -s ../data
+          larch-test -tag slow
       - name: Upload Conda package to Anaconda Cloud
         env:
           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
