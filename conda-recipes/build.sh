@@ -4,7 +4,7 @@ rm -rf build
 mkdir build
 cd build
 
-cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE:-"Release"} -DUSE_USHER=1 ..
+cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE:-"Release"} -DUSE_USHER=${USE_USHER:-"ON"} ..
 make -j${NUM_THREADS:-"4"}
 
 mkdir -p $PREFIX/lib

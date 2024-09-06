@@ -1,7 +1,7 @@
 {% set name = "larch" %}
 {% set version = environ.get('VERSION', '0.0.0') %}
 {% set git_rev = environ.get('GIT_COMMIT', 'main') %}
-{% set git_src = environ.get('GIT_SRC', 'remote') %}
+{% set git_src = environ.get('GIT_SRC', 'local') %}
 
 package:
   name: {{ name }}
