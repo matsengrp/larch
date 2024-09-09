@@ -264,6 +264,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
         }
 
         if (child_iter == mat_node->children.end()) {
+          started = false;
           // initialize
           if (condensed) {
             child_iter = mat_node->children.begin();
@@ -285,25 +286,32 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
           return;
         }
 
-        if (condensed) {
-          if (++child_iter != mat_node->children.end()) {
-            c_node_id = (*child_iter)->node_id;
-          } else {
-            done = true;
-          }
-        } else {
-          if (not advance_condensed()) {
-            if (not advance_child()) {
-              done = true;
+        if (started) {
+          if (condensed) {
+            if (++child_iter != mat_node->children.end()) {
+              c_node_id = (*child_iter)->node_id;
             } else {
-              cn_str = cn_id_iter->second.begin();
-              if (cn_str == cn_id_iter->second.end()) {
+              done = true;
+            }
+          } else {
+            if (not advance_condensed()) {
+              if (not advance_child()) {
                 done = true;
+              } else {
+                cn_str = cn_id_iter->second.begin();
+                if (cn_str == cn_id_iter->second.end()) {
+                  done = true;
+                }
               }
             }
+            if (not done) {
+              c_node_id = storage.sampleid_to_mat_node_id_map_.at(*cn_str);
+            }
           }
-          if (not done) {
-            c_node_id = storage.sampleid_to_mat_node_id_map_.at(*cn_str);
+        } else {
+          started = true;
+          if (child_iter == mat_node->children.end()) {
+            done = true;
           }
         }
       }
@@ -316,6 +324,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       decltype(cn_id_iter->second.begin()) cn_str = {};
       size_t c_node_id = NoId;
       bool done = false;
+      bool started = false;
 
      private:
       bool advance_condensed() {
