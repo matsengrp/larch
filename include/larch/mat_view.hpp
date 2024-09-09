@@ -338,7 +338,10 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 
     return ranges::views::iota(size_t{0}) |
            ranges::views::take_while([is_ua, mat_node](size_t) {
-             if (is_ua or mat_node == nullptr or mat_node->children.empty()) {
+             if (is_ua) {
+               return true;
+             }
+             if (mat_node == nullptr or mat_node->children.empty()) {
                return false;
              } else {
                return true;
@@ -347,7 +350,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
            ranges::views::transform(
                [i = Iter{CheckIsCondensed<decltype(dag)>::value, mat_node,
                          dag_node.template GetFeatureExtraStorage<MATNodeStorage>()}](
-                   size_t) mutable -> const Iter& {
+                   size_t) mutable -> Iter& {
                  if (i.mat_node != nullptr) {
                    i.advance();
                  }
@@ -356,6 +359,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
            ranges::views::take_while([](auto& i) { return not i.done; }) |
            ranges::views::transform([is_ua, dag_node](auto& i) {
              if (is_ua) {
+               i.done = true;
                return Edge{dag_node.GetDAG(),
                            EdgeId{dag_node.GetFirstChild().GetId().value}};
              } else {
