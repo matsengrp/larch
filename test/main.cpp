@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
   bool opt_list_names = false;
   bool opt_test_range = false;
 
-  assert(std::filesystem::exists("./data/") && "Test data folder './data' not found!");
+  assert(std::filesystem::exists("./data/") && "Test data folder not found.");
 
   std::set<int> range;
   std::regex regex{".*"};
