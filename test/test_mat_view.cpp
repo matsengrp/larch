@@ -20,6 +20,16 @@ void test_mat_view_impl(DAGView dag) {
   // check BuildMAT
   check_MAT_MADAG_Eq(mat, dag);
 
+  // condense MAT prior to building a MAT View
+  Original_State_t origin_states;
+  check_samples(mat.root, origin_states, &mat);
+  reassign_states(mat, origin_states);
+
+  // condense MAT leaves
+  std::vector<std::string> condense_arg{};
+  mat.condense_leaves(condense_arg);
+  mat.fix_node_idx();
+
   std::cout << "\nDAG view\n";
   MADAGToDOT(dag, std::cout);
 
@@ -47,7 +57,9 @@ void test_mat_view_impl(DAGView dag) {
   auto merge_mv = ExtendDAGStorage<void, decltype(mv), Extend::Nodes<SampleId>,
                                    Extend::Empty<>, Extend::Empty<>, DefaultViewBase,
                                    IdContinuity::Sparse>::FromView(mv);
+  merge_mv.View().RecomputeCompactGenomes<IdContinuity::Sparse>(true);
   merge_mv.View().SampleIdsFromCG();
+
   Merge merge(mv.GetReferenceSequence());
 
   std::cout << "\n\nMAT view\n";
@@ -108,9 +120,6 @@ void test_condensed_mat_view() {
   mv.BuildRootAndLeafs();
 
   mv.GetRoot().Validate(true, false);
-
-  // ERROR: calling RecomputeCompactGenomes gives an error message:
-  // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'
   mv.RecomputeCompactGenomes<IdContinuity::Sparse>(true);
 
   auto umv = mv.GetUncondensed();
@@ -118,9 +127,6 @@ void test_condensed_mat_view() {
   auto merge_umv = ExtendDAGStorage<void, decltype(umv), Extend::Nodes<SampleId>,
                                     Extend::Empty<>, Extend::Empty<>, DefaultViewBase,
                                     IdContinuity::Sparse>::FromView(umv);
-
-  // ERROR: calling RecomputeCompactGenomes gives an error message:
-  // 'vector::_M_range_check: __n (which is 12) >= this->size() (which is 12)'
   umv.RecomputeCompactGenomes<IdContinuity::Sparse>(true);
 
   merge_umv.View().SampleIdsFromCG();
@@ -167,10 +173,10 @@ void test_sample_dag() {
 
 [[maybe_unused]] static const auto test_added1 =
     add_test({[]() {
-                test_mat_view("data/startmat/startmat_no_ancestral.pb.gz",
-                              "data/startmat/refseq.txt.gz", "");
+                test_mat_view("data/seedtree/seedtree.pb.gz",
+                              "data/seedtree/refseq.txt.gz", "");
               },
-              "MATView: startmat"});
+              "MATView: seedtree"});
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[]() { test_condensed_mat_view(); }, "MATView: condensing"});

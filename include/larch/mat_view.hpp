@@ -777,15 +777,11 @@ struct MATElementsContainerBase {
 
   template <typename VT>
   size_t GetCount() const {
-    size_t count = GetMAT().get_size_upper();
+    size_t count = GetMAT().get_node_idx() + 2;
+
     if constexpr (C == Component::Edge) {
       Assert(count > 0);
       count -= 1;
-    }
-    if constexpr (CheckIsCondensed<VT>::value) {
-      count += extra_storage_.condensed_nodes_.size();
-      Assert(count > extra_storage_.condensed_nodes_count_);
-      count -= extra_storage_.condensed_nodes_count_;
     }
     return count;
   }
