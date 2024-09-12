@@ -2,6 +2,8 @@
 
 #include "larch/mat_conversion.hpp"
 
+#define MV_UA_NODE_ID 100000
+
 template <typename DAGStorageType, typename DAGViewType>
 struct CondensedViewBase : DefaultViewBase<DAGStorageType, DAGViewType> {
   static constexpr inline bool is_condensed = true;
@@ -99,7 +101,7 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
 
     node_storage.mat_tree_ = mat;
     edge_storage.mat_tree_ = mat;
-    size_t ua_node_id = 0;
+    size_t ua_node_id = MV_UA_NODE_ID;
     size_t num_nodes = mat->get_size_upper();
     Assert(mat->get_node(ua_node_id) == nullptr);
     node_storage.ua_node_id_ = NodeId{ua_node_id};
@@ -838,6 +840,13 @@ struct MATElementsContainerBase {
     }
     if constexpr (C == Component::Node) {
       return ranges::views::iota(size_t{0}, iota_max) |
+             ranges::views::transform([](size_t i) -> size_t {
+               if (i == 0) {
+                 return MV_UA_NODE_ID;
+               } else {
+                 return i - 1;
+               }
+             }) |
              ranges::views::filter([this](size_t i) {
                if constexpr (CheckIsCondensed<VT>::value) {
                  return GetMAT().get_node(i) != nullptr or
