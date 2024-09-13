@@ -274,6 +274,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
           } else {
             child_iter = mat_node->children.begin();
             Assert(child_iter != mat_node->children.end());
+            c_node_id = (*child_iter)->node_id;
             cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
             cn_str = cn_id_iter != storage.condensed_nodes_.end()
                          ? cn_id_iter->second.begin()
@@ -522,8 +523,12 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto* mat_node = mat.get_node(id.value);
     bool is_ua = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
                      .ua_node_id_ == id;
-    if (not is_ua) {
-      // Assert(mat_node != nullptr);
+    if ((not is_ua) and (mat_node == nullptr)) {
+      //auto& storage = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>();
+      auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
+      if (storage.condensed_nodes_.find(id) == storage.condensed_nodes_.end()) {
+        is_ua = true;
+      }
     }
     return std::make_tuple(dag_node, std::ref(mat), mat_node, is_ua);
   }
@@ -855,7 +860,7 @@ struct MATElementsContainerBase {
              }) |
              ranges::views::transform([](size_t i) -> NodeId { return {i}; });
     } else {
-      return ranges::views::iota(size_t{0}, iota_max) |
+      return ranges::views::iota(size_t{0}, iota_max + 1) |
              ranges::views::filter([this](size_t i) {
                if constexpr (CheckIsCondensed<VT>::value) {
                  return GetMAT().get_node(i) != nullptr and
