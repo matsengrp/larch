@@ -15,32 +15,74 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install build-essential zlib1g-dev python3-pip python3-pytest git git-lfs
-      - name: Set up Conda
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          auto-activate-base: false
-      - name: Install conda-build
+      - name: Install conda
         run: |
-          conda env update -f environment-dev.yml
-          conda activate larch-dev
-      - name: Build conda package
+          curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh > Miniconda3-latest-Linux-x86_64.sh
+          bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/miniconda
+          ~/miniconda/bin/conda update -n base -c defaults conda
+      - name: Inspect repo
         run: |
-          conda activate larch-dev
-          export VERSION=$(cat ./VERSION)
-          conda-build . --output-folder=./build-conda
-      - name: Test conda package
+          echo "pwd: $(pwd)"
+          ls -lR
+          cp conda-recipes/* .
+      # - name: Test Anaconda Cloud connection
+      #   env:
+      #     # ANACONDA_USERNAME: ${{ secrets.ANACONDA_USERNAME }}
+      #     ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+      #   run: |
+      #     source ~/miniconda/etc/profile.d/conda.sh
+      #     conda create -n anaconda-client anaconda-client
+      #     conda activate anaconda-client
+      #     anaconda -t $ANACONDA_TOKEN login
+      #     anaconda whoami
+      - name: Create conda env
         run: |
-          conda create -n larch-conda
-          conda activate larch-conda
-          conda install --use-local larch
-          mkdir build-test
-          cd build-test 
-          ln -s ../data
-          larch-test -tag slow
+          source ~/miniconda/etc/profile.d/conda.sh
+          conda config --prepend channels conda-forge
+          conda config --prepend channels bioconda
+          conda config --show channels
+          conda env create -f environment-dev.yml
+      # - name: Build conda package
+      #   run: |
+      #     source ~/miniconda/etc/profile.d/conda.sh
+      #     conda activate larch-dev
+      #     export VERSION=$(cat ./VERSION)
+      #     export GIT_SRC='local'
+      #     conda-build . --output-folder=./larch-via-conda
+      # - name: Inspect conda package
+      #   run: |
+      #     source ~/miniconda/etc/profile.d/conda.sh
+      #     ls -lR larch-via-conda
+      #     ls larch-via-conda/linux-64/larch-*.tar.bz2
+      #     tar -jtvf $(ls larch-via-conda/linux-64/larch-*.tar.bz2)
+      # - name: Test conda package
+      #   run: |
+      #     source ~/miniconda/etc/profile.d/conda.sh
+      #     # conda create -n larch-via-conda
+      #     # conda activate larch-via-conda
+      #     conda activate larch-dev
+      #     conda install larch-via-conda/linux-64/larch-*.tar.bz2
+      #     larch-usher --version 
+      #     larch-dagutil --version 
+      #     larch-dag2dot --version
+      #     mkdir build-test
+      #     cd build-test 
+      #     ln -s ../data
+      #     larch-test --help
+      #     # larch-test -tag slow
       - name: Upload Conda package to Anaconda Cloud
         env:
           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         run: |
+          source ~/miniconda/etc/profile.d/conda.sh
           conda activate larch-dev
-          anaconda upload --all ./conda-bld/*
-
+          conda build . --user davidrich27 --token $ANACONDA_TOKEN
+      #   conda activate larch-dev
+      #   anaconda login -t $ANACONDA_TOKEN
+      #   anaconda whoami
+      #   anaconda upload $(ls larch-via-conda/linux-64/larch-*.tar.bz2)
+      # - name: publish-to-conda
+      #   uses: maxibor/conda-package-publish-action@v1.1
+      #   with:
+      #     subDir: '/home/runner/work/larch/larch'
+      #     AnacondaToken: ${{ secrets.ANACONDA_TOKEN }}
