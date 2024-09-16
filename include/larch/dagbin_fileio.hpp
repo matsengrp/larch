@@ -4,6 +4,10 @@
 #include <fstream>
 #include <vector>
 
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+#pragma GCC visibility push(default)
+
 class DagbinFileIO {
  public:
   enum class SectionId : char {
@@ -103,3 +107,6 @@ class DagbinFileIO {
 };
 
 #include "larch/impl/dagbin_fileio_impl.hpp"
+
+#pragma GCC visibility pop
+#pragma GCC pop_options
