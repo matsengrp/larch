@@ -8,6 +8,9 @@ endif()
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+endif()
 option(USE_USHER "Use matOptimize" yes)
 
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
@@ -22,6 +25,7 @@ else()
     message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
+message("build type: ${CMAKE_BUILD_TYPE}")
 message("cmake system architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 message("using usher: ${USE_USHER}")
 
@@ -103,7 +107,7 @@ if(${USE_HTSLIB})
 endif()
 
 add_custom_target(generate_version_h ALL
-  COMMAND cd ${CMAKE_SOURCE_DIR} && ${CMAKE_COMMAND} -P version.cmake
+  COMMAND cd ${CMAKE_SOURCE_DIR} && ${CMAKE_COMMAND} -DBUILD_TYPE=${CMAKE_BUILD_TYPE} -P version.cmake  
   COMMENT "Generating version.hpp with version information"
   VERBATIM
 )
@@ -294,10 +298,10 @@ if(${USE_USHER})
   )
 endif()
 
-larch_executable(dag-util
+larch_executable(larch-dagutil
   tools/larch-dagutil.cpp)
 
-larch_executable(dag2dot
+larch_executable(larch-dag2dot
   tools/larch-dag2dot.cpp)
 
 if(${USE_USHER})

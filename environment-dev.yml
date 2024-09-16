@@ -11,13 +11,14 @@ dependencies:
   - openmpi
   - openmpi-mpicc
   - openmpi-mpicxx
-  - boost-cpp
+  - boost-cpp=1.76
   - automake
   - autoconf
   - libtool
   - yasm
-  - ucx
   - zlib
+  - ucx
+  - cuda-cudart
   - git-lfs
   # development
   - git

@@ -36,6 +36,11 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
+if (NOT BUILD_TYPE)
+    set(BUILD_TYPE "Unknown")
+endif()
+message("BUILD_TYPE: ${BUILD_TYPE}")
+
 # output version details to file
 configure_file(
     "tools/version.hpp.in"

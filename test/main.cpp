@@ -94,6 +94,8 @@ int main(int argc, char* argv[]) {
   for (int i = 1; i < argc; ++i) {
     if (std::string("-h") == argv[i]) {
       get_usage();
+    } else if (std::string("--version") == argv[i]) {
+      Version("larch-test");
     } else if (std::string("nocatch") == argv[i]) {
       no_catch = true;
     } else if (std::string("--list") == argv[i]) {

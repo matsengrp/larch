@@ -15,6 +15,7 @@ dependencies:
   - autoconf
   - libtool
   - yasm
-  - ucx
   - zlib
+  - ucx
+  - cuda-cudart
   - git-lfs
