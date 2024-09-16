@@ -1,4 +1,4 @@
-name: Build larch on linux and run tests
+name: Build larch on linux and run tests (in debug)
 
 on:
   workflow_dispatch:
