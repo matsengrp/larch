@@ -102,11 +102,4 @@ class DagbinFileIO {
                                 std::optional<size_t> max_id_opt = std::nullopt);
 };
 
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
-#pragma GCC visibility push(default)
-
 #include "larch/impl/dagbin_fileio_impl.hpp"
-
-#pragma GCC visibility pop
-#pragma GCC pop_options

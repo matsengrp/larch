@@ -4,7 +4,7 @@ rm -rf build
 mkdir build
 cd build
 
-BUILD_TYPE=${BUILD_TYPE:-"Debug"}
+BUILD_TYPE=${BUILD_TYPE:-"Release"}
 USE_USHER=${USE_USHER:-"ON"}
 NUM_THREADS=${NUM_THREADS:-"4"}
 INCLUDE_TESTS=${INCLUDE_TESTS:-"false"}
@@ -25,7 +25,7 @@ cp larch-usher $PREFIX/bin/larch-usher
 cp larch-dagutil $PREFIX/bin/larch-dagutil
 cp larch-dag2dot $PREFIX/bin/larch-dag2dot
 
-# if [[ ${INCLUDE_TESTS} == true ]]; then
+if [[ ${INCLUDE_TESTS} == true ]]; then
     cp larch-test $PREFIX/bin/larch-test
-# fi
+fi
 
