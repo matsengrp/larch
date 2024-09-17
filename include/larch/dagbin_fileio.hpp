@@ -4,10 +4,6 @@
 #include <fstream>
 #include <vector>
 
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
-#pragma GCC visibility push(default)
-
 class DagbinFileIO {
  public:
   enum class SectionId : char {
@@ -72,7 +68,7 @@ class DagbinFileIO {
                                      const std::vector<std::streampos> &offsets);
 
   template <typename iostream>
-  inline static bool CheckMagicNumber(iostream &infile);
+  inline static bool CheckMagicNumber(iostream &infile, bool do_assert = true);
 
   template <typename iostream>
   inline static void WriteMagicNumber(iostream &outfile);
@@ -105,6 +101,10 @@ class DagbinFileIO {
                                 std::optional<size_t> min_id_opt = std::nullopt,
                                 std::optional<size_t> max_id_opt = std::nullopt);
 };
+
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+#pragma GCC visibility push(default)
 
 #include "larch/impl/dagbin_fileio_impl.hpp"
 
