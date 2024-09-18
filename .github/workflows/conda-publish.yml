@@ -34,8 +34,10 @@ jobs:
           ANACONDA_USER: ${{ vars.ANACONDA_USER }}
           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
           ANACONDA_FLAGS: ${{ vars.ANACONDA_FLAGS }} 
+          INCLUDE_TESTS: ${{ vars.INCLUDE_TESTS }}
         run: |
           source ~/miniconda/etc/profile.d/conda.sh
           conda activate larch-dev
-          export VERSION=$(cat ./VERSION)
+          export LARCH_VERSION=$(cat ./VERSION)
+          export INCLUDE_TESTS=${INCLUDE_TESTS}
           conda build . --user ${ANACONDA_USER} --token ${ANACONDA_TOKEN} ${ANACONDA_FLAGS}

@@ -4,18 +4,21 @@ rm -rf build
 mkdir build
 cd build
 
-BUILD_TYPE=${BUILD_TYPE:-"Release"}
+CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE:-"Release"}
 USE_USHER=${USE_USHER:-"ON"}
-NUM_THREADS=${NUM_THREADS:-"4"}
-INCLUDE_TESTS=${INCLUDE_TESTS:-"false"}
+CMAKE_NUM_THREADS=${CMAKE_NUM_THREADS:-"4"}
+MAKE_NUM_THREADS=${MAKE_NUM_THREADS:-"20"}
+INCLUDE_LARCH_TEST=${INCLUDE_LARCH_TEST:-"false"}
 
-echo "INCLUDE_TESTS: ${INCLUDE_TESTS}"
-echo "BUILD_TYPE: ${BUILD_TYPE}"
+echo "INCLUDE_LARCH_TEST: ${INCLUDE_LARCH_TEST}"
+echo "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}"
 echo "USE_USHER: ${USE_USHER}"
-echo "NUM_THREADS: ${NUM_THREADS}"
+echo "CMAKE_NUM_THREADS: ${CMAKE_NUM_THREADS}"
+echo "MAKE_NUM_THREADS: ${MAKE_NUM_THREADS}"
 
-cmake -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DUSE_USHER=${USE_USHER} ..
-make -j${NUM_THREADS}
+export CMAKE_NUM_THREADS=${CMAKE_NUM_THREADS}
+cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DUSE_USHER=${USE_USHER} ..
+make -j${MAKE_NUM_THREADS}
 
 mkdir -p $PREFIX/lib
 cp $(find . -name *.so*) $PREFIX/lib/
@@ -25,7 +28,7 @@ cp larch-usher $PREFIX/bin/larch-usher
 cp larch-dagutil $PREFIX/bin/larch-dagutil
 cp larch-dag2dot $PREFIX/bin/larch-dag2dot
 
-if [[ ${INCLUDE_TESTS} == true ]]; then
+if [[ ${INCLUDE_LARCH_TEST} == true ]]; then
     cp larch-test $PREFIX/bin/larch-test
 fi
 

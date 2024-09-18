@@ -1,7 +1,7 @@
 {% set name = "larch-phylo" %}
-{% set version = environ.get('VERSION', '0.0.0') %}
-{% set git_rev = environ.get('GIT_COMMIT', 'main') %}
-{% set git_src = environ.get('GIT_SRC', 'local') %}
+{% set version = environ.get('LARCH_VERSION', '0.0.0') %}
+{% set git_commit = environ.get('LARCH_COMMIT', 'main') %}
+{% set git_src = environ.get('LARCH_SRC', 'local') %}
 
 package:
   name: {{ name }}
@@ -14,7 +14,7 @@ source:
   {% else %}
   # method 2: use online repo
   git_url: https://github.com/matsengrp/larch.git
-  git_rev: {{ git_rev }}
+  git_rev: {{ git_commit }}
   git_submodules: true
   {% endif %}
 
@@ -26,7 +26,6 @@ requirements:
   build:
     - cmake=3.19.6
     - make
-    # - cxx-compiler
     - openmpi
     - openmpi-mpicc
     - openmpi-mpicxx
@@ -72,30 +71,6 @@ requirements:
     - boost-cpp=1.76
     - ucx
     - zlib
-
-    - binutils
-    - binutils_impl_linux-64
-    - binutils_linux-64
-    - gdb
-    - libstdcxx-ng
-    - libgcc-ng
-    - libgomp
-    - libgfortran-ng
-    - libgfortran5
-    - libedit
-    - libffi
-    - expat
-    - libuuid
-    - libiconv
-    - libzlib
-    - perl
-    - gettext
-    - libasprintf
-    - libtool
-    - kernel-headers_linux-64
-    - rdma-core
-    - openssl
-    - keyutils
   
   host:
     - {{ compiler('c') }}
