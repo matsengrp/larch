@@ -17,5 +17,3 @@ dependencies:
   - yasm
   - zlib
   - ucx
-  - cuda-cudart
-  - git-lfs

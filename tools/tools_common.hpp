@@ -19,7 +19,6 @@ inline static void Version(std::string program_name = "larch-usher") {
   std::cout << "Build version: " << VERSION_NUMBER << "\n";
   std::cout << "Build date: " << GIT_COMMIT_DATE << "\n";
   std::cout << "Build commit: " << GIT_COMMIT_HASH << "\n";
-  std::cout << "Build type: " << BUILD_TYPE << "\n";
 
   exit(EXIT_SUCCESS);
 }
