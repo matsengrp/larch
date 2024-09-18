@@ -68,7 +68,7 @@ class DagbinFileIO {
                                      const std::vector<std::streampos> &offsets);
 
   template <typename iostream>
-  inline static bool CheckMagicNumber(iostream &infile);
+  inline static bool CheckMagicNumber(iostream &infile, bool do_assert = true);
 
   template <typename iostream>
   inline static void WriteMagicNumber(iostream &outfile);

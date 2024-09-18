@@ -1,0 +1,43 @@
+name: Build larch on linux and publish to Anaconda Cloud
+
+on:
+  workflow_dispatch:
+
+jobs:
+  conda-publish:
+    runs-on: ubuntu-latest
+    environment: conda-publish 
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Prepare build environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install build-essential zlib1g-dev python3-pip python3-pytest git git-lfs
+      - name: Install conda
+        run: |
+          curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh > Miniconda3-latest-Linux-x86_64.sh
+          bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/miniconda
+          ~/miniconda/bin/conda update -n base -c defaults conda
+      - name: Create conda env
+        run: |
+          source ~/miniconda/etc/profile.d/conda.sh
+          conda config --prepend channels conda-forge
+          conda config --prepend channels bioconda
+          conda config --show channels
+          conda env create -f environment-dev.yml
+      - name: Build conda package and upload to Anaconda Cloud
+        env:
+          ANACONDA_USER: ${{ vars.ANACONDA_USER }}
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+          ANACONDA_FLAGS: ${{ vars.ANACONDA_FLAGS }} 
+          INCLUDE_TESTS: ${{ vars.INCLUDE_TESTS }}
+        run: |
+          source ~/miniconda/etc/profile.d/conda.sh
+          conda activate larch-dev
+          export LARCH_VERSION=$(cat ./VERSION)
+          export INCLUDE_TESTS=${INCLUDE_TESTS}
+          conda build . --user ${ANACONDA_USER} --token ${ANACONDA_TOKEN} ${ANACONDA_FLAGS}

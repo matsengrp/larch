@@ -1,4 +1,4 @@
-name: larch-dev
+name: larch
 channels:
   - conda-forge
   - bioconda
@@ -10,21 +10,10 @@ dependencies:
   - openmpi
   - openmpi-mpicc
   - openmpi-mpicxx
-  - boost-cpp
+  - boost-cpp=1.76
   - automake
   - autoconf
   - libtool
   - yasm
-  - ucx
   - zlib
-
-  - git
-  - mafft
-  - python
-  - rsync
-  - wget
-  - openssh
-  - gdb
-  - bzip2
-  - backports.lzma
-  - protobuf=3.12.3
+  - ucx

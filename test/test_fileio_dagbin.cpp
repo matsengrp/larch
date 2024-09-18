@@ -25,6 +25,32 @@
   return true;
 }
 
+[[maybe_unused]] static void read_dagbin_sample_dag() {
+  std::string protobuf_path = "data/sample_dag/sample_dag.pb";
+  std::string dagbin_path = "data/sample_dag/sample_dag.dagbin";
+
+  auto sample_dag = make_sample_dag();
+  dag_info(sample_dag);
+
+  // Compare read/write dag protobuf vs dagbin
+  auto sample_dag_from_protobuf = LoadDAGFromProtobuf(protobuf_path);
+  auto sample_dag_from_dagbin = LoadDAGFromDagbin(dagbin_path);
+  dag_info(sample_dag_from_protobuf);
+  dag_info(sample_dag_from_dagbin); 
+  TestAssert(compare_treedags(sample_dag_from_dagbin.View(),
+                              sample_dag_from_protobuf.View()) &&
+             "Loading Sample DAG via Protobuf and Dagbin do not have the same result.");
+
+  // Compare dag to sample dag.
+  sample_dag_from_protobuf.View().RecomputeCompactGenomes();
+  TestAssert(compare_treedags(sample_dag_from_protobuf.View(), sample_dag.View()) &&
+             "Loaded Protobuf DAG does not match Sample DAG.");
+  sample_dag_from_dagbin.View().RecomputeCompactGenomes();
+  TestAssert(compare_treedags(sample_dag_from_dagbin.View(), sample_dag.View()) &&
+             "Loaded Dagbin DAG does not match Sample DAG.");
+}
+
+
 [[maybe_unused]] static void test_dagbin_sample_dag() {
   std::string protobuf_path = test_output_folder + "/sample_dag.pb";
   std::string dagbin_path = test_output_folder + "/sample_dag.dagbin";
@@ -37,6 +63,8 @@
   StoreDAGToDagbin(sample_dag.View(), dagbin_path);
   auto sample_dag_from_protobuf = LoadDAGFromProtobuf(protobuf_path);
   auto sample_dag_from_dagbin = LoadDAGFromDagbin(dagbin_path);
+  dag_info(sample_dag_from_protobuf);
+  dag_info(sample_dag_from_dagbin); 
   TestAssert(compare_treedags(sample_dag_from_dagbin.View(),
                               sample_dag_from_protobuf.View()) &&
              "Loading Sample DAG via Protobuf and Dagbin do not have the same result.");
@@ -164,23 +192,25 @@
 }
 
 [[maybe_unused]] static const auto test_added0 =
+    add_test({read_dagbin_sample_dag, "Load dagbin: Sample DAG (Read-only)"});
+[[maybe_unused]] static const auto test_added1 =
     add_test({test_dagbin_sample_dag, "Load dagbin: Sample DAG"});
 
 const std::string input_dag_path = "data/test_5_trees/full_dag.pb.gz";
 
-[[maybe_unused]] static const auto test_added1 =
+[[maybe_unused]] static const auto test_added2 =
     add_test({[] { test_dagbin(input_dag_path, FileFormat::ProtobufDAG); },
               "Load dagbin: test_5_trees"});
-[[maybe_unused]] static const auto test_added2 =
+[[maybe_unused]] static const auto test_added3 =
     add_test({[] { test_dagbin_via_larchusher(input_dag_path, 3, true, true); },
               "Load dagbin: test_5_trees, 3 iters, simultaneous write"});
-[[maybe_unused]] static const auto test_added3 =
+[[maybe_unused]] static const auto test_added4 =
     add_test({[] { test_dagbin_via_larchusher(input_dag_path, 3, true, false); },
               "Load dagbin: test_5_trees, 3 iters, seeded"});
 
 const std::string big_input_dag_path = "data/big_test/big_test.pb.gz";
 
-[[maybe_unused]] static const auto test_added4 =
+[[maybe_unused]] static const auto test_added5 =
     add_test({[] { test_dagbin(big_input_dag_path, FileFormat::ProtobufDAG); },
               "Load dagbin: big_test",
               {"slow"}});

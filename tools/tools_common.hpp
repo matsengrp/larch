@@ -5,12 +5,22 @@
 #include <iostream>
 #include <iomanip>
 
+#include "version.hpp"
 #include "larch/common.hpp"
 
 [[noreturn]] inline static void Fail() {
   std::cerr << "Run with -h or --help to see usage.\n";
 
   std::exit(EXIT_FAILURE);
+}
+
+inline static void Version(std::string program_name = "larch-usher") {
+  std::cout << program_name << "\n";
+  std::cout << "Build version: " << VERSION_NUMBER << "\n";
+  std::cout << "Build date: " << GIT_COMMIT_DATE << "\n";
+  std::cout << "Build commit: " << GIT_COMMIT_HASH << "\n";
+
+  exit(EXIT_SUCCESS);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////

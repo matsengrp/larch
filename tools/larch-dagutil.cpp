@@ -207,6 +207,8 @@ int main(int argc, char** argv) try {
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
       Usage();
+    } else if (name == "--version") {
+      Version();
     } else if (name == "-i" or name == "--input") {
       ParseOption<false>(name, params, input_paths, -1);
       ranges::actions::push_back(input_paths, params);

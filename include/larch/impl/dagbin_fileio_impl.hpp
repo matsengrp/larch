@@ -2,7 +2,7 @@
 bool DagbinFileIO::IsFileDagbinFormat(std::string_view path) {
   std::ifstream infile;
   infile.open(std::string{path}, std::ios::binary);
-  auto is_dagbin_file = CheckMagicNumber(infile);
+  auto is_dagbin_file = CheckMagicNumber(infile, false);
   infile.close();
   return is_dagbin_file;
 }
@@ -32,18 +32,20 @@ MADAGStorage<> DagbinFileIO::ReadDAG(std::string_view path) {
         ReadEdges(infile, dag);
         break;
       default:
-        Assert(false && "ERROR: Invalid section_id");
+        assert(false && "ERROR: Invalid section_id");
     }
   };
 
   infile.open(std::string{path}, std::ios::binary);
-  Assert(CheckMagicNumber(infile));
+  CheckMagicNumber(infile);
   for (auto [section_begpos, section_id] : labeled_linked_list) {
-    Assert(section_id == ReadData<SectionId>(infile));
+    [[maybe_unused]] auto true_section_id = ReadData<SectionId>(infile);
+    Assert(section_id == true_section_id);
     auto section_endpos = ReadData<std::streampos>(infile);
 
     read_section(section_id);
-    Assert(section_endpos == infile.tellg());
+    [[maybe_unused]] auto true_section_endpos = infile.tellg();
+    Assert(section_endpos == true_section_endpos);
   }
   infile.close();
 
@@ -115,7 +117,7 @@ void DagbinFileIO::AppendDAG(DAG dag, std::string_view path) {
 
   // Read old header
   file.seekg(0, std::ios::beg);
-  Assert(CheckMagicNumber(file));
+  CheckMagicNumber(file);
   auto section_id = ReadData<SectionId>(file);
   auto section_offset = ReadData<std::streampos>(file);
   Assert(section_id == SectionId::Header);
@@ -190,7 +192,7 @@ DagbinFileIO::ReadLabeledLinkedList(iostream &infile) {
   SectionId section_id;
   std::streampos section_offset;
   infile.seekg(0, std::ios::beg);
-  Assert(CheckMagicNumber(infile));
+  CheckMagicNumber(infile);
   section_offset = infile.tellg();
   while (!infile.eof()) {
     infile.seekg(section_offset);
@@ -213,7 +215,7 @@ std::vector<std::streampos> DagbinFileIO::ReadLinkedList(iostream &infile) {
 
   std::streampos section_offset;
   infile.seekg(0, std::ios::beg);
-  Assert(CheckMagicNumber(infile));
+  CheckMagicNumber(infile);
   section_offset = infile.tellg();
   while (!infile.eof()) {
     offsets.push_back(section_offset);
@@ -241,9 +243,10 @@ void DagbinFileIO::WriteLinkedList(iostream &outfile,
 }
 
 template <typename iostream>
-bool DagbinFileIO::CheckMagicNumber(iostream &infile) {
+bool DagbinFileIO::CheckMagicNumber(iostream &infile, bool do_assert) {
   std::vector<unsigned char> magic_number(MAGIC_NUMBER.size());
   infile.read(reinterpret_cast<char *>(magic_number.data()), MAGIC_NUMBER.size());
+  if (do_assert) Assert(magic_number == MAGIC_NUMBER)
   return (magic_number == MAGIC_NUMBER);
 }
 

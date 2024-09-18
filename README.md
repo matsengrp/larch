@@ -9,7 +9,7 @@ Requirements
 For Ubuntu 18.04 LTS the following commands installs the requirements:
 
 ```shell
-sudo apt install --no-install-recommends git cmake make g++ mpi-default-dev libprotobuf-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-iostreams-dev libboost-date-time-dev protobuf-compiler automake autoconf libtool nasm
+sudo apt install --no-install-recommends git git-lfs cmake make g++ mpi-default-dev libprotobuf-dev libboost-dev libboost-program-options-dev libboost-filesystem-dev libboost-iostreams-dev libboost-date-time-dev protobuf-compiler automake autoconf libtool nasm
 ```
 
 To get a recent cmake, download from `https://cmake.org/download/`, for example:
@@ -33,19 +33,16 @@ singularity build larch-singularity.sif larch-singularity.def
 singularity shell larch-singularity.sif --net
 ```
 
-To setup a conda environment capable of building Larch, use:
-
-```shell
-conda create -n larch
-conda activate larch
-conda install --channel "conda-forge" --update-deps --override-channels cmake make cxx-compiler openmpi openmpi-mpicc openmpi-mpicxx boost-cpp automake autoconf libtool yasm ucx zlib
-```
-
-To setup a conda environment capable of building Larch including development tools, create `larch-dev` using the environment
-file provided:
+To setup a conda environment capable of building Larch, create `larch` using the standard environment file provided:
 
 ```shell
 conda env create -f environment.yml
+```
+
+To setup a conda environment capable of building Larch including development tools, create `larch-dev` using the development environment file provided:
+
+```shell
+conda env create -f environment-dev.yml
 ```
 
 Building
@@ -54,8 +51,8 @@ Building
 There are 4 executables that are built automatically as part of the larch package and provide various methods for exploring tree space and manipulating DAGs/trees:
 - `larch-test` is the suite of tests used to validate the various routines.
 - `larch-usher` is a tool that takes an input tree/DAG and explores tree space through SPR moves.
-- `dag-util` is a utility that manipulates (e.g. merge, prune) or inspects DAGs/trees.
-- `dag2dot` is a utility that writes a DAG to a DOT file format for easier viewing.
+- `larch-dagutil` is a utility that manipulates (e.g. merge, prune) or inspects DAGs/trees.
+- `larch-dag2dot` is a utility that writes a DAG to a DOT file format for easier viewing.
 
 Note: If you run against memory limitations during the cmake step, you can regulate number of parallel threads with `export CMAKE_NUM_THREADS="8"` (reduce number as necessary).
 

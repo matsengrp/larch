@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(larch)
 
-option(USE_USHER "Use matOptimize" yes)
-
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
@@ -10,24 +8,40 @@ endif()
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
-include(FetchContent)
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+endif()
+option(USE_USHER "Use matOptimize" yes)
 
+if(USE_USHER)
+    set(TBB_VERSION "2019_U9")
+else()
+    set(TBB_VERSION "v2021.11.0")
+endif()
+
+message("cmake system architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+message("build type: ${CMAKE_BUILD_TYPE}")
+message("using usher: ${USE_USHER}")
+
+include(FetchContent)
 if(USE_USHER)
   FetchContent_Declare(oneTBB-src
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-    GIT_TAG 2019_U9
+    GIT_TAG ${TBB_VERSION}
+    GIT_PROGRESS true
   )
   FetchContent_MakeAvailable(oneTBB-src)
 
   include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
   tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
+
   find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
   find_package(MPI REQUIRED)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 else()
   FetchContent_Declare(oneTBB
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-    GIT_TAG v2021.11.0
+    GIT_TAG ${TBB_VERSION}
     GIT_SHALLOW true
     GIT_PROGRESS true
     UPDATE_DISCONNECTED true
@@ -85,6 +99,12 @@ if(${USE_HTSLIB})
     INSTALL_COMMAND make install
   )
 endif()
+
+add_custom_target(generate_version_h ALL
+  COMMAND cd ${CMAKE_SOURCE_DIR} && ${CMAKE_COMMAND} -DBUILD_TYPE=${CMAKE_BUILD_TYPE} -P version.cmake  
+  COMMENT "Generating version.hpp with version information"
+  VERBATIM
+)
 
 find_package(ZLIB)
 
@@ -181,6 +201,7 @@ function(larch_executable PRODUCT)
   target_compile_options(${PRODUCT} PRIVATE ${STRICT_WARNINGS})
   larch_link_opts(${PRODUCT})
   target_link_libraries(${PRODUCT} PUBLIC larch)
+  add_dependencies(${PRODUCT} generate_version_h)
 endfunction()
 
 add_library(larch
@@ -271,11 +292,11 @@ if(${USE_USHER})
   )
 endif()
 
-larch_executable(dag-util
-  tools/dag-util.cpp)
+larch_executable(larch-dagutil
+  tools/larch-dagutil.cpp)
 
-larch_executable(dag2dot
-  tools/dag2dot.cpp)
+larch_executable(larch-dag2dot
+  tools/larch-dag2dot.cpp)
 
 if(${USE_USHER})
   larch_executable(larch-usher
