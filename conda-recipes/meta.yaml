@@ -1,4 +1,4 @@
-{% set name = "larch" %}
+{% set name = "larch-phylo" %}
 {% set version = environ.get('VERSION', '0.0.0') %}
 {% set git_rev = environ.get('GIT_COMMIT', 'main') %}
 {% set git_src = environ.get('GIT_SRC', 'local') %}
@@ -104,8 +104,6 @@ requirements:
 test:
   commands:
     - larch-usher --version
-    # - ln -s ${SRC_DIR}/data 
-    # - larch-test -tag slow
 
 extra:
   system:
