@@ -167,8 +167,14 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
            ranges::views::transform([this](size_t) { return GetSingleParent(); });
   }
   auto GetClades() const {
-    return ranges::views::iota(size_t{0}, GetCladesCount()) |
-           ranges::views::transform([this](size_t i) { return GetClade(CladeIdx{i}); });
+    auto [dag_node, mat, mat_node, is_ua] = access();
+    auto children = GetChildren();
+    return ranges::views::counted(children.begin(), GetCladesCount()) |
+           Transform::GetId() | ranges::views::transform([dag_node](EdgeId child) {
+             return ranges::views::iota(child.value, child.value + 1) |
+                    Transform::ToId<Component::Edge>() |
+                    Transform::ToEdges(dag_node.GetDAG());
+           });
   }
 
   auto GetClade(CladeIdx clade) const {
@@ -181,28 +187,15 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       }
     } else {
       if (not is_ua) {
-        Assert(mat_node != nullptr);
         size_t ctr = 0;
-        auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
-        for (auto* c : mat_node->children) {
-          auto c_node_id = c->node_id;
-          auto cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
-          if (cn_id_iter != storage.condensed_nodes_.end()) {
-            for (auto cn_str : storage.condensed_nodes_.at(NodeId{c_node_id})) {
-              if (ctr == clade.value) {
-                node_id = storage.sampleid_to_mat_node_id_map_.at(cn_str);
-                break;
-              }
-              ctr++;
-            }
-          } else {
-            if (ctr == clade.value) {
-              node_id = c_node_id;
-              break;
-            }
-            ctr++;
+        for (auto&& i : GetChildren() | Transform::GetChild()) {
+          if (ctr == clade.value) {
+            node_id = i.GetId().value;
+            break;
           }
+          ++ctr;
         }
+        Assert(node_id != mat.root->node_id);
       }
     }
     return ranges::views::iota(node_id, node_id + 1) |
@@ -524,7 +517,8 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     bool is_ua = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
                      .ua_node_id_ == id;
     if ((not is_ua) and (mat_node == nullptr)) {
-      //auto& storage = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>();
+      // auto& storage = dag.template GetFeatureExtraStorage<Component::Node,
+      // MATNodeStorage>();
       auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
       if (storage.condensed_nodes_.find(id) == storage.condensed_nodes_.end()) {
         is_ua = true;
