@@ -365,8 +365,9 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
            ranges::views::transform([is_ua, dag_node](auto& i) {
              if (is_ua) {
                i.done = true;
+               size_t root_id = dag_node.template GetFeatureExtraStorage<MATNodeStorage>().mat_tree_->root->node_id;
                return Edge{dag_node.GetDAG(),
-                           EdgeId{dag_node.GetFirstChild().GetId().value}};
+                           EdgeId{root_id}};
              } else {
                return Edge{dag_node.GetDAG(), EdgeId{i.c_node_id}};
              }
