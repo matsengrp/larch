@@ -20,7 +20,7 @@ source:
 
 build:
   number: 0
-  skip: true # [win]
+  skip: true # [win or osx]
 
 requirements:
   build:
@@ -73,6 +73,7 @@ requirements:
     - zlib
   
   host:
+    - python
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
 
