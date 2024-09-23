@@ -737,9 +737,15 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     auto& mat = dag.GetMAT();
     Assert(id.value == MV_UA_NODE_ID or id.value < mat.get_size_upper());
     MAT::Node* mat_node = mat.get_node(id.value);
-    bool is_ua = mat_node != nullptr ? (mat.root->node_id == mat_node->node_id) : false;
-    // auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
-    // bool is_ua = (storage.ua_node_id_.value == id.value);
+
+    bool is_ua = mat_node != nullptr ? ((mat.root->node_id == mat_node->node_id)) : false;
+    if ((not is_ua) and (mat_node == nullptr)) {
+      auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+      if (storage.condensed_nodes_.find(NodeId{id.value}) == storage.condensed_nodes_.end()) {
+        is_ua = true;
+      }
+    }
+
     return std::make_tuple(dag_edge, std::ref(mat), mat_node, is_ua);
   }
 };
