@@ -89,8 +89,8 @@ extra:
 
 about:
   home: https://github.com/matsengrp/larch
-  license: GNU General Public License
-  license_family: GPL
+  license: MIT License
+  license_family: MIT
   license_file: LICENSE
   summary: 'Tool for exploring tree space of DAG/tree through SPR moves'
   description: |

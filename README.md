@@ -2,9 +2,9 @@
 
 ## Installation
 
-### Install from conda
+### Install via conda
 
-To install from conda, use the following:
+To install via conda, it is available on the `matsengrp` channel:
 
 ```shell
 conda install -c matsengrp larch-phylo
