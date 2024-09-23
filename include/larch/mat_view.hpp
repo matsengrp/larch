@@ -365,9 +365,11 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
            ranges::views::transform([is_ua, dag_node](auto& i) {
              if (is_ua) {
                i.done = true;
-               size_t root_id = dag_node.template GetFeatureExtraStorage<MATNodeStorage>().mat_tree_->root->node_id;
-               return Edge{dag_node.GetDAG(),
-                           EdgeId{root_id}};
+               // size_t root_id =
+               //     dag_node.template GetFeatureExtraStorage<MATNodeStorage>()
+               //         .mat_tree_->root->node_id;
+               // return Edge{dag_node.GetDAG(), EdgeId{root_id}};
+               return Edge{dag_node.GetDAG(), EdgeId{MV_UA_NODE_ID}};
              } else {
                return Edge{dag_node.GetDAG(), EdgeId{i.c_node_id}};
              }
@@ -733,7 +735,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     EdgeId id = dag_edge.GetId();
     auto dag = dag_edge.GetDAG();
     auto& mat = dag.GetMAT();
-    Assert(id.value < mat.get_size_upper());
+    Assert(id.value == MV_UA_NODE_ID or id.value < mat.get_size_upper());
     MAT::Node* mat_node = mat.get_node(id.value);
     bool is_ua = mat_node != nullptr ? (mat.root->node_id == mat_node->node_id) : false;
     // auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();

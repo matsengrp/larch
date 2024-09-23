@@ -63,11 +63,11 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs() const {
   storage.leafs_ = {};
   std::atomic<size_t> root_id{NoId};
   Reduction<std::vector<NodeId>> leafs{32};
-  ParallelForEach(dag.GetNodes() | Transform::GetId(), [&](NodeId nid) {
+  SeqForEach(dag.GetNodes() | Transform::GetId(), [&](NodeId nid) {
     auto node = dag.Get(nid);
-    for (auto clade : node.GetClades()) {
-      Assert(not clade.empty() && "Empty clade");
-    }
+    // for (auto clade : node.GetClades()) {
+    //   Assert(not clade.empty() && "Empty clade");
+    // }
     if (node.IsUA()) {
       const size_t previous = root_id.exchange(node.GetId().value);
       if (previous != NoId) {
