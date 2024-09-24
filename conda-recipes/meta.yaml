@@ -1,7 +1,7 @@
 {% set name = "larch-phylo" %}
 {% set version = environ.get('LARCH_VERSION', '0.0.0') %}
-{% set git_commit = environ.get('LARCH_COMMIT', 'main') %}
 {% set src = environ.get('LARCH_SRC', 'local') %}
+{% set git_commit = environ.get('LARCH_COMMIT', 'main') %}
 {% set hash = environ.get('LARCH_HASH', 'unknown')}
 
 package:
@@ -19,8 +19,8 @@ source:
   git_submodules: true
   {% elif src == 'release' %}
   # method 3: use release tarball
-  url:
-  sha256:
+  url: https://github.com/matsengrp/{{ name }}/archive/v{{ version }}.tar.gz
+  sha256: {{ hash }}
   {% endif %}
 
 build:
