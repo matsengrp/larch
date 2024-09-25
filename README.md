@@ -1,5 +1,19 @@
 # Getting started
 
+## Installation
+
+### Install via conda
+
+To install via conda, it is available on the `matsengrp` channel:
+
+```shell
+conda install -c matsengrp larch-phylo
+```
+
+Currently only available in Linux.
+
+### Build from source
+
 Requirements
 ------------
 
@@ -70,8 +84,18 @@ Cmake build options:
   - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
   - add `-DUSE_ASAN=yes` to enable asan and ubsan.
 
-Running
+## Running
 -------
+
+### file formats
+
+For all tools in this suite, a number of file formats are supported for loading and storing MATs and MADAGs. When passing filepaths as arguments, the file format can be explicitly specified with `--input-format/--output-format` options.  Alternatively, the program can infer the file format when filepath contains a recognized file extension.
+
+File format options:
+- `MADAG dagbin` Supported as input and output. `*.dagbin` is the recognized extension.
+- `MADAG protobuf` Supported as input and output. `*.pb_dag` is the recognized extension, or using `*.pb` WITHOUT a `--MAT-refseq-file` option.
+- `MAT protobuf` Supported as input only. `*.pb_tree` is the recognized extension, or using `*.pb` WITH a `--MAT-refseq-file` option.
+- `MADAG json` Supported as input only. `*.json_dag` or `*.json` is the recognized extension.
 
 ### larch-test
 
@@ -91,16 +115,6 @@ larch-test options:
 - `-tag` excludes tests with a given tag.
 - `+tag` includes tests with a given tag.
 - For example, the `-tag "slow"` removes tests which require an long runtime to complete.
-
-### file formats
-
-For all tools in this suite, a number of file formats are supported for loading and storing MATs and MADAGs. When passing filepaths as arguments, the file format can be explicitly specified with `--input-format/--output-format` options.  Alternatively, the program can infer the file format when filepath contains a recognized file extension.
-
-File format options:
-- `MADAG dagbin` Supported as input and output. `*.dagbin` is the recognized extension.
-- `MADAG protobuf` Supported as input and output. `*.pb_dag` is the recognized extension, or using `*.pb` WITHOUT a `--MAT-refseq-file` option.
-- `MAT protobuf` Supported as input only. `*.pb_tree` is the recognized extension, or using `*.pb` WITH a `--MAT-refseq-file` option.
-- `MADAG json` Supported as input only. `*.json_dag` or `*.json` is the recognized extension.
 
 ### larch-usher
 
@@ -134,11 +148,11 @@ larch-usher options:
 - `-S` Enable smart stopping: larch-usher will terminate when parsimony improvement ceases to occur.
 - `-T` specify a hard time limit after which larch-usher will terminate.
 
-### dag-util
+### larch-dagutil
 
 From the `larch/build/` directory:
 ```shell
-./dag-util -i ../data/testcase/tree_1.pb.gz -i ../data/testcase/tree_2.pb.gz -o merged_trees.pb
+./larch-dagutil -i ../data/testcase/tree_1.pb.gz -i ../data/testcase/tree_2.pb.gz -o merged_trees.pb
 ```
 This executable takes a list of protobuf files and merges the resulting DAGs together into one.
 
@@ -156,11 +170,11 @@ dag-util options:
 - `--output-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`)
 - `--rf-format` [Default: format inferred by file extension] Specify the format of the RF file. Options are: (`dagbin`, `pb`, `dag-pb`, `tree-pb`, `json`, `dag-json`)
 
-### dag2dot
+### larch-dag2dot
 
 From the `larch/build/` directory:
 ```shell
-./dag2dot -i ../data/testcase/full_dag.pb
+./larch-dag2dot -i ../data/testcase/full_dag.pb
 ```
 This command writes the provided DAG in dot format to stdout.
 
