@@ -210,41 +210,46 @@ MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
 
   // uncollapsing has to occur _after_ we read the mutations, since those mutations
   // are stored for edges in an ordered traversal of the condensed newick tree.
-  for (auto orig_leaf_in_dag : result.GetLeafs()) {
-    std::string node_name = orig_leaf_in_dag.GetSampleId().value();
-    // check if this leaf is condensed
-    if (node_name.find("_condensed_") != std::string::npos) {
-      // find the corresponding condensed leaf in the data.condensed_nodes() dictionary
-      for (const auto& cn : data.condensed_nodes()) {
-        std::string condensed_node_name = static_cast<std::string>(cn.node_name());
-        if (condensed_node_name == node_name) {
-          // expand this condensed leaf node in the result by:
-          // - renaming this node to the first string in the list, and
-          // - adding all of the sibling nodes as children of the condensed leaf node's
-          // parent.
-          auto parent_edge = orig_leaf_in_dag.GetSingleParent();
-          auto parent_node = parent_edge.GetParent();
-          auto clade_idx = parent_node.GetCladesCount();
-          size_t ctr = 0;
-          for (const auto& sib_node : cn.condensed_leaves()) {
-            auto sib_node_name = static_cast<std::string>(sib_node);
-            if (ctr < 1) {
-              orig_leaf_in_dag = SampleId{sib_node_name};
-            } else {
-              auto muts_copy = parent_edge.GetEdgeMutations().Copy();
-              auto new_sib_node = result.AppendNode();
-              new_sib_node = SampleId{sib_node_name};
-              auto new_sib_edge = result.AppendEdge();
-              new_sib_edge.SetEdgeMutations(std::move(muts_copy));
-              result.AddEdge(new_sib_edge, parent_node, new_sib_node, {clade_idx++});
-              result.AddLeaf(new_sib_node);
+  const auto & leaf_ids = result.GetNodes() | Transform::GetId();
+  for (auto orig_leaf_id : leaf_ids) {
+    if (result.Get(orig_leaf_id).IsLeaf()) {
+      auto orig_leaf_in_dag = result.Get(orig_leaf_id);
+      std::string node_name = orig_leaf_in_dag.GetSampleId().value();
+      // check if this leaf is condensed
+      if (node_name.find("_condensed_") != std::string::npos) {
+        // find the corresponding condensed leaf in the data.condensed_nodes() dictionary
+        for (const auto& cn : data.condensed_nodes()) {
+          std::string condensed_node_name = static_cast<std::string>(cn.node_name());
+          if (condensed_node_name == node_name) {
+            // expand this condensed leaf node in the result by:
+            // - renaming this node to the first string in the list, and
+            // - adding all of the sibling nodes as children of the condensed leaf node's
+            // parent.
+            auto parent_edge = orig_leaf_in_dag.GetSingleParent();
+            auto parent_node = parent_edge.GetParent();
+            auto clade_idx = parent_node.GetCladesCount();
+            size_t ctr = 0;
+            for (const auto& sib_node : cn.condensed_leaves()) {
+              auto sib_node_name = static_cast<std::string>(sib_node);
+              if (ctr < 1) {
+                orig_leaf_in_dag = SampleId{sib_node_name};
+              } else {
+                auto muts_copy = parent_edge.GetEdgeMutations().Copy();
+                auto new_sib_node = result.AppendNode();
+                new_sib_node = SampleId{sib_node_name};
+                auto new_sib_edge = result.AppendEdge();
+                new_sib_edge.SetEdgeMutations(std::move(muts_copy));
+                result.AddEdge(new_sib_edge, parent_node, new_sib_node, {clade_idx++});
+                result.AddLeaf(new_sib_node);
+              }
+              ctr++;
             }
-            ctr++;
           }
         }
       }
     }
   }
+
   result.BuildConnections();
   result.GetRoot().Validate(true, false);
   return result_storage;
