@@ -1,8 +1,8 @@
 {% set name = "larch-phylo" %}
-{% set version = environ.get('LARCH_VERSION', '0.0.0') %}
 {% set src = environ.get('LARCH_SRC', 'local') %}
 {% set git_commit = environ.get('LARCH_COMMIT', 'main') %}
-{% set hash = environ.get('LARCH_HASH', 'unknown') %}
+{% set version = environ.get('LARCH_VERSION', '0.1.0') %}
+{% set hash = environ.get('LARCH_HASH', 'f09851e89217b688c9b012da0161cadbc88b5692a9c823b44b83c2c129a5762d') %}
 
 package:
   name: {{ name }}
@@ -29,62 +29,33 @@ build:
 
 requirements:
   build:
-    - cmake=3.19.6
+    - python
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+
+    - cmake =3.19.6
     - make
     - openmpi
     - openmpi-mpicc
     - openmpi-mpicxx
-    - boost-cpp=1.76
+    - boost-cpp =1.76
     - automake
     - autoconf
     - libtool
     - yasm
     - ucx
     - zlib
-    - git-lfs
-
-    - gcc
-    - gxx
-    - binutils
-    - binutils_impl_linux-64
-    - binutils_linux-64
-    - gdb
-    - libstdcxx-ng
-    - libgcc-ng
-    - libgomp
-    - libgfortran-ng
-    - libgfortran5
-    - libedit
-    - libffi
-    - expat
-    - libuuid
-    - libiconv
-    - libzlib
-    - perl
-    - gettext
-    - libasprintf
-    - libtool
-    - kernel-headers_linux-64
-    - rdma-core
-    - openssl
-    - keyutils
 
   run:
     - openmpi
-    - openmpi-mpicc
-    - openmpi-mpicxx
-    - boost-cpp=1.76
+    - boost-cpp =1.76
     - ucx
     - zlib
-  
-  host:
-    - python
-    - {{ compiler('c') }}
-    - {{ compiler('cxx') }}
 
 test:
   commands:
     - larch-usher --version
+    - ls -lsh
 
 about:
   home: https://github.com/matsengrp/larch
@@ -99,9 +70,7 @@ about:
 
 extra:
   recipe-maintainers:
-    - matsengrp
     - matsen
     - davidrich27
     - marybarker
-    - ognian~
     
