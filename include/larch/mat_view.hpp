@@ -178,7 +178,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 
   auto GetClade(CladeIdx clade) const {
     auto [dag_node, mat, mat_node, is_ua] = access();
-    size_t node_id = mat.root->node_id;
+    size_t node_id = MV_UA_NODE_ID;//mat.root->node_id;
     if constexpr (CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
       if (not is_ua) {
         Assert(mat_node != nullptr);
@@ -253,9 +253,23 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
              size_t count)
           : access_{access}, clades_count{count} {
         if (mat_node() == nullptr or mat_node()->children.empty()) {
-          done = true;
+          if (is_ua()) {
+            c_node_id = dag_node().template GetFeatureExtraStorage<MATNodeStorage>()
+                   .mat_tree_->root->node_id;
+          } else {
+            done = true;
+          }
         } else {
-          child_iter = mat_node()->children.end();
+          child_iter = mat_node()->children.begin();
+          c_node_id = (*child_iter)->node_id;
+          if (not condensed()) {
+            // check if this child node needs uncondensing
+            cn_id_iter = storage().condensed_nodes_.find(NodeId{c_node_id});
+            if (cn_id_iter != storage().condensed_nodes_.end()) {
+              cn_str = cn_id_iter->second.begin();
+              c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
+            }
+          }
         }
       }
 
@@ -270,10 +284,6 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 
       Edge read() const {
         if (is_ua()) {
-          // size_t root_id =
-          //     dag_node.template GetFeatureExtraStorage<MATNodeStorage>()
-          //         .mat_tree_->root->node_id;
-          // return Edge{dag_node.GetDAG(), EdgeId{root_id}};
           return Edge{dag_node().GetDAG(), EdgeId{MV_UA_NODE_ID}};
         } else {
           return Edge{dag_node().GetDAG(), EdgeId{c_node_id}};
@@ -286,62 +296,29 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
         if (is_done()) {
           return;
         }
-
         if (is_ua()) {
           done = true;
           return;
         }
-
-        if (child_iter == mat_node()->children.end()) {
-          started = false;
-          // initialize
-          if (condensed()) {
-            child_iter = mat_node()->children.begin();
+        if (condensed()) {
+          if (++child_iter != mat_node()->children.end()) {
             c_node_id = (*child_iter)->node_id;
           } else {
-            child_iter = mat_node()->children.begin();
-            Assert(child_iter != mat_node()->children.end());
-            c_node_id = (*child_iter)->node_id;
-            cn_id_iter = storage().condensed_nodes_.find(NodeId{c_node_id});
-            cn_str = cn_id_iter != storage().condensed_nodes_.end()
-                         ? cn_id_iter->second.begin()
-                         : decltype(cn_str){};
-            if (cn_id_iter == storage().condensed_nodes_.end() or
-                cn_str == cn_id_iter->second.end()) {
-              c_node_id = mat_node()->node_id;
-            } else {
-              c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
-            }
-          }
-          return;
-        }
-
-        if (started) {
-          if (condensed()) {
-            if (++child_iter != mat_node()->children.end()) {
-              c_node_id = (*child_iter)->node_id;
-            } else {
-              done = true;
-            }
-          } else {
-            if (not advance_condensed()) {
-              if (not advance_child()) {
-                done = true;
-              } else {
-                cn_str = cn_id_iter->second.begin();
-                if (cn_str == cn_id_iter->second.end()) {
-                  done = true;
-                }
-              }
-            }
-            if (not done) {
-              c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
-            }
+            done = true;
           }
         } else {
-          started = true;
-          if (child_iter == mat_node()->children.end()) {
-            done = true;
+          if (not advance_condensed()) {
+            if (not advance_child()) {
+              done = true;
+            }
+          }
+          if (not done) {
+            if (cn_id_iter == storage().condensed_nodes_.end() or
+                cn_str == cn_id_iter->second.end()) {
+              c_node_id = (*child_iter)->node_id;
+            } else {
+              c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
+            }
           }
         }
       }
@@ -387,7 +364,6 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       decltype(cn_id_iter->second.begin()) cn_str = {};
       size_t c_node_id = NoId;
       bool done = false;
-      bool started = false;
       size_t clades_count = 0;
     };
 
@@ -538,10 +514,8 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     bool is_ua = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
                      .ua_node_id_ == id;
     if ((not is_ua) and (mat_node == nullptr)) {
-      // auto& storage = dag.template GetFeatureExtraStorage<Component::Node,
-      // MATNodeStorage>();
       auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
-      if (storage.condensed_nodes_.find(id) == storage.condensed_nodes_.end()) {
+      if (storage.node_id_to_sampleid_map_.find(id) == storage.node_id_to_sampleid_map_.end()) {
         is_ua = true;
       }
     }
@@ -760,8 +734,9 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
         mat_node != nullptr ? ((mat.root->node_id == mat_node->node_id)) : false;
     if ((not is_ua) and (mat_node == nullptr)) {
       auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
-      if (storage.condensed_nodes_.find(NodeId{id.value}) ==
-          storage.condensed_nodes_.end()) {
+      //if (storage.condensed_nodes_.find(NodeId{id.value}) ==
+      //    storage.condensed_nodes_.end()) {
+      if (storage.node_id_to_sampleid_map_.find(NodeId{id.value}) == storage.node_id_to_sampleid_map_.end()) {
         is_ua = true;
       }
     }
