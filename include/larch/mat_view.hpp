@@ -310,6 +310,13 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
           if (not advance_condensed()) {
             if (not advance_child()) {
               done = true;
+            } else {
+              c_node_id = (*child_iter)->node_id;
+              cn_id_iter = storage().condensed_nodes_.find(NodeId{c_node_id});
+              if (cn_id_iter != storage().condensed_nodes_.end()) {
+                cn_str = cn_id_iter->second.begin();
+                c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
+              }
             }
           }
           if (not done) {
