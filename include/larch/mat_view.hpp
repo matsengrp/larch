@@ -249,8 +249,9 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     struct Result : ranges::view_facade<Result> {
       Result() : done(true) {}
       Result(std::tuple<Node, std::reference_wrapper<const MAT::Tree>, MAT::Node*, bool>
-                 access)
-          : access_{access} {
+                 access,
+             size_t count)
+          : access_{access}, clades_count{count} {
         if (mat_node() == nullptr or mat_node()->children.empty()) {
           done = true;
         } else {
@@ -261,8 +262,8 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       using Storage = decltype(std::declval<Node>()
                                    .template GetFeatureExtraStorage<MATNodeStorage>());
 
-      bool empty() const { return true; }
-      size_t size() const { return 0; }
+      bool empty() const { return clades_count == 0; }
+      size_t size() const { return clades_count; }
 
      private:
       friend ranges::range_access;
@@ -294,7 +295,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
         if (child_iter == mat_node()->children.end()) {
           started = false;
           // initialize
-          if (condensed) {
+          if (condensed()) {
             child_iter = mat_node()->children.begin();
             c_node_id = (*child_iter)->node_id;
           } else {
@@ -376,9 +377,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 
       bool is_ua() const { return std::get<3>(access_.value()); }
 
-      bool is_done() const {
-        return done or not access_.has_value() or mat_node() == nullptr;
-      }
+      bool is_done() const { return done or not access_.has_value(); }
 
       std::optional<
           std::tuple<Node, std::reference_wrapper<const MAT::Tree>, MAT::Node*, bool>>
@@ -389,9 +388,10 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       size_t c_node_id = NoId;
       bool done = false;
       bool started = false;
+      size_t clades_count = 0;
     };
 
-    return Result{access()};
+    return Result{access(), GetCladesCount()};
   }
 
   auto GetSingleParent() const {
