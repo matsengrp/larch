@@ -45,8 +45,14 @@ void test_mat_view_impl(DAGView dag) {
   mv.RecomputeCompactGenomes<IdContinuity::Sparse>();
   mv.GetRoot().Validate(true, false);
 
+  std::cout << "\nCondensed MAT view\n";
+  MADAGToDOT(mv, std::cout);
+
   auto umv = mv.GetUncondensed();
   static_assert(not umv.IsCondensed());
+
+  std::cout << "\nUnndensed MAT view\n";
+  MADAGToDOT(umv, std::cout);
 
   // check BuildFromMAT
   auto dag_from_mat = AddMATConversion(MergeDAGStorage<>::EmptyDefault());
@@ -171,12 +177,11 @@ void test_sample_dag() {
 [[maybe_unused]] static const auto test_added0 =
     add_test({[]() { test_sample_dag(); }, "MATView: sample dag"});
 
-[[maybe_unused]] static const auto test_added1 =
-    add_test({[]() {
-                test_mat_view("data/seedtree/seedtree.pb.gz",
-                              "data/seedtree/refseq.txt.gz", "");
-              },
-              "MATView: seedtree"});
+[[maybe_unused]] static const auto test_added1 = add_test(
+    {[]() {
+       test_mat_view("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz", "");
+     },
+     "MATView: seedtree"});
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[]() { test_condensed_mat_view(); }, "MATView: condensing"});

@@ -168,9 +168,8 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   }
   auto GetClades() const {
     auto [dag_node, mat, mat_node, is_ua] = access();
-    auto children = GetChildren();
-    return ranges::views::counted(children.begin(), GetCladesCount()) |
-           Transform::GetId() | ranges::views::transform([dag_node](EdgeId child) {
+    return GetChildren() | Transform::GetId() |
+           ranges::views::transform([dag_node](EdgeId child) {
              return ranges::views::iota(child.value, child.value + 1) |
                     Transform::ToId<Component::Edge>() |
                     Transform::ToEdges(dag_node.GetDAG());
@@ -244,47 +243,81 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto [dag_node, mat, mat_node, is_ua] = access();
     auto dag = dag_node.GetDAG();
 
+    using Node = typename decltype(dag)::NodeView;
     using Edge = typename decltype(dag)::EdgeView;
 
-    struct Iter {
-      Iter(bool cond, MAT::Node* mn, const ExtraFeatureStorage<MATNodeStorage>& stor)
-          : condensed{cond}, mat_node{mn}, storage{stor}, child_iter{[mn] {
-              return mn != nullptr ? mn->children.end() : decltype(child_iter){};
-            }()} {}
+    struct Result : ranges::view_facade<Result> {
+      Result() : done(true) {}
+      Result(std::tuple<Node, std::reference_wrapper<const MAT::Tree>, MAT::Node*, bool>
+                 access)
+          : access_{access} {
+        if (mat_node() == nullptr or mat_node()->children.empty()) {
+          done = true;
+        } else {
+          child_iter = mat_node()->children.end();
+        }
+      }
 
-      void advance() {
-        Assert(mat_node != nullptr);
-        if (done) {
+      using Storage = decltype(std::declval<Node>()
+                                   .template GetFeatureExtraStorage<MATNodeStorage>());
+
+      bool empty() const { return true; }
+      size_t size() const { return 0; }
+
+     private:
+      friend ranges::range_access;
+
+      Edge read() const {
+        if (is_ua()) {
+          // size_t root_id =
+          //     dag_node.template GetFeatureExtraStorage<MATNodeStorage>()
+          //         .mat_tree_->root->node_id;
+          // return Edge{dag_node.GetDAG(), EdgeId{root_id}};
+          return Edge{dag_node().GetDAG(), EdgeId{MV_UA_NODE_ID}};
+        } else {
+          return Edge{dag_node().GetDAG(), EdgeId{c_node_id}};
+        }
+      }
+
+      bool equal(ranges::default_sentinel_t) const { return is_done(); }
+
+      void next() {
+        if (is_done()) {
           return;
         }
 
-        if (child_iter == mat_node->children.end()) {
+        if (is_ua()) {
+          done = true;
+          return;
+        }
+
+        if (child_iter == mat_node()->children.end()) {
           started = false;
           // initialize
           if (condensed) {
-            child_iter = mat_node->children.begin();
+            child_iter = mat_node()->children.begin();
             c_node_id = (*child_iter)->node_id;
           } else {
-            child_iter = mat_node->children.begin();
-            Assert(child_iter != mat_node->children.end());
+            child_iter = mat_node()->children.begin();
+            Assert(child_iter != mat_node()->children.end());
             c_node_id = (*child_iter)->node_id;
-            cn_id_iter = storage.condensed_nodes_.find(NodeId{c_node_id});
-            cn_str = cn_id_iter != storage.condensed_nodes_.end()
+            cn_id_iter = storage().condensed_nodes_.find(NodeId{c_node_id});
+            cn_str = cn_id_iter != storage().condensed_nodes_.end()
                          ? cn_id_iter->second.begin()
                          : decltype(cn_str){};
-            if (cn_id_iter == storage.condensed_nodes_.end() or
+            if (cn_id_iter == storage().condensed_nodes_.end() or
                 cn_str == cn_id_iter->second.end()) {
-              c_node_id = mat_node->node_id;
+              c_node_id = mat_node()->node_id;
             } else {
-              c_node_id = storage.sampleid_to_mat_node_id_map_.at(*cn_str);
+              c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
             }
           }
           return;
         }
 
         if (started) {
-          if (condensed) {
-            if (++child_iter != mat_node->children.end()) {
+          if (condensed()) {
+            if (++child_iter != mat_node()->children.end()) {
               c_node_id = (*child_iter)->node_id;
             } else {
               done = true;
@@ -301,30 +334,19 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
               }
             }
             if (not done) {
-              c_node_id = storage.sampleid_to_mat_node_id_map_.at(*cn_str);
+              c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
             }
           }
         } else {
           started = true;
-          if (child_iter == mat_node->children.end()) {
+          if (child_iter == mat_node()->children.end()) {
             done = true;
           }
         }
       }
 
-      const bool condensed;
-      MAT::Node* const mat_node;
-      const ExtraFeatureStorage<MATNodeStorage>& storage;
-      decltype(mat_node->children.begin()) child_iter;
-      decltype(storage.condensed_nodes_.begin()) cn_id_iter = {};
-      decltype(cn_id_iter->second.begin()) cn_str = {};
-      size_t c_node_id = NoId;
-      bool done = false;
-      bool started = false;
-
-     private:
       bool advance_condensed() {
-        if (cn_id_iter == storage.condensed_nodes_.end()) {
+        if (cn_id_iter == storage().condensed_nodes_.end()) {
           return false;
         }
         if (cn_str == cn_id_iter->second.end()) {
@@ -334,46 +356,42 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       }
 
       bool advance_child() {
-        if (child_iter == mat_node->children.end()) {
+        if (child_iter == mat_node()->children.end()) {
           return false;
         }
-        return ++child_iter != mat_node->children.end();
+        return ++child_iter != mat_node()->children.end();
       }
+
+      static constexpr bool condensed() {
+        return CheckIsCondensed<decltype(std::get<0>(access_.value()).GetDAG())>::value;
+      }
+
+      Node dag_node() const { return std::get<0>(access_.value()); }
+
+      MAT::Node* mat_node() const { return std::get<2>(access_.value()); }
+
+      Storage& storage() const {
+        return dag_node().template GetFeatureExtraStorage<MATNodeStorage>();
+      }
+
+      bool is_ua() const { return std::get<3>(access_.value()); }
+
+      bool is_done() const {
+        return done or not access_.has_value() or mat_node() == nullptr;
+      }
+
+      std::optional<
+          std::tuple<Node, std::reference_wrapper<const MAT::Tree>, MAT::Node*, bool>>
+          access_;
+      decltype(std::declval<MAT::Node>().children.begin()) child_iter = {};
+      decltype(std::declval<Storage>().condensed_nodes_.begin()) cn_id_iter = {};
+      decltype(cn_id_iter->second.begin()) cn_str = {};
+      size_t c_node_id = NoId;
+      bool done = false;
+      bool started = false;
     };
 
-    return ranges::views::iota(size_t{0}) |
-           ranges::views::take_while([is_ua, mat_node](size_t) {
-             if (is_ua) {
-               return true;
-             }
-             if (mat_node == nullptr or mat_node->children.empty()) {
-               return false;
-             } else {
-               return true;
-             }
-           }) |
-           ranges::views::transform(
-               [i = Iter{CheckIsCondensed<decltype(dag)>::value, mat_node,
-                         dag_node.template GetFeatureExtraStorage<MATNodeStorage>()}](
-                   size_t) mutable -> Iter& {
-                 if (i.mat_node != nullptr) {
-                   i.advance();
-                 }
-                 return i;
-               }) |
-           ranges::views::take_while([](auto& i) { return not i.done; }) |
-           ranges::views::transform([is_ua, dag_node](auto& i) {
-             if (is_ua) {
-               i.done = true;
-               // size_t root_id =
-               //     dag_node.template GetFeatureExtraStorage<MATNodeStorage>()
-               //         .mat_tree_->root->node_id;
-               // return Edge{dag_node.GetDAG(), EdgeId{root_id}};
-               return Edge{dag_node.GetDAG(), EdgeId{MV_UA_NODE_ID}};
-             } else {
-               return Edge{dag_node.GetDAG(), EdgeId{i.c_node_id}};
-             }
-           });
+    return Result{access()};
   }
 
   auto GetSingleParent() const {
@@ -738,10 +756,12 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     Assert(id.value == MV_UA_NODE_ID or id.value < mat.get_size_upper());
     MAT::Node* mat_node = mat.get_node(id.value);
 
-    bool is_ua = mat_node != nullptr ? ((mat.root->node_id == mat_node->node_id)) : false;
+    bool is_ua =
+        mat_node != nullptr ? ((mat.root->node_id == mat_node->node_id)) : false;
     if ((not is_ua) and (mat_node == nullptr)) {
       auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
-      if (storage.condensed_nodes_.find(NodeId{id.value}) == storage.condensed_nodes_.end()) {
+      if (storage.condensed_nodes_.find(NodeId{id.value}) ==
+          storage.condensed_nodes_.end()) {
         is_ua = true;
       }
     }

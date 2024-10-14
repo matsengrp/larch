@@ -212,8 +212,9 @@ void ValidateImpl(Node node, StorageValidator&& storage,
                                ", should be " + std::to_string(node.GetId().value)};
     }
   }
-  for (CladeIdx i{0}; i.value < storage.CladesRange().size(); ++i.value) {
-    auto&& clade = storage.CladesRange().at(i.value);
+  CladeIdx cidx{0};
+  for (auto&& clade : storage.CladesRange()) {
+    CladeIdx i{cidx.value++};
     if (not allow_dag) {
       if (clade.size() != 1) {
         std::string children;
