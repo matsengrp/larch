@@ -186,7 +186,7 @@
   MADAGStorage<> dag_storage = MADAGStorage<>::EmptyDefault();
   auto dag = dag_storage.View();
   dag.SetReferenceSequence("GAA");
-  dag.InitializeNodes(14);
+  dag.InitializeNodes(15);
   size_t edge_id = 0;
   dag.AddEdge({edge_id++}, {10}, {0}, {0});
   dag.AddEdge({edge_id++}, {7},  {1},  {0});
@@ -196,6 +196,7 @@
   dag.AddEdge({edge_id++}, {8},  {4},  {1});
   dag.AddEdge({edge_id++}, {8},  {7},  {2});
   dag.AddEdge({edge_id++}, {8},  {13}, {3});
+  dag.AddEdge({edge_id++}, {8},  {14}, {4});
   dag.AddEdge({edge_id++}, {9},  {5},  {0});
   dag.AddEdge({edge_id++}, {9},  {6},  {1});
   dag.AddEdge({edge_id++}, {9},  {12}, {2});
@@ -215,6 +216,7 @@
   amb_seq_map[{11}] = {"TGN"};
   amb_seq_map[{12}] = {"NNT"};
   amb_seq_map[{13}] = {"NGG"};
+  amb_seq_map[{14}] = {"GGN"};
   auto amb_dag = amb_dag_storage.View();
   amb_dag.SetCompactGenomesFromNodeSequenceMap(amb_seq_map);
   amb_dag.RecomputeEdgeMutations();

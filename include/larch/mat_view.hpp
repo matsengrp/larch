@@ -844,10 +844,6 @@ struct MATElementsContainerBase {
   template <typename VT>
   auto All() const {
     size_t iota_max = GetCount<VT>() + 1;
-    if constexpr (CheckIsCondensed<VT>::value) {
-      iota_max = GetCount<VT>() + extra_storage_.condensed_nodes_count_ -
-                 extra_storage_.condensed_nodes_.size() + 1;
-    }
     if constexpr (C == Component::Node) {
       return ranges::views::iota(size_t{0}, iota_max) |
              ranges::views::transform([](size_t i) -> size_t {
