@@ -793,6 +793,10 @@ struct MATElementsContainerBase {
       Assert(count > 0);
       count -= 1;
     }
+    if constexpr (not CheckIsCondensed<VT>::value) {
+      count -= extra_storage_.condensed_nodes_.size();
+      count += extra_storage_.condensed_nodes_count_;
+    }
     return count;
   }
 
