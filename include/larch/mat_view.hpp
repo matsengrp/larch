@@ -787,7 +787,7 @@ struct MATElementsContainerBase {
 
   template <typename VT>
   size_t GetCount() const {
-    size_t count = GetMAT().get_node_idx() + 2;
+    size_t count = GetMAT().get_node_idx() + 1;
 
     if constexpr (C == Component::Edge) {
       Assert(count > 0);
@@ -844,6 +844,13 @@ struct MATElementsContainerBase {
   template <typename VT>
   auto All() const {
     size_t iota_max = GetCount<VT>() + 1;
+    // getcount returns the number of nodes/edges in the tree.
+    // if view is condensed, we need to check all possible node ids,
+    // which means checking the max number of nodes, condensed or not.
+    if constexpr (CheckIsCondensed<VT>::value) {
+      iota_max -= extra_storage_.condensed_nodes_.size();
+      iota_max += extra_storage_.condensed_nodes_count_;
+    }
     if constexpr (C == Component::Node) {
       return ranges::views::iota(size_t{0}, iota_max) |
              ranges::views::transform([](size_t i) -> size_t {
