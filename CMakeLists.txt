@@ -50,7 +50,15 @@ else()
   FetchContent_MakeAvailable(oneTBB)
 endif()
 
-include(protobuf.cmake)
+
+option(PROTOBUF_FROM_SOURCE "Build protobuf from source code" OFF)
+if(PROTOBUF_FROM_SOURCE)
+  include(protobuf.cmake)
+endif()
+find_package(Protobuf REQUIRED)
+if(Protobuf_FOUND)
+  message(STATUS "Protobuf version : ${Protobuf_VERSION}")
+endif()
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}

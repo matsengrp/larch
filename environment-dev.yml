@@ -2,7 +2,6 @@ name: larch-dev
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
   # larch
   - cmake=3.19.6
@@ -20,6 +19,7 @@ dependencies:
   - ucx
   - cuda-cudart
   - git-lfs
+  - protobuf
   # development
   - git
   - mafft
