@@ -5,13 +5,19 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/static)
+
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
+option(USE_USHER "Use matOptimize" ON)
+option(PROTOBUF_FROM_SOURCE "Build protobuf from source code" OFF)
+
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
-option(USE_USHER "Use matOptimize" yes)
 
 if(USE_USHER)
     set(TBB_VERSION "2019_U9")
@@ -23,6 +29,10 @@ message("cmake system architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 message("build type: ${CMAKE_BUILD_TYPE}")
 message("using usher: ${USE_USHER}")
 
+# External static libraries: protobuf/larch-autogen, range-v3, nlohmann_json, htslib
+# External dynamic libraries: oneTBB, boost, zlib
+
+## oneTBB
 include(FetchContent)
 if(USE_USHER)
   FetchContent_Declare(oneTBB-src
@@ -33,9 +43,13 @@ if(USE_USHER)
   FetchContent_MakeAvailable(oneTBB-src)
 
   include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
-  tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
-
+  tbb_build(
+    TBB_ROOT ${onetbb-src_SOURCE_DIR} 
+    CONFIG_DIR TBB_DIR 
+    MAKE_ARGS tbb_cpf=1 CFLAGS="-w"
+  )
   find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
+
   find_package(MPI REQUIRED)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 else()
@@ -45,20 +59,19 @@ else()
     GIT_SHALLOW true
     GIT_PROGRESS true
     UPDATE_DISCONNECTED true
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DTBB_TEST=OFF -DTBB_FIND_PACKAGE=OFF
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DTBB_TEST=OFF -DTBB_FIND_PACKAGE=OFF -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=${CMAKE_BINARY_DIR}/lib
   )
   FetchContent_MakeAvailable(oneTBB)
 endif()
 
-
-option(PROTOBUF_FROM_SOURCE "Build protobuf from source code" OFF)
+## protobuf 
 if(PROTOBUF_FROM_SOURCE)
+  message("building protobuf from source...")
   include(protobuf.cmake)
+else()
+  message("using protobuf from environment...")
 endif()
 find_package(Protobuf REQUIRED)
-if(Protobuf_FOUND)
-  message(STATUS "Protobuf version : ${Protobuf_VERSION}")
-endif()
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -66,21 +79,24 @@ add_library(larch-autogen OBJECT
   ${DETAILED_MUTATIONS_PROTO_SRCS} ${DETAILED_MUTATIONS_PROTO_HDRS}
 )
 set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
+
+## larch-autogen library from protobuf
 target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR} ${Protobuf_INCLUDE_DIRS})
 target_link_libraries(larch-autogen PUBLIC ${Protobuf_ABSL_LIBS})
 set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
-
 protobuf_generate(
   LANGUAGE cpp
   TARGET larch-autogen
   PROTOS proto/dag.proto deps/usher/parsimony.proto deps/usher/mutation_detailed.proto
 )
 
+## nlohmann_json
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
 FetchContent_MakeAvailable(json)
 
+## range-v3
 include(ExternalProject)
 ExternalProject_Add(range-v3
   GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
@@ -93,6 +109,7 @@ ExternalProject_Add(range-v3
   INSTALL_DIR range-v3/install
 )
 
+## htslib
 if(${USE_HTSLIB})
   ExternalProject_Add(htslib
     GIT_REPOSITORY https://github.com/samtools/htslib.git
@@ -108,20 +125,30 @@ if(${USE_HTSLIB})
   )
 endif()
 
+## zlib
+find_package(ZLIB)
+
+## boost
+find_package(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
+
+# Internal libraries and binaries
+
+## set build version
 add_custom_target(generate_version_h ALL
   COMMAND cd ${CMAKE_SOURCE_DIR} && ${CMAKE_COMMAND} -DBUILD_TYPE=${CMAKE_BUILD_TYPE} -P version.cmake  
   COMMENT "Generating version.hpp with version information"
   VERBATIM
 )
 
-find_package(ZLIB)
-
+## set compiler warnings
 set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
 
+## set compiler version
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   list(APPEND STRICT_WARNINGS -Wcast-align=strict)
 endif()
 
+# set larch compiler options
 function(larch_compile_opts PRODUCT)
   target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -pipe)
 
@@ -152,8 +179,6 @@ function(larch_compile_opts PRODUCT)
   endif()
 endfunction()
 
-FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
-
 if(${USE_USHER})
   include_directories(deps/usher/)
   file(GLOB MATOPTIMIZE_SRC
@@ -177,6 +202,7 @@ if(${USE_USHER})
   )
 endif()
 
+# link libraries to executable
 function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
 
@@ -198,11 +224,12 @@ function(larch_link_opts PRODUCT)
   endif()
 
   if(${USE_HTSLIB})
-    target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/lib)
+    target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install)
     target_link_libraries(${PRODUCT} PUBLIC -lhts)
   endif()
 endfunction()
 
+# build larch executable
 function(larch_executable PRODUCT)
   add_executable(${PRODUCT} ${ARGN})
   larch_compile_opts(${PRODUCT})
@@ -210,8 +237,24 @@ function(larch_executable PRODUCT)
   larch_link_opts(${PRODUCT})
   target_link_libraries(${PRODUCT} PUBLIC larch)
   add_dependencies(${PRODUCT} generate_version_h)
+
+  get_target_property(LINKED_LIBS ${PRODUCT} LINK_LIBRARIES)
+  message(STATUS "Libraries linked to ${PRODUCT}: ${LINKED_LIBS}")
+
+  get_target_property(PRODUCT_LIBRARIES ${PRODUCT} LINK_LIBRARIES)
+  get_target_property(PRODUCT_ARCHIVES ${PRODUCT} ARCHIVE_OUTPUT_DIRECTORY)
+  message(STATUS "Libraries to be installed to LIBRARY destination: ${PRODUCT_LIBRARIES}")
+  message(STATUS "Archives to be installed to ARCHIVE destination: ${PRODUCT_ARCHIVES}")
+
+  install(TARGETS ${PRODUCT} 
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+  )
 endfunction()
 
+# Internal libraries: larch, usher
+
+## larch library
 add_library(larch
   src/dag_loader.cpp
 )
@@ -225,10 +268,12 @@ endif()
 
 larch_link_opts(larch)
 
+## usher library
 if(${USE_USHER})
   add_library(usher
     ${MATOPTIMIZE_SRC}
-    src/usher_globals.cpp)
+    src/usher_globals.cpp
+  )
   target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer -DUSE_USHER)
 
   if(${USE_ASAN})
@@ -253,16 +298,19 @@ if(${USE_USHER})
 
   add_library(larch-usher-glue
     src/usher_glue.cpp)
-  larch_compile_opts(larch-usher-glue)
-  target_compile_options(larch-usher-glue PRIVATE ${STRICT_WARNINGS})
-  larch_link_opts(larch-usher-glue)
-  target_link_libraries(larch-usher-glue PUBLIC usher)
-  add_dependencies(larch-usher-glue larch usher)
-  set_target_properties(larch-usher-glue
+    larch_compile_opts(larch-usher-glue)
+    target_compile_options(larch-usher-glue PRIVATE ${STRICT_WARNINGS})
+    larch_link_opts(larch-usher-glue)
+    target_link_libraries(larch-usher-glue PUBLIC usher)
+    add_dependencies(larch-usher-glue larch usher)
+    set_target_properties(larch-usher-glue
     PROPERTIES CXX_CLANG_TIDY ""
   )
 endif()
 
+# Executables: larch-usher, larch-dagutil, larch-dag2dot, larch-test
+
+## larch-test
 larch_executable(larch-test
   test/main.cpp
   test/test_ambiguous_vcf.cpp
@@ -300,12 +348,17 @@ if(${USE_USHER})
   )
 endif()
 
+## larch-dagutil
 larch_executable(larch-dagutil
-  tools/larch-dagutil.cpp)
+  tools/larch-dagutil.cpp
+)
 
+## larch-dag2dot
 larch_executable(larch-dag2dot
-  tools/larch-dag2dot.cpp)
+  tools/larch-dag2dot.cpp
+)
 
+## larch-usher
 if(${USE_USHER})
   larch_executable(larch-usher
     tools/larch-usher.cpp
