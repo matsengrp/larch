@@ -94,8 +94,6 @@ void test_condensed_mat_view() {
 
   std::cout << "\n\nDAG view\n";
   MADAGToDOT(dag_storage.View(), std::cout);
-  std::cout << "\n\nMAT\n";
-  MATToDOT(mat, std::cout);
 
   // optimal labelings for MAT (this disambiguates the leaf nodes so they can be
   // condensed) NOTE: ordinarily, reassign_states optimizes internal node labels and
@@ -111,9 +109,6 @@ void test_condensed_mat_view() {
   std::vector<std::string> condense_arg{};
   mat.condense_leaves(condense_arg);
   mat.fix_node_idx();
-
-  std::cout << "\n\nCondensed MAT\n";
-  MATToDOT(mat, std::cout);
 
   // create a MATView from the condensed MAT
   MATStorageImpl matview_storage_impl;

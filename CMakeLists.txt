@@ -1,34 +1,47 @@
 cmake_minimum_required(VERSION 3.16)
 project(larch)
 
-option(USE_USHER "Use matOptimize" yes)
-
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
-include(FetchContent)
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+endif()
+option(USE_USHER "Use matOptimize" yes)
 
-if (USE_USHER)
+if(USE_USHER)
+    set(TBB_VERSION "2019_U9")
+else()
+    set(TBB_VERSION "v2021.11.0")
+endif()
+
+message("cmake system architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+message("build type: ${CMAKE_BUILD_TYPE}")
+message("using usher: ${USE_USHER}")
+
+include(FetchContent)
+if(USE_USHER)
   FetchContent_Declare(oneTBB-src
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-    GIT_TAG 2019_U9
+    GIT_TAG ${TBB_VERSION}
+    GIT_PROGRESS true
   )
   FetchContent_MakeAvailable(oneTBB-src)
 
   include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
   tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w")
+
   find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
   find_package(MPI REQUIRED)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 else()
   FetchContent_Declare(oneTBB
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-    GIT_TAG v2021.11.0
+    GIT_TAG ${TBB_VERSION}
     GIT_SHALLOW true
     GIT_PROGRESS true
     UPDATE_DISCONNECTED true
@@ -87,23 +100,14 @@ if(${USE_HTSLIB})
   )
 endif()
 
+add_custom_target(generate_version_h ALL
+  COMMAND cd ${CMAKE_SOURCE_DIR} && ${CMAKE_COMMAND} -DBUILD_TYPE=${CMAKE_BUILD_TYPE} -P version.cmake  
+  COMMENT "Generating version.hpp with version information"
+  VERBATIM
+)
+
 find_package(ZLIB)
 
-ExternalProject_Add(isa-l
-  GIT_REPOSITORY https://github.com/intel/isa-l.git
-  GIT_TAG v2.30.0
-  GIT_SHALLOW true
-  GIT_PROGRESS true
-  UPDATE_DISCONNECTED true
-  PREFIX isa-l
-  SOURCE_DIR isa-l/source
-  BINARY_DIR isa-l/source
-  INSTALL_DIR isa-l/install
-  CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env SED=/bin/sed GREP=/bin/grep ./autogen.sh && ${CMAKE_COMMAND} -E env AS=yasm ./configure --prefix=${CMAKE_BINARY_DIR}/isa-l/install --libdir=${CMAKE_BINARY_DIR}/isa-l/install
-  BUILD_COMMAND make && make other
-  INSTALL_COMMAND make install
-)
-set(isal_lib ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
 set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
@@ -112,7 +116,8 @@ endif()
 
 function(larch_compile_opts PRODUCT)
   target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -pipe)
-  if (CMAKE_BUILD_TYPE EQUAL "DEBUG")
+
+  if(CMAKE_BUILD_TYPE EQUAL "DEBUG")
     target_compile_options(${PRODUCT} PUBLIC -fno-omit-frame-pointer -fno-stack-protector)
   endif()
 
@@ -142,26 +147,26 @@ endfunction()
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
 
 if(${USE_USHER})
-include_directories(deps/usher/)
-file(GLOB MATOPTIMIZE_SRC
-  "deps/usher/src/matOptimize/apply_move/*.cpp"
-  "deps/usher/src/matOptimize/Profitable_Moves_Enumerators/*.cpp"
-  "deps/usher/src/matOptimize/Fitch_Sankoff.cpp"
-  "deps/usher/src/matOptimize/mutation_annotated_tree.cpp"
-  "deps/usher/src/matOptimize/mutation_annotated_tree_nuc_util.cpp"
-  "deps/usher/src/matOptimize/mutation_annotated_tree_node.cpp"
-  "deps/usher/src/matOptimize/mutation_annotated_tree_load_store.cpp"
-  "deps/usher/src/matOptimize/mutation_annotated_tree_nuc_utils.cpp"
-  "deps/usher/src/matOptimize/optimize_inner_loop.cpp"
-  "deps/usher/src/matOptimize/Mutation_Collection.cpp"
-  "deps/usher/src/matOptimize/condense.cpp"
-  "deps/usher/src/matOptimize/reassign_states.cpp"
-  "deps/usher/src/matOptimize/detailed_mutations_load.cpp"
-  "deps/usher/src/matOptimize/detailed_mutations_store.cpp"
-  "deps/usher/src/matOptimize/optimize_tree.cpp"
-  "deps/usher/src/matOptimize/priority_conflict_resolver.cpp"
-  "deps/usher/src/matOptimize/check_samples.cpp"
-)
+  include_directories(deps/usher/)
+  file(GLOB MATOPTIMIZE_SRC
+    "deps/usher/src/matOptimize/apply_move/*.cpp"
+    "deps/usher/src/matOptimize/Profitable_Moves_Enumerators/*.cpp"
+    "deps/usher/src/matOptimize/Fitch_Sankoff.cpp"
+    "deps/usher/src/matOptimize/mutation_annotated_tree.cpp"
+    "deps/usher/src/matOptimize/mutation_annotated_tree_nuc_util.cpp"
+    "deps/usher/src/matOptimize/mutation_annotated_tree_node.cpp"
+    "deps/usher/src/matOptimize/mutation_annotated_tree_load_store.cpp"
+    "deps/usher/src/matOptimize/mutation_annotated_tree_nuc_utils.cpp"
+    "deps/usher/src/matOptimize/optimize_inner_loop.cpp"
+    "deps/usher/src/matOptimize/Mutation_Collection.cpp"
+    "deps/usher/src/matOptimize/condense.cpp"
+    "deps/usher/src/matOptimize/reassign_states.cpp"
+    "deps/usher/src/matOptimize/detailed_mutations_load.cpp"
+    "deps/usher/src/matOptimize/detailed_mutations_store.cpp"
+    "deps/usher/src/matOptimize/optimize_tree.cpp"
+    "deps/usher/src/matOptimize/priority_conflict_resolver.cpp"
+    "deps/usher/src/matOptimize/check_samples.cpp"
+  )
 endif()
 
 function(larch_link_opts PRODUCT)
@@ -177,6 +182,7 @@ function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
   target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
+
   if(${USE_USHER})
     target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
   else()
@@ -195,6 +201,7 @@ function(larch_executable PRODUCT)
   target_compile_options(${PRODUCT} PRIVATE ${STRICT_WARNINGS})
   larch_link_opts(${PRODUCT})
   target_link_libraries(${PRODUCT} PUBLIC larch)
+  add_dependencies(${PRODUCT} generate_version_h)
 endfunction()
 
 add_library(larch
@@ -211,44 +218,41 @@ endif()
 larch_link_opts(larch)
 
 if(${USE_USHER})
-add_library(usher
-  ${MATOPTIMIZE_SRC}
-  src/usher_globals.cpp)
-target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer  -DUSE_USHER)
+  add_library(usher
+    ${MATOPTIMIZE_SRC}
+    src/usher_globals.cpp)
+  target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer -DUSE_USHER)
 
-if(${USE_ASAN})
-  target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
-elseif(${USE_TSAN})
-  target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=thread)
-endif()
+  if(${USE_ASAN})
+    target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
+  elseif(${USE_TSAN})
+    target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=thread)
+  endif()
 
-target_include_directories(usher PUBLIC include)
-target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
-target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
+  target_include_directories(usher PUBLIC include)
+  target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
+  target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
 
-target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/isa-l/install/include)
-add_dependencies(usher range-v3)
+  add_dependencies(usher range-v3)
 
-add_dependencies(usher isa-l)
-target_include_directories(usher PUBLIC ${PROTO_OUT_DIR}/deps/usher)
-larch_link_opts(usher)
-target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
+  target_include_directories(usher PUBLIC ${PROTO_OUT_DIR}/deps/usher)
+  larch_link_opts(usher)
+  target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
 
-target_link_libraries(usher PUBLIC ${CMAKE_BINARY_DIR}/isa-l/install/libisal.a)
-set_target_properties(usher
-  PROPERTIES CXX_CLANG_TIDY ""
-)
+  set_target_properties(usher
+    PROPERTIES CXX_CLANG_TIDY ""
+  )
 
-add_library(larch-usher-glue
-  src/usher_glue.cpp)
-larch_compile_opts(larch-usher-glue)
-target_compile_options(larch-usher-glue PRIVATE ${STRICT_WARNINGS})
-larch_link_opts(larch-usher-glue)
-target_link_libraries(larch-usher-glue PUBLIC usher)
-add_dependencies(larch-usher-glue larch usher)
-set_target_properties(larch-usher-glue
-  PROPERTIES CXX_CLANG_TIDY ""
-)
+  add_library(larch-usher-glue
+    src/usher_glue.cpp)
+  larch_compile_opts(larch-usher-glue)
+  target_compile_options(larch-usher-glue PRIVATE ${STRICT_WARNINGS})
+  larch_link_opts(larch-usher-glue)
+  target_link_libraries(larch-usher-glue PUBLIC usher)
+  add_dependencies(larch-usher-glue larch usher)
+  set_target_properties(larch-usher-glue
+    PROPERTIES CXX_CLANG_TIDY ""
+  )
 endif()
 
 larch_executable(larch-test
@@ -259,9 +263,10 @@ larch_executable(larch-test
   test/test_count_trees.cpp
   test/test_dag_completion.cpp
   test/test_dag_trimming.cpp
+  test/test_fileio_dagbin.cpp
+  test/test_fileio_protobuf.cpp
   test/test_larch_usher.cpp
   test/test_lca.cpp
-  test/test_loading.cpp
   test/test_map.cpp
   test/test_mat_conversion.cpp
   test/test_mat_view.cpp
@@ -276,28 +281,29 @@ larch_executable(larch-test
   test/test_subtree_weight.cpp
   test/test_weight_accum.cpp
   test/test_weight_counter.cpp
-  test/test_write_parsimony.cpp
+  test/test_write_parsimony_protobuf.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
+
 if(${USE_USHER})
-target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
-add_dependencies(larch-test larch-usher-glue)
-set_target_properties(larch-test
-  PROPERTIES CXX_CLANG_TIDY ""
-)
+  target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
+  add_dependencies(larch-test larch-usher-glue)
+  set_target_properties(larch-test
+    PROPERTIES CXX_CLANG_TIDY ""
+  )
 endif()
 
-larch_executable(merge
-  tools/merge.cpp)
+larch_executable(larch-dagutil
+  tools/larch-dagutil.cpp)
 
-larch_executable(dag2dot
-  tools/dag2dot.cpp)
+larch_executable(larch-dag2dot
+  tools/larch-dag2dot.cpp)
 
 if(${USE_USHER})
-larch_executable(larch-usher
-  tools/larch-usher.cpp
-)
-target_compile_options(larch-usher PRIVATE ${STRICT_WARNINGS})
-target_link_libraries(larch-usher PRIVATE larch-usher-glue)
-add_dependencies(larch-usher larch-usher-glue)
+  larch_executable(larch-usher
+    tools/larch-usher.cpp
+  )
+  target_compile_options(larch-usher PRIVATE ${STRICT_WARNINGS})
+  target_link_libraries(larch-usher PRIVATE larch-usher-glue)
+  add_dependencies(larch-usher larch-usher-glue)
 endif()

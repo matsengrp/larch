@@ -1,27 +1,9 @@
 #include "test_common.hpp"
-#include "sample_dag.hpp"
+#include "test_common_dag.hpp"
 #include "larch/dag_loader.hpp"
 
 using Node = MutableMADAG::NodeView;
 using Edge = MutableMADAG::EdgeView;
-
-[[maybe_unused]] static void dag_info(MADAGStorage<>& dag_storage) {
-  auto dag = dag_storage.View();
-  std::cout << "=== DAG_INFO [begin] ===" << std::endl;
-  std::cout << "=== NODES: " << dag.GetNodesCount() << " ===" << std::endl;
-  for (auto node : dag.GetNodes()) {
-    std::cout << "node: " << node.GetId() << std::endl;
-    std::cout << "  leaf_set: " << node.GetLeafsBelow() << std::endl;
-    std::cout << "  children: " << node.GetChildren() << std::endl;
-    std::cout << "  clades: " << node.GetClades() << std::endl;
-  }
-  std::cout << "=== EDGES: " << dag.GetEdgesCount() << " ===" << std::endl;
-  for (auto edge : dag.GetEdges()) {
-    std::cout << "edge: " << edge.GetId() << " [" << edge.GetParent() << " -> "
-              << edge.GetChild() << " | " << edge.GetClade() << "]" << std::endl;
-  }
-  std::cout << "=== DAG_INFO [end] ===" << std::endl << std::endl;
-}
 
 [[maybe_unused]] std::set<std::tuple<NodeId, NodeId, CladeIdx>> dag_make_node_pair_map(
     MADAGStorage<>& dag_storage) {

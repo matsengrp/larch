@@ -7,6 +7,8 @@
 #include <unordered_set>
 #include <tuple>
 #include <typeinfo>
+#include <random>
+#include <optional>
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -175,11 +177,13 @@ inline std::string tuple_to_string() {
 
 //////////////////////////////////////////////////////////////////////////////////////
 
+// Generic containers to stream.
+
 template <typename T>
 inline std::ostream& operator<<(std::ostream& os, const std::vector<T>& vector) {
   os << "[ ";
   for (const auto& element : vector) {
-    os << element << " ";
+    os << element << ", ";
   }
   os << "]";
   return os;
@@ -189,7 +193,7 @@ template <typename T>
 inline std::ostream& operator<<(std::ostream& os, const std::set<T>& set) {
   os << "{ ";
   for (const auto& element : set) {
-    os << element << " ";
+    os << element << ", ";
   }
   os << "}";
   return os;
@@ -199,7 +203,7 @@ template <typename T>
 inline std::ostream& operator<<(std::ostream& os, const std::unordered_set<T>& set) {
   os << "{ ";
   for (const auto& element : set) {
-    os << element << " ";
+    os << element << ", ";
   }
   os << "}";
   return os;
@@ -209,7 +213,7 @@ template <typename K, typename V>
 inline std::ostream& operator<<(std::ostream& os, const std::map<K, V>& map) {
   os << "{ ";
   for (const auto& [key, value] : map) {
-    os << "( " << key << ": " << value << " ) ";
+    os << key << ": " << value << ", ";
   }
   os << "}";
   return os;
@@ -219,7 +223,7 @@ template <typename K, typename V>
 inline std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& map) {
   os << "{ ";
   for (const auto& [key, value] : map) {
-    os << "( " << key << ": " << value << " ) ";
+    os << key << ": " << value << ", ";
   }
   os << "}";
   return os;
@@ -227,15 +231,72 @@ inline std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>
 
 template <typename T1, typename T2>
 inline std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2>& tup) {
-  os << "[ " << tup.first << " " << tup.second << "]";
+  os << "[ " << tup.first << ", " << tup.second << " ], ";
   return os;
 }
 
 template <typename T1, typename T2, typename T3>
 inline std::ostream& operator<<(std::ostream& os, const std::tuple<T1, T2, T3>& tup) {
-  os << "[ " << std::get<0>(tup) << " " << std::get<1>(tup) << " " << std::get<2>(tup)
-     << "]";
+  os << "[ " << std::get<0>(tup) << ", " << std::get<1>(tup) << ", " << std::get<2>(tup)
+     << " ], ";
   return os;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+// Common utilities
+
+class RandomNumberGenerator {
+ public:
+  RandomNumberGenerator(std::optional<uint32_t> user_seed) {
+    std::random_device rd;
+    seed_ = user_seed.value_or(rd());
+    generator_ = std::mt19937(seed_);
+  }
+
+  template <typename T>
+  T Generate() {
+    if constexpr (std::is_integral<T>::value) {
+      std::uniform_int_distribution<T> dist;
+      return dist(generator_);
+    } else if constexpr (std::is_floating_point<T>::value) {
+      std::uniform_real_distribution<T> dist(0.0, 1.0);
+      return dist(generator_);
+    } else {
+      static_assert(!sizeof(T),
+                    "Only integral and floating point types are supported.");
+    }
+  }
+
+  uint32_t GenerateSeed() { return Generate<uint32_t>(); }
+
+  std::mt19937 generator_;
+  uint32_t seed_;
+};
+
+inline std::vector<std::string> SplitString(const std::string& str, char delim) {
+  std::vector<std::string> tokens;
+  size_t start = 0;
+  size_t end = str.find(delim);
+
+  while (end != std::string::npos) {
+    tokens.push_back(str.substr(start, end - start));
+    start = end + 1;
+    end = str.find(delim, start);
+  }
+  tokens.push_back(str.substr(start));
+
+  return tokens;
+}
+
+inline int ParseNumber(std::string_view str) {
+  int result{};
+  std::istringstream stream{std::string{str}};
+  stream >> result;
+  if (stream.fail()) {
+    throw std::runtime_error("Invalid number");
+  }
+  return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////

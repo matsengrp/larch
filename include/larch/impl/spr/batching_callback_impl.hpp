@@ -99,6 +99,8 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
             }
 #endif
             applied_moves_count_.fetch_add(1);
+          } else {
+            bucket.pop_back();
           }
 
           return accepted.second;

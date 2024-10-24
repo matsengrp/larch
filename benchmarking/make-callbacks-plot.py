@@ -27,7 +27,7 @@ if len(data) > 4 and data[4].strip() == "+":
 else:
     all_data["options"] = ['']
 
-prefix=dir_name + '/' + all_data["log_folder_name"] + "/"
+prefix=dir_name + '/'
 
 directories = [
     "option_" + x
@@ -43,6 +43,10 @@ plot_fields = [("MaxParsimony", notransform),
                ("NTrees", logtransform),
                ("NEdges", notransform),
                ("NNodes", notransform),
+               ("MinSumRFDistance", logtransform),
+               ("MaxSumRFDistance", logtransform),
+               ("MinSumRFCount", notransform),
+               ("MaxSumRFCount", notransform),
                ("SecondsElapsed", notransform),
                ]
 
@@ -61,7 +65,7 @@ colors = [
 ]
 
 
-fields = ['Iteration', 'NTrees', 'NNodes', 'NEdges', 'MaxParsimony', 'NTreesMaxParsimony', 'WorstParsimony', 'SecondsElapsed']
+fields = ['Iteration', 'NTrees', 'NNodes', 'NEdges', 'MaxParsimony', 'NTreesMaxParsimony', 'WorstParsimony', 'MinSumRFDistance', 'MaxSumRFDistance', 'MinSumRFCount', 'MaxSumRFCount', 'SecondsElapsed']
 iterations = 501
 
 def floor_mean(numbers):
@@ -96,6 +100,7 @@ for ax, (plot_field, (vertical_transform, vertical_transform_name)) in zip(axarr
             [[] for _ in range(iterations)]
             for _ in range(len(fields))
         ]
+        basic_val = 1 if "og" in vertical_transform_name else 0
         for logfile in p.glob('log*/logfile.csv'):
             with open(logfile, newline='') as csvfile:
                 reader = csv.reader(csvfile, delimiter='\t')
@@ -105,12 +110,12 @@ for ax, (plot_field, (vertical_transform, vertical_transform_name)) in zip(axarr
                     continue
                 for iteration_idx, row in enumerate(reader):
                     for field_idx, dat in enumerate(row):
-                        data[field_idx][iteration_idx].append(0 if dat == '' else int(dat))
+                        data[field_idx][iteration_idx].append(basic_val if dat == '' else max(int(dat), basic_val))
         data_dict = dict(zip(fields, data))
         itlist = list(range(len([row[0] for row in data_dict['Iteration'] if len(row) > 0])))
-        meanlist = [vertical_transform(mean(row)) for row in data_dict[plot_field] if len(row) > 0]
-        minlist = [vertical_transform(min(row)) for row in data_dict[plot_field] if len(row) > 0]
-        maxlist = [vertical_transform(max(row)) for row in data_dict[plot_field] if len(row) > 0]
+        meanlist = [float(vertical_transform(mean(row))) for row in data_dict[plot_field] if len(row) > 0]
+        minlist = [float(vertical_transform(min(row))) for row in data_dict[plot_field] if len(row) > 0]
+        maxlist = [float(vertical_transform(max(row))) for row in data_dict[plot_field] if len(row) > 0]
         assert len(itlist) == len(maxlist) and len(maxlist) == len(minlist) and len(minlist) == len(meanlist)
         ax.plot(itlist,
                 meanlist,

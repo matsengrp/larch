@@ -1,5 +1,5 @@
 #include "test_common.hpp"
-#include "sample_dag.hpp"
+#include "test_common_dag.hpp"
 #include "larch/dag_loader.hpp"
 
 using Storage = MergeDAGStorage<>;

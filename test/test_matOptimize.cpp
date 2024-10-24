@@ -190,7 +190,8 @@ static void test_matOptimize(std::string_view input_dag_path,
     int move_coeff_pscore = 1;
     Larch_Move_Found_Callback callback{
         merge, sample.View(), {move_coeff_nodes, move_coeff_pscore}};
-    /* StoreTreeToProtobuf(sample.View(), "before_optimize_dag.pb"); */
+    /* StoreTreeToProtobuf(sample.View(), test_output_folder +
+     * "/before_optimize_dag.pb"); */
     auto radius_callback = [&](MAT::Tree& tree) -> void {
       auto temp_result =
           AddMappedNodes(AddMATConversion(MADAGStorage<>::EmptyDefault()));

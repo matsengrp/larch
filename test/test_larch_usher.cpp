@@ -3,11 +3,14 @@
 #include "test_common.hpp"
 
 static void test_larch_usher(const std::string& args) {
-  std::string command =
-      "./larch-usher -i data/seedtree/seedtree.pb.gz -r data/seedtree/refseq.txt.gz -o "
-      "test_larch_usher_output.pb -c 2 ";
-  command += args;
-  TestAssert(0 == std::system(command.c_str()));
+  std::string input_dag_path = "data/seedtree/seedtree.pb.gz";
+  std::string refseq_path = "data/seedtree/refseq.txt.gz";
+  std::string output_dag_path = test_output_folder + "/test_larch_usher_output.pb";
+  int iter = 2;
+
+  auto [command, result] =
+      run_larch_usher(input_dag_path, output_dag_path, refseq_path, iter, args);
+  TestAssert(0 == result);
 }
 
 [[maybe_unused]] static const auto test_added0 =

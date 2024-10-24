@@ -143,7 +143,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::MakeComplete() const {
   size_t taxon_count = dag.GetLeafsCount();
   dag.ClearConnections();
   // Connect rootsplit nodes.
-  bool rootsplits_found = false;
+  [[maybe_unused]] bool rootsplits_found = false;
   for (auto& [clade_union, node_ids] : clade_union_map) {
     if (clade_union.size() == taxon_count) {
       for (auto node_id : node_ids) {

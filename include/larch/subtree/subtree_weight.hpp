@@ -7,15 +7,16 @@ the weight type, including at least the values of this example struct:
 
 struct ExampleWeightOps {
   using Weight = size_t;  // Provide any weight type
-  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);  // The value assigned to
-each leaf node inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);  // The
-value assigned to each edge
+  // The value assigned to each leaf node
+  inline Weight ComputeLeaf(MADAG dag, NodeId node_id);
+  // The value assigned to each edge
+  inline Weight ComputeEdge(MADAG dag, EdgeId edge_id);
   // Describes how to aggregate weights for alternative subtrees below a clade.
   // The returned pair contains the aggregated weight (for example, the optimal
   // one), and a vector containing indices for optimal weights in the input
   // vector. If optimality is undefined, all indices should be returned.
   inline std::pair<Weight, std::vector<size_t>>
-WithinCladeAccumOptimum(std::vector<Weight>);
+  WithinCladeAccumOptimum(std::vector<Weight>);
   // Describes how to aggregate weights of subtrees below different child clades
   inline Weight BetweenClades(std::vector<Weight>);
   // Describes how to aggregate the weight of a subtree below a node, and the
@@ -57,7 +58,7 @@ class SubtreeWeight {
   using MutableDAG = typename DAG::MutableType;
   using Node = typename DAG::NodeView;
   using Edge = typename DAG::EdgeView;
-  explicit SubtreeWeight(DAG dag);
+  explicit SubtreeWeight(DAG dag, std::optional<uint32_t> user_seed = std::nullopt);
 
   DAG GetDAG() const;
 
@@ -94,12 +95,11 @@ class SubtreeWeight {
                    const WeightOps& weight_ops, const EdgeSelector& edge_selector,
                    MutableDAGType result);
 
-  template <typename NodeType, typename EdgeSelector, typename MutableDAGType>
+  template <typename NodeType, typename EdgesSelector, typename MutableDAGType>
   void ExtractSubset(NodeType input_node, NodeId result_node_id,
-                   const WeightOps& weight_ops, const EdgeSelector& edge_selector,
-                   std::unordered_map<EdgeId, bool> visited_edge,
-                   std::unordered_map<NodeId, NodeId> visited_node,
-                   MutableDAGType result);
+                     const WeightOps& weight_ops, const EdgesSelector& edge_selector,
+                     std::unordered_map<NodeId, NodeId>& mapped_id,
+                     MutableDAGType result);
 
   DAG dag_;
 

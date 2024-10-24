@@ -31,6 +31,7 @@
 
 #include "larch/dag_loader.hpp"
 #include "larch/newick.hpp"
+#include "larch/dagbin_fileio.hpp"
 
 inline int32_t EncodeBasePB(char base) {
   switch (base) {
@@ -45,6 +46,64 @@ inline int32_t EncodeBasePB(char base) {
     default:
       Fail("Invalid base");
   };
+}
+
+inline std::string FilenameFromPath(const std::string path) {
+  int beg_i = int(path.size()) - 1;
+  for (; beg_i >= 0; beg_i--) {
+    if (path[beg_i] == '/') {
+      beg_i += 1;
+      return path.substr(beg_i, path.size());
+    }
+  }
+  return path.substr(0, path.size());
+}
+
+FileFormat InferFileFormat(std::string_view path) {
+  auto filename = FilenameFromPath(std::string{path});
+  auto tokens = SplitString(filename, '.');
+  for (int i = int(tokens.size()) - 1; i >= 0; i--) {
+    auto& extension = tokens[i];
+    auto it =
+        std::find_if(file_extension_names.begin(), file_extension_names.end(),
+                     [&extension](const std::pair<std::string, FileFormat> element) {
+                       return element.first == extension;
+                     });
+    if (it != file_extension_names.end()) {
+      return it->second;
+    }
+  }
+  std::cerr << "ERROR: Unable to infer the file format of path '" << filename << "'."
+            << std::endl;
+  std::exit(EXIT_FAILURE);
+}
+
+template <typename DAG>
+void StoreDAG(const DAG dag, std::string_view output_dag_path, FileFormat file_format,
+              bool append_changes) {
+  if (file_format == FileFormat::Infer) {
+    file_format = InferFileFormat(output_dag_path);
+  }
+  switch (file_format) {
+    case FileFormat::Dagbin:
+      StoreDAGToDagbin(dag, output_dag_path, append_changes);
+      return;
+    case FileFormat::ProtobufDAG:
+      StoreDAGToProtobuf(dag, output_dag_path);
+      return;
+    case FileFormat::DebugAll:
+      StoreDAGToDagbin(dag, std::string{output_dag_path} + ".dagbin", append_changes);
+      StoreDAGToProtobuf(dag, std::string{output_dag_path} + ".pb");
+      return;
+    case FileFormat::JsonDAG:
+    case FileFormat::Protobuf:
+    case FileFormat::ProtobufTree:
+    default:
+      std::cerr << "ERROR: Could not save DAG to unsupported/unrecognized file format "
+                   "of path '"
+                << output_dag_path << "'." << std::endl;
+      std::exit(EXIT_FAILURE);
+  }
 }
 
 template <typename DAG>
@@ -79,6 +138,15 @@ void StoreDAGToProtobuf(DAG dag, std::string_view path) {
 
   std::ofstream file{std::string{path}};
   data.SerializeToOstream(&file);
+}
+
+template <typename DAG>
+void StoreDAGToDagbin(DAG dag, std::string_view path, bool append_changes) {
+  if (append_changes) {
+    DagbinFileIO::AppendDAG(dag, path);
+  } else {
+    DagbinFileIO::WriteDAG(dag, path);
+  }
 }
 
 template <typename DAG>
@@ -175,8 +243,8 @@ static std::string CompactGenomeToString(Node node) {
   return result;
 }
 
-template <typename DAG>
-void MADAGToDOT(DAG dag, std::ostream& out) {
+template <typename DAG, typename iostream>
+void MADAGToDOT(DAG dag, iostream& out) {
   out << "digraph G {\n";
   out << "  forcelabels=true\n";
   out << "  nodesep=1.0\n";
@@ -194,8 +262,8 @@ void MADAGToDOT(DAG dag, std::ostream& out) {
   out << "}\n";
 }
 
-template <typename DAG>
-void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, std::ostream& out) {
+template <typename DAG, typename iostream>
+void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, iostream& out) {
   out << "digraph {\n";
   out << "  forcelabels=true\n";
   out << "  nodesep=1.0\n";

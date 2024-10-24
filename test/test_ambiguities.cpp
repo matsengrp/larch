@@ -1,9 +1,9 @@
 #include "test_common.hpp"
-#include "sample_dag.hpp"
+#include "test_common_dag.hpp"
 #include "larch/dag_loader.hpp"
 
-[[maybe_unused]] static auto BuildNodeSequenceMap(MADAGStorage<> &dag_storage,
-                                                  bool include_nonleaf_nodes = false) {
+[[maybe_unused]] static auto build_node_sequence_map(
+    MADAGStorage<> &dag_storage, bool include_nonleaf_nodes = false) {
   NodeSeqMap node_seq_map;
   auto dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
@@ -15,7 +15,8 @@
   return node_seq_map;
 }
 
-[[maybe_unused]] static auto DAGMutationsAreValid(MADAGStorage<> &dag_storage) {
+[[maybe_unused]] static auto verify_dag_mutations_are_valid(
+    MADAGStorage<> &dag_storage) {
   using Edge = MutableMADAG::EdgeView;
   auto dag = dag_storage.View();
 
@@ -36,20 +37,26 @@
   return true;
 }
 
-[[maybe_unused]] static auto VerifyCompactGenomesCompatibleWithLeaves(
-    MADAGStorage<> &dag_storage, NodeSeqMap &truth_leaf_seq_map) {
+[[maybe_unused]] static auto verify_compact_genomes_compatible_with_leaves(
+    MADAGStorage<> &dag_storage, NodeSeqMap &truth_leaf_seq_map,
+    bool do_print_failure = true) {
   auto dag = dag_storage.View();
-  auto dag_leaf_seq_map = BuildNodeSequenceMap(dag_storage, false);
+  auto dag_leaf_seq_map = build_node_sequence_map(dag_storage, false);
   for (auto node : dag.GetLeafs()) {
     if (dag_leaf_seq_map[node.GetId()] != truth_leaf_seq_map[node.GetId()]) {
+      if (do_print_failure) {
+        std::cout << "Failed_at [" << node.GetId()
+                  << "]: TEST:" << truth_leaf_seq_map[node.GetId()]
+                  << " vs TRUTH:" << dag_leaf_seq_map[node.GetId()] << std::endl;
+      }
       return false;
     }
   }
   return true;
 }
 
-[[maybe_unused]] static void WriteDAGToFile(MADAGStorage<> &dag_storage,
-                                            const std::string &output_filename) {
+[[maybe_unused]] static void write_dag_to_file(MADAGStorage<> &dag_storage,
+                                               const std::string &output_filename) {
   std::ofstream os;
   auto dag = dag_storage.View();
   os.open(output_filename);
@@ -68,27 +75,33 @@
 
   bool write_files = false;
   if (write_files) {
-    WriteDAGToFile(amb_dag_storage, "_ignore/amb_dag.dot");
-    WriteDAGToFile(unamb_dag_storage, "_ignore/unamb_dag.dot");
-    StoreDAGToProtobuf(amb_dag, "_ignore/amb_dag.pb");
-    StoreDAGToProtobuf(unamb_dag, "_ignore/unamb_dag.pb");
+    write_dag_to_file(amb_dag_storage, test_output_folder + "/amb_dag.dot");
+    write_dag_to_file(unamb_dag_storage, test_output_folder + "/unamb_dag.dot");
+    StoreDAGToProtobuf(amb_dag, test_output_folder + "/amb_dag.pb");
+    StoreDAGToProtobuf(unamb_dag, test_output_folder + "/unamb_dag.pb");
   }
 
-  // (0) Test checks that all edges mutations are compatible with adjacent compact
+  // (0) Test spot checks that edges mutations are compatible with adjacent compact
   // genomes.
+  // Initial edge mutation: T->A.
+  // Set to T->G.
   amb_dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
-  TestAssert(not(DAGMutationsAreValid(amb_dag_storage)) &&
+  TestAssert(not(verify_dag_mutations_are_valid(amb_dag_storage)) &&
              "Test_0a: DAG EdgeMutations incorrectly found to be compatible with "
              "Compact Genomes.");
+  // Set to G->A.
   amb_dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{1}] = {'G', 'A'};
-  TestAssert(not(DAGMutationsAreValid(amb_dag_storage)) &&
+  TestAssert(not(verify_dag_mutations_are_valid(amb_dag_storage)) &&
              "Test_0b: DAG EdgeMutations incorrectly found to be compatible with "
              "Compact Genomes.");
+  // Reset back to T->A.
   amb_dag.Get(EdgeId{1}).GetMutableEdgeMutations()[{1}] = {'T', 'A'};
-  TestAssert((DAGMutationsAreValid(amb_dag_storage)) &&
-             "Test_0c: DAG EdgeMutations are not compatible with Compact Genomes.");
-  TestAssert((DAGMutationsAreValid(unamb_dag_storage)) &&
-             "Test_0d: DAG EdgeMutations are not compatible with Compact Genomes.");
+  TestAssert((verify_dag_mutations_are_valid(amb_dag_storage)) &&
+             "Test_0c: DAG EdgeMutations are not compatible with ambiguous Compact "
+             "Genomes.");
+  TestAssert((verify_dag_mutations_are_valid(unamb_dag_storage)) &&
+             "Test_0d: DAG EdgeMutations are not compatible with unambiguous Compact "
+             "Genomes.");
 
   // (1) Test checks for ambiguity.
   for (auto base : {'A', 'C', 'G', 'T'}) {
@@ -123,6 +136,7 @@
              "Test_2g: GetCommonBases does not return correct value.");
 
   // (3) Test that ambiguous leaves are compatible with unambiguous leaves.
+
   for (auto node : amb_dag.GetLeafs()) {
     auto &cg_1 = amb_dag.Get(node.GetId()).GetCompactGenome();
     auto &cg_2 = unamb_dag.Get(node.GetId()).GetCompactGenome();
@@ -174,17 +188,22 @@
 
   // (6) Test that recomputing edge mutations and compact genomes does not alter
   // leaves.
+  TestAssert(
+      (verify_compact_genomes_compatible_with_leaves(amb_dag_storage, amb_seq_map)) &&
+      "Test_6a: Leaf CGs altered before running RecomputeCompactGenomes.");
   amb_dag.RecomputeCompactGenomes(false);
-  TestAssert((VerifyCompactGenomesCompatibleWithLeaves(amb_dag_storage, amb_seq_map)) &&
-             "Test_6a: RecomputeCompactGenomes incorrectly altered leaf CGs.");
-  unamb_dag.RecomputeCompactGenomes(false);
+  verify_compact_genomes_compatible_with_leaves(amb_dag_storage, amb_seq_map);
   TestAssert(
-      (VerifyCompactGenomesCompatibleWithLeaves(unamb_dag_storage, unamb_seq_map)) &&
+      (verify_compact_genomes_compatible_with_leaves(amb_dag_storage, amb_seq_map)) &&
       "Test_6b: RecomputeCompactGenomes incorrectly altered leaf CGs.");
+  unamb_dag.RecomputeCompactGenomes(false);
+  TestAssert((verify_compact_genomes_compatible_with_leaves(unamb_dag_storage,
+                                                            unamb_seq_map)) &&
+             "Test_6c: RecomputeCompactGenomes incorrectly altered leaf CGs.");
   amb_dag.RecomputeCompactGenomes(true);
-  TestAssert(
-      not(VerifyCompactGenomesCompatibleWithLeaves(amb_dag_storage, amb_seq_map)) &&
-      "Test_6c: RecomputeCompactGenomes incorrectly left leaf CGs unaltered .");
+  TestAssert(not(verify_compact_genomes_compatible_with_leaves(amb_dag_storage,
+                                                               amb_seq_map, false)) &&
+             "Test_6d: RecomputeCompactGenomes incorrectly left leaf CGs unaltered .");
 }
 
 [[maybe_unused]] static const auto test_added0 =

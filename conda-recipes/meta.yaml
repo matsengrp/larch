@@ -1,0 +1,107 @@
+{% set name = "larch-phylo" %}
+{% set version = environ.get('LARCH_VERSION', '0.0.0') %}
+{% set src = environ.get('LARCH_SRC', 'local') %}
+{% set git_commit = environ.get('LARCH_COMMIT', 'main') %}
+{% set hash = environ.get('LARCH_HASH', 'unknown') %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  {% if src == 'local' %}
+  # method 1: use local repo
+  path: ../
+  {% elif src == 'remote' %}
+  # method 2: use online repo
+  git_url: https://github.com/matsengrp/larch.git
+  git_rev: {{ git_commit }}
+  git_submodules: true
+  {% elif src == 'release' %}
+  # method 3: use release tarball
+  url: https://github.com/matsengrp/{{ name }}/archive/v{{ version }}.tar.gz
+  sha256: {{ hash }}
+  {% endif %}
+
+build:
+  number: 0
+  skip: true # [win or osx]
+
+requirements:
+  build:
+    - cmake=3.19.6
+    - make
+    - openmpi
+    - openmpi-mpicc
+    - openmpi-mpicxx
+    - boost-cpp=1.76
+    - automake
+    - autoconf
+    - libtool
+    - yasm
+    - ucx
+    - zlib
+    - git-lfs
+
+    - gcc
+    - gxx
+    - binutils
+    - binutils_impl_linux-64
+    - binutils_linux-64
+    - gdb
+    - libstdcxx-ng
+    - libgcc-ng
+    - libgomp
+    - libgfortran-ng
+    - libgfortran5
+    - libedit
+    - libffi
+    - expat
+    - libuuid
+    - libiconv
+    - libzlib
+    - perl
+    - gettext
+    - libasprintf
+    - libtool
+    - kernel-headers_linux-64
+    - rdma-core
+    - openssl
+    - keyutils
+
+  run:
+    - openmpi
+    - openmpi-mpicc
+    - openmpi-mpicxx
+    - boost-cpp=1.76
+    - ucx
+    - zlib
+  
+  host:
+    - python
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+
+test:
+  commands:
+    - larch-usher --version
+
+about:
+  home: https://github.com/matsengrp/larch
+  license: MIT License
+  license_family: MIT
+  license_file: LICENSE
+  summary: 'Phylogenetic tool for exploring tree space of mutation annotated DAG/trees through SPR moves'
+  description: |
+    Phylogenetic tool for exploring tree space of mutation annotated DAG/trees through SPR moves.
+  doc_url: https://github.com/matsengrp/larch/blob/main/README.md
+  dev_url: https://github.com/matsengrp/larch
+
+extra:
+  recipe-maintainers:
+    - matsengrp
+    - matsen
+    - davidrich27
+    - marybarker
+    - ognian~
+    
