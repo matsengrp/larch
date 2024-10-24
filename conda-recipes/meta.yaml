@@ -1,11 +1,13 @@
-{% set name = "larch-phylo" %}
-{% set version = environ.get('LARCH_VERSION', '0.0.0') %}
+{% set name = "larch" %}
+{% set package_name = "larch-phylo" %}
 {% set src = environ.get('LARCH_SRC', 'local') %}
 {% set git_commit = environ.get('LARCH_COMMIT', 'main') %}
-{% set hash = environ.get('LARCH_HASH', 'unknown') %}
+{% set version = environ.get('LARCH_VERSION', '0.1.0') %}
+{% set hash = environ.get('LARCH_HASH', 'f09851e89217b688c9b012da0161cadbc88b5692a9c823b44b83c2c129a5762d') %}
+{% set include_tests = environ.get('LARCH_INCLUDE_TEST', 'false') %}
 
 package:
-  name: {{ name }}
+  name: {{ package_name }}
   version: {{ version }}
 
 source:
@@ -19,7 +21,7 @@ source:
   git_submodules: true
   {% elif src == 'release' %}
   # method 3: use release tarball
-  url: https://github.com/matsengrp/{{ name }}/archive/v{{ version }}.tar.gz
+  url: https://github.com/matsengrp/{{ name }}/releases/download/v{{ version }}/{{ name }}-v{{ version }}.tar.gz
   sha256: {{ hash }}
   {% endif %}
 
@@ -29,62 +31,37 @@ build:
 
 requirements:
   build:
-    - cmake=3.19.6
+    - python
+    - gcc >=12.4.0,<14.0.0
+    - gxx >=12.4.0,<14.0.0
+    - cmake =3.19.6
     - make
-    - openmpi
-    - openmpi-mpicc
-    - openmpi-mpicxx
-    - boost-cpp=1.76
+    - openmpi >=4.1.0,<5.0
+    - openmpi-mpicc >=4.1.0,<5.0
+    - openmpi-mpicxx >=4.1.0,<5.0
     - automake
     - autoconf
     - libtool
     - yasm
-    - ucx
-    - zlib
-    - git-lfs
+    - openssh
+    - protobuf
 
-    - gcc
-    - gxx
-    - binutils
-    - binutils_impl_linux-64
-    - binutils_linux-64
-    - gdb
-    - libstdcxx-ng
-    - libgcc-ng
-    - libgomp
-    - libgfortran-ng
-    - libgfortran5
-    - libedit
-    - libffi
-    - expat
-    - libuuid
-    - libiconv
-    - libzlib
-    - perl
-    - gettext
-    - libasprintf
-    - libtool
-    - kernel-headers_linux-64
-    - rdma-core
-    - openssl
-    - keyutils
+    - openmpi >=4.1.0,<5.0
+    - boost-cpp =1.76
+    - ucx >=1.16.0
+    - zlib >=1.2.11
 
   run:
-    - openmpi
-    - openmpi-mpicc
-    - openmpi-mpicxx
-    - boost-cpp=1.76
-    - ucx
-    - zlib
-  
-  host:
-    - python
-    - {{ compiler('c') }}
-    - {{ compiler('cxx') }}
+    - openmpi >=4.1.0,<5.0
+    - boost-cpp =1.76
+    - ucx >=1.16.0
+    - zlib >=1.2.11
 
 test:
   commands:
     - larch-usher --version
+    - larch-dagutil --version
+    - larch-dag2dot --version
 
 about:
   home: https://github.com/matsengrp/larch
@@ -99,9 +76,6 @@ about:
 
 extra:
   recipe-maintainers:
-    - matsengrp
     - matsen
     - davidrich27
     - marybarker
-    - ognian~
-    
