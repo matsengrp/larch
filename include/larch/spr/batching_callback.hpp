@@ -5,6 +5,7 @@
 
 #include "larch/spr/spr_view.hpp"
 #include "larch/merge/merge.hpp"
+#include "larch/mat_view.hpp"
 
 template <typename CRTP, typename SampleDAG>
 class BatchingCallback : public Move_Found_Callback {
@@ -21,6 +22,7 @@ class BatchingCallback : public Move_Found_Callback {
     }
   }
 
+  // TODO old datatypes
   using Storage = MergeDAGStorage<>;  // TODO MADAG storage?
   using MATStorage = decltype(AddMATConversion(Storage::EmptyDefault()));
   using SPRType =
@@ -29,10 +31,19 @@ class BatchingCallback : public Move_Found_Callback {
       decltype(AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
   using FragmentType = FragmentStorage<decltype(std::declval<SPRType>().View())>;
 
+  // TODO new datatypes
+  using NewStorage =
+      ExtendStorageType<void, MATViewStorage, Extend::Nodes<CompactGenome>,
+                        Extend::DAG<ReferenceSequence>>;
+  using NewSPRType = decltype(AddSPRStorage(NewStorage::EmptyDefault()).View());
+  // using NewReassignedStatesStorage =
+  //     decltype(AddMappedNodes(AddMATConversion(NewStorage::EmptyDefault())));
+  // using NewFragmentType =
+  // FragmentStorage<decltype(std::declval<NewSPRType>().View())>;
+
   bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&
                       nodes_with_major_allele_set_change) override;
-
   void operator()(MAT::Tree& tree);
 
   void OnReassignedStates(MAT::Tree& tree);
@@ -51,16 +62,26 @@ class BatchingCallback : public Move_Found_Callback {
   };
 
   void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq);
+  void CreateMATViewStorage(MAT::Tree& tree, std::string_view ref_seq);
 
   Merge& merge_;
   SampleDAG sample_dag_;
   bool collapse_empty_fragment_edges_;
-  std::atomic<size_t> applied_moves_count_;
+
+  // TODO remove old MATConversion
   std::unique_ptr<ReassignedStatesStorage> reassigned_states_storage_ =
       std::make_unique<ReassignedStatesStorage>(
           AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
-  std::shared_mutex mat_mtx_;
   std::unique_ptr<MATStorage> sample_mat_storage_;
+
+  // TODO add new MATView
+  // std::unique_ptr<NewReassignedStatesStorage> new_reassigned_states_storage_ =
+  //   std::make_unique<NewReassignedStatesStorage>(
+  //       AddMappedNodes(AddMATConversion(NewStorage::EmptyDefault())));
+  std::unique_ptr<MATStorageImpl> sample_matview_storage_;
+
+  std::atomic<size_t> applied_moves_count_;
+  std::shared_mutex mat_mtx_;
   std::mutex merge_mtx_;
   Reduction<std::deque<MoveStorage>> moves_batch_{32};
 };

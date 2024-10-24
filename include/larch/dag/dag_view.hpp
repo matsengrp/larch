@@ -29,11 +29,11 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::View;
 
-  using NodeView = ElementView<Component::Node, DAGView<Storage, Base>>;
-  using EdgeView = ElementView<Component::Edge, DAGView<Storage, Base>>;
-  using BaseType = Base<Storage, DAGView<Storage, Base>>;
+  using NodeView = ElementView<Component::Node, DAGView>;
+  using EdgeView = ElementView<Component::Edge, DAGView>;
+  using BaseType = Base<Storage, DAGView>;
   using StorageType = Storage;
-  using MutableType = DAGView<std::remove_const_t<Storage>>;
+  using MutableType = DAGView<std::remove_const_t<Storage>, Base>;
 
   template <Component C>
   static constexpr IdContinuity id_continuity =
@@ -45,6 +45,23 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   explicit DAGView(Storage& dag_storage);
 
+  DAGView(DAGView&& other) = default;
+  DAGView(const DAGView& other) = default;
+
+  DAGView& operator=(DAGView&& other) {
+    dag_storage_ = std::addressof(other.GetStorage());
+    return *this;
+  }
+
+  DAGView& operator=(const DAGView& other) {
+    dag_storage_ = std::addressof(other.GetStorage());
+    return *this;
+  }
+
+  bool operator==(const DAGView& other) const {
+    return std::addressof(GetStorage()) == std::addressof(other.GetStorage());
+  }
+
   operator DAGView<const Storage, Base>() const;
 
   DAGView<const Storage, Base> Const() const;
@@ -53,22 +70,20 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
    * Get a Node or Edge view by its id
    * @{
    */
-  ElementView<Component::Node, DAGView<Storage, Base>> Get(NodeId id) const;
-  ElementView<Component::Edge, DAGView<Storage, Base>> Get(EdgeId id) const;
+  ElementView<Component::Node, DAGView> Get(NodeId id) const;
+  ElementView<Component::Edge, DAGView> Get(EdgeId id) const;
   /** @} */
 
-  ElementView<Component::Node, DAGView<Storage, Base>> AppendNode() const;
-  ElementView<Component::Edge, DAGView<Storage, Base>> AppendEdge() const;
+  ElementView<Component::Node, DAGView> AppendNode() const;
+  ElementView<Component::Edge, DAGView> AppendEdge() const;
 
-  ElementView<Component::Node, DAGView<Storage, Base>> AddNode(NodeId id);
-  ElementView<Component::Edge, DAGView<Storage, Base>> AddEdge(EdgeId id);
+  ElementView<Component::Node, DAGView> AddNode(NodeId id);
+  ElementView<Component::Edge, DAGView> AddEdge(EdgeId id);
 
-  ElementView<Component::Edge, DAGView<Storage, Base>> AddEdge(EdgeId id, NodeId parent,
-                                                               NodeId child,
-                                                               CladeIdx clade);  // TODO
-  ElementView<Component::Edge, DAGView<Storage, Base>> AppendEdge(
-      NodeId parent, NodeId child,
-      CladeIdx clade) const;  // TODO
+  ElementView<Component::Edge, DAGView> AddEdge(EdgeId id, NodeId parent, NodeId child,
+                                                CladeIdx clade);  // TODO
+  ElementView<Component::Edge, DAGView> AppendEdge(NodeId parent, NodeId child,
+                                                   CladeIdx clade) const;  // TODO
 
   size_t GetNodesCount() const;
   size_t GetEdgesCount() const;
@@ -84,7 +99,7 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   template <Component C>
   Id<C> GetNextAvailableId() const {
-    return dag_storage_.template GetNextAvailableId<C>();
+    return GetStorage().template GetNextAvailableId<C>();
   }
 
   NodeId GetNextAvailableNodeId() const {
@@ -120,5 +135,5 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   Storage& GetStorage() const;
 
  private:
-  Storage& dag_storage_;
+  Storage* dag_storage_ = nullptr;
 };

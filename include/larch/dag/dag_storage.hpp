@@ -45,7 +45,7 @@ struct ExtraStorage {
  * the same interface, like ExtendDAGStorage.
  */
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
-          typename ExtraStorageT>
+          typename ExtraStorageT, template <typename, typename> typename ViewBase>
 struct DAGStorage {
   static_assert(ExtraStorageT::role == Role::Storage);
   static_assert(ExtraStorageT::component == Component::DAG);
@@ -53,10 +53,11 @@ struct DAGStorage {
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 
-  using Self = ShortName;
+  using Self =
+      std::conditional_t<std::is_same_v<ShortName, void>, DAGStorage, ShortName>;
 
-  using ViewType = DAGView<Self>;
-  using ConstViewType = DAGView<const Self>;
+  using ViewType = DAGView<Self, ViewBase>;
+  using ConstViewType = DAGView<const Self, ViewBase>;
 
   using ExtraStorageType = ExtraStorageT;
   using FeatureTypes = typename ExtraStorageT::FeatureTypes;
@@ -104,8 +105,10 @@ struct DAGStorage {
              ExtraStorageT&& features_storage);
   MOVE_ONLY(DAGStorage);
 
-  ViewType View();
-  ConstViewType View() const;
+  template <template <typename, typename> typename Base = ViewBase>
+  DAGView<Self, Base> View();
+  template <template <typename, typename> typename Base = ViewBase>
+  DAGView<const Self, Base> View() const;
 
   NodeId AppendNode();
   EdgeId AppendEdge();
@@ -113,10 +116,18 @@ struct DAGStorage {
   void AddNode(NodeId id);
   void AddEdge(EdgeId id);
 
-  auto GetNodes() const { return nodes_container_.All(); }
-  auto GetEdges() const { return edges_container_.All(); }
+  template <typename VT>
+  auto GetNodes() const {
+    return nodes_container_.template All<VT>();
+  }
+  template <typename VT>
+  auto GetEdges() const {
+    return edges_container_.template All<VT>();
+  }
 
+  template <typename VT>
   size_t GetNodesCount() const;
+  template <typename VT>
   size_t GetEdgesCount() const;
 
   template <Component C>

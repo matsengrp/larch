@@ -213,13 +213,14 @@ struct CombineBases<std::tuple<Ts...>> : Ts... {
 template <typename T>
 auto ViewOf(T&& dag);
 
-template <typename, template <typename, typename> typename = DefaultViewBase>
+template <typename, template <typename, typename> typename>
 struct DAGView;
 
 template <typename...>
 struct ExtraStorage;
 
-template <typename, typename, typename, typename>
+template <typename, typename, typename, typename,
+          template <typename, typename> typename = DefaultViewBase>
 struct DAGStorage;
 
 template <Component, typename, IdContinuity, typename...>
