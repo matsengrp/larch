@@ -565,14 +565,14 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     // if it's an edge above a condensed node
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
     if (mat_node == nullptr) {
-      auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
+      [[maybe_unused]] auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
       Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
-      auto condensed_mat_node_str =
+      [[maybe_unused]] auto condensed_mat_node_str =
           storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
-      auto condensed_mat_node_iter =
+      [[maybe_unused]] auto condensed_mat_node_iter =
           storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
       Assert(condensed_mat_node_iter != storage.reversed_condensed_nodes_.end());
-      auto& condensed_mat_node =
+      [[maybe_unused]] auto& condensed_mat_node =
           storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
       Assert(condensed_mat_node->parent != nullptr);
       return dag_edge.GetDAG().Get(NodeId{condensed_mat_node->parent->node_id});
@@ -653,15 +653,15 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     }
     // if it's an edge above a condensed node
     if (mat_node == nullptr) {
-      auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
-      auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
+      [[maybe_unused]] auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+      [[maybe_unused]] auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
       Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
-      auto condensed_mat_node_str =
+      [[maybe_unused]] auto condensed_mat_node_str =
           storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
-      auto condensed_mat_node_iter =
+      [[maybe_unused]] auto condensed_mat_node_iter =
           storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
       Assert(condensed_mat_node_iter != storage.reversed_condensed_nodes_.end());
-      auto& condensed_mat_node =
+      [[maybe_unused]] auto& condensed_mat_node =
           storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
       Assert(condensed_mat_node->parent != nullptr);
       return NodeId{condensed_mat_node->parent->node_id};
@@ -703,11 +703,11 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     auto& id_storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
 
     if (mat_node == nullptr) {
-      auto cn_id_str = id_storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
+      [[maybe_unused]]auto cn_id_str = id_storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
       Assert(cn_id_str != id_storage.node_id_to_sampleid_map_.end());
-      auto condensed_mat_node_str =
+      [[maybe_unused]]auto condensed_mat_node_str =
           id_storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
-      auto condensed_mat_node_iter =
+      [[maybe_unused]]auto condensed_mat_node_iter =
           id_storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
       Assert(condensed_mat_node_iter != id_storage.reversed_condensed_nodes_.end());
       mat_node = id_storage.reversed_condensed_nodes_.at(condensed_mat_node_str);

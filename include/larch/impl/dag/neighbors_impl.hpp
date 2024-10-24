@@ -162,7 +162,7 @@ struct NeighborsValidator {
 };
 
 template <typename Node, typename StorageValidator>
-void ValidateImpl(Node node, StorageValidator&& storage,
+void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] StorageValidator&& storage,
                   [[maybe_unused]] bool recursive, [[maybe_unused]] bool allow_dag) {
 #ifndef NDEBUG
   auto dag = node.GetDAG();
