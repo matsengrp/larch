@@ -7,8 +7,13 @@ endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/static)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+# set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+# set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+set(CMAKE_SHARED_LIBRARY_PREFIX "larch_")
+
+# set(CMAKE_SHARED_LIBRARY_SUFFIX ".larch.so")
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
 set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
 
@@ -16,39 +21,42 @@ option(USE_USHER "Use matOptimize" ON)
 option(PROTOBUF_FROM_SOURCE "Build protobuf from source code" OFF)
 
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
 
 if(USE_USHER)
-    set(TBB_VERSION "2019_U9")
+  set(TBB_VERSION "2019_U9")
 else()
-    set(TBB_VERSION "v2021.11.0")
+  set(TBB_VERSION "v2021.11.0")
 endif()
 
-message("cmake system architecture: ${CMAKE_SYSTEM_PROCESSOR}")
-message("build type: ${CMAKE_BUILD_TYPE}")
-message("using usher: ${USE_USHER}")
+message(STATUS "cmake system architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "using usher: ${USE_USHER}")
 
-# External static libraries: protobuf/larch-autogen, range-v3, nlohmann_json, htslib
-# External dynamic libraries: oneTBB, boost, zlib
-
-## oneTBB
+# External static libraries: protobuf/larch-autogen, range-v3, nlohmann_json, htslib, oneTBB, boost, zlib
 include(FetchContent)
+include(ExternalProject)
+
+# # oneTBB
 if(USE_USHER)
-  FetchContent_Declare(oneTBB-src
+  FetchContent_Declare(oneTBB
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
     GIT_TAG ${TBB_VERSION}
+    GIT_SHALLOW true
     GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DTBB_TEST=OFF -DTBB_FIND_PACKAGE=OFF
   )
-  FetchContent_MakeAvailable(oneTBB-src)
-
-  include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
+  FetchContent_MakeAvailable(oneTBB)
+  include(${onetbb_SOURCE_DIR}/cmake/TBBBuild.cmake)
   tbb_build(
-    TBB_ROOT ${onetbb-src_SOURCE_DIR} 
-    CONFIG_DIR TBB_DIR 
-    MAKE_ARGS tbb_cpf=1 CFLAGS="-w"
+    TBB_ROOT ${onetbb_SOURCE_DIR}
+    CONFIG_DIR TBB_DIR
+    MAKE_ARGS tbb_cpf=1 CFLAGS="-w" tbb_build_dir=${PROJECT_BINARY_DIR}/deps/onetbb
   )
-  find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
+
+  find_package(TBB REQUIRED COMPONENTS tbbmalloc tbbmalloc_proxy tbb_preview)
 
   find_package(MPI REQUIRED)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
@@ -59,18 +67,21 @@ else()
     GIT_SHALLOW true
     GIT_PROGRESS true
     UPDATE_DISCONNECTED true
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DTBB_TEST=OFF -DTBB_FIND_PACKAGE=OFF -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=${CMAKE_BINARY_DIR}/lib
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DTBB_TEST=OFF -DTBB_FIND_PACKAGE=OFF
   )
   FetchContent_MakeAvailable(oneTBB)
+
+  find_package(TBB REQUIRED COMPONENTS tbbmalloc tbbmalloc_proxy tbb_preview)
 endif()
 
-## protobuf 
+# # protobuf
 if(PROTOBUF_FROM_SOURCE)
-  message("building protobuf from source...")
+  message(STATUS "protobuf from source...")
   include(protobuf.cmake)
 else()
-  message("using protobuf from environment...")
+  message(STATUS "protobuf from conda environment...")
 endif()
+
 find_package(Protobuf REQUIRED)
 
 add_library(larch-autogen OBJECT
@@ -80,7 +91,7 @@ add_library(larch-autogen OBJECT
 )
 set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
 
-## larch-autogen library from protobuf
+# # larch-autogen library
 target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR} ${Protobuf_INCLUDE_DIRS})
 target_link_libraries(larch-autogen PUBLIC ${Protobuf_ABSL_LIBS})
 set_target_properties(larch-autogen
@@ -92,24 +103,26 @@ protobuf_generate(
   PROTOS proto/dag.proto deps/usher/parsimony.proto deps/usher/mutation_detailed.proto
 )
 
-## nlohmann_json
-FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz)
+# # nlohmann_json
+FetchContent_Declare(json
+  URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz
+  BINARY_DIR ${CMAKE_BINARY_DIR}/deps/nlohmann_json
+)
 FetchContent_MakeAvailable(json)
 
-## range-v3
-include(ExternalProject)
+# # range-v3
 ExternalProject_Add(range-v3
   GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
   GIT_TAG 0.12.0
   GIT_SHALLOW true
   GIT_PROGRESS true
   UPDATE_DISCONNECTED true
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/range-v3/install -DCMAKE_BUILD_TYPE=Release -DRANGE_V3_DOCS=OFF -DRANGE_V3_TESTS=OFF -DRANGE_V3_EXAMPLES=OFF -DRANGE_V3_PERF=OFF -DRANGE_V3_HEADER_CHECKS=OFF
-  PREFIX range-v3
-  INSTALL_DIR range-v3/install
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/deps/range-v3/install -DCMAKE_BUILD_TYPE=Release -DRANGE_V3_DOCS=OFF -DRANGE_V3_TESTS=OFF -DRANGE_V3_EXAMPLES=OFF -DRANGE_V3_PERF=OFF -DRANGE_V3_HEADER_CHECKS=OFF
+  PREFIX deps/range-v3
+  INSTALL_DIR deps/range-v3/install
 )
 
-## htslib
+# # htslib
 if(${USE_HTSLIB})
   ExternalProject_Add(htslib
     GIT_REPOSITORY https://github.com/samtools/htslib.git
@@ -117,33 +130,33 @@ if(${USE_HTSLIB})
     GIT_SHALLOW true
     GIT_PROGRESS true
     UPDATE_DISCONNECTED true
-    PREFIX htslib
+    PREFIX deps/htslib
     BUILD_IN_SOURCE true
-    CONFIGURE_COMMAND autoreconf -i COMMAND ./configure --prefix=${PROJECT_BINARY_DIR}/htslib/install
+    CONFIGURE_COMMAND autoreconf -i COMMAND ./configure --prefix=${PROJECT_BINARY_DIR}/deps/htslib/install
     BUILD_COMMAND make -j
     INSTALL_COMMAND make install
   )
 endif()
 
-## zlib
-find_package(ZLIB)
+# # zlib
+find_package(ZLIB REQUIRED)
 
-## boost
-find_package(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
+# # boost
+find_package(Boost REQUIRED COMPONENTS program_options iostreams filesystem date_time)
 
 # Internal libraries and binaries
 
-## set build version
+# # set build version
 add_custom_target(generate_version_h ALL
-  COMMAND cd ${CMAKE_SOURCE_DIR} && ${CMAKE_COMMAND} -DBUILD_TYPE=${CMAKE_BUILD_TYPE} -P version.cmake  
+  COMMAND cd ${CMAKE_SOURCE_DIR} && ${CMAKE_COMMAND} -DBUILD_TYPE=${CMAKE_BUILD_TYPE} -P version.cmake
   COMMENT "Generating version.hpp with version information"
   VERBATIM
 )
 
-## set compiler warnings
+# # set compiler warnings
 set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
 
-## set compiler version
+# # set compiler version
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   list(APPEND STRICT_WARNINGS -Wcast-align=strict)
 endif()
@@ -170,11 +183,11 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR}/deps/usher)
-  target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
+  target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
   add_dependencies(${PRODUCT} range-v3)
 
   if(${USE_HTSLIB})
-    target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/include)
+    target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/htslib/install/include)
     add_dependencies(${PRODUCT} htslib)
   endif()
 endfunction()
@@ -231,6 +244,9 @@ endfunction()
 
 # build larch executable
 function(larch_executable PRODUCT)
+  message(STATUS "PRODUCT: ${PRODUCT}")
+  message(STATUS "SOURCES: ${ARGN}")
+
   add_executable(${PRODUCT} ${ARGN})
   larch_compile_opts(${PRODUCT})
   target_compile_options(${PRODUCT} PRIVATE ${STRICT_WARNINGS})
@@ -245,16 +261,18 @@ function(larch_executable PRODUCT)
   get_target_property(PRODUCT_ARCHIVES ${PRODUCT} ARCHIVE_OUTPUT_DIRECTORY)
   message(STATUS "Libraries to be installed to LIBRARY destination: ${PRODUCT_LIBRARIES}")
   message(STATUS "Archives to be installed to ARCHIVE destination: ${PRODUCT_ARCHIVES}")
+endfunction()
 
-  install(TARGETS ${PRODUCT} 
-    LIBRARY DESTINATION lib
+function(larch_install PRODUCT)
+  install(TARGETS ${PRODUCT}
     RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
   )
 endfunction()
 
 # Internal libraries: larch, usher
 
-## larch library
+# # larch library
 add_library(larch
   src/dag_loader.cpp
 )
@@ -268,7 +286,7 @@ endif()
 
 larch_link_opts(larch)
 
-## usher library
+# # usher library
 if(${USE_USHER})
   add_library(usher
     ${MATOPTIMIZE_SRC}
@@ -284,7 +302,7 @@ if(${USE_USHER})
 
   target_include_directories(usher PUBLIC include)
   target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
-  target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
+  target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
 
   add_dependencies(usher range-v3)
 
@@ -298,19 +316,19 @@ if(${USE_USHER})
 
   add_library(larch-usher-glue
     src/usher_glue.cpp)
-    larch_compile_opts(larch-usher-glue)
-    target_compile_options(larch-usher-glue PRIVATE ${STRICT_WARNINGS})
-    larch_link_opts(larch-usher-glue)
-    target_link_libraries(larch-usher-glue PUBLIC usher)
-    add_dependencies(larch-usher-glue larch usher)
-    set_target_properties(larch-usher-glue
+  larch_compile_opts(larch-usher-glue)
+  target_compile_options(larch-usher-glue PRIVATE ${STRICT_WARNINGS})
+  larch_link_opts(larch-usher-glue)
+  target_link_libraries(larch-usher-glue PUBLIC usher)
+  add_dependencies(larch-usher-glue larch usher)
+  set_target_properties(larch-usher-glue
     PROPERTIES CXX_CLANG_TIDY ""
   )
 endif()
 
 # Executables: larch-usher, larch-dagutil, larch-dag2dot, larch-test
 
-## larch-test
+# # larch-test
 larch_executable(larch-test
   test/main.cpp
   test/test_ambiguous_vcf.cpp
@@ -348,17 +366,19 @@ if(${USE_USHER})
   )
 endif()
 
-## larch-dagutil
+# # larch-dagutil
 larch_executable(larch-dagutil
   tools/larch-dagutil.cpp
 )
+larch_install(larch-dagutil)
 
-## larch-dag2dot
+# # larch-dag2dot
 larch_executable(larch-dag2dot
   tools/larch-dag2dot.cpp
 )
+larch_install(larch-dag2dot)
 
-## larch-usher
+# # larch-usher
 if(${USE_USHER})
   larch_executable(larch-usher
     tools/larch-usher.cpp
@@ -366,4 +386,5 @@ if(${USE_USHER})
   target_compile_options(larch-usher PRIVATE ${STRICT_WARNINGS})
   target_link_libraries(larch-usher PRIVATE larch-usher-glue)
   add_dependencies(larch-usher larch-usher-glue)
+  larch_install(larch-usher)
 endif()
