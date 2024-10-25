@@ -5,26 +5,32 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
+  message(WARNING "ERROR: CMake build directory cannot be the same as root source directory.")
+endif()
 
-# set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-# set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-set(CMAKE_SHARED_LIBRARY_PREFIX "larch_")
+set(CMAKE_DISABLE_SOURCE_CHANGES ON)
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
-# set(CMAKE_SHARED_LIBRARY_SUFFIX ".larch.so")
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION yes)
-set(CMAKE_EXPORT_COMPILE_COMMANDS yes)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/static")
+set(CMAKE_DEPS_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/deps")
+
+set(CMAKE_SHARED_LIBRARY_PREFIX "liblarch_")
+file(MAKE_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(USE_USHER "Use matOptimize" ON)
 option(PROTOBUF_FROM_SOURCE "Build protobuf from source code" OFF)
 
-if(NOT CMAKE_BUILD_TYPE)
+if(NOT ${CMAKE_BUILD_TYPE})
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
 
-if(USE_USHER)
+if(${USE_USHER})
   set(TBB_VERSION "2019_U9")
 else()
   set(TBB_VERSION "v2021.11.0")
@@ -39,23 +45,37 @@ include(FetchContent)
 include(ExternalProject)
 
 # # oneTBB
-if(USE_USHER)
+if(${USE_USHER})
+  set(TBB_LIB_DIR "${PROJECT_BINARY_DIR}/deps/onetbb")
   FetchContent_Declare(oneTBB
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
     GIT_TAG ${TBB_VERSION}
     GIT_SHALLOW true
     GIT_PROGRESS true
     UPDATE_DISCONNECTED true
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DTBB_TEST=OFF -DTBB_FIND_PACKAGE=OFF
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DTBB_TEST=OFF -DTBB_FIND_PACKAGE=ON
   )
   FetchContent_MakeAvailable(oneTBB)
   include(${onetbb_SOURCE_DIR}/cmake/TBBBuild.cmake)
   tbb_build(
     TBB_ROOT ${onetbb_SOURCE_DIR}
     CONFIG_DIR TBB_DIR
-    MAKE_ARGS tbb_cpf=1 CFLAGS="-w" tbb_build_dir=${PROJECT_BINARY_DIR}/deps/onetbb
+    MAKE_ARGS tbb_cpf=1 CFLAGS="-w" tbb_build_dir=${TBB_LIB_DIR}
   )
 
+  # find_package(TBB REQUIRED COMPONENTS tbbmalloc tbbmalloc_proxy tbb_preview)
+  file(GLOB TBB_SHARED_LIBS "${TBB_LIB_DIR}/**/*.so*")
+
+  foreach(LIB_PATH ${TBB_SHARED_LIBS})
+    get_filename_component(LIB_DIR "${LIB_PATH}" DIRECTORY)
+    get_filename_component(LIB_NAME "${LIB_PATH}" NAME)
+    set(NEW_LIB_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_SHARED_LIBRARY_PREFIX}${LIB_NAME}")
+    file(RENAME "${LIB_PATH}" "${NEW_LIB_PATH}")
+    message(STATUS "moved from ${LIB_PATH} to ${NEW_LIB_PATH}...")
+  endforeach()
+
+  set(CMAKE_PREFIX_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+  set(CMAKE_LIBRARY_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
   find_package(TBB REQUIRED COMPONENTS tbbmalloc tbbmalloc_proxy tbb_preview)
 
   find_package(MPI REQUIRED)
@@ -75,11 +95,11 @@ else()
 endif()
 
 # # protobuf
-if(PROTOBUF_FROM_SOURCE)
-  message(STATUS "protobuf from source...")
+if(${PROTOBUF_FROM_SOURCE})
+  message(STATUS " protobuf from source... ")
   include(protobuf.cmake)
 else()
-  message(STATUS "protobuf from conda environment...")
+  message(STATUS " protobuf from conda environment... ")
 endif()
 
 find_package(Protobuf REQUIRED)
@@ -95,7 +115,7 @@ set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
 target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR} ${Protobuf_INCLUDE_DIRS})
 target_link_libraries(larch-autogen PUBLIC ${Protobuf_ABSL_LIBS})
 set_target_properties(larch-autogen
-  PROPERTIES CXX_CLANG_TIDY ""
+  PROPERTIES CXX_CLANG_TIDY " "
 )
 protobuf_generate(
   LANGUAGE cpp
@@ -149,7 +169,7 @@ find_package(Boost REQUIRED COMPONENTS program_options iostreams filesystem date
 # # set build version
 add_custom_target(generate_version_h ALL
   COMMAND cd ${CMAKE_SOURCE_DIR} && ${CMAKE_COMMAND} -DBUILD_TYPE=${CMAKE_BUILD_TYPE} -P version.cmake
-  COMMENT "Generating version.hpp with version information"
+  COMMENT " Generating version.hpp with version information "
   VERBATIM
 )
 
@@ -165,7 +185,7 @@ endif()
 function(larch_compile_opts PRODUCT)
   target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -pipe)
 
-  if(CMAKE_BUILD_TYPE EQUAL "DEBUG")
+  if(CMAKE_BUILD_TYPE EQUAL " DEBUG ")
     target_compile_options(${PRODUCT} PUBLIC -fno-omit-frame-pointer -fno-stack-protector)
   endif()
 
@@ -195,23 +215,23 @@ endfunction()
 if(${USE_USHER})
   include_directories(deps/usher/)
   file(GLOB MATOPTIMIZE_SRC
-    "deps/usher/src/matOptimize/apply_move/*.cpp"
-    "deps/usher/src/matOptimize/Profitable_Moves_Enumerators/*.cpp"
-    "deps/usher/src/matOptimize/Fitch_Sankoff.cpp"
-    "deps/usher/src/matOptimize/mutation_annotated_tree.cpp"
-    "deps/usher/src/matOptimize/mutation_annotated_tree_nuc_util.cpp"
-    "deps/usher/src/matOptimize/mutation_annotated_tree_node.cpp"
-    "deps/usher/src/matOptimize/mutation_annotated_tree_load_store.cpp"
-    "deps/usher/src/matOptimize/mutation_annotated_tree_nuc_utils.cpp"
-    "deps/usher/src/matOptimize/optimize_inner_loop.cpp"
-    "deps/usher/src/matOptimize/Mutation_Collection.cpp"
-    "deps/usher/src/matOptimize/condense.cpp"
-    "deps/usher/src/matOptimize/reassign_states.cpp"
-    "deps/usher/src/matOptimize/detailed_mutations_load.cpp"
-    "deps/usher/src/matOptimize/detailed_mutations_store.cpp"
-    "deps/usher/src/matOptimize/optimize_tree.cpp"
-    "deps/usher/src/matOptimize/priority_conflict_resolver.cpp"
-    "deps/usher/src/matOptimize/check_samples.cpp"
+    " deps/usher/src/matOptimize/apply_move/*.cpp "
+    " deps/usher/src/matOptimize/Profitable_Moves_Enumerators/*.cpp "
+    " deps/usher/src/matOptimize/Fitch_Sankoff.cpp "
+    " deps/usher/src/matOptimize/mutation_annotated_tree.cpp "
+    " deps/usher/src/matOptimize/mutation_annotated_tree_nuc_util.cpp "
+    " deps/usher/src/matOptimize/mutation_annotated_tree_node.cpp "
+    " deps/usher/src/matOptimize/mutation_annotated_tree_load_store.cpp "
+    " deps/usher/src/matOptimize/mutation_annotated_tree_nuc_utils.cpp "
+    " deps/usher/src/matOptimize/optimize_inner_loop.cpp "
+    " deps/usher/src/matOptimize/Mutation_Collection.cpp "
+    " deps/usher/src/matOptimize/condense.cpp "
+    " deps/usher/src/matOptimize/reassign_states.cpp "
+    " deps/usher/src/matOptimize/detailed_mutations_load.cpp "
+    " deps/usher/src/matOptimize/detailed_mutations_store.cpp "
+    " deps/usher/src/matOptimize/optimize_tree.cpp "
+    " deps/usher/src/matOptimize/priority_conflict_resolver.cpp "
+    " deps/usher/src/matOptimize/check_samples.cpp "
   )
 endif()
 
@@ -244,8 +264,8 @@ endfunction()
 
 # build larch executable
 function(larch_executable PRODUCT)
-  message(STATUS "PRODUCT: ${PRODUCT}")
-  message(STATUS "SOURCES: ${ARGN}")
+  message(STATUS " PRODUCT: ${PRODUCT} ")
+  message(STATUS " SOURCES: ${ARGN} ")
 
   add_executable(${PRODUCT} ${ARGN})
   larch_compile_opts(${PRODUCT})
@@ -255,12 +275,12 @@ function(larch_executable PRODUCT)
   add_dependencies(${PRODUCT} generate_version_h)
 
   get_target_property(LINKED_LIBS ${PRODUCT} LINK_LIBRARIES)
-  message(STATUS "Libraries linked to ${PRODUCT}: ${LINKED_LIBS}")
+  message(STATUS " Libraries linked to ${PRODUCT}: ${LINKED_LIBS} ")
 
   get_target_property(PRODUCT_LIBRARIES ${PRODUCT} LINK_LIBRARIES)
   get_target_property(PRODUCT_ARCHIVES ${PRODUCT} ARCHIVE_OUTPUT_DIRECTORY)
-  message(STATUS "Libraries to be installed to LIBRARY destination: ${PRODUCT_LIBRARIES}")
-  message(STATUS "Archives to be installed to ARCHIVE destination: ${PRODUCT_ARCHIVES}")
+  message(STATUS " Libraries to be installed to LIBRARY destination: ${PRODUCT_LIBRARIES} ")
+  message(STATUS " Archives to be installed to ARCHIVE destination: ${PRODUCT_ARCHIVES} ")
 endfunction()
 
 function(larch_install PRODUCT)
@@ -268,6 +288,11 @@ function(larch_install PRODUCT)
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
   )
+endfunction()
+
+function(lib_install PRODUCT)
+  get_target_property(LIB_PATH ${PRODUCT} LOCATION)
+  message(" LIB_PATH: ${LIB_PATH} ")
 endfunction()
 
 # Internal libraries: larch, usher
@@ -311,7 +336,7 @@ if(${USE_USHER})
   target_link_libraries(usher PRIVATE ${Boost_LIBRARIES} ZLIB::ZLIB ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
 
   set_target_properties(usher
-    PROPERTIES CXX_CLANG_TIDY ""
+    PROPERTIES CXX_CLANG_TIDY " "
   )
 
   add_library(larch-usher-glue
@@ -322,7 +347,7 @@ if(${USE_USHER})
   target_link_libraries(larch-usher-glue PUBLIC usher)
   add_dependencies(larch-usher-glue larch usher)
   set_target_properties(larch-usher-glue
-    PROPERTIES CXX_CLANG_TIDY ""
+    PROPERTIES CXX_CLANG_TIDY " "
   )
 endif()
 
@@ -362,7 +387,7 @@ if(${USE_USHER})
   target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
   add_dependencies(larch-test larch-usher-glue)
   set_target_properties(larch-test
-    PROPERTIES CXX_CLANG_TIDY ""
+    PROPERTIES CXX_CLANG_TIDY " "
   )
 endif()
 
