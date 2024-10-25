@@ -45,18 +45,39 @@ message(STATUS "using usher: ${USE_USHER}")
 include(FetchContent)
 include(ExternalProject)
 
+function(append_library_prefix LIB_PATH)
+  get_filename_component(LIB_DIR "${LIB_PATH}" DIRECTORY)
+  get_filename_component(LIB_NAME "${LIB_PATH}" NAME)
+  add_custom_command(
+    OUTPUT "${LIB_DIR}/liblarch_${LIB_NAME}"
+    COMMAND ${CMAKE_COMMAND} -E rename "${LIB_PATH}" "${LIB_DIR}/liblarch_${LIB_NAME}"
+    DEPENDS tbbmalloc tbbmalloc_proxy tbb_preview
+    COMMENT "Renaming TBB shared libraries..."
+  )
+endfunction()
+
+function(add_tbb_library LIB_NAME LIB_DEPENDENCY)
+  add_library(${LIB_NAME} SHARED IMPORTED)
+  add_dependencies(${LIB_NAME} ${LIB_DEPENDENCY})
+  append_library_prefix("${TBB_DIR}/tbb_cmake_subdir_release/lib${LIB_NAME}.so.2")
+  append_library_prefix("${TBB_DIR}/tbb_cmake_subdir_debug/lib${LIB_NAME}_debug.so.2")
+  set_target_properties(${LIB_NAME} PROPERTIES
+    IMPORTED_LOCATION_RELEASE "${TBB_DIR}/tbb_cmake_subdir_release/${CMAKE_SHARED_LIBRARY_PREFIX}lib${LIB_NAME}.so.2"
+    IMPORTED_LOCATION_DEBUG "${TBB_DIR}/tbb_cmake_subdir_debug/${CMAKE_SHARED_LIBRARY_PREFIX}lib${LIB_NAME}_debug.so.2"
+  )
+endfunction()
+
 function(lib_install PRODUCT)
   get_target_property(LIB_PATH ${PRODUCT} LOCATION)
   get_filename_component(LIB_NAME ${LIB_PATH} NAME)
   install(FILES "${LIB_PATH}"
     DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-
-    # RENAME "liblarch_${LIB_NAME}"
   )
 endfunction()
 
 # # oneTBB
 if(${USE_USHER})
+  set(TBB_DIR "${PROJECT_BINARY_DIR}/deps/onetbb")
   FetchContent_Declare(oneTBB
     GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
     GIT_TAG ${TBB_VERSION}
@@ -70,15 +91,20 @@ if(${USE_USHER})
   tbb_build(
     TBB_ROOT ${onetbb_SOURCE_DIR}
     CONFIG_DIR TBB_DIR
-    MAKE_ARGS tbb_cpf=1 CFLAGS="-w" tbb_build_dir=${PROJECT_BINARY_DIR}/deps/onetbb
+    MAKE_ARGS tbb_cpf=1 CFLAGS="-w" tbb_build_dir=${TBB_DIR}
   )
 
   find_package(TBB REQUIRED COMPONENTS tbbmalloc tbbmalloc_proxy tbb_preview)
-
   lib_install(TBB::tbbmalloc)
   lib_install(TBB::tbbmalloc_proxy)
   lib_install(TBB::tbb_preview)
 
+  # add_tbb_library(tbbmalloc TBB)
+  # lib_install(tbbmalloc)
+  # add_tbb_library(tbbmalloc_proxy TBB)
+  # lib_install(tbbmalloc_proxy)
+  # add_tbb_library(tbbmalloc_preview TBB)
+  # lib_install(tbbmalloc_preview)
   find_package(MPI REQUIRED)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 else()
@@ -253,6 +279,8 @@ function(larch_link_opts PRODUCT)
 
   if(${USE_USHER})
     target_link_libraries(${PRODUCT} PUBLIC TBB::tbbmalloc TBB::tbbmalloc_proxy TBB::tbb_preview -lstdc++fs)
+
+  # target_link_libraries(${PRODUCT} PUBLIC tbbmalloc tbbmalloc_proxy tbb_preview -lstdc++fs)
   else()
     target_link_libraries(${PRODUCT} PUBLIC TBB::tbb)
   endif()
