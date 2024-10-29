@@ -17,8 +17,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/static)
 set(CMAKE_DEPS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/deps)
 
-set(CMAKE_SHARED_LIBRARY_PREFIX "liblarch_")
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib/extra")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib/larch")
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
@@ -45,33 +44,11 @@ message(STATUS "using usher: ${USE_USHER}")
 include(FetchContent)
 include(ExternalProject)
 
-function(append_library_prefix LIB_PATH)
-  get_filename_component(LIB_DIR "${LIB_PATH}" DIRECTORY)
-  get_filename_component(LIB_NAME "${LIB_PATH}" NAME)
-  add_custom_command(
-    OUTPUT "${LIB_DIR}/liblarch_${LIB_NAME}"
-    COMMAND ${CMAKE_COMMAND} -E rename "${LIB_PATH}" "${LIB_DIR}/liblarch_${LIB_NAME}"
-    DEPENDS tbbmalloc tbbmalloc_proxy tbb_preview
-    COMMENT "Renaming TBB shared libraries..."
-  )
-endfunction()
-
-function(add_tbb_library LIB_NAME LIB_DEPENDENCY)
-  add_library(${LIB_NAME} SHARED IMPORTED)
-  add_dependencies(${LIB_NAME} ${LIB_DEPENDENCY})
-  append_library_prefix("${TBB_DIR}/tbb_cmake_subdir_release/lib${LIB_NAME}.so.2")
-  append_library_prefix("${TBB_DIR}/tbb_cmake_subdir_debug/lib${LIB_NAME}_debug.so.2")
-  set_target_properties(${LIB_NAME} PROPERTIES
-    IMPORTED_LOCATION_RELEASE "${TBB_DIR}/tbb_cmake_subdir_release/${CMAKE_SHARED_LIBRARY_PREFIX}lib${LIB_NAME}.so.2"
-    IMPORTED_LOCATION_DEBUG "${TBB_DIR}/tbb_cmake_subdir_debug/${CMAKE_SHARED_LIBRARY_PREFIX}lib${LIB_NAME}_debug.so.2"
-  )
-endfunction()
-
 function(lib_install PRODUCT)
   get_target_property(LIB_PATH ${PRODUCT} LOCATION)
   get_filename_component(LIB_NAME ${LIB_PATH} NAME)
   install(FILES "${LIB_PATH}"
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/larch"
   )
 endfunction()
 
@@ -99,12 +76,6 @@ if(${USE_USHER})
   lib_install(TBB::tbbmalloc_proxy)
   lib_install(TBB::tbb_preview)
 
-  # add_tbb_library(tbbmalloc TBB)
-  # lib_install(tbbmalloc)
-  # add_tbb_library(tbbmalloc_proxy TBB)
-  # lib_install(tbbmalloc_proxy)
-  # add_tbb_library(tbbmalloc_preview TBB)
-  # lib_install(tbbmalloc_preview)
   find_package(MPI REQUIRED)
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 else()
@@ -299,14 +270,6 @@ function(larch_executable PRODUCT)
   larch_link_opts(${PRODUCT})
   target_link_libraries(${PRODUCT} PUBLIC larch)
   add_dependencies(${PRODUCT} generate_version_h)
-
-  get_target_property(LINKED_LIBS ${PRODUCT} LINK_LIBRARIES)
-  message(STATUS "Libraries linked to ${PRODUCT}: ${LINKED_LIBS}")
-
-  get_target_property(PRODUCT_LIBRARIES ${PRODUCT} LINK_LIBRARIES)
-  get_target_property(PRODUCT_ARCHIVES ${PRODUCT} ARCHIVE_OUTPUT_DIRECTORY)
-  message(STATUS "Libraries to be installed to LIBRARY destination: ${PRODUCT_LIBRARIES}")
-  message(STATUS "Archives to be installed to ARCHIVE destination: ${PRODUCT_ARCHIVES}")
 endfunction()
 
 function(larch_install PRODUCT)
