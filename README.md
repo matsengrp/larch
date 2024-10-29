@@ -76,13 +76,19 @@ To build all from `larch/` directory, run:
 git submodule update --init --recursive
 mkdir build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake ..
 make -j16
+
+# optionally, to install outside of build directory
+make install
 ```
 
 Cmake build options:
+  - add `-DMAKE_BUILD_TYPE=Debug` to build in debug mode.  `-DMAKE_BUILD_TYPE=Release` is enabled by default.
   - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
   - add `-DUSE_ASAN=yes` to enable asan and ubsan.
+  - add `-DCMAKE_INSTALL_PREFIX=path/to/install` to select install location.  By default, this will perform a system-wide installation.  To install in current conda environment, use `-DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX`.
+
 
 ## Running
 -------
@@ -99,9 +105,9 @@ File format options:
 
 ### larch-test
 
-From the `larch/build/` directory:
+From the `larch/build/bin` directory:
 ```shell
-ln -s ../data
+ln -s ../../data
 ./larch-test
 ```
 
@@ -118,7 +124,7 @@ larch-test options:
 
 ### larch-usher
 
-From the `larch/build/` directory:
+From the `larch/build/bin` directory:
 ```shell
 ./larch-usher -i ../data/testcase/tree_1.pb.gz -o output_dag.pb -c 10
 ```
@@ -150,7 +156,7 @@ larch-usher options:
 
 ### larch-dagutil
 
-From the `larch/build/` directory:
+From the `larch/build/bin` directory:
 ```shell
 ./larch-dagutil -i ../data/testcase/tree_1.pb.gz -i ../data/testcase/tree_2.pb.gz -o merged_trees.pb
 ```
@@ -172,7 +178,7 @@ dag-util options:
 
 ### larch-dag2dot
 
-From the `larch/build/` directory:
+From the `larch/build/bin` directory:
 ```shell
 ./larch-dag2dot -i ../data/testcase/full_dag.pb
 ```
