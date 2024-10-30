@@ -46,7 +46,7 @@ include(FetchContent)
 include(ExternalProject)
 
 function(lib_install PRODUCT)
-  get_target_property(LIB_PATH ${PRODUCT} IMPORTED_LOCATION_DEBUG)
+  get_target_property(LIB_PATH ${PRODUCT} IMPORTED_LOCATION_RELEASE)
   if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     get_target_property(LIB_PATH ${PRODUCT} IMPORTED_LOCATION_DEBUG)
   endif()
@@ -94,6 +94,9 @@ else()
   FetchContent_MakeAvailable(oneTBB)
 
   find_package(TBB REQUIRED COMPONENTS tbbmalloc tbbmalloc_proxy tbb_preview)
+  lib_install(TBB::tbbmalloc)
+  lib_install(TBB::tbbmalloc_proxy)
+  lib_install(TBB::tbb_preview)
 endif()
 
 # # protobuf
