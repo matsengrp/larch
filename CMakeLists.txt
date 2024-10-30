@@ -17,8 +17,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/static)
 set(CMAKE_DEPS_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/deps)
 
+set(CMAKE_SHARED_LIBRARY_PREFIX "liblarch_")
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib/larch")
-set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -26,7 +26,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(USE_USHER "Use matOptimize" ON)
 option(PROTOBUF_FROM_SOURCE "Build protobuf from source code" OFF)
 
-if(NOT ${CMAKE_BUILD_TYPE})
+# set default cmake build type
+if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
 
@@ -37,7 +38,7 @@ else()
 endif()
 
 message(STATUS "cmake system architecture: ${CMAKE_SYSTEM_PROCESSOR}")
-message(STATUS "build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "cmake build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "using usher: ${USE_USHER}")
 
 # External static libraries: protobuf/larch-autogen, range-v3, nlohmann_json, htslib, oneTBB, boost, zlib
@@ -45,7 +46,10 @@ include(FetchContent)
 include(ExternalProject)
 
 function(lib_install PRODUCT)
-  get_target_property(LIB_PATH ${PRODUCT} LOCATION)
+  get_target_property(LIB_PATH ${PRODUCT} IMPORTED_LOCATION_DEBUG)
+  if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    get_target_property(LIB_PATH ${PRODUCT} IMPORTED_LOCATION_DEBUG)
+  endif()
   get_filename_component(LIB_NAME ${LIB_PATH} NAME)
   install(FILES "${LIB_PATH}"
     DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/larch"
@@ -250,8 +254,6 @@ function(larch_link_opts PRODUCT)
 
   if(${USE_USHER})
     target_link_libraries(${PRODUCT} PUBLIC TBB::tbbmalloc TBB::tbbmalloc_proxy TBB::tbb_preview -lstdc++fs)
-
-  # target_link_libraries(${PRODUCT} PUBLIC tbbmalloc tbbmalloc_proxy tbb_preview -lstdc++fs)
   else()
     target_link_libraries(${PRODUCT} PUBLIC TBB::tbb)
   endif()

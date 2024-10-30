@@ -20,7 +20,7 @@ else()
   message("using version from VERSION file: ${VERSION_NUMBER}")
 endif()
 
-# get git hash
+# get git commit hash
 execute_process(
   COMMAND git rev-parse --short HEAD
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -28,11 +28,19 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# get git date
+# get git commit date
 execute_process(
   COMMAND git log -1 --format=%cd --date=short
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE GIT_COMMIT_DATE
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# get build date/time
+execute_process(
+  COMMAND date
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE BUILD_DATE
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
