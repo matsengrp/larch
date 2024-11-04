@@ -228,9 +228,9 @@ struct ExtendDAGStorage {
   template <typename VT>
   size_t GetEdgesCount() const;
 
-  template <Component C>
+  template <Component C, typename VT>
   Id<C> GetNextAvailableId() const {
-    return GetTarget().template GetNextAvailableId<C>();
+    return GetTarget().template GetNextAvailableId<C, VT>();
   }
 
   template <typename VT>

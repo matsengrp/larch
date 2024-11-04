@@ -52,8 +52,8 @@ ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, Cont>::AppendNod
   if constexpr (Cont == IdContinuity::Dense) {
     additional_node_features_storage_.push_back({});
   } else {
-    std::ignore =
-        additional_node_features_storage_[GetNextAvailableId<Component::Node>()];
+    std::ignore = additional_node_features_storage_[GetNextAvailableId<Component::Node,
+                                                                       TargetView>()];
   }
   return GetTarget().AppendNode().GetId();
 }
@@ -66,8 +66,8 @@ ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, Cont>::AppendEdg
   if constexpr (Cont == IdContinuity::Dense) {
     additional_edge_features_storage_.push_back({});
   } else {
-    std::ignore =
-        additional_edge_features_storage_[GetNextAvailableId<Component::Edge>()];
+    std::ignore = additional_edge_features_storage_[GetNextAvailableId<Component::Edge,
+                                                                       TargetView>()];
   }
   return GetTarget().AppendEdge().GetId();
 }

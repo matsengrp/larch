@@ -97,17 +97,19 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   }
   bool empty() const;
 
-  template <Component C>
+  template <Component C, typename VT>
   Id<C> GetNextAvailableId() const {
-    return GetStorage().template GetNextAvailableId<C>();
+    return GetStorage().template GetNextAvailableId<C, VT>();
   }
 
+  template <typename VT>
   NodeId GetNextAvailableNodeId() const {
-    return GetNextAvailableId<Component::Node>();
+    return GetNextAvailableId<Component::Node, VT>();
   }
 
+  template <typename VT>
   EdgeId GetNextAvailableEdgeId() const {
-    return GetNextAvailableId<Component::Edge>();
+    return GetNextAvailableId<Component::Edge, VT>();
   }
 
   /**

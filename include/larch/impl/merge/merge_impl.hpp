@@ -55,7 +55,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   });
 #endif
 
-  std::atomic<size_t> node_id{ResultDAG().GetNextAvailableNodeId().value};
+  std::atomic<size_t> node_id{ResultDAG().GetNextAvailableNodeId<MergeDAG>().value};
   ParallelForEach(idxs,
                   [&](size_t i) { MergeNodes(i, dags, below, dags_labels, node_id); });
 
@@ -82,7 +82,8 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
       added_edges);
 
   ResultDAG().InitializeNodes(result_nodes_.size());
-  std::atomic<size_t> edge_id{ResultDAG().GetNextAvailableEdgeId().value};
+  std::atomic<size_t> edge_id{
+      ResultDAG().template GetNextAvailableEdgeId<MergeDAG>().value};
   ResultDAG().InitializeEdges(result_edges_.size());
   idxs.resize(added_edges.size());
   std::iota(idxs.begin(), idxs.end(), 0);
@@ -309,8 +310,8 @@ void Merge::BuildResult(size_t i, std::vector<Merge::AddedEdge>& added_edges,
   Assert(result_parent_id.value != NoId);
   Assert(result_child_id.value != NoId);
   Assert(result_parent_id != result_child_id);
-  Assert(result_parent_id < ResultDAG().GetNextAvailableNodeId());
-  Assert(result_child_id < ResultDAG().GetNextAvailableNodeId());
+  Assert(result_parent_id < ResultDAG().template GetNextAvailableNodeId<MergeDAG>());
+  Assert(result_child_id < ResultDAG().template GetNextAvailableNodeId<MergeDAG>());
   parent_id = result_parent_id;
   child_id = result_child_id;
   clade = edge.ComputeCladeIdx();

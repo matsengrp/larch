@@ -130,12 +130,12 @@ struct DAGStorage {
   template <typename VT>
   size_t GetEdgesCount() const;
 
-  template <Component C>
+  template <Component C, typename VT>
   Id<C> GetNextAvailableId() const {
     if constexpr (C == Component::Node) {
-      return nodes_container_.GetNextAvailableId();
+      return nodes_container_.template GetNextAvailableId<VT>();
     } else {
-      return edges_container_.GetNextAvailableId();
+      return edges_container_.template GetNextAvailableId<VT>();
     }
   }
 

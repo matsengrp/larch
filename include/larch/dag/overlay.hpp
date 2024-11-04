@@ -138,13 +138,13 @@ struct OverlayDAGStorage {
   template <typename VT>
   size_t GetEdgesCount() const;
 
-  template <Component C>
+  template <Component C, typename VT>
   Id<C> GetNextAvailableId() const {
     if constexpr (C == Component::Node) {
-      return {GetTarget().template GetNextAvailableId<C>().value +
+      return {GetTarget().template GetNextAvailableId<C, VT>().value +
               added_node_storage_.size()};
     } else {
-      return {GetTarget().template GetNextAvailableId<C>().value +
+      return {GetTarget().template GetNextAvailableId<C, VT>().value +
               added_edge_storage_.size()};
     }
   }

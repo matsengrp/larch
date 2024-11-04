@@ -3,9 +3,7 @@
 #include "larch/mat_view.hpp"
 #include "sample_dag.hpp"
 
-using Storage = ExtendStorageType<void, MATViewStorage, Extend::Nodes<CompactGenome>,
-                                  Extend::DAG<ReferenceSequence>, Extend::Empty<>,
-                                  CondensedViewBase>;
+using Storage = CondensedMADAGStorage;
 
 template <typename DAGView>
 void test_mat_view_impl(DAGView dag) {
@@ -34,8 +32,7 @@ void test_mat_view_impl(DAGView dag) {
   MADAGToDOT(dag, std::cout);
 
   // Create MAT View
-  MATStorageImpl matview_storage_impl;
-  auto matview_storage = matview_storage_impl.GetCondensed();
+  CondensedMATViewStorage matview_storage;
   matview_storage.View().SetMAT(std::addressof(mat));
   auto storage = Storage::Consume(std::move(matview_storage));
   auto mv = storage.View();
@@ -111,8 +108,7 @@ void test_condensed_mat_view() {
   mat.fix_node_idx();
 
   // create a MATView from the condensed MAT
-  MATStorageImpl matview_storage_impl;
-  auto matview_storage = matview_storage_impl.GetCondensed();
+  CondensedMATViewStorage matview_storage;
   matview_storage.View().SetMAT(std::addressof(mat));
   auto storage = Storage::Consume(std::move(matview_storage));
   auto mv = storage.View();

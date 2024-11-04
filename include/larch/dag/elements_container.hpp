@@ -45,7 +45,10 @@ struct ElementsContainer {
   template <typename VT>
   size_t GetCount() const;
 
-  Id<C> GetNextAvailableId() const { return {GetCount<void>()}; }
+  template <typename VT>
+  Id<C> GetNextAvailableId() const {
+    return {GetCount<VT>()};
+  }
 
   Id<C> Append();
 
