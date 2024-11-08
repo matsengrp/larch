@@ -34,10 +34,17 @@ jobs:
           ANACONDA_USER: ${{ vars.ANACONDA_USER }}
           ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
           ANACONDA_FLAGS: ${{ vars.ANACONDA_FLAGS }} 
-          INCLUDE_TESTS: ${{ vars.INCLUDE_TESTS }}
+          INCLUDE_LARCH_TEST: ${{ vars.INCLUDE_LARCH_TEST }}
+          RUN_LARCH_TEST: ${{ vars.RUN_LARCH_TEST }}
+          UPLOAD_TO_ANACONDA: ${{ vars.UPLOAD_TO_ANACONDA }}
         run: |
           source ~/miniconda/etc/profile.d/conda.sh
           conda activate larch-dev
           export LARCH_VERSION=$(cat ./VERSION)
-          export INCLUDE_TESTS=${INCLUDE_TESTS}
-          conda build . --user ${ANACONDA_USER} --token ${ANACONDA_TOKEN} ${ANACONDA_FLAGS}
+          export INCLUDE_LARCH_TEST=${INCLUDE_LARCH_TEST}
+          export RUN_LARCH_TEST=${RUN_LARCH_TEST}
+          if [[ ${UPLOAD_TO_ANACONDA} == true ]]; then
+            conda build . --user ${ANACONDA_USER} --token ${ANACONDA_TOKEN} ${ANACONDA_FLAGS}
+          else
+            conda build . 
+          fi
