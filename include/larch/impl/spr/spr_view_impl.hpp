@@ -1,7 +1,10 @@
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMATRoot() const {
   auto& node = static_cast<const CRTP&>(*this);
-  return node.GetMATNode()->parent == nullptr;
+  if (node.GetMATNode() != nullptr) {
+    return node.GetMATNode()->parent == nullptr;
+  }
+  return false;
 }
 
 template <typename CRTP, typename Tag>
@@ -203,9 +206,6 @@ FeatureConstView<HypotheticalNode, CRTP, Tag>::GetParentChangedBaseSites() const
 template <typename CRTP, typename Tag>
 CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGenome()
     const {
-#if USE_MAT_VIEW
-  return {};
-#else
   auto node = static_cast<const CRTP&>(*this).Const();
   Assert(node.HaveMATNode());
   ContiguousSet<MutationPosition> changed_base_sites =
@@ -253,7 +253,6 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
   CompactGenome result = old_cg.Copy();
   result.ApplyChanges(cg_changes);
   return result;
-#endif
 }
 
 template <typename CRTP, typename Tag>
@@ -490,11 +489,6 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>>
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     const std::vector<NodeId>& fragment_nodes,
     const std::vector<EdgeId>& fragment_edges) const {
-#if USE_MAT_VIEW
-  std::ignore = fragment_nodes;
-  std::ignore = fragment_edges;
-  return {};
-#else  // TODO USE_MAT_VIEW
   auto& dag = static_cast<const CRTP&>(*this);
 
   // keep track of edges/nodes that are collapsible
@@ -563,6 +557,8 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
         }
       }
       if (parent_is_in_fragment[node_id]) {
+#if USE_MAT_VIEW // TODO: MAT-VIEW OVERLAY
+#else
         if (not this_node.template IsOverlaid<HypotheticalNode>()) {
           this_node.template SetOverlay<HypotheticalNode>();
         }
@@ -634,6 +630,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
           edge_already_added.insert_or_assign(parent_edge, true);
           clades_count.insert_or_assign(parent_node, clade + 1);
         }
+#endif
       }
     }
   }
@@ -684,7 +681,6 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   }
 
   return {current_nodes, current_edges};
-#endif
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -707,16 +703,9 @@ namespace {
 
 template <typename DAG>
 std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& dst) {
-#if USE_MAT_VIEW
-  std::ignore = dag;
-  std::ignore = lca;
-  std::ignore = src;
-  std::ignore = dst;
-  return {};
-#else  // TODO USE_MAT_VIEW
   for (auto node : dag.GetNodes()) {
     if (not node.IsUA()) {
-      if (node.IsCondensedInMAT() or (not node.IsMATRoot())) {
+      if (not node.IsMATRoot()) {
         Assert(node.GetParentsCount() == 1);
       }
     }
@@ -776,6 +765,8 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
   Assert(src_size == src_edges.size());
   Assert(dst_size == dst_edges.size());
 
+#if USE_MAT_VIEW // TODO: MAT-VIEW OVERLAY
+#else
   if (is_sibling_move) {
     auto src_parent_single_parent = src_parent_node.GetParentsCount() > 0
                                         ? src_parent_node.GetSingleParent()
@@ -949,13 +940,13 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     dst_parent_node.AddEdge({dst_parent_clade_ctr}, new_edge, true);
     new_node.SetSingleParent(new_edge);
   }
+#endif
   Assert(dag.GetNodesCount() ==
          (has_unifurcation_after_move ? old_num_nodes : old_num_nodes + 1));
   Assert(dag.GetEdgesCount() ==
          (has_unifurcation_after_move ? old_num_edges : old_num_edges + 1));
 
   return {new_node, has_unifurcation_after_move};
-#endif
 }
 
 }  // namespace

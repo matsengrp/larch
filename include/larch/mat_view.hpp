@@ -431,7 +431,20 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     return is_ua;
   }
 
-  bool IsTreeRoot() const;
+  //bool IsTreeRoot() const;
+
+  bool IsTreeRoot() const {
+    auto [dag_node, mat, mat_node, is_ua] = access();
+    if (mat_node != nullptr) {
+      return mat_node->node_id == mat.root->node_id;
+    }
+    return false;
+  }
+
+  MAT::Node* GetMATNode() const {
+    auto [dag_node, mat, mat_node, is_ua] = access();
+    return mat_node;
+  }
 
   bool IsLeaf() const { return GetCladesCount() == 0; }
 
