@@ -19,6 +19,8 @@
 #include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
 
+#define USE_MAT_VIEW 1
+
 template <typename T>
 struct type_identity {
   using type = T;
@@ -158,16 +160,16 @@ inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wc++20-extensions"
 template <typename T>
-inline const auto tuple_to_string_impl = [
-]<std::size_t... I>(std::index_sequence<I...>) {
-  std::string result = "std::tuple<";
-  result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
-                    std::string{", "}));
-  result.pop_back();
-  result.pop_back();
-  result += ">";
-  return result;
-};
+inline const auto tuple_to_string_impl =
+    []<std::size_t... I>(std::index_sequence<I...>) {
+      std::string result = "std::tuple<";
+      result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
+                        std::string{", "}));
+      result.pop_back();
+      result.pop_back();
+      result += ">";
+      return result;
+    };
 
 template <typename T>
 inline std::string tuple_to_string() {

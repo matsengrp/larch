@@ -203,6 +203,9 @@ FeatureConstView<HypotheticalNode, CRTP, Tag>::GetParentChangedBaseSites() const
 template <typename CRTP, typename Tag>
 CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGenome()
     const {
+#if USE_MAT_VIEW
+  return {};
+#else
   auto node = static_cast<const CRTP&>(*this).Const();
   Assert(node.HaveMATNode());
   ContiguousSet<MutationPosition> changed_base_sites =
@@ -250,6 +253,7 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
   CompactGenome result = old_cg.Copy();
   result.ApplyChanges(cg_changes);
   return result;
+#endif
 }
 
 template <typename CRTP, typename Tag>
@@ -486,6 +490,11 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>>
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     const std::vector<NodeId>& fragment_nodes,
     const std::vector<EdgeId>& fragment_edges) const {
+#if USE_MAT_VIEW
+  std::ignore = fragment_nodes;
+  std::ignore = fragment_edges;
+  return {};
+#else  // TODO USE_MAT_VIEW
   auto& dag = static_cast<const CRTP&>(*this);
 
   // keep track of edges/nodes that are collapsible
@@ -675,6 +684,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   }
 
   return {current_nodes, current_edges};
+#endif
 }
 
 template <typename DAG, typename CRTP, typename Tag>
@@ -697,6 +707,13 @@ namespace {
 
 template <typename DAG>
 std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& dst) {
+#if USE_MAT_VIEW
+  std::ignore = dag;
+  std::ignore = lca;
+  std::ignore = src;
+  std::ignore = dst;
+  return {};
+#else  // TODO USE_MAT_VIEW
   for (auto node : dag.GetNodes()) {
     if (not node.IsUA()) {
       if (node.IsCondensedInMAT() or (not node.IsMATRoot())) {
@@ -938,6 +955,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
          (has_unifurcation_after_move ? old_num_edges : old_num_edges + 1));
 
   return {new_node, has_unifurcation_after_move};
+#endif
 }
 
 }  // namespace

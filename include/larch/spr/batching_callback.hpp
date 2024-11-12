@@ -7,8 +7,6 @@
 #include "larch/merge/merge.hpp"
 #include "larch/mat_view.hpp"
 
-#define USE_MAT_VIEW 1
-
 template <typename CRTP, typename SampleDAG>
 class BatchingCallback : public Move_Found_Callback {
  public:

@@ -85,6 +85,12 @@ struct ExtraFeatureConstView<MATNodeStorage, CRTP> {
     auto& dag = static_cast<const CRTP&>(*this);
     return dag.GetStorage().template View<UncondensedViewBase>();
   }
+
+  auto GetNodeFromMAT(MAT::Node* mat_node) const {
+    Assert(mat_node != nullptr);
+    auto& dag = static_cast<const CRTP&>(*this);
+    return typename CRTP::NodeView{dag, NodeId{mat_node->node_id}};
+  }
 };
 
 struct MATEdgeStorage;

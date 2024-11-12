@@ -144,7 +144,10 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
         FragmentExtraStorage<Target>{target, root_node_id}};
 
     auto view = result.View();
+#if USE_MAT_VIEW
+#else
     view.BuildConnections();
+#endif
     Assert(view.GetRoot().GetId() == root_node_id);
     return result;
   }
