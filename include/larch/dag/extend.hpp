@@ -251,13 +251,13 @@ struct ExtendDAGStorage {
   const auto& GetFeatureStorage() const;
 
   template <typename F>
-  auto& GetFeatureStorage(NodeId id);
+  auto&& GetFeatureStorage(NodeId id);
 
   template <typename F>
   const auto& GetFeatureStorage(NodeId id) const;
 
   template <typename F>
-  auto& GetFeatureStorage(EdgeId id);
+  auto&& GetFeatureStorage(EdgeId id);
 
   template <typename F>
   const auto& GetFeatureStorage(EdgeId id) const;

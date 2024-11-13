@@ -27,7 +27,7 @@ class BatchingCallback : public Move_Found_Callback {
   }
 
 #if USE_MAT_VIEW
-  using MATStorage = UncondensedMADAGStorage;
+  using MATStorage = UncondensedMergeDAGStorage;
   using SPRType = decltype(AddSPRStorage(std::declval<MATStorage>().View()));
   using ReassignedStatesStorage =
       decltype(AddMappedNodes(AddMATConversion(MergeDAGStorage<>::EmptyDefault())));

@@ -192,8 +192,8 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase,
           IdContinuity Cont>
 template <typename F>
-auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                       Cont>::GetFeatureStorage(NodeId id) {
+auto&& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                        Cont>::GetFeatureStorage(NodeId id) {
   if constexpr (tuple_contains_v<
                     std::remove_reference_t<
                         decltype(additional_node_features_storage_.at(NodeId{0}))>,
@@ -223,8 +223,8 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase,
           IdContinuity Cont>
 template <typename F>
-auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                       Cont>::GetFeatureStorage(EdgeId id) {
+auto&& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                        Cont>::GetFeatureStorage(EdgeId id) {
   if constexpr (tuple_contains_v<typename decltype(additional_edge_features_storage_)::
                                      value_type::second_type,
                                  F>) {

@@ -146,13 +146,13 @@ struct DAGStorage {
   void ClearEdges();
 
   template <typename Feature>
-  auto& GetFeatureStorage(NodeId id);
+  auto&& GetFeatureStorage(NodeId id);
 
   template <typename Feature>
   const auto& GetFeatureStorage(NodeId id) const;
 
   template <typename Feature>
-  auto& GetFeatureStorage(EdgeId id);
+  auto&& GetFeatureStorage(EdgeId id);
 
   template <typename Feature>
   const auto& GetFeatureStorage(EdgeId id) const;

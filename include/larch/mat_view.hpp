@@ -431,7 +431,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     return is_ua;
   }
 
-  //bool IsTreeRoot() const;
+  // bool IsTreeRoot() const;
 
   bool IsTreeRoot() const {
     auto [dag_node, mat, mat_node, is_ua] = access();
@@ -445,6 +445,8 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto [dag_node, mat, mat_node, is_ua] = access();
     return mat_node;
   }
+
+  bool HaveMATNode() const { return GetMATNode() != nullptr; }
 
   bool IsLeaf() const { return GetCladesCount() == 0; }
 
@@ -553,7 +555,17 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 };
 
 template <typename CRTP, typename Tag>
-struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {};
+struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {
+  void ClearConnections() const {
+    // TODO USE_MAT_VIEW
+  }
+  void SetSingleParent(EdgeId /*parent*/) const {
+    // TODO USE_MAT_VIEW
+  }
+  void AddEdge(CladeIdx /*clade*/, EdgeId /*id*/, bool /*this_node_is_parent*/) const {
+    // TODO USE_MAT_VIEW
+  }
+};
 
 struct MATEdgeStorage {
   MOVE_ONLY(MATEdgeStorage);
@@ -781,13 +793,19 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 };
 
 template <typename CRTP, typename Tag>
-struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {};
+struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {
+  void Set(NodeId /*parent*/, NodeId /*child*/, CladeIdx /*clade*/) const {
+    // TODO USE_MAT_VIEW
+  }
+};
 
 template <Component C, bool>
 struct MATElementsContainerBase {
   using ElementStorageT =
       std::conditional_t<C == Component::Node, MATNodeStorage, MATEdgeStorage>;
-  using FeatureTypes = std::tuple<ElementStorageT>;
+  using FeatureTypes =
+      std::conditional_t<C == Component::Node, std::tuple<ElementStorageT, Neighbors>,
+                         std::tuple<ElementStorageT, Endpoints>>;
   using AllFeatureTypes = FeatureTypes;
 
   static constexpr IdContinuity id_continuity = IdContinuity::Sparse;
@@ -834,6 +852,9 @@ struct MATElementsContainerBase {
   template <typename Feature>
   const auto& GetFeatureStorage(Id<C> id) const {
     if constexpr (C == Component::Node) {
+      if constexpr (std::is_same_v<Feature, Neighbors>) {
+        return Neighbors{};  // TODO USE_MAT_VIEW
+      }
       // TODO
     } else {
       if (features_storage_.empty()) {
@@ -844,8 +865,12 @@ struct MATElementsContainerBase {
   }
 
   template <typename Feature>
-  auto& GetFeatureStorage(Id<C> id) {
+  auto&& GetFeatureStorage(Id<C> id) {
     if constexpr (C == Component::Node) {
+      if constexpr (std::is_same_v<Feature, Neighbors>) {
+        static Neighbors neighbors;
+        return neighbors;  // TODO USE_MAT_VIEW
+      }
       // TODO
     } else {
       if (features_storage_.empty()) {
@@ -968,5 +993,15 @@ using CondensedMADAGStorage =
 using UncondensedMADAGStorage =
     ExtendStorageType<void, UncondensedMATViewStorage,
                       Extend::Nodes<CompactGenome, Deduplicate<SampleId>>,
+                      Extend::DAG<ReferenceSequence>, Extend::Empty<>,
+                      UncondensedViewBase>;
+
+using CondensedMergeDAGStorage = ExtendStorageType<
+    void, CondensedMATViewStorage, Extend::Nodes<Deduplicate<CompactGenome>>,
+    Extend::DAG<ReferenceSequence>, Extend::Empty<>, CondensedViewBase>;
+
+using UncondensedMergeDAGStorage =
+    ExtendStorageType<void, UncondensedMATViewStorage,
+                      Extend::Nodes<Deduplicate<CompactGenome>, Deduplicate<SampleId>>,
                       Extend::DAG<ReferenceSequence>, Extend::Empty<>,
                       UncondensedViewBase>;

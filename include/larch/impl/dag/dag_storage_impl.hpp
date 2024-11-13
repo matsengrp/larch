@@ -124,8 +124,8 @@ void DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
 template <typename Feature>
-auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                 ViewBase>::GetFeatureStorage(NodeId id) {
+auto&& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                  ViewBase>::GetFeatureStorage(NodeId id) {
   return nodes_container_.template GetFeatureStorage<Feature>(id);
 }
 
@@ -140,8 +140,8 @@ const auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorage
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
 template <typename Feature>
-auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                 ViewBase>::GetFeatureStorage(EdgeId id) {
+auto&& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                  ViewBase>::GetFeatureStorage(EdgeId id) {
   return edges_container_.template GetFeatureStorage<Feature>(id);
 }
 

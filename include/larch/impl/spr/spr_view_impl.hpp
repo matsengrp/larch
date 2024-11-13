@@ -557,8 +557,6 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
         }
       }
       if (parent_is_in_fragment[node_id]) {
-#if USE_MAT_VIEW // TODO: MAT-VIEW OVERLAY
-#else
         if (not this_node.template IsOverlaid<HypotheticalNode>()) {
           this_node.template SetOverlay<HypotheticalNode>();
         }
@@ -630,7 +628,6 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
           edge_already_added.insert_or_assign(parent_edge, true);
           clades_count.insert_or_assign(parent_node, clade + 1);
         }
-#endif
       }
     }
   }
@@ -744,6 +741,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
   auto new_node = has_unifurcation_after_move ? src_parent_node : dag.AppendNode();
   auto new_edge = has_unifurcation_after_move ? src_parent_node.GetSingleParent()
                                               : dag.AppendEdge();
+  std::ignore = new_edge;  // TODO USE_MAT_VIEW
   std::vector<EdgeId> src_edges;
   std::vector<EdgeId> src_sibling_edges;
   for (auto e : src_parent_node.GetChildren()) {
@@ -765,8 +763,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
   Assert(src_size == src_edges.size());
   Assert(dst_size == dst_edges.size());
 
-#if USE_MAT_VIEW // TODO: MAT-VIEW OVERLAY
-#else
   if (is_sibling_move) {
     auto src_parent_single_parent = src_parent_node.GetParentsCount() > 0
                                         ? src_parent_node.GetSingleParent()
@@ -940,7 +936,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     dst_parent_node.AddEdge({dst_parent_clade_ctr}, new_edge, true);
     new_node.SetSingleParent(new_edge);
   }
-#endif
   Assert(dag.GetNodesCount() ==
          (has_unifurcation_after_move ? old_num_nodes : old_num_nodes + 1));
   Assert(dag.GetEdgesCount() ==
