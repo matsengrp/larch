@@ -212,6 +212,12 @@ struct ExtendDAGStorage {
     return Self{Target{}};
   }
 
+  template <typename... Args>
+  static Self EmplaceTarget(Args&&... args) {
+    static_assert(Target::role == Role::Storage);
+    return Self{Target{std::forward<Args>(args)...}};
+  }
+
   template <template <typename, typename> typename Base = ViewBase>
   DAGView<Self, Base> View();
   template <template <typename, typename> typename Base = ViewBase>

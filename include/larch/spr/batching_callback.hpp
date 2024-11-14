@@ -27,6 +27,7 @@ class BatchingCallback : public Move_Found_Callback {
   }
 
 #if USE_MAT_VIEW
+  using Storage = MergeDAGStorage<>;
   using MATStorage = UncondensedMergeDAGStorage;
   using SPRType = decltype(AddSPRStorage(std::declval<MATStorage>().View()));
   using ReassignedStatesStorage =
@@ -71,17 +72,10 @@ class BatchingCallback : public Move_Found_Callback {
   SampleDAG sample_dag_;
   bool collapse_empty_fragment_edges_;
 
-#if USE_MAT_VIEW
   std::unique_ptr<ReassignedStatesStorage> reassigned_states_storage_ =
       std::make_unique<ReassignedStatesStorage>(
           AddMappedNodes(AddMATConversion(MergeDAGStorage<>::EmptyDefault())));
-  std::unique_ptr<MATStorage> sample_matview_storage_;
-#else
-  std::unique_ptr<ReassignedStatesStorage> reassigned_states_storage_ =
-      std::make_unique<ReassignedStatesStorage>(
-          AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
   std::unique_ptr<MATStorage> sample_mat_storage_;
-#endif
 
   std::atomic<size_t> applied_moves_count_;
   std::shared_mutex mat_mtx_;
