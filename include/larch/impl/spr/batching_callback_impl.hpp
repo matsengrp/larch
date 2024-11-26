@@ -203,6 +203,11 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage(MAT::Tree& tree,
   auto view = sample_mat_storage_->View();
   view.SetReferenceSequence(ref_seq);
   view.BuildRootAndLeafs();
+  for (auto node : view.GetNodes()) {
+    auto id_iter = view.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+        SampleId{"TODO"});
+    node = id_iter.first;
+  }
   view.RecomputeCompactGenomes(true);
 }
 #else
