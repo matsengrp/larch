@@ -203,6 +203,24 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage(MAT::Tree& tree,
   auto view = sample_mat_storage_->View();
   view.SetReferenceSequence(ref_seq);
   view.BuildRootAndLeafs();
+
+//alternative sampleId placement(please change if there's a better way!!)
+for (auto node : view.GetNodes()) {
+  if (node.IsLeaf()) {
+    std::string sample_id = "";
+    if (node.GetMATNode() == nullptr) {
+      auto& node_storage = node.template GetFeatureExtraStorage<MATNodeStorage>();
+      sample_id = node_storage.node_id_to_sampleid_map_.at(node.GetId());
+    } else {
+      sample_id = tree.get_node_name(node.GetMATNode()->node_id);
+    }
+    Assert(not sample_id.empty());
+    auto id_iter = view.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+        SampleId{std::move(sample_id)});
+    node = id_iter.first;
+  }
+}
+/*
   for (auto node : view.GetNodes()) {
     if (node.GetMATNode() == nullptr) {
       continue;
@@ -213,6 +231,7 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage(MAT::Tree& tree,
         SampleId{std::move(sample_id)});
     node = id_iter.first;
   }
+*/
   view.RecomputeCompactGenomes(true);
 }
 #else
