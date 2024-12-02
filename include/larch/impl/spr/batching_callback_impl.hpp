@@ -204,8 +204,13 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage(MAT::Tree& tree,
   view.SetReferenceSequence(ref_seq);
   view.BuildRootAndLeafs();
   for (auto node : view.GetNodes()) {
+    if (node.GetMATNode() == nullptr) {
+      continue;
+    }
+    std::string sample_id = tree.condensed_nodes.at(node.GetMATNode()->node_id).at(0);
+    Assert(not sample_id.empty());
     auto id_iter = view.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-        SampleId{"TODO"});
+        SampleId{std::move(sample_id)});
     node = id_iter.first;
   }
   view.RecomputeCompactGenomes(true);
