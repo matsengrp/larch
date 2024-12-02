@@ -42,9 +42,13 @@ struct ElementsContainer {
   ElementsContainer() = default;
   MOVE_ONLY(ElementsContainer);
 
+  template <typename VT>
   size_t GetCount() const;
 
-  Id<C> GetNextAvailableId() const { return {GetCount()}; }
+  template <typename VT>
+  Id<C> GetNextAvailableId() const {
+    return {GetCount<VT>()};
+  }
 
   Id<C> Append();
 
@@ -64,8 +68,9 @@ struct ElementsContainer {
   template <typename Feature>
   const auto& GetFeatureExtraStorage() const;
 
+  template <typename VT>
   auto All() const {
-    return ranges::views::iota(size_t{0}, GetCount()) |
+    return ranges::views::iota(size_t{0}, GetCount<VT>()) |
            ranges::views::transform([](size_t i) -> Id<C> { return {i}; });
   }
 

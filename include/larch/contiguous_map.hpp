@@ -138,10 +138,12 @@ class ContiguousMap {
   ContiguousMap(const ContiguousMap&) = default;
 
   void AssertOrdered() const {
+#ifndef NDEBUG
     for (size_t i = 0; i + 1 < data_.size(); ++i) {
       Assert((data_[i].first < data_[i + 1].first) or
              (data_[i].first == data_[i + 1].first));
     }
+#endif
   }
 
   iterator Find(const K& key) {

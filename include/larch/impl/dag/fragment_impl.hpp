@@ -18,6 +18,7 @@ FragmentElementsContainer<Target, C>::FragmentElementsContainer(
 }
 
 template <typename Target, Component C>
+template <typename VT>
 size_t FragmentElementsContainer<Target, C>::GetCount() const {
   return ids_.size();
 }
