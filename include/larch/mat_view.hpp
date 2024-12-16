@@ -851,6 +851,15 @@ struct MATElementsContainerBase {
 
   template <typename VT>
   bool ContainsId(Id<C> id) const {
+    if constexpr (not CheckIsCondensed<VT>::value) {
+      if (GetMAT().get_node(id.value) != nullptr) {
+        return true;
+      }
+      if (extra_storage_.node_id_to_sampleid_map_.find(NodeId{id.value}) !=
+          extra_storage_.node_id_to_sampleid_map_.end()) {
+        return true;
+      }
+    }
     return GetMAT().get_node(id.value) != nullptr;
   }
 
