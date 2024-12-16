@@ -112,6 +112,16 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
     return GetNextAvailableId<Component::Edge, VT>();
   }
 
+  template <typename VT>
+  bool ContainsId(NodeId id) const {
+    return GetStorage().template ContainsId<VT>(id);
+  }
+
+  template <typename VT>
+  bool ContainsId(EdgeId id) const {
+    return GetStorage().template ContainsId<VT>(id);
+  }
+
   /**
    * Return a range containing Node views for each node in the DAG
    */

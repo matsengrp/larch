@@ -50,6 +50,11 @@ struct ElementsContainer {
     return {GetCount<VT>()};
   }
 
+  template <typename VT>
+  bool ContainsId(Id<C> id) const {
+    return id.value < GetCount<VT>();
+  }
+
   Id<C> Append();
 
   void Add(Id<C> id);

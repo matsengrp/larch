@@ -240,6 +240,16 @@ struct ExtendDAGStorage {
   }
 
   template <typename VT>
+  bool ContainsId(NodeId id) const {
+    return GetTarget().template ContainsId<VT>(id);
+  }
+
+  template <typename VT>
+  bool ContainsId(EdgeId id) const {
+    return GetTarget().template ContainsId<VT>(id);
+  }
+
+  template <typename VT>
   auto GetNodes() const;
   template <typename VT>
   auto GetEdges() const;

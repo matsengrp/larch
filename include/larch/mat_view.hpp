@@ -849,6 +849,11 @@ struct MATElementsContainerBase {
     return {GetCount<VT>()};
   }
 
+  template <typename VT>
+  bool ContainsId(Id<C> id) const {
+    return id.value < GetCount<VT>();
+  }
+
   template <typename Feature>
   const auto& GetFeatureStorage(Id<C> id) const {
     if constexpr (C == Component::Node) {

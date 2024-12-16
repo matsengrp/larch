@@ -139,6 +139,16 @@ struct DAGStorage {
     }
   }
 
+  template <typename VT>
+  bool ContainsId(NodeId id) const {
+    return nodes_container_.template ContainsId<VT>(id);
+  }
+
+  template <typename VT>
+  bool ContainsId(EdgeId id) const {
+    return edges_container_.template ContainsId<VT>(id);
+  }
+
   void InitializeNodes(size_t size);
   void InitializeEdges(size_t size);
 

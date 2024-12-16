@@ -150,6 +150,28 @@ struct OverlayDAGStorage {
   }
 
   template <typename VT>
+  bool ContainsId(NodeId id) const {
+    if (GetTarget().template ContainsId<VT>(id)) {
+      return true;
+    } else {
+      return id.value <
+             GetTarget().template GetNextAvailableId<Component::Node, VT>().value +
+                 added_node_storage_.size();
+    }
+  }
+
+  template <typename VT>
+  bool ContainsId(EdgeId id) const {
+    if (GetTarget().template ContainsId<VT>(id)) {
+      return true;
+    } else {
+      return id.value <
+             GetTarget().template GetNextAvailableId<Component::Edge, VT>().value +
+                 added_edge_storage_.size();
+    }
+  }
+
+  template <typename VT>
   auto GetNodes() const;
   template <typename VT>
   auto GetEdges() const;
