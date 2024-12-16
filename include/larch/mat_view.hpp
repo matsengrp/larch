@@ -851,7 +851,7 @@ struct MATElementsContainerBase {
 
   template <typename VT>
   bool ContainsId(Id<C> id) const {
-    return id.value < GetCount<VT>();
+    return GetMAT().get_node(id.value) != nullptr;
   }
 
   template <typename Feature>
