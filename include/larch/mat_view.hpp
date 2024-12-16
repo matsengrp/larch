@@ -851,6 +851,9 @@ struct MATElementsContainerBase {
 
   template <typename VT>
   bool ContainsId(Id<C> id) const {
+    if (id.value == MV_UA_NODE_ID) {
+      return true;
+    }
     if constexpr (not CheckIsCondensed<VT>::value) {
       if (GetMAT().get_node(id.value) != nullptr) {
         return true;
@@ -867,7 +870,7 @@ struct MATElementsContainerBase {
   const auto& GetFeatureStorage(Id<C> id) const {
     if constexpr (C == Component::Node) {
       if constexpr (std::is_same_v<Feature, Neighbors>) {
-        return Neighbors{};  // TODO USE_MAT_VIEW
+        return std::get<Neighbors>(features_storage_.at(id));
       }
       // TODO
     } else {
@@ -882,8 +885,7 @@ struct MATElementsContainerBase {
   auto&& GetFeatureStorage(Id<C> id) {
     if constexpr (C == Component::Node) {
       if constexpr (std::is_same_v<Feature, Neighbors>) {
-        static Neighbors neighbors;
-        return neighbors;  // TODO USE_MAT_VIEW
+        return std::get<Neighbors>(features_storage_.at(id));
       }
       // TODO
     } else {
