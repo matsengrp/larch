@@ -46,14 +46,14 @@ template <typename F>
 auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   auto& element_view = static_cast<const CRTP&>(*this);
   auto id = element_view.GetId();
-  auto& storage = element_view.GetDAG().GetStorage().GetTargetStorage();
+  const auto& storage = element_view.GetDAG().GetStorage().GetTargetStorage();
   static_assert(
       CRTP::template contains_feature<F>,
       "Attempted to SetOverlay on a Feature not supported by given DAG Element.");
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     Assert(storage.GetTarget().template ContainsId<CRTP>(id));
-    auto& replaced_node_storage =
-        std::get<OverlayFeatureStorageType<NodeId, F>>(storage.replaced_node_storage_);
+    auto& replaced_node_storage = std::get<OverlayFeatureStorageType<NodeId, F>>(
+        element_view.GetDAG().GetStorage().GetTargetStorage().replaced_node_storage_);
     Assert(replaced_node_storage.find(id) == replaced_node_storage.end());
     if constexpr (std::is_copy_assignable_v<F>) {
       replaced_node_storage[id] = storage.GetTarget().template GetFeatureStorage<F>(id);
@@ -63,8 +63,8 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
     }
   } else {
     Assert(storage.GetTarget().template ContainsId<CRTP>(id));
-    auto& replaced_edge_storage =
-        std::get<OverlayFeatureStorageType<EdgeId, F>>(storage.replaced_edge_storage_);
+    auto& replaced_edge_storage = std::get<OverlayFeatureStorageType<EdgeId, F>>(
+        element_view.GetDAG().GetStorage().GetTargetStorage().replaced_edge_storage_);
     Assert(replaced_edge_storage.find(id) == replaced_edge_storage.end());
     if constexpr (std::is_copy_assignable_v<F>) {
       replaced_edge_storage[id] = storage.GetTarget().template GetFeatureStorage<F>(id);

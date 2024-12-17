@@ -870,22 +870,21 @@ struct MATElementsContainerBase {
   const auto& GetFeatureStorage(Id<C> id) const {
     if constexpr (C == Component::Node) {
       if constexpr (std::is_same_v<Feature, Neighbors>) {
-        return std::get<Neighbors>(features_storage_.at(id));
-      }
-      // TODO
-    } else {
-      if (features_storage_.empty()) {
-        features_storage_.resize(GetMAT().get_size_upper());
-      }
-      return std::get<Feature>(features_storage_.at(id));
-    }
-  }
-
-  template <typename Feature>
-  auto&& GetFeatureStorage(Id<C> id) {
-    if constexpr (C == Component::Node) {
-      if constexpr (std::is_same_v<Feature, Neighbors>) {
-        return std::get<Neighbors>(features_storage_.at(id));
+        Neighbors& result = std::get<Neighbors>(features_storage_.at(id));
+        result = {};
+        if (id.value == MV_UA_NODE_ID) {
+          std::vector<EdgeId> clade;
+          clade.push_back(EdgeId{GetMAT().root->node_id});
+          result.clades_.push_back(std::move(clade));
+        } else {
+          auto* node = GetMAT().get_node(id.value);
+          Assert(node != nullptr);
+          result.parents_.push_back(EdgeId{node->parent->node_id});
+          for (auto* i : node->children) {
+            result.clades_.push_back({EdgeId{i->node_id}});
+          }
+        }
+        return result;
       }
       // TODO
     } else {
