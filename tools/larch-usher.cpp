@@ -81,7 +81,8 @@
       {"--seed INT", "Set seed for random number generation (default: random)"},
       {"--thread INT", "Set number of cpu threads (default: max allowed by system)"},
       {"-T,--max-time", "Exit after fixed runtime(in minutes)\n"},
-      {"-S,--autodetect-stoptime", "Set program to exit after parsimony improvement plateaus\n"}};
+      {"-S,--autodetect-stoptime",
+       "Set program to exit after parsimony improvement plateaus\n"}};
 
   std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
 
@@ -237,7 +238,7 @@ struct Treebased_Move_Found_Callback
     return {false, move.score_change <= 0};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 
   std::pair<int, int> move_score_coeffs_;
 };
@@ -265,7 +266,7 @@ struct Merge_All_Moves_Found_Callback
     return {true, true};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 };
 
 template <typename SampleDAG>
@@ -385,7 +386,7 @@ struct Merge_All_Profitable_Moves_Found_Callback
     return {move.score_change <= 0, move.score_change <= 0};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 
   SampleDAG sample_dag_;
   Merge& merge_;
@@ -518,7 +519,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     return {move.score_change <= 0, false};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 
   SampleDAG sample_dag_;
   Merge& merge_;
@@ -946,7 +947,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     }();
 
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
-              << sample_tree.GetNodesCount() << "\n";
+              << sample_tree.View().GetNodesCount() << "\n";
+
     MAT::Tree mat;
     sample_tree.View().GetRoot().Validate(true);
     sample_tree.View().BuildMAT(mat);
@@ -1000,7 +1002,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       if (this_parsimony < current_best_parsimony) {
         last_parsimony_change_window_size = current_parsimony_change_window_size + 1;
         current_parsimony_change_window_size = 0;
-        iter_count = i + 1 + 2*last_parsimony_change_window_size;
+        iter_count = i + 1 + 2 * last_parsimony_change_window_size;
         current_best_parsimony = this_parsimony;
       } else {
         current_parsimony_change_window_size++;
@@ -1032,4 +1034,3 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   return EXIT_SUCCESS;
 }
-

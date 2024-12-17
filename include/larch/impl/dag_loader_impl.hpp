@@ -255,7 +255,7 @@ void MADAGToDOT(DAG dag, iostream& out) {
   for (auto edge : dag.Const().GetEdges()) {
     out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
         << CompactGenomeToString(edge.GetChild()) << "\"";
-    out << "[ headlabel=\"";
+    out << "[ headlabel=\"" << "[" << edge.GetId().value << "]  ";
     out << EdgeMutationsToString(edge);
     out << "\" ]\n";
   }

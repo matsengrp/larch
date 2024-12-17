@@ -14,6 +14,8 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
   constexpr static const Component component = C;
   constexpr static const Role role = Role::View;
 
+  using DAGType = DAGViewType;
+
   /**
    * This operator= is used for setting specailly handled per-element
    * features, like Deduplicate.
@@ -24,6 +26,15 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
   static const bool contains_feature;
 
   ElementView(DAGViewType dag_view, Id<C> id);
+
+  ElementView(ElementView&& other) = default;
+  ElementView(const ElementView& other) = default;
+  ElementView& operator=(ElementView&& other) = default;
+  ElementView& operator=(const ElementView& other) = default;
+
+  bool operator==(const ElementView& other) const {
+    return dag_view_ == other.dag_view_ and id_ == other.id_;
+  }
 
   auto Const() const;
 

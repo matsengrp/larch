@@ -15,7 +15,7 @@ LeafSet::LeafSet(Node node, const LabelsType& labels, ComputedLSType& computed_l
           for (auto clade : node.GetClades()) {
             Assert(not clade.empty());
             std::vector<UniqueData> clade_leafs;
-            clade_leafs.reserve(clade.size());
+            clade_leafs.reserve(static_cast<size_t>(clade.size()));
             for (Node child : clade | Transform::GetChild()) {
               if (child.IsLeaf()) {
                 Assert(child.Const().HaveSampleId());
