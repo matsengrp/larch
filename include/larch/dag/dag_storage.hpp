@@ -182,6 +182,8 @@ struct DAGStorage {
   auto& GetTargetStorage() { return features_storage_.GetTargetStorage(*this); }
   auto& GetTargetStorage() const { return features_storage_.GetTargetStorage(*this); }
 
+  NodesContainerT& GetNodesContainer() { return nodes_container_; }
+
  private:
   NodesContainerT nodes_container_;
   EdgesContainerT edges_container_;
