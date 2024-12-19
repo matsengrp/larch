@@ -45,10 +45,14 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
       [this, &move, best_score_change,
        &nodes_with_major_allele_set_change](auto& bucket) -> bool {
         std::shared_lock lock{mat_mtx_};
+
+        /* CONDENSING CODE: probably want to change this to an uncondensed storage, once
+         * it's implemented*/
         Assert(sample_mat_storage_ != nullptr);
         bucket.push_back(MoveStorage{
             std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
             nullptr});
+
         auto& storage = bucket.back();
     // storage.spr->View().GetRoot().Validate(true);
 #ifndef NDEBUG
@@ -107,10 +111,13 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   std::cout << "Larch-Usher callback Applying " << applied_moves_count_.load() << "\n"
             << std::flush;
   applied_moves_count_.store(0);
+
   reassigned_states_storage_ = std::make_unique<ReassignedStatesStorage>(
       AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
+
   auto reassigned_states = reassigned_states_storage_->View();
   reassigned_states.BuildFromMAT(tree, merge_.GetResult().GetReferenceSequence());
+
   check_edge_mutations(reassigned_states.Const());
   reassigned_states.RecomputeCompactGenomes(true);
   {
@@ -136,7 +143,11 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   }
   {
     std::unique_lock lock{mat_mtx_};
+#if USE_MAT_VIEW
+    CreateMATViewStorage(tree, merge_.GetResult().GetReferenceSequence());
+#else
     CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
+#endif
   }
   static_cast<CRTP&>(*this).OnRadius();
 }
@@ -157,7 +168,11 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   }
   {
     std::unique_lock lock{mat_mtx_};
+#if USE_MAT_VIEW
+    CreateMATViewStorage(tree, merge_.GetResult().GetReferenceSequence());
+#else
     CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
+#endif
   }
 }
 
@@ -177,6 +192,49 @@ auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
   return reassigned_states_storage_->View();
 }
 
+#if USE_MAT_VIEW
+template <typename CRTP, typename SampleDAG>
+void BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage(MAT::Tree& tree,
+                                                             std::string_view ref_seq) {
+  UncondensedMATViewStorage storage;
+  storage.View().SetMAT(std::addressof(tree));
+  sample_mat_storage_ =
+      std::make_unique<MATStorage>(MATStorage::Consume(std::move(storage)));
+  auto view = sample_mat_storage_->View();
+  view.SetReferenceSequence(ref_seq);
+  view.BuildRootAndLeafs();
+
+//alternative sampleId placement(please change if there's a better way!!)
+for (auto node : view.GetNodes()) {
+  if (node.IsLeaf()) {
+    std::string sample_id = "";
+    if (node.GetMATNode() == nullptr) {
+      auto& node_storage = node.template GetFeatureExtraStorage<MATNodeStorage>();
+      sample_id = node_storage.node_id_to_sampleid_map_.at(node.GetId());
+    } else {
+      sample_id = tree.get_node_name(node.GetMATNode()->node_id);
+    }
+    Assert(not sample_id.empty());
+    auto id_iter = view.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+        SampleId{std::move(sample_id)});
+    node = id_iter.first;
+  }
+}
+/*
+  for (auto node : view.GetNodes()) {
+    if (node.GetMATNode() == nullptr) {
+      continue;
+    }
+    std::string sample_id = tree.condensed_nodes.at(node.GetMATNode()->node_id).at(0);
+    Assert(not sample_id.empty());
+    auto id_iter = view.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+        SampleId{std::move(sample_id)});
+    node = id_iter.first;
+  }
+*/
+  view.RecomputeCompactGenomes(true);
+}
+#else
 template <typename CRTP, typename SampleDAG>
 void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
                                                          std::string_view ref_seq) {
@@ -188,3 +246,4 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
   view.RecomputeCompactGenomes(true);
   view.SampleIdsFromCG();
 }
+#endif
