@@ -12,6 +12,7 @@ inline constexpr bool ElementsContainer<C, ElementStorageT, IdCont,
 
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
+template <typename VT>
 size_t ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetCount() const {
   return elements_storage_.size();
 }
@@ -19,7 +20,7 @@ size_t ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetCount() co
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
 Id<C> ElementsContainer<C, ElementStorageT, IdCont, Features...>::Append() {
-  Id<C> result{GetCount()};
+  Id<C> result{GetCount<void>()};
   elements_storage_.push_back({});
   features_storage_.push_back({});
   return result;
@@ -49,9 +50,9 @@ void ElementsContainer<C, ElementStorageT, IdCont, Features...>::Clear() {
 
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
-template <typename Feature>
+template <typename Feature, typename E>
 auto& ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(
-    Id<C> id) {
+    Id<C> id, E) {
   if constexpr (tuple_contains_v<std::tuple<Features...>, Feature>) {
     return std::get<Feature>(features_storage_.at(id));
   } else {
@@ -61,9 +62,10 @@ auto& ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStor
 
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
-template <typename Feature>
-const auto& ElementsContainer<C, ElementStorageT, IdCont,
-                              Features...>::GetFeatureStorage(Id<C> id) const {
+template <typename Feature, typename E>
+const auto&
+ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(Id<C> id,
+                                                                              E) const {
   if constexpr (tuple_contains_v<std::tuple<Features...>, Feature>) {
     return std::get<Feature>(features_storage_.at(id));
   } else {

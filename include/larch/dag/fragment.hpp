@@ -37,21 +37,25 @@ struct FragmentElementsContainer {
   FragmentElementsContainer(Target target, std::vector<Id<C>>&& ids);
   MOVE_ONLY(FragmentElementsContainer);
 
+  template <typename VT>
   size_t GetCount() const;
 
   Id<C> GetNextAvailableId() const { return target_.template GetNextAvailableId<C>(); }
 
-  template <typename Feature>
-  auto& GetFeatureStorage(Id<C> id);
-  template <typename Feature>
-  const auto& GetFeatureStorage(Id<C> id) const;
+  template <typename Feature, typename E>
+  auto& GetFeatureStorage(Id<C> id, E elem);
+  template <typename Feature, typename E>
+  const auto& GetFeatureStorage(Id<C> id, E elem) const;
 
   template <typename Feature>
   auto& GetFeatureExtraStorage();
   template <typename Feature>
   const auto& GetFeatureExtraStorage() const;
 
-  auto All() const { return ids_ | ranges::views::all; }
+  template <typename VT>
+  auto All() const {
+    return ids_ | ranges::views::all;
+  }
 
  private:
   Target target_;

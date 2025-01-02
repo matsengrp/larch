@@ -18,13 +18,14 @@ FragmentElementsContainer<Target, C>::FragmentElementsContainer(
 }
 
 template <typename Target, Component C>
+template <typename VT>
 size_t FragmentElementsContainer<Target, C>::GetCount() const {
   return ids_.size();
 }
 
 template <typename Target, Component C>
-template <typename Feature>
-auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id) {
+template <typename Feature, typename E>
+auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id, E) {
   Assert(ranges::contains(ids_, id));
   if constexpr (std::is_same_v<Feature, Neighbors>) {
     return fragment_element_features_.at(id);
@@ -34,8 +35,8 @@ auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id) {
 }
 
 template <typename Target, Component C>
-template <typename Feature>
-const auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id) const {
+template <typename Feature, typename E>
+const auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id, E) const {
   Assert(ranges::contains(ids_, id));
   if constexpr (std::is_same_v<Feature, Neighbors>) {
     return fragment_element_features_.at(id);

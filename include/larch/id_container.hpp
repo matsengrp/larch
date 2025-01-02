@@ -12,9 +12,17 @@ enum class IdContinuity { Dense, Sparse };
 
 enum class Ordering { Ordered, Unordered };
 
-template <typename Id, typename T, IdContinuity Cont = IdContinuity::Dense,
+static inline constexpr IdContinuity DefIdCont = IdContinuity::Sparse;
+
+template <typename Id, typename T, IdContinuity Cont = DefIdCont,
           Ordering Ord = Ordering::Ordered>
 class IdContainer {
+ public:
+  static constexpr IdContinuity continuity = Cont;
+  static constexpr Ordering ordering = Ordering::Unordered;
+  // FIXME continuity == IdContinuity::Dense ? Ordering::Unordered : Ord;
+
+ private:
   static constexpr auto storage_type_helper = [] {
     if constexpr (Cont == IdContinuity::Dense) {
       if constexpr (std::is_trivially_copyable_v<T>) {
@@ -23,7 +31,7 @@ class IdContainer {
         return type_identity<std::vector<T>>{};
       }
     } else {
-      if constexpr (Ord == Ordering::Ordered) {
+      if constexpr (ordering == Ordering::Ordered) {
         return type_identity<ContiguousMap<Id, T>>{};
       } else {
         return type_identity<std::unordered_map<Id, T>>{};
@@ -32,10 +40,6 @@ class IdContainer {
   }();
 
  public:
-  static constexpr IdContinuity continuity = Cont;
-  static constexpr Ordering ordering =
-      Cont == IdContinuity::Dense ? Ordering::Unordered : Ord;
-
   using storage_type = typename decltype(storage_type_helper)::type;
 
   using value_type = std::pair<Id, T>;
@@ -115,7 +119,7 @@ class IdContainer {
     if constexpr (Cont == IdContinuity::Dense) {
       return data_.at(key.value);
     } else {
-      return data_.at(key);
+      return data_[key];
     }
   }
 
@@ -123,7 +127,7 @@ class IdContainer {
     if constexpr (Cont == IdContinuity::Dense) {
       return data_.at(key.value);
     } else {
-      return data_.at(key);
+      return data_[key];
     }
   }
 
@@ -140,13 +144,19 @@ class IdContainer {
   }
 
   void resize(size_t size) {
-    static_assert(Cont == IdContinuity::Dense);
-    data_.resize(size);
+    if constexpr (Cont == IdContinuity::Dense) {
+      data_.resize(size);
+    } else {
+      data_.reserve(size);
+    }
   }
 
   void push_back(T&& value) {
-    static_assert(Cont == IdContinuity::Dense);
-    data_.push_back(std::forward<T>(value));
+    if constexpr (Cont == IdContinuity::Dense) {
+      data_.push_back(std::forward<T>(value));
+    } else {
+      Fail("Can't pushe_back on sparse IDs");
+    }
   }
 
   T* At(Id key) {
@@ -158,9 +168,9 @@ class IdContainer {
     } else {
       auto it = data_.find(key);
       if (it == data_.end()) {
-        return nullptr;
+        return std::addressof(data_[key]);
       }
-      return std::addressof(*it);
+      return std::addressof(it->second);
     }
   }
 
@@ -173,13 +183,14 @@ class IdContainer {
     } else {
       auto it = data_.find(key);
       if (it == data_.end()) {
+        Fail("Out of bounds for sparse IDs");
         return nullptr;
       }
-      return std::addressof(*it);
+      return std::addressof(it->second);
     }
   }
 
  private:
   IdContainer(const IdContainer&) = default;
-  storage_type data_;
+  mutable storage_type data_;
 };
