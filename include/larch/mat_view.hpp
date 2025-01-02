@@ -151,22 +151,6 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
     edge_storage.sampleid_to_mat_node_id_map_ =
         node_storage.sampleid_to_mat_node_id_map_;
     edge_storage.condensed_nodes_count_ = node_storage.condensed_nodes_count_;
-
-    dag.GetStorage().GetNodesContainer().neighbors_fn_ = [dag](NodeId id) {
-      Neighbors result;
-      auto node = dag.Get(id);
-      if (id.value == MV_UA_NODE_ID) {
-        std::vector<EdgeId> clade;
-        clade.push_back(EdgeId{dag.GetMAT().root->node_id});
-        result.clades_.push_back(std::move(clade));
-      } else {
-        result.parents_.push_back(node.GetSingleParent());
-        for (auto i : node.GetClades()) {
-          result.clades_.push_back(ranges::to_vector(i | Transform::GetId()));
-        }
-      }
-      return result;
-    };
   }
 };
 
@@ -882,12 +866,21 @@ struct MATElementsContainerBase {
     return GetMAT().get_node(id.value) != nullptr;
   }
 
-  template <typename Feature>
-  const auto& GetFeatureStorage(Id<C> id) const {
+  template <typename Feature, typename E>
+  const auto& GetFeatureStorage(Id<C> id, E elem) const {
     if constexpr (C == Component::Node) {
       if constexpr (std::is_same_v<Feature, Neighbors>) {
         Neighbors& result = std::get<Neighbors>(features_storage_.at(id));
-        result = neighbors_fn_(id);
+        if (id.value == MV_UA_NODE_ID) {
+          std::vector<EdgeId> clade;
+          clade.push_back(EdgeId{GetMAT().root->node_id});
+          result.clades_.push_back(std::move(clade));
+        } else {
+          result.parents_.push_back(elem.GetSingleParent());
+          for (auto i : elem.GetClades()) {
+            result.clades_.push_back(ranges::to_vector(i | Transform::GetId()));
+          }
+        }
         return result;
       }
       // TODO
@@ -974,7 +967,6 @@ struct MATElementsContainerBase {
 
   mutable IdContainer<Id<C>, AllFeatureTypes, id_continuity> features_storage_ = {};
   ExtraFeatureStorage<ElementStorageT> extra_storage_ = {};
-  std::function<Neighbors(NodeId)> neighbors_fn_;
 };
 
 class UncondensedNodesContainer

@@ -50,9 +50,9 @@ void ElementsContainer<C, ElementStorageT, IdCont, Features...>::Clear() {
 
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
-template <typename Feature>
+template <typename Feature, typename E>
 auto& ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(
-    Id<C> id) {
+    Id<C> id, E) {
   if constexpr (tuple_contains_v<std::tuple<Features...>, Feature>) {
     return std::get<Feature>(features_storage_.at(id));
   } else {
@@ -62,9 +62,10 @@ auto& ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStor
 
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
-template <typename Feature>
-const auto& ElementsContainer<C, ElementStorageT, IdCont,
-                              Features...>::GetFeatureStorage(Id<C> id) const {
+template <typename Feature, typename E>
+const auto&
+ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(Id<C> id,
+                                                                              E) const {
   if constexpr (tuple_contains_v<std::tuple<Features...>, Feature>) {
     return std::get<Feature>(features_storage_.at(id));
   } else {

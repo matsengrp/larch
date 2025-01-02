@@ -126,7 +126,7 @@ template <typename ShortName, typename NodesContainerT, typename EdgesContainerT
 template <typename Feature>
 auto&& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
                   ViewBase>::GetFeatureStorage(NodeId id) {
-  return nodes_container_.template GetFeatureStorage<Feature>(id);
+  return nodes_container_.template GetFeatureStorage<Feature>(id, View().Get(id));
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
@@ -134,7 +134,7 @@ template <typename ShortName, typename NodesContainerT, typename EdgesContainerT
 template <typename Feature>
 const auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
                        ViewBase>::GetFeatureStorage(NodeId id) const {
-  return nodes_container_.template GetFeatureStorage<Feature>(id);
+  return nodes_container_.template GetFeatureStorage<Feature>(id, View().Get(id));
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
@@ -142,7 +142,7 @@ template <typename ShortName, typename NodesContainerT, typename EdgesContainerT
 template <typename Feature>
 auto&& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
                   ViewBase>::GetFeatureStorage(EdgeId id) {
-  return edges_container_.template GetFeatureStorage<Feature>(id);
+  return edges_container_.template GetFeatureStorage<Feature>(id, View().Get(id));
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
@@ -150,7 +150,7 @@ template <typename ShortName, typename NodesContainerT, typename EdgesContainerT
 template <typename Feature>
 const auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
                        ViewBase>::GetFeatureStorage(EdgeId id) const {
-  return edges_container_.template GetFeatureStorage<Feature>(id);
+  return edges_container_.template GetFeatureStorage<Feature>(id, View().Get(id));
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
