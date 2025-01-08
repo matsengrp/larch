@@ -225,6 +225,7 @@ class Tree {
   Node* root = nullptr;
   std::vector<Node*> all_nodes;
   size_t node_idx = 0;
+  size_t num_nodes = 0;
   condensed_node_t condensed_nodes;
   std::unordered_map<size_t, std::string> node_names;
   std::unordered_map<std::string, size_t> node_name_to_idx_map;
@@ -278,9 +279,14 @@ class Tree {
     auto dfs = depth_first_expansion();
     for (auto node : dfs) {
       node_idx = std::max(node_idx, node->node_id);
+      ++num_nodes;
     }
     node_idx++;
   }
+
+  size_t get_node_idx() const { return num_nodes; }
+  size_t get_size_upper() const { return all_nodes.size(); }
+
   Node* get_node(const std::string& identifier) const {
     auto iter = node_name_to_idx_map.find(identifier);
     if (iter != node_name_to_idx_map.end()) {
@@ -358,6 +364,8 @@ class Tree {
 
     return traversal;
   }
+  void condense_leaves(std::vector<std::string> = std::vector<std::string>{}) {}
+  void uncondense_leaves() {}
 };
 
 inline void save_mutation_annotated_tree(Mutation_Annotated_Tree::Tree tree,

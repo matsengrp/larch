@@ -870,6 +870,7 @@ struct MATElementsContainerBase {
   const auto& GetFeatureStorage(Id<C> id, E elem) const {
     if constexpr (C == Component::Node) {
       if constexpr (std::is_same_v<Feature, Neighbors>) {
+        std::unique_lock lock{*mtx_};
         Neighbors& result = std::get<Neighbors>(features_storage_.at(id));
         if (id.value == MV_UA_NODE_ID) {
           std::vector<EdgeId> clade;
@@ -967,6 +968,7 @@ struct MATElementsContainerBase {
 
   mutable IdContainer<Id<C>, AllFeatureTypes, id_continuity> features_storage_ = {};
   ExtraFeatureStorage<ElementStorageT> extra_storage_ = {};
+  std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
 };
 
 class UncondensedNodesContainer
