@@ -852,7 +852,11 @@ struct MATElementsContainerBase {
   template <typename VT>
   bool ContainsId(Id<C> id) const {
     if (id.value == MV_UA_NODE_ID) {
-      return true;
+      if constexpr (C == Component::Node) {
+        return true;
+      } else {
+        return false;
+      }
     }
     if constexpr (not CheckIsCondensed<VT>::value) {
       if (GetMAT().get_node(id.value) != nullptr) {
