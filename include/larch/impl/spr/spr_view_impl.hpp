@@ -489,6 +489,7 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>>
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     const std::vector<NodeId>& fragment_nodes,
     const std::vector<EdgeId>& fragment_edges) const {
+/*
   auto& dag = static_cast<const CRTP&>(*this);
 
   // keep track of edges/nodes that are collapsible
@@ -631,13 +632,27 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
       }
     }
   }
+*/
   std::vector<NodeId> current_nodes;
   std::vector<EdgeId> current_edges;
+//HERE'S THERE ALTERATION!
+for (auto node: fragment_nodes) {
+  current_nodes.push_back(node);
+}
+for (auto edge: fragment_edges) {
+  current_edges.push_back(edge);
+}
+//END THE ALTERATION!!
+/*
+std::cout << "Nodes\n" << std::flush;
   for (const auto& nodeadded : node_already_added) {
     current_nodes.push_back(nodeadded.first);
+std::cout << "adding: " << nodeadded.first << "\n" << std::flush;
   }
+std::cout << "Edges\n" << std::flush;
   for (const auto& edgeadded : edge_already_added) {
     current_edges.push_back(edgeadded.first);
+std::cout << "adding: " << edgeadded.first << "\n" << std::flush;
   }
 #ifndef NDEBUG
   for (auto node_id : current_nodes) {
@@ -676,6 +691,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
       // TODO delete / clear this edge
     }
   }
+*/
 
   return {current_nodes, current_edges};
 }
