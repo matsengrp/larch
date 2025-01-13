@@ -290,11 +290,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       friend ranges::range_access;
 
       Edge read() const {
-        if (is_ua()) {
-          return Edge{dag_node().GetDAG(), EdgeId{MV_UA_NODE_ID}};
-        } else {
-          return Edge{dag_node().GetDAG(), EdgeId{c_node_id}};
-        }
+        return Edge{dag_node().GetDAG(), EdgeId{c_node_id}};
       }
 
       bool equal(ranges::default_sentinel_t) const { return is_done(); }
@@ -851,7 +847,7 @@ struct MATElementsContainerBase {
 
   template <typename VT>
   bool ContainsId(Id<C> id) const {
-    if (id.value == MV_UA_NODE_ID) {
+    if (id.value == MV_UA_NODE_ID or id.value == extra_storage_.ua_node_id_.value) {
       if constexpr (C == Component::Node) {
         return true;
       } else {
@@ -946,9 +942,11 @@ struct MATElementsContainerBase {
              ranges::views::filter([this](size_t i) {
                if constexpr (is_condensed) {
                  return GetMAT().get_node(i) != nullptr and
+                        i != MV_UA_NODE_ID and
                         i != extra_storage_.ua_node_id_.value;
                }
                return (GetMAT().get_node(i) != nullptr and
+                       i != MV_UA_NODE_ID and
                        i != extra_storage_.ua_node_id_.value) or
                       (extra_storage_.node_id_to_sampleid_map_.find(NodeId{i}) !=
                        extra_storage_.node_id_to_sampleid_map_.end());
