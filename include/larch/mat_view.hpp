@@ -289,9 +289,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
      private:
       friend ranges::range_access;
 
-      Edge read() const {
-        return Edge{dag_node().GetDAG(), EdgeId{c_node_id}};
-      }
+      Edge read() const { return Edge{dag_node().GetDAG(), EdgeId{c_node_id}}; }
 
       bool equal(ranges::default_sentinel_t) const { return is_done(); }
 
@@ -790,8 +788,16 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {
-  void Set(NodeId /*parent*/, NodeId /*child*/, CladeIdx /*clade*/) const {
-    // TODO USE_MAT_VIEW
+  void Set(NodeId parent, NodeId child, CladeIdx clade) const {
+    auto& storage =
+        static_cast<const CRTP&>(*this).template GetFeatureStorage<Endpoints>();
+    Assert(parent.value != NoId);
+    Assert(child.value != NoId);
+    Assert(parent.value != child.value);
+    Assert(clade.value != NoId);
+    storage.parent_ = parent;
+    storage.child_ = child;
+    storage.clade_ = clade;
   }
 };
 
@@ -941,12 +947,10 @@ struct MATElementsContainerBase {
       return ranges::views::iota(size_t{0}, iota_max + 1) |
              ranges::views::filter([this](size_t i) {
                if constexpr (is_condensed) {
-                 return GetMAT().get_node(i) != nullptr and
-                        i != MV_UA_NODE_ID and
+                 return GetMAT().get_node(i) != nullptr and i != MV_UA_NODE_ID and
                         i != extra_storage_.ua_node_id_.value;
                }
-               return (GetMAT().get_node(i) != nullptr and
-                       i != MV_UA_NODE_ID and
+               return (GetMAT().get_node(i) != nullptr and i != MV_UA_NODE_ID and
                        i != extra_storage_.ua_node_id_.value) or
                       (extra_storage_.node_id_to_sampleid_map_.find(NodeId{i}) !=
                        extra_storage_.node_id_to_sampleid_map_.end());

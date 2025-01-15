@@ -492,7 +492,6 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>>
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     const std::vector<NodeId>& fragment_nodes,
     const std::vector<EdgeId>& fragment_edges) const {
-
   auto& dag = static_cast<const CRTP&>(*this);
 
   // keep track of edges/nodes that are collapsible
@@ -627,9 +626,9 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
           }
         }
         if (not edge_already_added[parent_edge.GetId()]) {
-Assert(parent_edge.template IsOverlaid<Endpoint>());
+          Assert(parent_edge.template IsOverlaid<Endpoints>());
           parent_edge.Set(parent_node, this_node, {clade});
-Assert(parent_edge.GetParent() == parent_node);
+          Assert(parent_edge.GetParent().GetId() == parent_node.GetId());
           parent_node.AddEdge({clade}, parent_edge, true);
           this_node.SetSingleParent(parent_edge);
           edge_already_added.insert_or_assign(parent_edge, true);

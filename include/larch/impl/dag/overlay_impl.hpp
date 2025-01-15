@@ -323,7 +323,7 @@ auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
                     OverlayStorageType::TargetView::is_mutable) {
         Fail("Can't modify non-overlaid edge");
       }
-      return self.GetTarget().template GetFeatureStorage<F>(id);
+      return const_cast<F&>(self.GetTarget().template GetFeatureStorage<F>(id));
     } else {
       return it->second;
     }
