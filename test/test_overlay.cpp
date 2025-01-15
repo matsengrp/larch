@@ -65,6 +65,7 @@ static void test_overlay_mat_view() {
   auto overlay_dag_storage = AddOverlay<void>(mv);
   auto overlay_dag = overlay_dag_storage.View();
 
+  // test overlay compact genome
   [[maybe_unused]] auto input_node = mv.Get(NodeId{2});
   auto overlay_node = overlay_dag.Get(NodeId{2});
 
@@ -85,6 +86,22 @@ static void test_overlay_mat_view() {
 
   TestAssert(not overlay_node.GetCompactGenome().empty());
   TestAssert(input_node.GetCompactGenome() != overlay_node.GetCompactGenome());
+
+  // test overlay connectivity (edge Endpoints, node Neighbors)
+  auto overlay_edge = overlay_dag.Get(EdgeId{3});
+  auto overlay_child = overlay_edge.GetChild();
+  auto overlay_new_parent = overlay_dag.Get(NodeId{10});
+
+  overlay_edge.SetOverlay<Endpoints>();
+  overlay_new_parent.SetOverlay<Neighbors>();
+
+  TestAssert(overlay_edge.IsOverlaid<Endpoints>());
+  TestAssert(overlay_new_parent.IsOverlaid<Neighbors>());
+
+  overlay_edge.Set(overlay_new_parent, overlay_child, {2});
+  overlay_new_parent.AddEdge({2}, overlay_edge, true);
+  TestAssert(overlay_edge.GetParent() == overlay_new_parent);
+  TestAssert(overlay_child.GetSingleParent().GetParent() == overlay_new_parent);
 }
 
 [[maybe_unused]] static const auto test_added0 =
