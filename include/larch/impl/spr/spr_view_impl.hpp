@@ -258,6 +258,9 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNonrootAnchorNode() const {
   auto node = static_cast<const CRTP&>(*this).Const();
+  if (node.IsMoveSource() or node.IsMoveTarget()) {
+    return true;
+  }
   if (node.IsMoveNew() or node.HasChangedTopology()) {
     return false;
   }
@@ -489,7 +492,7 @@ std::pair<std::vector<NodeId>, std::vector<EdgeId>>
 FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     const std::vector<NodeId>& fragment_nodes,
     const std::vector<EdgeId>& fragment_edges) const {
-/*
+
   auto& dag = static_cast<const CRTP&>(*this);
 
   // keep track of edges/nodes that are collapsible
@@ -564,6 +567,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
         auto parent_pair = FindFinalParent(FindFinalParent, node_id);
         auto parent_edge = dag.Get(node_id).GetSingleParent();
         auto parent_node = dag.Get(parent_pair.second);
+
         if (not parent_edge.template IsOverlaid<Endpoints>()) {
           parent_edge.template SetOverlay<Endpoints>();
         }
@@ -623,7 +627,9 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
           }
         }
         if (not edge_already_added[parent_edge.GetId()]) {
+Assert(parent_edge.template IsOverlaid<Endpoint>());
           parent_edge.Set(parent_node, this_node, {clade});
+Assert(parent_edge.GetParent() == parent_node);
           parent_node.AddEdge({clade}, parent_edge, true);
           this_node.SetSingleParent(parent_edge);
           edge_already_added.insert_or_assign(parent_edge, true);
@@ -632,27 +638,13 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
       }
     }
   }
-*/
   std::vector<NodeId> current_nodes;
   std::vector<EdgeId> current_edges;
-//HERE'S THERE ALTERATION!
-for (auto node: fragment_nodes) {
-  current_nodes.push_back(node);
-}
-for (auto edge: fragment_edges) {
-  current_edges.push_back(edge);
-}
-//END THE ALTERATION!!
-/*
-std::cout << "Nodes\n" << std::flush;
   for (const auto& nodeadded : node_already_added) {
     current_nodes.push_back(nodeadded.first);
-std::cout << "adding: " << nodeadded.first << "\n" << std::flush;
   }
-std::cout << "Edges\n" << std::flush;
   for (const auto& edgeadded : edge_already_added) {
     current_edges.push_back(edgeadded.first);
-std::cout << "adding: " << edgeadded.first << "\n" << std::flush;
   }
 #ifndef NDEBUG
   for (auto node_id : current_nodes) {
@@ -691,8 +683,6 @@ std::cout << "adding: " << edgeadded.first << "\n" << std::flush;
       // TODO delete / clear this edge
     }
   }
-*/
-
   return {current_nodes, current_edges};
 }
 
@@ -975,6 +965,7 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   auto& self = GetFeatureStorage(this);
   Assert(not self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
+
   auto [new_node, has_unifurcation_after_move] =
       dag.ApplyMove(dag.GetNodeFromMAT(move.LCA), dag.GetNodeFromMAT(move.src),
                     dag.GetNodeFromMAT(move.dst));
