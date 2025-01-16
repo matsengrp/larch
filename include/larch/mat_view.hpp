@@ -892,6 +892,9 @@ struct MATElementsContainerBase {
       }
       // TODO
     } else {
+      if constexpr (std::is_same_v<Feature, Neighbors>) {
+        Fail("Not supported");
+      }
       if (features_storage_.empty()) {
         features_storage_.resize(GetMAT().get_size_upper());
       }

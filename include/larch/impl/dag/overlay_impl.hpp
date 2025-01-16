@@ -41,10 +41,26 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsAppended() const {
   return not target_dag.template ContainsId<CRTP>(id);
 }
 
+namespace {
+
+template <typename, typename = void>
+constexpr bool IsMATView = false;
+
+template <typename T>
+constexpr bool
+    IsMATView<T, std::void_t<decltype(std::declval<T>().GetDAG().IsCondensed())>> =
+        true;
+
+}  // namespace
+
 template <typename CRTP, typename Tag>
 template <typename F>
 auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   auto& element_view = static_cast<const CRTP&>(*this);
+
+  if constexpr (IsMATView<CRTP>) {
+  }
+
   auto id = element_view.GetId();
   const auto& storage = element_view.GetDAG().GetStorage().GetTargetStorage();
   static_assert(
@@ -100,16 +116,18 @@ inline constexpr bool
 
 template <typename ShortName, typename Target,
           template <typename, typename> typename ViewBase>
-typename OverlayDAGStorage<ShortName, Target, ViewBase>::ViewType
+template <template <typename, typename> typename Base>
+DAGView<typename OverlayDAGStorage<ShortName, Target, ViewBase>::Self, Base>
 OverlayDAGStorage<ShortName, Target, ViewBase>::View() {
-  return ViewType{static_cast<Self&>(*this)};
+  return DAGView<Self, Base>{static_cast<Self&>(*this)};
 }
 
 template <typename ShortName, typename Target,
           template <typename, typename> typename ViewBase>
-typename OverlayDAGStorage<ShortName, Target, ViewBase>::ConstViewType
+template <template <typename, typename> typename Base>
+DAGView<const typename OverlayDAGStorage<ShortName, Target, ViewBase>::Self, Base>
 OverlayDAGStorage<ShortName, Target, ViewBase>::View() const {
-  return ConstViewType{static_cast<const Self&>(*this)};
+  return DAGView<const Self, Base>{static_cast<const Self&>(*this)};
 }
 
 template <typename ShortName, typename Target,
@@ -323,6 +341,7 @@ auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
                     OverlayStorageType::TargetView::is_mutable) {
         Fail("Can't modify non-overlaid edge");
       }
+      // For MATView this will never be called
       return const_cast<F&>(self.GetTarget().template GetFeatureStorage<F>(id));
     } else {
       return it->second;
