@@ -581,6 +581,7 @@ struct ExtraFeatureStorage<MATEdgeStorage> {
   std::map<NodeId, std::string> node_id_to_sampleid_map_;
   std::map<std::string, size_t> sampleid_to_mat_node_id_map_;
   size_t condensed_nodes_count_ = 0;
+  std::function<const Endpoints*(EdgeId)> overlay_access_;
 };
 
 template <typename CRTP, typename Tag>
@@ -592,6 +593,12 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     }
     // if it's an edge above a condensed node
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+    if (storage.overlay_access_) {
+      auto* overlaid = storage.overlay_access_(dag_edge.GetId());
+      if (overlaid != nullptr) {
+        return dag_edge.GetDAG().Get(overlaid->parent_);
+      }
+    }
     if (mat_node == nullptr) {
       [[maybe_unused]] auto cn_id_str =
           storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
@@ -762,7 +769,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
  private:
   auto access() const {
-    auto dag_edge = static_cast<const CRTP&>(*this);
+    auto& dag_edge = static_cast<const CRTP&>(*this);
     EdgeId id = dag_edge.GetId();
     auto dag = dag_edge.GetDAG();
     auto& mat = *dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>()
@@ -788,6 +795,13 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {
+  void SetOverlayAccess(
+      std::function<const Endpoints*(EdgeId)>&& overlay_access) const {
+    auto& dag_edge = static_cast<const CRTP&>(*this);
+    auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+    storage.overlay_access_ = std::move(overlay_access);
+  }
+
   void Set(NodeId parent, NodeId child, CladeIdx clade) const {
     auto& storage =
         static_cast<const CRTP&>(*this).template GetFeatureStorage<Endpoints>();

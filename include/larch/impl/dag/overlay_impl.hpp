@@ -57,12 +57,19 @@ template <typename CRTP, typename Tag>
 template <typename F>
 auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   auto& element_view = static_cast<const CRTP&>(*this);
-
-  if constexpr (IsMATView<CRTP>) {
-  }
-
   auto id = element_view.GetId();
   const auto& storage = element_view.GetDAG().GetStorage().GetTargetStorage();
+
+  if constexpr (IsMATView<CRTP> and std::is_same_v<decltype(id), EdgeId>) {
+    auto dag = element_view.GetDAG();
+    element_view.SetOverlayAccess([&storage, dag](EdgeId eid) -> const Endpoints* {
+      if (not dag.Get(eid).template IsOverlaid<F>()) {
+        return nullptr;
+      }
+      return std::addressof(storage.template GetFeatureStorageImpl<F>(storage, eid));
+    });
+  }
+
   static_assert(
       CRTP::template contains_feature<F>,
       "Attempted to SetOverlay on a Feature not supported by given DAG Element.");
