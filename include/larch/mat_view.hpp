@@ -588,17 +588,15 @@ template <typename CRTP, typename Tag>
 struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   auto GetParent() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();
+    auto* overlaid = get_overlaid(dag_edge);
+    if (overlaid != nullptr) {
+      return dag_edge.GetDAG().Get(overlaid->parent_);
+    }
     if (is_ua) {
       return dag_edge.GetDAG().GetRoot();
     }
-    // if it's an edge above a condensed node
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
-    if (storage.overlay_access_) {
-      auto* overlaid = storage.overlay_access_(dag_edge.GetId());
-      if (overlaid != nullptr) {
-        return dag_edge.GetDAG().Get(overlaid->parent_);
-      }
-    }
+    // if it's an edge above a condensed node
     if (mat_node == nullptr) {
       [[maybe_unused]] auto cn_id_str =
           storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
@@ -620,6 +618,10 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
   auto GetChild() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();
+    auto* overlaid = get_overlaid(dag_edge);
+    if (overlaid != nullptr) {
+      return dag_edge.GetDAG().Get(overlaid->child_);
+    }
     if (is_ua) {
       return dag_edge.GetDAG().Get(NodeId{mat.root->node_id});
     }
@@ -631,6 +633,10 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
   CladeIdx GetClade() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();
+    auto* overlaid = get_overlaid(dag_edge);
+    if (overlaid != nullptr) {
+      return overlaid->clade_;
+    }
     CladeIdx result{0};
     if (is_ua) {
       return result;
@@ -684,6 +690,10 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
   auto GetParentId() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();
+    auto* overlaid = get_overlaid(dag_edge);
+    if (overlaid != nullptr) {
+      return overlaid->parent_;
+    }
     if (is_ua) {
       return dag_edge.GetDAG().GetRoot().GetId();
     }
@@ -710,11 +720,19 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
   auto GetChildId() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();
+    auto* overlaid = get_overlaid(dag_edge);
+    if (overlaid != nullptr) {
+      return overlaid->child_;
+    }
     return NodeId{dag_edge.GetId().value};
   }
 
   std::pair<NodeId, NodeId> GetNodeIds() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();
+    auto* overlaid = get_overlaid(dag_edge);
+    if (overlaid != nullptr) {
+      return {overlaid->parent_, overlaid->child_};
+    }
     if (is_ua) {
       return {dag_edge.GetDAG().GetRoot(), {mat.root->node_id}};
     }
@@ -790,6 +808,15 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     }
 
     return std::make_tuple(dag_edge, std::ref(mat), mat_node, is_ua);
+  }
+
+  template <typename Edge>
+  const Endpoints* get_overlaid(Edge dag_edge) const {
+    auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+    if (storage.overlay_access_) {
+      return storage.overlay_access_(dag_edge.GetId());
+    }
+    return nullptr;
   }
 };
 
