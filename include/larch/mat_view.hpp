@@ -424,8 +424,12 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 
   auto GetSingleParent() const {
     auto [dag_node, mat, mat_node, is_ua] = access();
-    Assert(not is_ua);
+    auto* overlaid = get_overlaid(dag_node);
     auto dag = dag_node.GetDAG();
+    if (overlaid) {
+      return typename decltype(dag)::EdgeView{dag, overlaid->parents_.at(0)};
+    }
+    Assert(not is_ua);
     if constexpr (not CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
       if (mat_node == nullptr) {
         auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
