@@ -507,6 +507,16 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     if (is_ua) {
       return false;
     }
+    auto* overlaid = get_overlaid(dag_node);
+    auto dag = dag_node.GetDAG();
+    if (overlaid) { // THIS SHOULD BE TRUE (but it's not)
+      for (auto p: overlaid->parents_) {
+        auto e = dag.Get(p); // THIS SHOULD GET THE OVERLAID EDGE
+        if (e.GetParentId() == node) {
+          return true;
+        }
+      }
+    }
     if (mat_node == nullptr) {
       auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
       auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_node.GetId());
@@ -532,6 +542,18 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto [dag_node, mat, mat_node, is_ua] = access();
     if (is_ua) {
       return node.value == mat.root->node_id;
+    }
+    auto* overlaid = get_overlaid(dag_node);
+    auto dag = dag_node.GetDAG();
+    if (overlaid) { // THIS SHOULD BE TRUE (but it's not)
+      for (auto c: overlaid->clades_) {
+        for (auto e: c) {
+          auto child_id = dag.Get(e).GetChildId(); // THIS SHOULD GET THE OVERLAID EDGE
+          if (node == child_id) {
+            return true;
+          }
+        }
+      }
     }
     if (mat_node == nullptr) {
       return false;

@@ -105,6 +105,7 @@ static void test_overlay_mat_view() {
 
   TestAssert(overlay_edge.GetParent().GetParentsCount() == 1);
   TestAssert(overlay_edge.GetChild().GetParentsCount() == 1);
+  TestAssert(overlay_edge.GetChild().ContainsParent(overlay_edge.GetParent()));
   TestAssert(overlay_edge.GetParent().ContainsChild(overlay_edge.GetChild()));
 }
 
