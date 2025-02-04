@@ -66,6 +66,7 @@ struct ExtraFeatureStorage<MATNodeStorage> {
   std::map<NodeId, std::string> node_id_to_sampleid_map_;
   std::map<std::string, size_t> sampleid_to_mat_node_id_map_;
   size_t condensed_nodes_count_ = 0;
+  std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
   std::function<const Neighbors*(NodeId)> overlay_access_;
 };
 
@@ -330,7 +331,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 
       void next() {
         if (overlaid) {
-          if (overlaid_iter >= overlaid->clades_.size()) {
+          if (overlaid_iter + 1 >= overlaid->clades_.size()) {
             return;
           }
           ++overlaid_iter;
@@ -509,9 +510,9 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     }
     auto* overlaid = get_overlaid(dag_node);
     auto dag = dag_node.GetDAG();
-    if (overlaid) { // THIS SHOULD BE TRUE (but it's not)
-      for (auto p: overlaid->parents_) {
-        auto e = dag.Get(p); // THIS SHOULD GET THE OVERLAID EDGE
+    if (overlaid) {  // THIS SHOULD BE TRUE (but it's not)
+      for (auto p : overlaid->parents_) {
+        auto e = dag.Get(p);  // THIS SHOULD GET THE OVERLAID EDGE
         if (e.GetParentId() == node) {
           return true;
         }
@@ -545,10 +546,10 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     }
     auto* overlaid = get_overlaid(dag_node);
     auto dag = dag_node.GetDAG();
-    if (overlaid) { // THIS SHOULD BE TRUE (but it's not)
-      for (auto c: overlaid->clades_) {
-        for (auto e: c) {
-          auto child_id = dag.Get(e).GetChildId(); // THIS SHOULD GET THE OVERLAID EDGE
+    if (overlaid) {  // THIS SHOULD BE TRUE (but it's not)
+      for (auto c : overlaid->clades_) {
+        for (auto e : c) {
+          auto child_id = dag.Get(e).GetChildId();  // THIS SHOULD GET THE OVERLAID EDGE
           if (node == child_id) {
             return true;
           }
@@ -620,6 +621,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   template <typename Node>
   const Neighbors* get_overlaid(Node dag_node) const {
     auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
+    std::unique_lock lock{*storage.mtx_};
     if (storage.overlay_access_) {
       return storage.overlay_access_(dag_node.GetId());
     }
@@ -633,6 +635,7 @@ struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {
       std::function<const Neighbors*(NodeId)>&& overlay_access) const {
     auto& dag_node = static_cast<const CRTP&>(*this);
     auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
+    std::unique_lock lock{*storage.mtx_};
     storage.overlay_access_ = std::move(overlay_access);
   }
 
@@ -667,6 +670,7 @@ struct ExtraFeatureStorage<MATEdgeStorage> {
   std::map<NodeId, std::string> node_id_to_sampleid_map_;
   std::map<std::string, size_t> sampleid_to_mat_node_id_map_;
   size_t condensed_nodes_count_ = 0;
+  std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
   std::function<const Endpoints*(EdgeId)> overlay_access_;
 };
 
@@ -899,6 +903,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   template <typename Edge>
   const Endpoints* get_overlaid(Edge dag_edge) const {
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+    std::unique_lock lock{*storage.mtx_};
     if (storage.overlay_access_) {
       return storage.overlay_access_(dag_edge.GetId());
     }
@@ -912,6 +917,7 @@ struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {
       std::function<const Endpoints*(EdgeId)>&& overlay_access) const {
     auto& dag_edge = static_cast<const CRTP&>(*this);
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+    std::unique_lock lock{*storage.mtx_};
     storage.overlay_access_ = std::move(overlay_access);
   }
 
