@@ -640,13 +640,36 @@ struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {
   }
 
   void ClearConnections() const {
+    throw std::runtime_error("Not implemented");
     // TODO USE_MAT_VIEW
   }
   void SetSingleParent(EdgeId /*parent*/) const {
+    throw std::runtime_error("Not implemented");
     // TODO USE_MAT_VIEW
   }
-  void AddEdge(CladeIdx /*clade*/, EdgeId /*id*/, bool /*this_node_is_parent*/) const {
-    // TODO USE_MAT_VIEW
+  void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent) const {
+    auto dag_node = static_cast<const CRTP&>(*this);
+    Neighbors* overlaid = const_cast<Neighbors*>(get_overlaid(dag_node));
+    if (overlaid) {
+      if (this_node_is_parent) {
+        GetOrInsert(overlaid->clades_, clade).push_back(id);
+      } else {
+        overlaid->parents_.push_back(id);
+      }
+    } else {
+      throw std::runtime_error("Not implemented");
+    }
+  }
+
+ private:
+  template <typename Node>
+  const Neighbors* get_overlaid(Node dag_node) const {
+    auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
+    std::unique_lock lock{*storage.mtx_};
+    if (storage.overlay_access_) {
+      return storage.overlay_access_(dag_node.GetId());
+    }
+    return nullptr;
   }
 };
 

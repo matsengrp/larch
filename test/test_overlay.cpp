@@ -6,7 +6,7 @@
 using Storage = CondensedMADAGStorage;
 
 static void test_overlay_dag(std::string_view input_dag_path,
-                         std::string_view refseq_path) {
+                             std::string_view refseq_path) {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
   MADAGStorage input_dag_storage =
       LoadTreeFromProtobuf(input_dag_path, reference_sequence);
@@ -94,6 +94,7 @@ static void test_overlay_mat_view() {
 
   overlay_edge.SetOverlay<Endpoints>();
   overlay_new_parent.SetOverlay<Neighbors>();
+  overlay_child.SetOverlay<Neighbors>();
 
   TestAssert(overlay_edge.IsOverlaid<Endpoints>());
   TestAssert(overlay_new_parent.IsOverlaid<Neighbors>());
@@ -105,6 +106,7 @@ static void test_overlay_mat_view() {
 
   TestAssert(overlay_edge.GetParent().GetParentsCount() == 1);
   TestAssert(overlay_edge.GetChild().GetParentsCount() == 1);
+  TestAssert(overlay_edge.GetChild().template IsOverlaid<Neighbors>());
   TestAssert(overlay_edge.GetChild().ContainsParent(overlay_edge.GetParent()));
   TestAssert(overlay_edge.GetParent().ContainsChild(overlay_edge.GetChild()));
 }
@@ -112,12 +114,9 @@ static void test_overlay_mat_view() {
 [[maybe_unused]] static const auto test_added0 =
     add_test({[] {
                 test_overlay_dag("data/20D_from_fasta/1final-tree-1.nh1.pb.gz",
-                             "data/20D_from_fasta/refseq.txt.gz");
+                                 "data/20D_from_fasta/refseq.txt.gz");
               },
               "Overlay: DAG"});
 
 [[maybe_unused]] static const auto test_added1 =
-    add_test({[] {
-                test_overlay_mat_view();
-              },
-              "Overlay: MATView"});
+    add_test({[] { test_overlay_mat_view(); }, "Overlay: MATView"});
