@@ -96,11 +96,14 @@ static void test_overlay_mat_view() {
   overlay_new_parent.SetOverlay<Neighbors>();
   overlay_child.SetOverlay<Neighbors>();
 
+  overlay_child.ClearConnections();
   TestAssert(overlay_edge.IsOverlaid<Endpoints>());
   TestAssert(overlay_new_parent.IsOverlaid<Neighbors>());
 
   overlay_edge.Set(overlay_new_parent, overlay_child, {2});
   overlay_new_parent.AddEdge({2}, overlay_edge, true);
+  overlay_child.SetSingleParent(overlay_edge);
+
   TestAssert(overlay_edge.GetParent() == overlay_new_parent);
   TestAssert(overlay_child.GetSingleParent().GetParent() == overlay_new_parent);
 

@@ -510,13 +510,14 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     }
     auto* overlaid = get_overlaid(dag_node);
     auto dag = dag_node.GetDAG();
-    if (overlaid) {  // THIS SHOULD BE TRUE (but it's not)
+    if (overlaid) {
       for (auto p : overlaid->parents_) {
-        auto e = dag.Get(p);  // THIS SHOULD GET THE OVERLAID EDGE
+        auto e = dag.Get(p);
         if (e.GetParentId() == node) {
           return true;
         }
       }
+      return false;
     }
     if (mat_node == nullptr) {
       auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
@@ -546,15 +547,16 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     }
     auto* overlaid = get_overlaid(dag_node);
     auto dag = dag_node.GetDAG();
-    if (overlaid) {  // THIS SHOULD BE TRUE (but it's not)
+    if (overlaid) {
       for (auto c : overlaid->clades_) {
         for (auto e : c) {
-          auto child_id = dag.Get(e).GetChildId();  // THIS SHOULD GET THE OVERLAID EDGE
+          auto child_id = dag.Get(e).GetChildId();
           if (node == child_id) {
             return true;
           }
         }
       }
+      return false;
     }
     if (mat_node == nullptr) {
       return false;
@@ -640,12 +642,24 @@ struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {
   }
 
   void ClearConnections() const {
-    throw std::runtime_error("Not implemented");
-    // TODO USE_MAT_VIEW
+    auto dag_node = static_cast<const CRTP&>(*this);
+    Neighbors* overlaid = const_cast<Neighbors*>(get_overlaid(dag_node));
+    if (overlaid) {
+      overlaid->parents_.clear();
+      overlaid->clades_.clear();
+    } else {
+      throw std::runtime_error("Not implemented");
+    }
   }
-  void SetSingleParent(EdgeId /*parent*/) const {
-    throw std::runtime_error("Not implemented");
-    // TODO USE_MAT_VIEW
+  void SetSingleParent(EdgeId parent) const {
+    auto dag_node = static_cast<const CRTP&>(*this);
+    Neighbors* overlaid = const_cast<Neighbors*>(get_overlaid(dag_node));
+    if (overlaid) {
+      overlaid->parents_.clear();
+      overlaid->parents_.push_back(parent);
+    } else {
+      throw std::runtime_error("Not implemented");
+    }
   }
   void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent) const {
     auto dag_node = static_cast<const CRTP&>(*this);
