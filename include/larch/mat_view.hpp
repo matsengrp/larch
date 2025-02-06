@@ -586,6 +586,17 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     }
     return false;
   }
+/*
+  bool HaveSampleId() const {
+    auto [dag_node, mat, mat_node, is_ua] = access();
+    return mat->get_node_name(mat_node->node_id);
+  }
+
+  std::optional<std::string> GetSampleId() const {
+    auto [dag_node, mat, mat_node, is_ua] = access();
+    return mat->get_node_name(mat_node->node_id);
+  }
+*/
 
   std::string ParentsToString() const;
   std::string ChildrenToString() const;
@@ -878,16 +889,6 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   bool IsTreeRoot() const { return GetParent().IsTreeRoot(); }
 
   bool IsLeaf() const { return GetChild().IsLeaf(); }
-
-  bool HaveSampleId() const {
-    auto [dag_node, mat, mat_node, is_ua] = access();
-    return mat_node->is_leaf();
-  }
-
-  std::optional<std::string> GetSampleId() const {
-    auto [dag_node, mat, mat_node, is_ua] = access();
-    return mat->get_node_name(mat_node->node_id);
-  }
 
   const EdgeMutations& GetEdgeMutations() const {
     auto [dag_edge, mat, mat_node, is_ua] = access();

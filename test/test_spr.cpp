@@ -6,7 +6,7 @@
 #include "test_common_dag.hpp"
 #include "larch/benchmark.hpp"
 
-// #include <tbb/global_control.h>
+#include <tbb/global_control.h>
 
 struct Empty_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
@@ -39,6 +39,7 @@ struct Test_Move_Found_Callback
     //   print_peak_mem();
     //   moves_count_.store(0);
     // }
+    return {false, false};
     return {move.score_change <= 0, move.score_change <= 0};
   }
 
@@ -63,7 +64,7 @@ struct Test_Move_Found_Callback
 }
 
 static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
-  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{input_dag});

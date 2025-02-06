@@ -791,6 +791,12 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
         src_parent_node.AddEdge({clade_ctr++}, e, true);
       }
     }
+    if (not new_node.template IsOverlaid<Neighbors>()) {
+      new_node.template SetOverlay<Neighbors>();
+    }
+    if (not new_edge.template IsOverlaid<Endpoints>()) {
+      new_edge.template SetOverlay<Endpoints>();
+    }
     new_edge.Set(src_parent_node, new_node, {clade_ctr});
     src_parent_node.AddEdge({clade_ctr}, new_edge, true);
     new_node.SetSingleParent(new_edge);
@@ -923,6 +929,12 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     dst_parent_node.template SetOverlay<Neighbors>();
     src_parent_node.ClearConnections();
     dst_parent_node.ClearConnections();
+    if (not new_node.template IsOverlaid<Neighbors>()) {
+      new_node.template SetOverlay<Neighbors>();
+    }
+    if (not new_edge.template IsOverlaid<Endpoints>()) {
+      new_edge.template SetOverlay<Endpoints>();
+    }
     if (src_grandparent_edge != EdgeId{NoId}) {
       src_parent_node.SetSingleParent(src_grandparent_edge);
     }
