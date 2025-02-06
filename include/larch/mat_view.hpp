@@ -332,6 +332,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       void next() {
         if (overlaid) {
           if (overlaid_iter + 1 >= overlaid->clades_.size()) {
+            done = true;
             return;
           }
           ++overlaid_iter;
@@ -473,8 +474,6 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto [dag_node, mat, mat_node, is_ua] = access();
     return is_ua;
   }
-
-  // bool IsTreeRoot() const;
 
   bool IsTreeRoot() const {
     auto [dag_node, mat, mat_node, is_ua] = access();

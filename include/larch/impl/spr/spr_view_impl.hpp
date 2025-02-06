@@ -823,6 +823,11 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
                                              : EdgeId{NoId};
     size_t clade_ctr = 0;
 
+    auto dst_parent_edge = dst_parent_node.GetSingleParent().GetId();
+    std::vector<EdgeId> src_gp_children;
+    for (auto c: src_grandparent.GetChildren()) {
+      src_gp_children.push_back(c.GetId());
+    }
     src_grandparent.template SetOverlay<Neighbors>();
     if (not dst_parent_node.template IsOverlaid<Neighbors>()) {
       dst_parent_node.template SetOverlay<Neighbors>();
@@ -830,15 +835,14 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     new_node.template SetOverlay<Neighbors>();
     new_edge.template SetOverlay<Endpoints>();
 
-    auto src_grandparent_edge = src_parent_node.GetSingleParent();
     src_parent_node.ClearConnections();
     src_parent_node.SetSingleParent(new_edge);
     std::vector<EdgeId> src_parent_siblings;
-    for (auto e : src_grandparent.GetChildren()) {
-      if (e.GetId() != src_grandparent_edge.GetId() and
-          (std::find(dst_edges.begin(), dst_edges.end(), e.GetId()) ==
+    for (auto e_id : src_gp_children) {
+      if (e_id != new_edge.GetId() and e_id != dst_parent_edge and
+          (std::find(dst_edges.begin(), dst_edges.end(), e_id) ==
            dst_edges.end())) {
-        src_parent_siblings.push_back(e.GetId());
+        src_parent_siblings.push_back(e_id);
       }
     }
     src_grandparent.ClearConnections();
@@ -885,8 +889,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
         dst_parent_node.AddEdge({clade_ctr++}, e, true);
       }
     }
+    new_node.ClearConnections();
     new_edge.Set(dst_parent_node, new_node, {clade_ctr});
     dst_parent_node.AddEdge({clade_ctr++}, new_edge, true);
+    new_node.SetSingleParent(new_edge);
     clade_ctr = 0;
     for (auto e_id : src_edges) {
       auto e = dag.Get(e_id);
@@ -973,7 +979,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
          (has_unifurcation_after_move ? old_num_nodes : old_num_nodes + 1));
   Assert(dag.GetEdgesCount() ==
          (has_unifurcation_after_move ? old_num_edges : old_num_edges + 1));
-
   return {new_node, has_unifurcation_after_move};
 }
 
