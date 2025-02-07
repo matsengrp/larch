@@ -666,7 +666,7 @@ struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {
     Neighbors* overlaid = const_cast<Neighbors*>(get_overlaid(dag_node));
     if (overlaid) {
       overlaid->parents_.clear();
-      overlaid->parents_.push_back(parent);
+      overlaid->parents_ = std::vector{parent};
     } else {
       throw std::runtime_error("Not implemented");
     }
