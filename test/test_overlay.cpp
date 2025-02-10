@@ -92,14 +92,28 @@ static void test_overlay_mat_view() {
   auto overlay_child = overlay_edge.GetChild();
   auto overlay_new_parent = overlay_dag.Get(NodeId{10});
 
+  auto overlay_old_parent = overlay_child.GetSingleParent().GetParent();
+  auto overlay_old_parent_edge = overlay_old_parent.GetSingleParent();
+  auto overlay_child_sib_1 = overlay_dag.Get(NodeId{4});
+  auto overlay_child_sib_2 = overlay_dag.Get(NodeId{7});
+  auto overlay_child_sib_edge_1 = overlay_dag.Get(EdgeId{4});
+  auto overlay_child_sib_edge_2 = overlay_dag.Get(EdgeId{7});
+
   overlay_edge.SetOverlay<Endpoints>();
   overlay_new_parent.SetOverlay<Neighbors>();
   overlay_child.SetOverlay<Neighbors>();
 
-  overlay_child.ClearConnections();
+  overlay_old_parent.SetOverlay<Neighbors>();
+  overlay_child_sib_1.SetOverlay<Neighbors>();
+  overlay_child_sib_2.SetOverlay<Neighbors>();
+  overlay_old_parent_edge.SetOverlay<Endpoints>();
+  overlay_child_sib_edge_1.SetOverlay<Endpoints>();
+  overlay_child_sib_edge_2.SetOverlay<Endpoints>();
+
   TestAssert(overlay_edge.IsOverlaid<Endpoints>());
   TestAssert(overlay_new_parent.IsOverlaid<Neighbors>());
 
+  overlay_child.ClearConnections();
   overlay_edge.Set(overlay_new_parent, overlay_child, {2});
   overlay_new_parent.AddEdge({2}, overlay_edge, true);
   overlay_child.SetSingleParent(overlay_edge);
@@ -112,6 +126,97 @@ static void test_overlay_mat_view() {
   TestAssert(overlay_edge.GetChild().template IsOverlaid<Neighbors>());
   TestAssert(overlay_edge.GetChild().ContainsParent(overlay_edge.GetParent()));
   TestAssert(overlay_edge.GetParent().ContainsChild(overlay_edge.GetChild()));
+
+  // make the overlay_dag a valid tree-shaped DAG by removing the old parent's stored connection to overlay_child
+  overlay_child_sib_edge_1.Set(overlay_old_parent, overlay_child_sib_1, {0});
+  overlay_child_sib_edge_2.Set(overlay_old_parent, overlay_child_sib_2, {1});
+  overlay_old_parent.ClearConnections();
+  overlay_old_parent.SetSingleParent(overlay_old_parent_edge);
+  overlay_old_parent.AddEdge({0}, overlay_child_sib_edge_1, true);
+  overlay_old_parent.AddEdge({1}, overlay_child_sib_edge_2, true);
+  overlay_child_sib_1.SetSingleParent(overlay_child_sib_edge_1);
+  overlay_child_sib_2.SetSingleParent(overlay_child_sib_edge_2);
+  // make sure the current overlay is a valid one
+  overlay_dag.GetRoot().Validate(true, false);
+
+  // test appending node/edge to overlaid dag.
+  auto new_node = overlay_dag.AppendNode();
+  auto new_edge = overlay_dag.AppendEdge();
+  auto child_node_1 = overlay_dag.Get(NodeId({8}));
+  auto child_node_2 = overlay_dag.Get(NodeId({9}));
+  auto child_node_3 = overlay_dag.Get(NodeId({3}));
+  auto parent_node  = overlay_dag.Get(NodeId({10}));
+  auto child_edge_1 = child_node_1.GetSingleParent();
+  auto child_edge_2 = child_node_2.GetSingleParent();
+  auto child_edge_3 = child_node_3.GetSingleParent();
+  auto parent_edge  = parent_node.GetSingleParent();
+
+  if (not child_node_1.IsOverlaid<Neighbors>()) {
+    child_node_1.SetOverlay<Neighbors>();
+  }
+  if (not child_node_2.IsOverlaid<Neighbors>()) {
+    child_node_2.SetOverlay<Neighbors>();
+  }
+  if (not child_node_3.IsOverlaid<Neighbors>()) {
+    child_node_3.SetOverlay<Neighbors>();
+  }
+  if (not parent_node.IsOverlaid<Neighbors>()) {
+    parent_node.SetOverlay<Neighbors>();
+  }
+  if (not child_edge_1.IsOverlaid<Endpoints>()) {
+    child_edge_1.SetOverlay<Endpoints>();
+  }
+  if (not child_edge_2.IsOverlaid<Endpoints>()) {
+    child_edge_2.SetOverlay<Endpoints>();
+  }
+  if (not child_edge_3.IsOverlaid<Endpoints>()) {
+    child_edge_3.SetOverlay<Endpoints>();
+  }
+  if (not parent_edge.IsOverlaid<Endpoints>()) {
+    parent_edge.SetOverlay<Endpoints>();
+  }
+
+  // OPERATIONS: 
+  // - create a cherry of child_nodes 1 and 2 with new_node as the parent of this cherry
+  // - and set new_node and child_node_3 as children of parent_node.
+  // step 1: clear parent node
+  parent_node.ClearConnections();
+  // step 2: connect parent_node to its parent
+  parent_node.SetSingleParent(parent_edge);
+  // step 3: add child_node_3 as child of parent_node
+  child_edge_3.Set(parent_node, child_node_3, {0});
+  parent_node.AddEdge({0}, child_edge_3, true);
+  child_node_3.SetSingleParent(child_edge_3);
+  // step 4: add new_node as child of parent_node
+  new_edge.Set(parent_node, new_node, {1});
+  parent_node.AddEdge({1}, new_edge, true);
+  new_node.SetSingleParent(new_edge);
+  // step 5: add child_node_1 as child of new_node
+  child_edge_1.Set(new_node, child_node_1, {0});
+  new_node.AddEdge({0}, child_edge_1, true);
+  child_node_1.SetSingleParent(child_edge_1);
+  // step 6: add child_node_2 as child of new_node
+  child_edge_2.Set(new_node, child_node_2, {1});
+  new_node.AddEdge({1}, child_edge_1, true);
+  child_node_2.SetSingleParent(child_edge_2);
+
+  TestAssert(parent_node.GetParentsCount() == 1);
+  TestAssert(new_node.GetParentsCount() == 1);
+  TestAssert(child_node_1.GetParentsCount() == 1);
+  TestAssert(child_node_2.GetParentsCount() == 1);
+  TestAssert(child_node_3.GetParentsCount() == 1);
+  TestAssert(not new_node.IsUA());
+  TestAssert(not new_node.IsLeaf());
+  TestAssert(new_node.GetCladesCount() == 2);
+  TestAssert(new_node.ContainsChild(child_node_1));
+  TestAssert(new_node.ContainsChild(child_node_2));
+  TestAssert(child_node_1.ContainsParent(new_node));
+  TestAssert(child_node_2.ContainsParent(new_node));
+  TestAssert(new_edge.GetParent() == parent_node);
+  TestAssert(new_edge.GetChild() == new_node);
+
+  // make sure the current overlay is a valid one
+  overlay_dag.GetRoot().Validate(true, false);
 }
 
 [[maybe_unused]] static const auto test_added0 =
