@@ -778,9 +778,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
                                         ? src_parent_node.GetSingleParent()
                                         : EdgeId{NoId};
     src_parent_node.template SetOverlay<Neighbors>();
-    if (not new_edge.IsAppended()) {
-      new_edge.template SetOverlay<Endpoints>();
-    }
+
     src_parent_node.ClearConnections();
     if (src_parent_single_parent != EdgeId{NoId}) {
       src_parent_node.SetSingleParent(src_parent_single_parent);
@@ -795,6 +793,16 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
         }
         e.Set(src_parent_node, e_child, {clade_ctr});
         src_parent_node.AddEdge({clade_ctr++}, e, true);
+      }
+    }
+    if (not new_node.IsAppended()) {
+      if (not new_node.template IsOverlaid<Neighbors>()) {
+        new_node.template SetOverlay<Neighbors>();
+      }
+    }
+    if (not new_edge.IsAppended()) {
+      if (not new_edge.template IsOverlaid<Endpoints>()) {
+        new_edge.template SetOverlay<Endpoints>();
       }
     }
     new_edge.Set(src_parent_node, new_node, {clade_ctr});
@@ -838,9 +846,12 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     if (not dst_parent_node.template IsOverlaid<Neighbors>()) {
       dst_parent_node.template SetOverlay<Neighbors>();
     }
-    new_node.template SetOverlay<Neighbors>();
-    new_edge.template SetOverlay<Endpoints>();
-
+    if (not new_edge.template IsOverlaid<Endpoints>()) {
+      new_edge.template SetOverlay<Endpoints>();
+    }
+    if (not new_node.template IsOverlaid<Neighbors>()) {
+      new_node.template SetOverlay<Neighbors>();
+    }
     src_parent_node.ClearConnections();
     src_parent_node.SetSingleParent(new_edge);
     std::vector<EdgeId> src_parent_siblings;
@@ -973,9 +984,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
       }
       dst_edge.Set(new_node, dst_node, {new_node_clade_ctr});
       new_node.AddEdge({new_node_clade_ctr++}, dst_edge, true);
-    }
-    if (not new_edge.IsAppended()) {
-      new_edge.template SetOverlay<Endpoints>();
     }
     new_edge.Set(dst_parent_node, new_node, {dst_parent_clade_ctr});
     dst_parent_node.AddEdge({dst_parent_clade_ctr}, new_edge, true);

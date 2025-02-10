@@ -197,7 +197,7 @@ static void test_overlay_mat_view() {
   child_node_1.SetSingleParent(child_edge_1);
   // step 6: add child_node_2 as child of new_node
   child_edge_2.Set(new_node, child_node_2, {1});
-  new_node.AddEdge({1}, child_edge_1, true);
+  new_node.AddEdge({1}, child_edge_2, true);
   child_node_2.SetSingleParent(child_edge_2);
 
   TestAssert(parent_node.GetParentsCount() == 1);
