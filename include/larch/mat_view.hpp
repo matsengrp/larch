@@ -586,17 +586,17 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     }
     return false;
   }
-/*
-  bool HaveSampleId() const {
-    auto [dag_node, mat, mat_node, is_ua] = access();
-    return mat->get_node_name(mat_node->node_id);
-  }
+  /*
+    bool HaveSampleId() const {
+      auto [dag_node, mat, mat_node, is_ua] = access();
+      return mat->get_node_name(mat_node->node_id);
+    }
 
-  std::optional<std::string> GetSampleId() const {
-    auto [dag_node, mat, mat_node, is_ua] = access();
-    return mat->get_node_name(mat_node->node_id);
-  }
-*/
+    std::optional<std::string> GetSampleId() const {
+      auto [dag_node, mat, mat_node, is_ua] = access();
+      return mat->get_node_name(mat_node->node_id);
+    }
+  */
 
   std::string ParentsToString() const;
   std::string ChildrenToString() const;
@@ -624,7 +624,11 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
       auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
       if (storage.node_id_to_sampleid_map_.find(id) ==
           storage.node_id_to_sampleid_map_.end()) {
-        is_ua = true;
+        std::unique_lock lock{*storage.mtx_};
+        if ((not storage.overlay_access_) or
+            storage.overlay_access_(dag_node.GetId()) == nullptr) {
+          is_ua = true;
+        }
       }
     }
     return std::make_tuple(dag_node, std::ref(mat), mat_node, is_ua);
