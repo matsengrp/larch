@@ -966,6 +966,16 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
       dst_sib_edge.Set(dst_parent_node, dst_sib_node, {dst_parent_clade_ctr});
       dst_parent_node.AddEdge({dst_parent_clade_ctr++}, dst_sib_edge, true);
     }
+    if (not new_edge.IsAppended()) {
+      if (not new_edge.template IsOverlaid<Endpoints>()) {
+        new_edge.template SetOverlay<Endpoints>();
+      }
+    }
+    if (not new_node.IsAppended()) {
+      if (not new_node.template IsOverlaid<Neighbors>()) {
+        new_node.template SetOverlay<Neighbors>();
+      }
+    }
     size_t new_node_clade_ctr = 0;
     for (auto src_edge_id : src_edges) {
       auto src_edge = dag.Get(src_edge_id);
