@@ -94,6 +94,8 @@ static void test_overlay_mat_view() {
 
   auto overlay_old_parent = overlay_child.GetSingleParent().GetParent();
   auto overlay_old_parent_edge = overlay_old_parent.GetSingleParent();
+  auto overlay_old_parent_edge_parent = overlay_old_parent_edge.GetParent();
+  auto overlay_old_parent_clade = overlay_old_parent_edge.GetClade().value;
   auto overlay_child_sib_1 = overlay_dag.Get(NodeId{4});
   auto overlay_child_sib_2 = overlay_dag.Get(NodeId{7});
   auto overlay_child_sib_edge_1 = overlay_dag.Get(EdgeId{4});
@@ -131,6 +133,7 @@ static void test_overlay_mat_view() {
   overlay_child_sib_edge_1.Set(overlay_old_parent, overlay_child_sib_1, {0});
   overlay_child_sib_edge_2.Set(overlay_old_parent, overlay_child_sib_2, {1});
   overlay_old_parent.ClearConnections();
+  overlay_old_parent_edge.Set(overlay_old_parent_edge_parent, overlay_old_parent, {overlay_old_parent_clade});
   overlay_old_parent.SetSingleParent(overlay_old_parent_edge);
   overlay_old_parent.AddEdge({0}, overlay_child_sib_edge_1, true);
   overlay_old_parent.AddEdge({1}, overlay_child_sib_edge_2, true);
