@@ -743,6 +743,9 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     // no-op
     return {};
   }
+  if (has_unifurcation_after_move and (first_dst_node == src_parent_node)) {
+    return {};
+  }
 
 #ifndef NDEBUG
   const size_t old_num_nodes = dag.GetNodesCount();
