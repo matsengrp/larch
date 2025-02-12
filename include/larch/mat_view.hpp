@@ -275,6 +275,9 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
              size_t count, const Neighbors* ovlay)
           : access_{access}, clades_count{count}, overlaid{ovlay} {
         if (overlaid) {
+          if (overlaid->clades_.empty()) {
+            done = true;
+          }
           return;
         }
         if (mat_node() == nullptr or mat_node()->children.empty()) {
