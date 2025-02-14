@@ -452,6 +452,9 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
                      ranges::actions::unique(std::equal_to<NodeId>{});
   collapsed.second |= ranges::actions::sort(std::less<EdgeId>{}) |
                       ranges::actions::unique(std::equal_to<EdgeId>{});
+  for (auto node : collapsed.first) {
+    std::cout << "in collapsed fragment, node " << node << " has " << dag.Get(node).GetCladesCount() << " children\n" << std::flush;
+  }
 
   return AddFragmentStorage(dag, std::move(collapsed.first),
                             std::move(collapsed.second), oldest_node);
@@ -508,6 +511,8 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
       node_already_added;
   IdContainer<EdgeId, bool, IdContinuity::Sparse, Ordering::Unordered>
       edge_already_added;
+  IdContainer<NodeId, bool, IdContinuity::Sparse, Ordering::Unordered>
+      visited;
   for (auto edge_id : fragment_edges) {
     auto edge = dag.Get(edge_id);
     auto parent = edge.GetParent();
@@ -655,60 +660,63 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
           this_node.SetSingleParent(parent_edge);
           edge_already_added.insert_or_assign(parent_edge, true);
         } else {
-          node_already_added.insert_or_assign(this_node, true);
-          node_already_added.insert_or_assign(parent_node, true);
-          edge_already_added.insert_or_assign(parent_edge, true);
-          if (not parent_node.template IsOverlaid<HypotheticalNode>()) {
-            parent_node.template SetOverlay<HypotheticalNode>();
-          }
-          if (not this_node.template IsOverlaid<HypotheticalNode>()) {
-            this_node.template SetOverlay<HypotheticalNode>();
-          }
-          std::vector<EdgeId> parent_children;
-          std::vector<EdgeId> node_children;
-          for (auto c : parent_node.GetChildren()) {
-            parent_children.push_back(c);
-          }
-          for (auto c : this_node.GetChildren()) {
-            node_children.push_back(c);
-          }
+          if (not visited[this_node]) {
+            node_already_added.insert_or_assign(this_node, true);
+            node_already_added.insert_or_assign(parent_node, true);
+            edge_already_added.insert_or_assign(parent_edge, true);
+            if (not parent_node.template IsOverlaid<HypotheticalNode>()) {
+              parent_node.template SetOverlay<HypotheticalNode>();
+            }
+            if (not this_node.template IsOverlaid<HypotheticalNode>()) {
+              this_node.template SetOverlay<HypotheticalNode>();
+            }
+            std::vector<EdgeId> parent_children;
+            std::vector<EdgeId> node_children;
+            for (auto c : parent_node.GetChildren()) {
+              parent_children.push_back(c);
+            }
+            for (auto c : this_node.GetChildren()) {
+              node_children.push_back(c);
+            }
 
-          if (not parent_node.template IsOverlaid<Neighbors>()) {
-            auto gp_edge_id =
-              parent_node.GetParentsCount() < 1 ? EdgeId{NoId} : parent_node.GetSingleParent();
-            parent_node.template SetOverlay<Neighbors>();
-            parent_node.ClearConnections();
-            if (gp_edge_id.value != NoId) {
-              parent_node.SetSingleParent(gp_edge_id);
-            }
-            size_t c_c = 0;
-            for (auto c_e : parent_children) {
-              auto c_n = dag.Get(c_e).GetChild();
-              if (not dag.Get(c_e).template IsOverlaid<Endpoints>()) {
-                dag.Get(c_e).template SetOverlay<Endpoints>();
+            if (not parent_node.template IsOverlaid<Neighbors>()) {
+              auto gp_edge_id =
+                parent_node.GetParentsCount() < 1 ? EdgeId{NoId} : parent_node.GetSingleParent();
+              parent_node.template SetOverlay<Neighbors>();
+              parent_node.ClearConnections();
+              if (gp_edge_id.value != NoId) {
+                parent_node.SetSingleParent(gp_edge_id);
               }
-              dag.Get(c_e).Set(parent_node, c_n, {c_c});
-              node_already_added.insert_or_assign(c_n, true);
-              edge_already_added.insert_or_assign(c_e, true);
-              parent_node.AddEdge({c_c++}, c_e, true);
-            }
-          }
-          if (not this_node.template IsOverlaid<Neighbors>()) {
-            this_node.template SetOverlay<Neighbors>();
-            this_node.ClearConnections();
-            size_t c_c = 0;
-            for (auto c_e : node_children) {
-              auto c_n = dag.Get(c_e).GetChild();
-              if (not dag.Get(c_e).template IsOverlaid<Endpoints>()) {
-                dag.Get(c_e).template SetOverlay<Endpoints>();
+              size_t c_c = 0;
+              for (auto c_e : parent_children) {
+                auto c_n = dag.Get(c_e).GetChild();
+                if (not dag.Get(c_e).template IsOverlaid<Endpoints>()) {
+                  dag.Get(c_e).template SetOverlay<Endpoints>();
+                }
+                dag.Get(c_e).Set(parent_node, c_n, {c_c});
+                node_already_added.insert_or_assign(c_n, true);
+                edge_already_added.insert_or_assign(c_e, true);
+                parent_node.AddEdge({c_c++}, c_e, true);
               }
-              dag.Get(c_e).Set(this_node, c_n, {c_c});
-              node_already_added.insert_or_assign(c_n, true);
-              edge_already_added.insert_or_assign(c_e, true);
-              this_node.AddEdge({c_c++}, c_e, true);
             }
+            if (not this_node.template IsOverlaid<Neighbors>()) {
+              this_node.template SetOverlay<Neighbors>();
+              this_node.ClearConnections();
+              size_t c_c = 0;
+              for (auto c_e : node_children) {
+                auto c_n = dag.Get(c_e).GetChild();
+                if (not dag.Get(c_e).template IsOverlaid<Endpoints>()) {
+                  dag.Get(c_e).template SetOverlay<Endpoints>();
+                }
+                dag.Get(c_e).Set(this_node, c_n, {c_c});
+                node_already_added.insert_or_assign(c_n, true);
+                edge_already_added.insert_or_assign(c_e, true);
+                this_node.AddEdge({c_c++}, c_e, true);
+              }
+            }
+            this_node.SetSingleParent(parent_edge);
+            visited.insert_or_assign(this_node, true);
           }
-          this_node.SetSingleParent(parent_edge);
         }
       }
     }
@@ -726,8 +734,6 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     auto node = dag.Get(node_id);
     Assert(node_id.value != NoId);
     if (node != dag.GetRoot()) {
-      if(node.GetParentsCount() != 1) {
-      }
       Assert(node.GetParentsCount() == 1);
     }
   }
@@ -875,6 +881,8 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
   if (not first_dst_node.template IsOverlaid<Neighbors>()) {
     first_dst_node.template SetOverlay<Neighbors>();
   }
+  first_src_node.ClearConnections();
+  first_dst_node.ClearConnections();
   size_t src_node_clade_ctr = 0;
   for (auto c_e: src_child_edges) {
     auto edge = dag.Get(c_e);
@@ -897,6 +905,8 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
   }
   src_parent_edge.Set(src_parent_node, first_src_node, {sc});
   dst_parent_edge.Set(dst_parent_node, first_dst_node, {dc});
+  first_src_node.SetSingleParent(src_parent_edge);
+  first_dst_node.SetSingleParent(dst_parent_edge);
 
   if (is_sibling_move) {
     auto src_parent_single_parent = src_parent_node.GetParentsCount() > 0
@@ -971,15 +981,11 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     if (not dst_parent_node.template IsOverlaid<Neighbors>()) {
       dst_parent_node.template SetOverlay<Neighbors>();
     }
-    if (not new_edge.IsAppended()) {
-      if (not new_edge.template IsOverlaid<Endpoints>()) {
-        new_edge.template SetOverlay<Endpoints>();
-      }
+    if (not new_edge.template IsOverlaid<Endpoints>()) {
+      new_edge.template SetOverlay<Endpoints>();
     }
-    if (not new_node.IsAppended()) {
-      if (not new_node.template IsOverlaid<Neighbors>()) {
-        new_node.template SetOverlay<Neighbors>();
-      }
+    if (not new_node.template IsOverlaid<Neighbors>()) {
+      new_node.template SetOverlay<Neighbors>();
     }
     std::vector<EdgeId> src_parent_siblings;
     for (auto e_id : src_gp_children) {
@@ -1181,9 +1187,7 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
     while (not(current_node == dag.GetMoveLCA().GetId() or
                dag.Get(current_node).HasChangedTopology())) {
       if (not dag.Get(current_node).IsAppended()) {
-        //if (not dag.Get(current_node).template IsOverlaid<HypotheticalNode>()) {
-          dag.Get(current_node).template SetOverlay<HypotheticalNode>();
-        //}
+        dag.Get(current_node).template SetOverlay<HypotheticalNode>();
       }
       dag.Get(current_node).SetHasChangedTopology();
       if (dag.Get(current_node).IsUA()) {
