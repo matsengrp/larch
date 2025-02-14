@@ -541,8 +541,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   for (auto node_id : fragment_nodes) {
     auto this_node = dag.Get(node_id);
     if ((this_node.IsNonrootAnchorNode() or this_node.IsLeaf() or
-         (not is_child_of_collapsible_edge[node_id])) and
-        (not node_already_added[node_id])) {
+         (not is_child_of_collapsible_edge[node_id]))) {
       node_already_added.insert_or_assign(node_id, true);
       if (is_parent_of_collapsible_edge[node_id] and
           not parent_is_in_fragment[node_id]) {
