@@ -978,6 +978,10 @@ return {};
   first_src_node.SetSingleParent(src_parent_edge);
   first_dst_node.SetSingleParent(dst_parent_edge);
 
+std::ignore = new_node;
+std::ignore = new_edge;
+/*
+
   if (is_sibling_move) {
     auto src_parent_single_parent = src_parent_node.GetParentsCount() > 0
                                         ? src_parent_node.GetSingleParent()
@@ -1177,6 +1181,7 @@ return {};
     dst_parent_node.AddEdge({dst_parent_clade_ctr}, new_edge, true);
     new_node.SetSingleParent(new_edge);
   }
+*/
   Assert(new_node.GetParentsCount() == 1);
   Assert(dag.GetNodesCount() ==
          (has_unifurcation_after_move ? old_num_nodes : old_num_nodes + 1));
