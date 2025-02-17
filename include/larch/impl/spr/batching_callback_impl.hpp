@@ -63,10 +63,12 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         if (storage.spr->View().InitHypotheticalTree(
                 move, nodes_with_major_allele_set_change)) {
           // storage.spr->View().GetRoot().Validate(true);
+Assert(storage.spr->View().Get(NodeId{5}).GetCladesCount() > 0);
           storage.fragment = std::make_unique<FragmentType>(
               collapse_empty_fragment_edges_
                   ? storage.spr->View().MakeFragment()
                   : storage.spr->View().MakeUncollapsedFragment());
+Assert(storage.spr->View().Get(NodeId{5}).GetCladesCount() > 0);
           auto fragment = storage.fragment->View();
           // GetFullDAG(fragment).GetRoot().Validate(true, false);
           auto& impl = static_cast<CRTP&>(*this);
@@ -94,7 +96,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
 #endif
             applied_moves_count_.fetch_add(1);
           } else {
-            bucket.pop_back();
+            //bucket.pop_back();
           }
 
           return accepted.second;
