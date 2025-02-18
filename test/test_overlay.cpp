@@ -92,9 +92,8 @@ static void test_overlay_mat_view() {
   TestAssert(node_7.GetCladesCount() == 2);
   node_7.SetOverlay<Neighbors>();
   TestAssert(node_7.GetCladesCount() == 2);
-  for (auto child_edge: node_7.GetChildren()) {
-    std::cout << "child " << child_edge.GetChild() << "\n" << std::flush;;
-  }
+  TestAssert(node_7.ContainsChild(overlay_dag.Get(NodeId{1})));
+  TestAssert(node_7.ContainsChild(overlay_dag.Get(NodeId{2})));
 
   // test overlay connectivity (edge Endpoints, node Neighbors)
   auto overlay_edge = overlay_dag.Get(EdgeId{3});
@@ -116,7 +115,7 @@ static void test_overlay_mat_view() {
 
   overlay_old_parent.SetOverlay<Neighbors>();
   overlay_child_sib_1.SetOverlay<Neighbors>();
-  overlay_child_sib_2.SetOverlay<Neighbors>();
+  //overlay_child_sib_2.SetOverlay<Neighbors>();
   overlay_old_parent_edge.SetOverlay<Endpoints>();
   overlay_child_sib_edge_1.SetOverlay<Endpoints>();
   overlay_child_sib_edge_2.SetOverlay<Endpoints>();
