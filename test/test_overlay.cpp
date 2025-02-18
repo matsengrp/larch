@@ -87,6 +87,15 @@ static void test_overlay_mat_view() {
   TestAssert(not overlay_node.GetCompactGenome().empty());
   TestAssert(input_node.GetCompactGenome() != overlay_node.GetCompactGenome());
 
+  // test accessing children after SetOverlay
+  auto node_7 = overlay_dag.Get(NodeId{7});
+  TestAssert(node_7.GetCladesCount() == 2);
+  node_7.SetOverlay<Neighbors>();
+  TestAssert(node_7.GetCladesCount() == 2);
+  for (auto child_edge: node_7.GetChildren()) {
+    std::cout << "child " << child_edge.GetChild() << "\n" << std::flush;;
+  }
+
   // test overlay connectivity (edge Endpoints, node Neighbors)
   auto overlay_edge = overlay_dag.Get(EdgeId{3});
   auto overlay_child = overlay_edge.GetChild();
