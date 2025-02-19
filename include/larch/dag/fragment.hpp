@@ -144,7 +144,24 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
         FragmentExtraStorage<Target>{target, root_node_id}};
 
     auto view = result.View();
-    view.BuildConnections();
+    std::set<NodeId> nodes_set;
+    for (auto node : view.GetNodes()) {
+      nodes_set.insert(node.GetId());
+      node.ClearConnections();
+    }
+    for (auto edge : view.GetEdges()) {
+      if (nodes_set.find(edge.GetChildId()) == nodes_set.end() or
+          nodes_set.find(edge.GetParentId()) == nodes_set.end()) {
+        continue;
+      }
+      Assert(edge.GetParentId().value != NoId && "Edge has no parent");
+      Assert(edge.GetChildId().value != NoId && "Edge has no child");
+      Assert(edge.GetClade().value != NoId && "Edge has no clade index");
+      Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
+      edge.GetParent().AddEdge(edge.GetClade(), edge, true);
+      edge.GetChild().AddEdge(edge.GetClade(), edge, false);
+    }
+    view.BuildRootAndLeafs();
     Assert(view.GetRoot().GetId() == root_node_id);
     return result;
   }
