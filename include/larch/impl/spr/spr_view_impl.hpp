@@ -854,6 +854,12 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     }
   }
   Assert(dag.IsTree());
+std::cout << "\n---------------------------------------------\nMove" << src << " -> " << dst << "\n" << std::flush;
+for (auto edge: dag.GetEdges()) {
+  std::cout << edge << ": " << edge.GetParent() << " -> " << edge.GetChild() << "\n" << std::flush;
+}
+MADAGToDOT(dag, std::cout);
+std::cout << "\n---------------------------------------------\n"<<std::flush;
 
   auto first_src_node = dag.Get(src);
   auto first_dst_node = dag.Get(dst);
