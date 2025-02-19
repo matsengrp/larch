@@ -524,9 +524,11 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
       edge.template SetOverlay<Endpoints>();
       if (parent.IsUA()) {
         edge.Set(parent, child, {0});
+        child.SetSingleParent(edge);
       } else {
         auto clade = edge.GetClade().value;
         edge.Set(parent, child, {clade});
+        child.SetSingleParent(edge);
       }
     }
     node_already_added.insert_or_assign(parent, true);
@@ -947,6 +949,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
         }
         e.Set(src_parent_node, e_child, {clade_ctr});
         src_parent_node.AddEdge({clade_ctr++}, e, true);
+        if (not e_child.template IsOverlaid<Neighbors>()) {
+          e_child.template SetOverlay<Neighbors>();
+        }
+        e_child.SetSingleParent(e);
       }
     }
     if (not new_node.IsAppended()) {
@@ -964,7 +970,9 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     new_node.SetSingleParent(new_edge);
     src_parent_edge.Set(new_node, first_src_node, {0});
     new_node.AddEdge({0}, src_parent_edge, true);
+    first_src_node.SetSingleParent(src_parent_edge);
     dst_parent_edge.Set(new_node, first_dst_node, {1});
+    first_dst_node.SetSingleParent(dst_parent_edge);
     new_node.AddEdge({1}, dst_parent_edge, true);
   } else if (has_unifurcation_after_move) {
     auto src_grandparent = src_parent_node.GetSingleParent().GetParent();
@@ -994,7 +1002,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     }
     std::vector<EdgeId> src_parent_siblings;
     for (auto e_id : src_gp_children) {
-      if (e_id != new_edge.GetId() and //e_id != dst_parent_single_parent and
+      if (e_id != new_edge.GetId() and 
           (e_id != dst_edge)) {
         src_parent_siblings.push_back(e_id);
       }
@@ -1012,6 +1020,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
         }
         e.Set(src_grandparent, e_child, {clade_ctr});
         src_grandparent.AddEdge({clade_ctr++}, e, true);
+        if (not e_child.template IsOverlaid<Neighbors>()) {
+          e_child.template SetOverlay<Neighbors>();
+        }
+        e_child.SetSingleParent(e);
       }
     }
     for (auto e_id : src_sibling_edges) {
@@ -1022,6 +1034,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
       }
       e.Set(src_grandparent, e_child, {clade_ctr});
       src_grandparent.AddEdge({clade_ctr++}, e, true);
+      if (not e_child.template IsOverlaid<Neighbors>()) {
+        e_child.template SetOverlay<Neighbors>();
+      }
+      e_child.SetSingleParent(e);
     }
     if (dst_parent_node != src_grandparent) {
       if (not dst_parent_node.template IsOverlaid<Neighbors>()) {
@@ -1051,6 +1067,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
         }
         e.Set(dst_parent_node, e_child, {clade_ctr});
         dst_parent_node.AddEdge({clade_ctr++}, e, true);
+        if (not e_child.template IsOverlaid<Neighbors>()) {
+          e_child.template SetOverlay<Neighbors>();
+        }
+        e_child.SetSingleParent(e);
       }
     }
     new_node.ClearConnections();
@@ -1059,8 +1079,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     new_node.SetSingleParent(new_edge);
     src_parent_edge.Set(new_node, first_src_node, {0});
     new_node.AddEdge({0}, src_parent_edge, true);
+    first_src_node.SetSingleParent(src_parent_edge);
     dst_parent_edge.Set(new_node, first_dst_node, {1});
     new_node.AddEdge({1}, dst_parent_edge, true);
+    first_dst_node.SetSingleParent(dst_parent_edge);
   } else {
     auto src_grandparent_edge = src_parent_node.GetParentsCount() > 0
                                     ? src_parent_node.GetSingleParent()
@@ -1091,6 +1113,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
       }
       src_sib_edge.Set(src_parent_node, src_sib_node, {src_parent_clade_ctr});
       src_parent_node.AddEdge({src_parent_clade_ctr++}, src_sib_edge, true);
+      if (not src_sib_node.template IsOverlaid<Neighbors>()) {
+        src_sib_node.template SetOverlay<Neighbors>();
+      }
+      src_sib_node.SetSingleParent(src_sib_edge);
     }
     size_t dst_parent_clade_ctr = 0;
     for (auto dst_sib_edge_id : dst_sibling_edges) {
@@ -1101,6 +1127,10 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
       }
       dst_sib_edge.Set(dst_parent_node, dst_sib_node, {dst_parent_clade_ctr});
       dst_parent_node.AddEdge({dst_parent_clade_ctr++}, dst_sib_edge, true);
+      if (not dst_sib_node.template IsOverlaid<Neighbors>()) {
+        dst_sib_node.template SetOverlay<Neighbors>();
+      }
+      dst_sib_node.SetSingleParent(dst_sib_edge);
     }
     if (not new_edge.IsAppended()) {
       if (not new_edge.template IsOverlaid<Endpoints>()) {
@@ -1114,12 +1144,15 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     }
     src_parent_edge.Set(new_node, first_src_node, {0});
     new_node.AddEdge({0}, src_parent_edge, true);
+    first_src_node.SetSingleParent(src_parent_edge);
     dst_parent_edge.Set(new_node, first_dst_node, {1});
     new_node.AddEdge({1}, dst_parent_edge, true);
+    first_dst_node.SetSingleParent(dst_parent_edge);
     new_edge.Set(dst_parent_node, new_node, {dst_parent_clade_ctr});
     dst_parent_node.AddEdge({dst_parent_clade_ctr}, new_edge, true);
     new_node.SetSingleParent(new_edge);
   }
+
   Assert(new_node.GetParentsCount() == 1);
   Assert(dag.GetNodesCount() ==
          (has_unifurcation_after_move ? old_num_nodes : old_num_nodes + 1));
