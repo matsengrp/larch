@@ -36,6 +36,7 @@ struct FeatureMutableView<Connections, CRTP, Tag> {
   void BuildConnections() const;
   void BuildConnectionsRaw() const;
   void BuildRootAndLeafs() const;
+  void BuildRootAndLeafs(NodeId fragment_root) const;
   void AddLeaf(NodeId id) const;
 
   std::map<std::set<NodeId>, std::set<NodeId>> BuildCladeUnionMap() const;

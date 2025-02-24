@@ -46,8 +46,6 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
        &nodes_with_major_allele_set_change](auto& bucket) -> bool {
         std::shared_lock lock{mat_mtx_};
 
-        /* CONDENSING CODE: probably want to change this to an uncondensed storage, once
-         * it's implemented*/
         Assert(sample_mat_storage_ != nullptr);
         CreateMATViewStorage(const_cast<MAT::Tree&>(sample_mat_storage_->View().GetMAT()),
                                                     sample_mat_storage_->View().GetReferenceSequence());
@@ -65,12 +63,10 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         if (storage.spr->View().InitHypotheticalTree(
                 move, nodes_with_major_allele_set_change)) {
           // storage.spr->View().GetRoot().Validate(true);
-Assert(storage.spr->View().Get(NodeId{5}).GetCladesCount() > 0);
           storage.fragment = std::make_unique<FragmentType>(
               collapse_empty_fragment_edges_
                   ? storage.spr->View().MakeFragment()
                   : storage.spr->View().MakeUncollapsedFragment());
-Assert(storage.spr->View().Get(NodeId{5}).GetCladesCount() > 0);
           auto fragment = storage.fragment->View();
           // GetFullDAG(fragment).GetRoot().Validate(true, false);
           auto& impl = static_cast<CRTP&>(*this);

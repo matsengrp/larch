@@ -94,6 +94,44 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs() const {
 }
 
 template <typename CRTP, typename Tag>
+void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs(NodeId fragment_root) const {
+  auto& storage = GetFeatureStorage(this);
+  auto& dag = static_cast<const CRTP&>(*this);
+  storage.root_ = {NoId};
+  storage.leafs_ = {};
+  std::atomic<size_t> root_id{NoId};
+  Reduction<std::vector<NodeId>> leafs{32};
+  SeqForEach(dag.GetNodes() | Transform::GetId(), [&](NodeId nid) {
+    auto node = dag.Get(nid);
+    // for (auto clade : node.GetClades()) {
+    //   Assert(not clade.empty() && "Empty clade");
+    // }
+    if ((node.IsUA()) or (node.GetId() == fragment_root)) {
+      const size_t previous = root_id.exchange(node.GetId().value);
+      if (previous != NoId) {
+        std::cout << "Duplicate root: " << previous << " and " << node.GetId().value
+                  << "\n";
+      }
+      Assert(previous == NoId);
+    }
+    if (node.IsLeaf()) {
+      leafs.AddElement([](std::vector<NodeId>& ls, NodeId id) { ls.push_back(id); },
+                       node);
+    }
+  });
+  Assert(root_id.load() != NoId);
+  storage.root_.value = root_id.load();
+  leafs.GatherAndClear(
+      [&leafs](auto buckets, auto& stor) {
+        for (auto&& bucket : buckets) {
+          stor.leafs_.reserve(leafs.size_approx());
+          stor.leafs_.insert(stor.leafs_.end(), bucket.begin(), bucket.end());
+        }
+      },
+      storage);
+}
+
+template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::AddLeaf(NodeId id) const {
   auto& storage = GetFeatureStorage(this);
   // TODO make leafs ContiguousSet ?

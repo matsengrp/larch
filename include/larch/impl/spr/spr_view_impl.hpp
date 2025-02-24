@@ -508,6 +508,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     auto edge = dag.Get(e);
     auto parent = dag.Get(e).GetParent();
     auto child = dag.Get(e).GetChild();
+    auto clade = edge.GetClade().value;
     if (not child.template IsOverlaid<HypotheticalNode>()) {
       child.template SetOverlay<HypotheticalNode>();
     }
@@ -526,7 +527,6 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
         edge.Set(parent, child, {0});
         child.SetSingleParent(edge);
       } else {
-        auto clade = edge.GetClade().value;
         edge.Set(parent, child, {clade});
         child.SetSingleParent(edge);
       }
@@ -856,38 +856,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
   Assert(not dag.HaveOverlays());
   Assert(dag.IsTree());
 std::cout << "\n--------------------------------------------------------------\nMove " << src << " -> " << dst << "\n" << std::flush;
-Assert(dag.GetNodesCount() == 11);
-Assert(dag.GetEdgesCount() == 10);
-Assert(dag.Get(NodeId{1}).GetCladesCount() == 2);
-Assert(dag.Get(NodeId{2}).GetCladesCount() == 2);
-Assert(dag.Get(NodeId{3}).GetCladesCount() == 0);
-Assert(dag.Get(NodeId{4}).GetCladesCount() == 0);
-Assert(dag.Get(NodeId{5}).GetCladesCount() == 3);
-Assert(dag.Get(NodeId{6}).GetCladesCount() == 0);
-Assert(dag.Get(NodeId{7}).GetCladesCount() == 0);
-Assert(dag.Get(NodeId{8}).GetCladesCount() == 2);
-Assert(dag.Get(NodeId{9}).GetCladesCount() == 0);
-Assert(dag.Get(NodeId{10}).GetCladesCount() == 0);
-
-Assert(dag.Get(NodeId{1}).ContainsChild(NodeId{2}));
-Assert(dag.Get(NodeId{1}).ContainsChild(NodeId{5}));
-Assert(dag.Get(NodeId{2}).ContainsChild(NodeId{3}));
-Assert(dag.Get(NodeId{2}).ContainsChild(NodeId{4}));
-Assert(dag.Get(NodeId{5}).ContainsChild(NodeId{6}));
-Assert(dag.Get(NodeId{5}).ContainsChild(NodeId{7}));
-Assert(dag.Get(NodeId{5}).ContainsChild(NodeId{8}));
-Assert(dag.Get(NodeId{8}).ContainsChild(NodeId{9}));
-Assert(dag.Get(NodeId{8}).ContainsChild(NodeId{10}));
-
-Assert(dag.Get(NodeId{2}).ContainsParent(NodeId{1}));
-Assert(dag.Get(NodeId{5}).ContainsParent(NodeId{1}));
-Assert(dag.Get(NodeId{3}).ContainsParent(NodeId{2}));
-Assert(dag.Get(NodeId{4}).ContainsParent(NodeId{2}));
-Assert(dag.Get(NodeId{6}).ContainsParent(NodeId{5}));
-Assert(dag.Get(NodeId{7}).ContainsParent(NodeId{5}));
-Assert(dag.Get(NodeId{8}).ContainsParent(NodeId{5}));
-Assert(dag.Get(NodeId{9}).ContainsParent(NodeId{8}));
-Assert(dag.Get(NodeId{10}).ContainsParent(NodeId{8}));
 
   auto first_src_node = dag.Get(src);
   auto first_dst_node = dag.Get(dst);

@@ -173,7 +173,7 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
               edge.GetChildId(), 0);
       child_storage.parents_.push_back(edge.GetId());
     }
-    view.BuildRootAndLeafs();
+    view.BuildRootAndLeafs(root_node_id);
     Assert(view.GetRoot().GetId() == root_node_id);
     return result;
   }
