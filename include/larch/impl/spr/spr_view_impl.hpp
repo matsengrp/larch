@@ -854,23 +854,19 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     }
   }
   Assert(dag.IsTree());
-std::cout << "\n---------------------------------------------\nMove" << src << " -> " << dst << "\n" << std::flush;
-for (auto edge: dag.GetEdges()) {
-  std::cout << edge << ": " << edge.GetParent() << " -> " << edge.GetChild() << "\n" << std::flush;
-}
-MADAGToDOT(dag, std::cout);
-std::cout << "\n---------------------------------------------\n"<<std::flush;
 
   auto first_src_node = dag.Get(src);
   auto first_dst_node = dag.Get(dst);
+  auto src_parent_node = first_src_node.GetSingleParent().GetParent();
+  auto dst_parent_node = first_dst_node.GetSingleParent().GetParent();
+  auto src_parent_edge = first_src_node.GetSingleParent();
+  auto dst_parent_edge = first_dst_node.GetSingleParent();
   if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId() or
       first_dst_node.GetSingleParent().GetParent().IsUA()) {
     // no-op
     return {};
   }
 
-  auto src_parent_node = first_src_node.GetSingleParent().GetParent();
-  auto dst_parent_node = first_dst_node.GetSingleParent().GetParent();
   const bool is_sibling_move = src_parent_node.GetId() == dst_parent_node.GetId();
   size_t src_size = 1;
   size_t dst_size = 1;
@@ -889,6 +885,40 @@ std::cout << "\n---------------------------------------------\n"<<std::flush;
   }
   Assert(src_parent_node.GetCladesCount() > 0);
   Assert(dst_parent_node.GetCladesCount() > 0);
+
+
+Assert(dag.GetNodesCount() == 11);
+Assert(dag.GetEdgesCount() == 10);
+Assert(dag.Get(NodeId{1}).GetCladesCount() == 2);
+Assert(dag.Get(NodeId{2}).GetCladesCount() == 2);
+Assert(dag.Get(NodeId{3}).GetCladesCount() == 0);
+Assert(dag.Get(NodeId{4}).GetCladesCount() == 0);
+Assert(dag.Get(NodeId{5}).GetCladesCount() == 3);
+Assert(dag.Get(NodeId{6}).GetCladesCount() == 0);
+Assert(dag.Get(NodeId{7}).GetCladesCount() == 0);
+Assert(dag.Get(NodeId{8}).GetCladesCount() == 2);
+Assert(dag.Get(NodeId{9}).GetCladesCount() == 0);
+Assert(dag.Get(NodeId{10}).GetCladesCount() == 0);
+
+Assert(dag.Get(NodeId{1}).ContainsChild(NodeId{2}));
+Assert(dag.Get(NodeId{1}).ContainsChild(NodeId{5}));
+Assert(dag.Get(NodeId{2}).ContainsChild(NodeId{3}));
+Assert(dag.Get(NodeId{2}).ContainsChild(NodeId{4}));
+Assert(dag.Get(NodeId{5}).ContainsChild(NodeId{6}));
+Assert(dag.Get(NodeId{5}).ContainsChild(NodeId{7}));
+Assert(dag.Get(NodeId{5}).ContainsChild(NodeId{8}));
+Assert(dag.Get(NodeId{8}).ContainsChild(NodeId{9}));
+Assert(dag.Get(NodeId{8}).ContainsChild(NodeId{10}));
+
+Assert(dag.Get(NodeId{2}).ContainsParent(NodeId{1}));
+Assert(dag.Get(NodeId{5}).ContainsParent(NodeId{1}));
+Assert(dag.Get(NodeId{3}).ContainsParent(NodeId{2}));
+Assert(dag.Get(NodeId{4}).ContainsParent(NodeId{2}));
+Assert(dag.Get(NodeId{6}).ContainsParent(NodeId{5}));
+Assert(dag.Get(NodeId{7}).ContainsParent(NodeId{5}));
+Assert(dag.Get(NodeId{8}).ContainsParent(NodeId{5}));
+Assert(dag.Get(NodeId{9}).ContainsParent(NodeId{8}));
+Assert(dag.Get(NodeId{10}).ContainsParent(NodeId{8}));
 
 #ifndef NDEBUG
   const size_t old_num_nodes = dag.GetNodesCount();
@@ -919,8 +949,6 @@ std::cout << "\n---------------------------------------------\n"<<std::flush;
   Assert(src_edge.value != NoId);
   Assert(dst_edge.value != NoId);
 
-  auto src_parent_edge = first_src_node.GetSingleParent();
-  auto dst_parent_edge = first_dst_node.GetSingleParent();
   auto sc = src_parent_edge.GetClade().value;
   auto dc = dst_parent_edge.GetClade().value;
   Assert(not src_parent_edge.template IsOverlaid<Endpoints>());
@@ -929,10 +957,13 @@ std::cout << "\n---------------------------------------------\n"<<std::flush;
   Assert(not dst_parent_edge.template IsOverlaid<Endpoints>());
   dst_parent_edge.template SetOverlay<Endpoints>();
   dst_parent_edge.Set(dst_parent_node, first_dst_node, {dc});
+
   Assert(not first_src_node.template IsOverlaid<Neighbors>());
   first_src_node.template SetOverlay<Neighbors>();
+  first_src_node.SetSingleParent(src_parent_edge);
   Assert(not first_dst_node.template IsOverlaid<Neighbors>());
   first_dst_node.template SetOverlay<Neighbors>();
+  first_dst_node.SetSingleParent(dst_parent_edge);
 
   if (is_sibling_move) {
     auto src_parent_single_parent = src_parent_node.GetParentsCount() > 0
@@ -992,7 +1023,7 @@ std::cout << "\n---------------------------------------------\n"<<std::flush;
 
     std::vector<EdgeId> src_gp_children;
     for (auto c: src_grandparent.GetChildren()) {
-      src_gp_children.push_back(c.GetId());
+      src_gp_children.push_back(c);
     }
     if (not src_grandparent.template IsOverlaid<Neighbors>()) {
       src_grandparent.template SetOverlay<Neighbors>();
@@ -1147,6 +1178,7 @@ std::cout << "\n---------------------------------------------\n"<<std::flush;
       if (not new_node.template IsOverlaid<Neighbors>()) {
         new_node.template SetOverlay<Neighbors>();
       }
+      new_node.ClearConnections();
     }
     src_parent_edge.Set(new_node, first_src_node, {0});
     new_node.AddEdge({0}, src_parent_edge, true);
