@@ -138,25 +138,28 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
                                   std::vector<EdgeId>&& edges, NodeId root_node_id) {
     static_assert(Target::role == Role::View);
 
+    std::set<NodeId> nodes_set{nodes.begin(), nodes.end()};
+    std::vector<EdgeId> edges_set;
+    for (auto edge : edges | Transform::ToEdges(target)) {
+      if (nodes_set.find(edge.GetChildId()) != nodes_set.end() and
+          nodes_set.find(edge.GetParentId()) != nodes_set.end()) {
+        edges_set.push_back(edge.GetId());
+      }
+    }
     FragmentStorage result{
         FragmentElementsContainer<Target, Component::Node>{target, std::move(nodes)},
-        FragmentElementsContainer<Target, Component::Edge>{target, std::move(edges)},
+        FragmentElementsContainer<Target, Component::Edge>{target,
+                                                           std::move(edges_set)},
         FragmentExtraStorage<Target>{target, root_node_id}};
 
     auto view = result.View();
-    std::set<NodeId> nodes_set;
     for (auto node : view.GetNodes()) {
-      nodes_set.insert(node.GetId());
       Neighbors& storage =
           result.GetNodesContainer().template GetFeatureStorage<Neighbors>(node.GetId(),
                                                                            0);
       storage = {};
     }
     for (auto edge : view.GetEdges()) {
-      if (nodes_set.find(edge.GetChildId()) == nodes_set.end() or
-          nodes_set.find(edge.GetParentId()) == nodes_set.end()) {
-        continue;
-      }
       Assert(edge.GetParentId().value != NoId && "Edge has no parent");
       Assert(edge.GetChildId().value != NoId && "Edge has no child");
       Assert(edge.GetClade().value != NoId && "Edge has no clade index");
@@ -169,8 +172,6 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
           result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
               edge.GetChildId(), 0);
       child_storage.parents_.push_back(edge.GetId());
-      // edge.GetParent().AddEdge(edge.GetClade(), edge, true);
-      // edge.GetChild().AddEdge(edge.GetClade(), edge, false);
     }
     view.BuildRootAndLeafs();
     Assert(view.GetRoot().GetId() == root_node_id);
