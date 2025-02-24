@@ -853,6 +853,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
       }
     }
   }
+  Assert(not dag.HaveOverlays());
   Assert(dag.IsTree());
 std::cout << "\n--------------------------------------------------------------\nMove " << src << " -> " << dst << "\n" << std::flush;
 Assert(dag.GetNodesCount() == 11);
