@@ -49,6 +49,8 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         /* CONDENSING CODE: probably want to change this to an uncondensed storage, once
          * it's implemented*/
         Assert(sample_mat_storage_ != nullptr);
+        CreateMATViewStorage(const_cast<MAT::Tree&>(sample_mat_storage_->View().GetMAT()),
+                                                    sample_mat_storage_->View().GetReferenceSequence());
         bucket.push_back(MoveStorage{
             std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
             nullptr});
