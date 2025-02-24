@@ -147,7 +147,10 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
     std::set<NodeId> nodes_set;
     for (auto node : view.GetNodes()) {
       nodes_set.insert(node.GetId());
-      node.ClearConnections();
+      Neighbors& storage =
+          result.GetNodesContainer().template GetFeatureStorage<Neighbors>(node.GetId(),
+                                                                           0);
+      storage = {};
     }
     for (auto edge : view.GetEdges()) {
       if (nodes_set.find(edge.GetChildId()) == nodes_set.end() or
@@ -158,8 +161,16 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
       Assert(edge.GetChildId().value != NoId && "Edge has no child");
       Assert(edge.GetClade().value != NoId && "Edge has no clade index");
       Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
-      edge.GetParent().AddEdge(edge.GetClade(), edge, true);
-      edge.GetChild().AddEdge(edge.GetClade(), edge, false);
+      Neighbors& parent_storage =
+          result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
+              edge.GetParentId(), 0);
+      GetOrInsert(parent_storage.clades_, edge.GetClade()).push_back(edge.GetId());
+      Neighbors& child_storage =
+          result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
+              edge.GetChildId(), 0);
+      child_storage.parents_.push_back(edge.GetId());
+      // edge.GetParent().AddEdge(edge.GetClade(), edge, true);
+      // edge.GetChild().AddEdge(edge.GetClade(), edge, false);
     }
     view.BuildRootAndLeafs();
     Assert(view.GetRoot().GetId() == root_node_id);
