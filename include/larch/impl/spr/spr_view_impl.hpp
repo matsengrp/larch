@@ -887,6 +887,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
   Assert(dst_parent_node.GetCladesCount() > 0);
 
 
+std::cout << "\n--------------------------------------------------------------\nMove " << src << " -> " << dst << "\n" << std::flush;
 Assert(dag.GetNodesCount() == 11);
 Assert(dag.GetEdgesCount() == 10);
 Assert(dag.Get(NodeId{1}).GetCladesCount() == 2);
