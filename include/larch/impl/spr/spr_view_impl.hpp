@@ -854,39 +854,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     }
   }
   Assert(dag.IsTree());
-
-  auto first_src_node = dag.Get(src);
-  auto first_dst_node = dag.Get(dst);
-  auto src_parent_node = first_src_node.GetSingleParent().GetParent();
-  auto dst_parent_node = first_dst_node.GetSingleParent().GetParent();
-  auto src_parent_edge = first_src_node.GetSingleParent();
-  auto dst_parent_edge = first_dst_node.GetSingleParent();
-  if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId() or
-      first_dst_node.GetSingleParent().GetParent().IsUA()) {
-    // no-op
-    return {};
-  }
-
-  const bool is_sibling_move = src_parent_node.GetId() == dst_parent_node.GetId();
-  size_t src_size = 1;
-  size_t dst_size = 1;
-  const bool has_unifurcation_after_move =
-      is_sibling_move ? src_parent_node.GetCladesCount() <= (src_size + dst_size)
-                      : src_parent_node.GetCladesCount() <= (src_size + 1);
-  if ((is_sibling_move and
-       (src_parent_node.GetCladesCount() == (src_size + dst_size))) or
-      src_parent_node.IsTreeRoot() or src_parent_node.IsUA() or
-      (not is_sibling_move and src_parent_node == lca)) {
-    // no-op
-    return {};
-  }
-  if (has_unifurcation_after_move and (first_dst_node == src_parent_node)) {
-    return {};
-  }
-  Assert(src_parent_node.GetCladesCount() > 0);
-  Assert(dst_parent_node.GetCladesCount() > 0);
-
-
 std::cout << "\n--------------------------------------------------------------\nMove " << src << " -> " << dst << "\n" << std::flush;
 Assert(dag.GetNodesCount() == 11);
 Assert(dag.GetEdgesCount() == 10);
@@ -920,6 +887,38 @@ Assert(dag.Get(NodeId{7}).ContainsParent(NodeId{5}));
 Assert(dag.Get(NodeId{8}).ContainsParent(NodeId{5}));
 Assert(dag.Get(NodeId{9}).ContainsParent(NodeId{8}));
 Assert(dag.Get(NodeId{10}).ContainsParent(NodeId{8}));
+
+  auto first_src_node = dag.Get(src);
+  auto first_dst_node = dag.Get(dst);
+  auto src_parent_node = first_src_node.GetSingleParent().GetParent();
+  auto dst_parent_node = first_dst_node.GetSingleParent().GetParent();
+  auto src_parent_edge = first_src_node.GetSingleParent();
+  auto dst_parent_edge = first_dst_node.GetSingleParent();
+  if (first_src_node.IsTreeRoot() or first_src_node.GetId() == first_dst_node.GetId() or
+      first_dst_node.GetSingleParent().GetParent().IsUA()) {
+    // no-op
+    return {};
+  }
+
+  const bool is_sibling_move = src_parent_node.GetId() == dst_parent_node.GetId();
+  size_t src_size = 1;
+  size_t dst_size = 1;
+  const bool has_unifurcation_after_move =
+      is_sibling_move ? src_parent_node.GetCladesCount() <= (src_size + dst_size)
+                      : src_parent_node.GetCladesCount() <= (src_size + 1);
+  if ((is_sibling_move and
+       (src_parent_node.GetCladesCount() == (src_size + dst_size))) or
+      src_parent_node.IsTreeRoot() or src_parent_node.IsUA() or
+      (not is_sibling_move and src_parent_node == lca)) {
+    // no-op
+    return {};
+  }
+  if (has_unifurcation_after_move and (first_dst_node == src_parent_node)) {
+    return {};
+  }
+  Assert(src_parent_node.GetCladesCount() > 0);
+  Assert(dst_parent_node.GetCladesCount() > 0);
+
 
 #ifndef NDEBUG
   const size_t old_num_nodes = dag.GetNodesCount();
