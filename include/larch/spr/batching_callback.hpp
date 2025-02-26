@@ -64,7 +64,12 @@ class BatchingCallback : public Move_Found_Callback {
 
 #if USE_MAT_VIEW
   void SetSample(MAT::Tree& tree, std::string ref_seq) {
-    sample_mat_tree_ = tree.copy_tree();
+
+  auto dag_from_mat = AddMATConversion(Storage::EmptyDefault());
+  dag_from_mat.View().BuildFromMAT(tree, ref_seq);
+  dag_from_mat.View().BuildMAT(sample_mat_tree_);
+
+    //sample_mat_tree_ = tree.copy_tree();
     sample_refseq_ = std::move(ref_seq);
   }
   MAT::Tree sample_mat_tree_;
