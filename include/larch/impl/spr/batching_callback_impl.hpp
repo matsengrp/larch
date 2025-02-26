@@ -46,10 +46,15 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
        &nodes_with_major_allele_set_change](auto& bucket) -> bool {
         std::shared_lock lock{mat_mtx_};
 
-        Assert(sample_mat_tree_ != nullptr);
+#if USE_MAT_VIEW
         bucket.push_back(MoveStorage{
             std::make_unique<SPRType>(AddSPRStorage(CreateMATViewStorage())), nullptr});
-
+#else
+        Assert(sample_mat_storage_ != nullptr);
+        bucket.push_back(MoveStorage{
+            std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
+            nullptr});
+#endif
         auto& storage = bucket.back();
     // storage.spr->View().GetRoot().Validate(true);
 #ifndef NDEBUG
@@ -192,9 +197,8 @@ auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
 #if USE_MAT_VIEW
 template <typename CRTP, typename SampleDAG>
 UncondensedMergeDAGStorage BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage() {
-  Assert(sample_mat_tree_ != nullptr);
   UncondensedMATViewStorage mv_storage;
-  mv_storage.View().SetMAT(sample_mat_tree_);
+  mv_storage.View().SetMAT(std::addressof(sample_mat_tree_));
 
   UncondensedMergeDAGStorage storage =
       UncondensedMergeDAGStorage::Consume(std::move(mv_storage));
@@ -210,7 +214,7 @@ UncondensedMergeDAGStorage BatchingCallback<CRTP, SampleDAG>::CreateMATViewStora
         auto& node_storage = node.template GetFeatureExtraStorage<MATNodeStorage>();
         sample_id = node_storage.node_id_to_sampleid_map_.at(node.GetId());
       } else {
-        sample_id = sample_mat_tree_->get_node_name(node.GetMATNode()->node_id);
+        sample_id = sample_mat_tree_.get_node_name(node.GetMATNode()->node_id);
       }
       Assert(not sample_id.empty());
       auto id_iter = view.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(

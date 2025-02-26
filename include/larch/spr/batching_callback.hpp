@@ -64,9 +64,11 @@ class BatchingCallback : public Move_Found_Callback {
 
 #if USE_MAT_VIEW
   void SetSample(MAT::Tree& tree, std::string ref_seq) {
-    sample_mat_tree_ = std::addressof(tree);
+    sample_mat_tree_ = tree.copy_tree();
     sample_refseq_ = std::move(ref_seq);
   }
+  MAT::Tree sample_mat_tree_;
+  std::string sample_refseq_;
 
   UncondensedMergeDAGStorage CreateMATViewStorage();
 #else
@@ -81,8 +83,6 @@ class BatchingCallback : public Move_Found_Callback {
       std::make_unique<ReassignedStatesStorage>(
           AddMappedNodes(AddMATConversion(MergeDAGStorage<>::EmptyDefault())));
   std::unique_ptr<MATStorage> sample_mat_storage_;
-  MAT::Tree* sample_mat_tree_;
-  std::string sample_refseq_;
 
   std::atomic<size_t> applied_moves_count_;
   std::shared_mutex mat_mtx_;
