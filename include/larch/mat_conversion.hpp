@@ -11,10 +11,12 @@
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wconversion"
+#define LOAD
 #include "src/matOptimize/mutation_annotated_tree.hpp"
 #include "src/matOptimize/check_samples.hpp"
 #include "src/matOptimize/tree_rearrangement_internal.hpp"
 #include "src/matOptimize/Profitable_Moves_Enumerators/Profitable_Moves_Enumerators.hpp"
+#undef LOAD
 #pragma GCC diagnostic pop
 
 namespace Mutation_Annotated_Tree {

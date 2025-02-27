@@ -63,8 +63,39 @@ class BatchingCallback : public Move_Found_Callback {
   };
 
 #if USE_MAT_VIEW
+  static MAT::Node* CopyNode(const MAT::Node* in, MAT::Node* parent) {
+    MAT::Node* out = new MAT::Node{in->node_id};
+    out->branch_length = in->branch_length;
+    out->parent = parent;
+    out->mutations = in->mutations;
+    out->have_masked = in->have_masked;
+    out->children.reserve(in->children.size());
+    for (auto* c : in->children) {
+      out->children.push_back(CopyNode(c, out));
+    }
+    return out;
+  }
+
+  static MAT::Tree CopyTree(const MAT::Tree& in) {
+    MAT::Tree out;
+    out.root = CopyNode(in.root, nullptr);
+    out.node_names = in.node_names;
+    out.node_name_to_idx_map = in.node_name_to_idx_map;
+    out.node_idx = in.node_idx;
+    out.num_nodes = in.num_nodes;
+    out.root_ident = in.root_ident;
+    out.max_level = in.max_level;
+    out.condensed_nodes = in.condensed_nodes;
+    out.curr_internal_node = in.curr_internal_node;
+    out.all_nodes.resize(in.all_nodes.size());
+    for (auto node : out.depth_first_expansion()) {
+      out.all_nodes[node->node_id] = node;
+    }
+    return out;
+  }
+
   void SetSample(MAT::Tree& tree, std::string ref_seq) {
-    sample_mat_tree_ = tree.copy_tree();
+    sample_mat_tree_ = CopyTree(tree);
     sample_refseq_ = std::move(ref_seq);
   }
   MAT::Tree sample_mat_tree_;
