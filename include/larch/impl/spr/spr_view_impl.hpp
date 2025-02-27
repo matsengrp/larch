@@ -856,6 +856,9 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
   Assert(not dag.HaveOverlays());
   Assert(dag.IsTree());
 std::cout << "\n--------------------------------------------------------------\nMove " << src << " -> " << dst << "\n" << std::flush;
+if ((src.value == 7) and (dst.value == 6)) {
+MADAGToDOT(dag, std::cout);
+}
 
   auto first_src_node = dag.Get(src);
   auto first_dst_node = dag.Get(dst);
@@ -918,6 +921,11 @@ std::cout << "\n--------------------------------------------------------------\n
   Assert(src_edge.value != NoId);
   Assert(dst_edge.value != NoId);
 
+  Assert(not first_src_node.template IsOverlaid<Neighbors>());
+  first_src_node.template SetOverlay<Neighbors>();
+if ((src.value == 7) and (dst.value == 6)) {
+MADAGToDOT(dag, std::cout);
+}
   auto sc = src_parent_edge.GetClade().value;
   auto dc = dst_parent_edge.GetClade().value;
   Assert(not src_parent_edge.template IsOverlaid<Endpoints>());
@@ -927,8 +935,6 @@ std::cout << "\n--------------------------------------------------------------\n
   dst_parent_edge.template SetOverlay<Endpoints>();
   dst_parent_edge.Set(dst_parent_node, first_dst_node, {dc});
 
-  Assert(not first_src_node.template IsOverlaid<Neighbors>());
-  first_src_node.template SetOverlay<Neighbors>();
   first_src_node.SetSingleParent(src_parent_edge);
   Assert(not first_dst_node.template IsOverlaid<Neighbors>());
   first_dst_node.template SetOverlay<Neighbors>();
@@ -1165,6 +1171,10 @@ std::cout << "\n--------------------------------------------------------------\n
          (has_unifurcation_after_move ? old_num_nodes : old_num_nodes + 1));
   Assert(dag.GetEdgesCount() ==
          (has_unifurcation_after_move ? old_num_edges : old_num_edges + 1));
+if ((src.value == 7) and (dst.value == 6)) {
+MADAGToDOT(dag, std::cout);
+}
+std::cout << "\n--------------------------------------------------------------\nend logic for Move " << src << " -> " << dst << "\n" << std::flush;
   return {new_node, has_unifurcation_after_move};
 }
 
