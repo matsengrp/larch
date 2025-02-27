@@ -19,8 +19,6 @@
 #include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
 
-#define USE_MAT_VIEW 1
-
 template <typename T>
 struct type_identity {
   using type = T;

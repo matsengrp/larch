@@ -936,7 +936,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     auto dag = dag_edge.GetDAG();
     auto& mat = *dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>()
                      .mat_tree_;
-    Assert(id.value == MV_UA_NODE_ID or id.value < mat.get_size_upper());
+    Assert((id.value == MV_UA_NODE_ID) or (id.value < mat.get_size_upper()));
     MAT::Node* mat_node = mat.get_node(id.value);
 
     bool is_ua =

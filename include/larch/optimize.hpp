@@ -195,6 +195,8 @@ class Node {
     }
     delete this;
   }
+  int branch_length = {};
+  bool have_masked = {};
 };
 
 static size_t level_helper(const Node* node) {
@@ -252,10 +254,7 @@ class Tree {
     }
     return ret;
   }
-  size_t get_max_level() const {
-    size_t max_level = level_helper(root);
-    return max_level;
-  }
+  size_t get_max_level() const { return level_helper(root); }
   std::vector<Node*> depth_first_expansion(Node* node = nullptr) const {
     std::vector<Node*> traversal;
     if (node == NULL) {
@@ -366,6 +365,9 @@ class Tree {
   }
   void condense_leaves(std::vector<std::string> = std::vector<std::string>{}) {}
   void uncondense_leaves() {}
+  size_t root_ident = {};
+  size_t max_level = {};
+  size_t curr_internal_node = {};
 };
 
 inline void save_mutation_annotated_tree(Mutation_Annotated_Tree::Tree tree,

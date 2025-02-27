@@ -12,6 +12,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
 option(USE_USHER "Use matOptimize" yes)
+option(USE_MAT_VIEW "Use MATView" yes)
 
 if(USE_USHER)
     set(TBB_VERSION "2019_U9")
@@ -51,6 +52,7 @@ else()
 endif()
 
 include(protobuf.cmake)
+# find_package(Protobuf REQUIRED)
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -79,6 +81,7 @@ ExternalProject_Add(range-v3
   GIT_TAG 0.12.0
   GIT_SHALLOW true
   GIT_PROGRESS true
+  GIT_SUBMODULES ""
   UPDATE_DISCONNECTED true
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/range-v3/install -DCMAKE_BUILD_TYPE=Release -DRANGE_V3_DOCS=OFF -DRANGE_V3_TESTS=OFF -DRANGE_V3_EXAMPLES=OFF -DRANGE_V3_PERF=OFF -DRANGE_V3_HEADER_CHECKS=OFF
   PREFIX range-v3
@@ -108,7 +111,7 @@ add_custom_target(generate_version_h ALL
 
 find_package(ZLIB)
 
-set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument -ftemplate-backtrace-limit=0)
+set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument -Wno-deprecated-declarations -Wno-unreachable-code-loop-increment -Wno-unneeded-internal-declaration -Wno-sign-conversion -Wno-braced-scalar-init -Wno-c++20-extensions -Wno-terminate -Wno-inaccessible-base -ftemplate-backtrace-limit=0)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   list(APPEND STRICT_WARNINGS -Wcast-align=strict)
@@ -123,6 +126,10 @@ function(larch_compile_opts PRODUCT)
 
   if(${USE_USHER})
     target_compile_options(${PRODUCT} PUBLIC -DUSE_USHER)
+  endif()
+
+  if(${USE_MAT_VIEW})
+    target_compile_options(${PRODUCT} PUBLIC -DUSE_MAT_VIEW)
   endif()
 
   if(${USE_ASAN})
