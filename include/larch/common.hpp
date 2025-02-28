@@ -19,6 +19,8 @@
 #include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
 
+#define MV_UA_NODE_ID 100000
+
 template <typename T>
 struct type_identity {
   using type = T;

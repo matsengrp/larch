@@ -2,8 +2,6 @@
 
 #include "larch/mat_conversion.hpp"
 
-#define MV_UA_NODE_ID 100000
-
 template <typename DAGStorageType, typename DAGViewType>
 struct CondensedViewBase : DefaultViewBase<DAGStorageType, DAGViewType> {
   static constexpr inline bool is_condensed = true;
@@ -726,6 +724,7 @@ struct ExtraFeatureStorage<MATEdgeStorage> {
   size_t condensed_nodes_count_ = 0;
   std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
   std::function<const Endpoints*(EdgeId)> overlay_access_;
+  std::function<const EdgeMutations*(EdgeId)> overlay_access_mutations_;
 };
 
 template <typename CRTP, typename Tag>
@@ -898,6 +897,10 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   bool IsLeaf() const { return GetChild().IsLeaf(); }
 
   const EdgeMutations& GetEdgeMutations() const {
+    auto* overlaid = get_overlaid_mutations(static_cast<const CRTP&>(*this));
+    if (overlaid != nullptr) {
+      return *overlaid;
+    }
     auto [dag_edge, mat, mat_node, is_ua] = access();
     auto& storage = dag_edge.template GetFeatureStorage<MATEdgeStorage>();
     auto& id_storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
@@ -963,16 +966,28 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     }
     return nullptr;
   }
+
+  template <typename Edge>
+  const EdgeMutations* get_overlaid_mutations(Edge dag_edge) const {
+    auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+    std::unique_lock lock{*storage.mtx_};
+    if (storage.overlay_access_mutations_) {
+      return storage.overlay_access_mutations_(dag_edge.GetId());
+    }
+    return nullptr;
+  }
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {
   void SetOverlayAccess(
-      std::function<const Endpoints*(EdgeId)>&& overlay_access) const {
+      std::function<const Endpoints*(EdgeId)>&& overlay_access_endpoints,
+      std::function<const EdgeMutations*(EdgeId)>&& overlay_access_mutations) const {
     auto& dag_edge = static_cast<const CRTP&>(*this);
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
     std::unique_lock lock{*storage.mtx_};
-    storage.overlay_access_ = std::move(overlay_access);
+    storage.overlay_access_ = std::move(overlay_access_endpoints);
+    storage.overlay_access_mutations_ = std::move(overlay_access_mutations);
   }
 
   void Set(NodeId parent, NodeId child, CladeIdx clade) const {
@@ -1035,7 +1050,11 @@ struct MATElementsContainerBase {
 
   template <typename VT>
   Id<C> GetNextAvailableId() const {
-    return {GetCount<VT>()};
+    std::size_t result = GetCount<VT>();
+    while (ContainsId<VT>({result})) {
+      ++result;
+    }
+    return {result};
   }
 
   template <typename VT>

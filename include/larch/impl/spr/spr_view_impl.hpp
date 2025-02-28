@@ -923,9 +923,9 @@ MADAGToDOT(dag, std::cout);
 
   Assert(not first_src_node.template IsOverlaid<Neighbors>());
   first_src_node.template SetOverlay<Neighbors>();
-if ((src.value == 7) and (dst.value == 6)) {
-MADAGToDOT(dag, std::cout);
-}
+// if ((src.value == 7) and (dst.value == 6)) {
+// MADAGToDOT(dag, std::cout);
+// }
   auto sc = src_parent_edge.GetClade().value;
   auto dc = dst_parent_edge.GetClade().value;
   Assert(not src_parent_edge.template IsOverlaid<Endpoints>());

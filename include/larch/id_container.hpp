@@ -24,7 +24,7 @@ class IdContainer {
 
  private:
   static constexpr auto storage_type_helper = [] {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       if constexpr (std::is_trivially_copyable_v<T>) {
         return type_identity<std::vector<T>>{};
       } else {
@@ -89,7 +89,7 @@ class IdContainer {
   }
 
   std::pair<iterator, bool> insert(value_type&& value) {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       bool inserted = value.first.value >= data_.size();
       T& val = this->operator[](value.first);
       val = std::forward<T>(value.second);
@@ -105,7 +105,7 @@ class IdContainer {
   }
 
   T& operator[](Id key) {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       if (key.value >= data_.size()) {
         data_.resize(key.value + 1);
       }
@@ -116,7 +116,7 @@ class IdContainer {
   }
 
   const T& at(Id key) const {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       return data_.at(key.value);
     } else {
       return data_[key];
@@ -124,14 +124,40 @@ class IdContainer {
   }
 
   T& at(Id key) {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       return data_.at(key.value);
     } else {
       return data_[key];
     }
   }
 
-  bool Contains(Id key) const { return data_.find(key) != data_.end(); }
+  bool Contains(Id key) const {
+    if constexpr (continuity == IdContinuity::Dense) {
+      return key.value < data_.size();
+    } else {
+      return data_.find(key) != data_.end();
+    }
+  }
+
+  Id GetNextAvailableId() const {
+    if constexpr (continuity == IdContinuity::Dense) {
+      return {data_.size()};
+    } else if constexpr (ordering == Ordering::Ordered) {
+      if (data_.empty()) {
+        return {0};
+      }
+      return {data_.back().first.value + 1};
+    } else {
+      auto keys = data_ | ranges::views::keys | ranges::views::filter([](auto& i) {
+                    return i.value != MV_UA_NODE_ID;
+                  });
+      auto result = ranges::max_element(keys);
+      if (result == keys.end()) {
+        return {0};
+      }
+      return {result->first.value + 1};
+    }
+  }
 
   void Union(const IdContainer& other) { return data_.Union(other); }
 
@@ -144,7 +170,7 @@ class IdContainer {
   }
 
   void resize(size_t size) {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       data_.resize(size);
     } else {
       data_.reserve(size);
@@ -152,7 +178,7 @@ class IdContainer {
   }
 
   void push_back(T&& value) {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       data_.push_back(std::forward<T>(value));
     } else {
       Fail("Can't pushe_back on sparse IDs");
@@ -160,7 +186,7 @@ class IdContainer {
   }
 
   T* At(Id key) {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       if (key.value >= data_.size()) {
         return nullptr;
       }
@@ -175,7 +201,7 @@ class IdContainer {
   }
 
   const T* At(Id key) const {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       if (key.value >= data_.size()) {
         return nullptr;
       }

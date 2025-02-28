@@ -2,6 +2,8 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+class EdgeMutations;
+
 struct Overlay {};
 
 template <typename CRTP, typename Tag>
