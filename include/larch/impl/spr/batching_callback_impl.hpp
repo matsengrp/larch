@@ -140,19 +140,20 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
     });
     std::unique_lock lock{merge_mtx_};
     if (not all.empty()) {
-//      merge_.AddDAGs(
-//          all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
-
+      merge_.AddDAGs(
+          all | ranges::views::transform([](auto& i) { return i.spr->View(); }));
+/*
 std::vector<size_t> idxs;
 idxs.resize(all.size());
 std::iota(idxs.begin(), idxs.end(), 0);
 for (auto i : idxs) {
 std::cout << "merging\n" << std::flush;
-MADAGToDOT(all.at(i).fragment->View(), std::cout);
-  merge_.AddDAG(all.at(i).fragment->View());
+MADAGToDOT(all.at(i).spr->View(), std::cout);
+  merge_.AddDAG(all.at(i).spr->View());
 std::cout << "merge:\n" << std::flush;
 MADAGToDOT(merge_.GetResult(), std::cout);
 }
+*/
 
     }
     merge_.AddDAGs(std::vector{reassigned_states});
