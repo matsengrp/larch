@@ -60,16 +60,15 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   auto id = element_view.GetId();
   const auto& storage = element_view.GetDAG().GetStorage().GetTargetStorage();
 
-  if constexpr (IsMATView<CRTP> and std::is_same_v<decltype(id), EdgeId> and
-                std::is_same_v<F, Endpoints>) {
+  if constexpr (IsMATView<CRTP> and std::is_same_v<decltype(id), EdgeId>) {
     auto dag = element_view.GetDAG();
     element_view.SetOverlayAccess(
         [&storage, dag](EdgeId eid) -> const Endpoints* {
-          if (not dag.Get(eid).template IsOverlaid<F>()) {
+          if (not dag.Get(eid).template IsOverlaid<Endpoints>()) {
             return nullptr;
           }
           return std::addressof(
-              storage.template GetFeatureStorageImpl<F>(storage, eid));
+              storage.template GetFeatureStorageImpl<Endpoints>(storage, eid));
         },
         [&storage, dag](EdgeId eid) -> const EdgeMutations* {
           if constexpr (CRTP::template contains_feature<EdgeMutations>) {

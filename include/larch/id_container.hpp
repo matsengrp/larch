@@ -151,7 +151,7 @@ class IdContainer {
       auto keys = data_ | ranges::views::keys | ranges::views::filter([](auto& i) {
                     return i.value != MV_UA_NODE_ID;
                   });
-      auto result = ranges::max_element(keys);
+      auto result = ranges::max_element(keys);  // TODO linear search
       if (result == keys.end()) {
         return {0};
       }

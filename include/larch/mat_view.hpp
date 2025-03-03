@@ -1009,7 +1009,7 @@ struct MATElementsContainerBase {
       std::conditional_t<C == Component::Node, MATNodeStorage, MATEdgeStorage>;
   using FeatureTypes =
       std::conditional_t<C == Component::Node, std::tuple<ElementStorageT, Neighbors>,
-                         std::tuple<ElementStorageT, Endpoints>>;
+                         std::tuple<ElementStorageT, Endpoints, EdgeMutations>>;
   using AllFeatureTypes = FeatureTypes;
 
   static constexpr IdContinuity id_continuity = IdContinuity::Sparse;
@@ -1051,7 +1051,7 @@ struct MATElementsContainerBase {
   template <typename VT>
   Id<C> GetNextAvailableId() const {
     std::size_t result = GetCount<VT>();
-    while (ContainsId<VT>({result})) {
+    while (ContainsId<VT>({result})) {  // TODO linear search
       ++result;
     }
     return {result};
