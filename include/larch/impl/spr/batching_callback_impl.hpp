@@ -62,6 +62,9 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
           Assert(i.HaveSampleId());
         }
 #endif
+//std::cout << "storage.spr->View() looks like this:\n" << std::flush;
+//MADAGToDOT(storage.spr->View(), std::cout);
+//std::cout << "finished printing storage.spr->View()\n" << std::flush;
         if (storage.spr->View().InitHypotheticalTree(
                 move, nodes_with_major_allele_set_change)) {
           // storage.spr->View().GetRoot().Validate(true);
@@ -137,11 +140,29 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
     });
     std::unique_lock lock{merge_mtx_};
     if (not all.empty()) {
-      merge_.AddDAGs(
-          all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
+//      merge_.AddDAGs(
+//          all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
+
+std::vector<size_t> idxs;
+idxs.resize(all.size());
+std::iota(idxs.begin(), idxs.end(), 0);
+for (auto i : idxs) {
+std::cout << "merging\n" << std::flush;
+MADAGToDOT(all.at(i).fragment->View(), std::cout);
+  merge_.AddDAG(all.at(i).fragment->View());
+std::cout << "merge:\n" << std::flush;
+MADAGToDOT(merge_.GetResult(), std::cout);
+}
+
     }
     merge_.AddDAGs(std::vector{reassigned_states});
     // merge_.GetResult().GetRoot().Validate(true, true);
+
+std::cout << "reassigned_states_storage is built as:\n" << std::flush;
+MADAGToDOT(reassigned_states, std::cout);
+std::cout << std::flush;
+std::cout << "merge:\n" << std::flush;
+MADAGToDOT(merge_.GetResult(), std::cout);
   }
   {
     std::unique_lock lock{mat_mtx_};
