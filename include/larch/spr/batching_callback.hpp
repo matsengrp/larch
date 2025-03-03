@@ -17,7 +17,7 @@ class BatchingCallback : public Move_Found_Callback {
   virtual ~BatchingCallback() {
     auto lock = WriteLock(mat_mtx_);
 #if USE_MAT_VIEW
-// TODO
+    sample_mat_tree_.delete_nodes();
 #else
     if (sample_mat_storage_ != nullptr) {
       sample_mat_storage_->View().GetMutableMAT().delete_nodes();
@@ -95,6 +95,7 @@ class BatchingCallback : public Move_Found_Callback {
   }
 
   void SetSample(MAT::Tree& tree, std::string ref_seq) {
+    sample_mat_tree_.delete_nodes();
     sample_mat_tree_ = CopyTree(tree);
     sample_refseq_ = std::move(ref_seq);
   }

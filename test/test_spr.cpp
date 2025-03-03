@@ -36,10 +36,14 @@ struct Test_Move_Found_Callback
     std::ignore = nodes_with_major_allele_set_change;
     std::ignore = best_score_change;
     for (auto hypothetical_node : fragment.GetNodes()) {
-      std::cout << "in OnMove, node " << hypothetical_node << " has " << hypothetical_node.GetCladesCount() << " children\n" << std::flush;
+      std::cout << "in OnMove, node " << hypothetical_node << " has "
+                << hypothetical_node.GetCladesCount() << " children\n"
+                << std::flush;
     }
     for (auto node : spr.GetNodes()) {
-      std::cout << "in OnMove, node " << node << " has " << node.GetCladesCount() << " children\n" << std::flush;
+      std::cout << "in OnMove, node " << node << " has " << node.GetCladesCount()
+                << " children\n"
+                << std::flush;
     }
     // if (moves_count_.fetch_add(1) > 100) {
     //   print_peak_mem();
@@ -100,6 +104,7 @@ static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
     optimized_dags.back().first.View().RecomputeCompactGenomes();
     merge.AddDAGs(std::vector{optimized_dags.back().first.View()},
                   optimized_dags.back().first.View().GetRoot());
+    mat.delete_nodes();
   }
 }
 
