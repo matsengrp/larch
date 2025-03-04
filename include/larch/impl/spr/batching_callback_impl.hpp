@@ -138,8 +138,21 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
     });
     std::unique_lock lock{merge_mtx_};
     if (not all.empty()) {
+      auto orig_num_leafs = merge_.GetResult().GetLeafsCount();
       merge_.AddDAGs(
           all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
+
+      // FOR DEBUGGING: alternative "serialized" merging of fragments to check them
+      //std::vector<size_t> idxs;
+      //idxs.resize(all.size());
+      //std::iota(idxs.begin(), idxs.end(), 0);
+      //for (auto i: idxs) {
+      //  MADAGToDOT(all.at(i).fragment->View(), std::cout);
+      //  merge_.AddDAG(all.at(i).fragment->View());
+      //  MADAGToDOT(merge_.GetResult(), std::cout);
+      //}
+
+      Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
     }
     merge_.AddDAGs(std::vector{reassigned_states});
     // merge_.GetResult().GetRoot().Validate(true, true);
