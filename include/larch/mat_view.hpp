@@ -66,6 +66,7 @@ struct ExtraFeatureStorage<MATNodeStorage> {
   size_t condensed_nodes_count_ = 0;
   std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
   std::function<const Neighbors*(NodeId)> overlay_access_;
+  size_t max_id_ = 0;
 };
 
 template <typename CRTP>
@@ -151,6 +152,15 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
     edge_storage.sampleid_to_mat_node_id_map_ =
         node_storage.sampleid_to_mat_node_id_map_;
     edge_storage.condensed_nodes_count_ = node_storage.condensed_nodes_count_;
+
+    size_t max_id = 0;
+    for (auto* i : mat->depth_first_expansion()) {
+      if (i->node_id > max_id) {
+        max_id = i->node_id;
+      }
+    }
+    node_storage.max_id_ = max_id;
+    edge_storage.max_id_ = max_id;
   }
 };
 
@@ -729,6 +739,7 @@ struct ExtraFeatureStorage<MATEdgeStorage> {
   std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
   std::function<const Endpoints*(EdgeId)> overlay_access_;
   std::function<const EdgeMutations*(EdgeId)> overlay_access_mutations_;
+  size_t max_id_ = 0;
 };
 
 template <typename CRTP, typename Tag>
@@ -1126,7 +1137,7 @@ struct MATElementsContainerBase {
 
   template <typename VT>
   auto All() const {
-    size_t iota_max = GetNextAvailableId<VT>().value + 5;
+    size_t iota_max = extra_storage_.max_id_ + 2;
     // getcount returns the number of nodes/edges in the tree.
     // if view is condensed, we need to check all possible node ids,
     // which means checking the max number of nodes, condensed or not.
@@ -1137,7 +1148,6 @@ struct MATElementsContainerBase {
       iota_max += extra_storage_.condensed_nodes_count_;
     }
     if constexpr (C == Component::Node) {
-      std::cout << "All nodes(): iota_max=" << iota_max << "\n";
       return ranges::views::iota(size_t{0}, iota_max) |
              ranges::views::transform([](size_t i) -> size_t {
                if (i == 0) {
@@ -1155,7 +1165,6 @@ struct MATElementsContainerBase {
                              i == extra_storage_.ua_node_id_.value or
                              (extra_storage_.node_id_to_sampleid_map_.find(NodeId{i}) !=
                               extra_storage_.node_id_to_sampleid_map_.end());
-               std::cout << "  Filter " << i << " : " << result << "\n";
                return result;
              }) |
              ranges::views::transform([](size_t i) -> NodeId { return {i}; });

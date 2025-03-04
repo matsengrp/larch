@@ -63,9 +63,6 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
           Assert(i.HaveSampleId());
         }
 #endif
-//std::cout << "storage.spr->View() looks like this:\n" << std::flush;
-//MADAGToDOT(storage.spr->View(), std::cout);
-//std::cout << "finished printing storage.spr->View()\n" << std::flush;
         if (storage.spr->View().InitHypotheticalTree(
                 move, nodes_with_major_allele_set_change)) {
           // storage.spr->View().GetRoot().Validate(true);
@@ -142,29 +139,10 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
     std::unique_lock lock{merge_mtx_};
     if (not all.empty()) {
       merge_.AddDAGs(
-          all | ranges::views::transform([](auto& i) { return i.spr->View(); }));
-/*
-std::vector<size_t> idxs;
-idxs.resize(all.size());
-std::iota(idxs.begin(), idxs.end(), 0);
-for (auto i : idxs) {
-std::cout << "merging\n" << std::flush;
-MADAGToDOT(all.at(i).spr->View(), std::cout);
-  merge_.AddDAG(all.at(i).spr->View());
-std::cout << "merge:\n" << std::flush;
-MADAGToDOT(merge_.GetResult(), std::cout);
-}
-*/
-
+          all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
     }
     merge_.AddDAGs(std::vector{reassigned_states});
     // merge_.GetResult().GetRoot().Validate(true, true);
-
-std::cout << "reassigned_states_storage is built as:\n" << std::flush;
-MADAGToDOT(reassigned_states, std::cout);
-std::cout << std::flush;
-std::cout << "merge:\n" << std::flush;
-MADAGToDOT(merge_.GetResult(), std::cout);
   }
   {
     std::unique_lock lock{mat_mtx_};
@@ -222,10 +200,10 @@ template <typename CRTP, typename SampleDAG>
 UncondensedMergeDAGStorage BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage() {
   UncondensedMATViewStorage mv_storage;
   mv_storage.View().SetMAT(std::addressof(sample_mat_tree_));
-  mv_storage.View().BuildRootAndLeafs();
+  // mv_storage.View().BuildRootAndLeafs();
   // MADAGToDOT(mv_storage.View(), std::cout);
-  Assert(mv_storage.View().GetRoot().GetId().value == MV_UA_NODE_ID);
-  mv_storage.View().GetRoot().Validate(true, false);
+  // Assert(mv_storage.View().GetRoot().GetId().value == MV_UA_NODE_ID);
+  // mv_storage.View().GetRoot().Validate(true, false);
 
   UncondensedMergeDAGStorage storage =
       UncondensedMergeDAGStorage::Consume(std::move(mv_storage));
