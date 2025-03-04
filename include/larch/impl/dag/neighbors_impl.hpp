@@ -162,7 +162,8 @@ struct NeighborsValidator {
 };
 
 template <typename Node, typename StorageValidator>
-void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] StorageValidator&& storage,
+void ValidateImpl([[maybe_unused]] Node node,
+                  [[maybe_unused]] StorageValidator&& storage,
                   [[maybe_unused]] bool recursive, [[maybe_unused]] bool allow_dag) {
 #ifndef NDEBUG
   auto dag = node.GetDAG();
@@ -176,9 +177,7 @@ void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] StorageValidator&
     }
     Assert(children_count != 1);
   }
-#ifndef NDEBUG
   ContiguousSet<std::string> sample_ids;
-#endif
   if (node.IsLeaf()) {
     Assert(storage.CladesRange().empty());
     using NodeT = std::remove_reference_t<decltype(node)>;
@@ -188,9 +187,7 @@ void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] StorageValidator&
                                                 decltype(dag.GetStorage())>>,
                                             FragmentStorage>) {
         Assert(node.HaveSampleId());
-#ifndef NDEBUG
         Assert(sample_ids.insert(node.GetSampleId().value()).second);
-#endif
       }
     }
   }
@@ -211,6 +208,8 @@ void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] StorageValidator&
                                std::to_string(edge.GetChildId().value) +
                                ", should be " + std::to_string(node.GetId().value)};
     }
+  } else {
+    Assert(node.IsUA());
   }
   CladeIdx cidx{0};
   for (auto&& clade : storage.CladesRange()) {

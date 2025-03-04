@@ -22,6 +22,7 @@ CladeIdx EdgeLabel::ComputeCladeIdx() const {
     }
     ++result.value;
   }
+  Fail("Can't compute clade index");
   return {};
 }
 

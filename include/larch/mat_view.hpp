@@ -521,13 +521,17 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     }
     if (mat_node == nullptr) {
       auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
+#ifndef NDEBUG
       auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_node.GetId());
       Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
+#endif
       auto condensed_mat_node_str =
           storage.node_id_to_sampleid_map_.at(dag_node.GetId());
+#ifndef NDEBUG
       auto condensed_mat_node_iter =
           storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
       Assert(condensed_mat_node_iter != storage.reversed_condensed_nodes_.end());
+#endif
       auto& condensed_mat_node =
           storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
       Assert(condensed_mat_node->parent != nullptr);
@@ -1122,7 +1126,7 @@ struct MATElementsContainerBase {
 
   template <typename VT>
   auto All() const {
-    size_t iota_max = GetCount<VT>() + 1;
+    size_t iota_max = GetNextAvailableId<VT>().value + 5;
     // getcount returns the number of nodes/edges in the tree.
     // if view is condensed, we need to check all possible node ids,
     // which means checking the max number of nodes, condensed or not.
@@ -1133,6 +1137,7 @@ struct MATElementsContainerBase {
       iota_max += extra_storage_.condensed_nodes_count_;
     }
     if constexpr (C == Component::Node) {
+      std::cout << "All nodes(): iota_max=" << iota_max << "\n";
       return ranges::views::iota(size_t{0}, iota_max) |
              ranges::views::transform([](size_t i) -> size_t {
                if (i == 0) {
@@ -1146,10 +1151,12 @@ struct MATElementsContainerBase {
                  return GetMAT().get_node(i) != nullptr or
                         i == extra_storage_.ua_node_id_.value;
                }
-               return GetMAT().get_node(i) != nullptr or
-                      i == extra_storage_.ua_node_id_.value or
-                      (extra_storage_.node_id_to_sampleid_map_.find(NodeId{i}) !=
-                       extra_storage_.node_id_to_sampleid_map_.end());
+               bool result = GetMAT().get_node(i) != nullptr or
+                             i == extra_storage_.ua_node_id_.value or
+                             (extra_storage_.node_id_to_sampleid_map_.find(NodeId{i}) !=
+                              extra_storage_.node_id_to_sampleid_map_.end());
+               std::cout << "  Filter " << i << " : " << result << "\n";
+               return result;
              }) |
              ranges::views::transform([](size_t i) -> NodeId { return {i}; });
     } else {

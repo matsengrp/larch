@@ -2,6 +2,8 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+#include "larch/parallel/reduction.hpp"
+
 template <typename Target, Component C>
 struct FragmentElementsContainer {
   static_assert(Target::role == Role::View);
@@ -173,7 +175,39 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
               edge.GetChildId(), 0);
       child_storage.parents_.push_back(edge.GetId());
     }
-    view.BuildRootAndLeafs(root_node_id);
+    Connections& storage = result.template GetFeatureStorage<Connections>();
+    storage.root_ = {NoId};
+    storage.leafs_ = {};
+    std::atomic<size_t> root_id{NoId};
+    Reduction<std::vector<NodeId>> leafs{32};
+    SeqForEach(view.GetNodes() | Transform::GetId(), [&](NodeId nid) {
+      auto node = view.Get(nid);
+      // for (auto clade : node.GetClades()) {
+      //   Assert(not clade.empty() && "Empty clade");
+      // }
+      if ((node.IsUA()) or (node.GetId() == root_node_id)) {
+        const size_t previous = root_id.exchange(node.GetId().value);
+        if (previous != NoId) {
+          std::cout << "Duplicate root: " << previous << " and " << node.GetId().value
+                    << "\n";
+        }
+        Assert(previous == NoId);
+      }
+      if (node.IsLeaf()) {
+        leafs.AddElement([](std::vector<NodeId>& ls, NodeId id) { ls.push_back(id); },
+                         node);
+      }
+    });
+    Assert(root_id.load() != NoId);
+    storage.root_.value = root_id.load();
+    leafs.GatherAndClear(
+        [&leafs](auto buckets, auto& stor) {
+          for (auto&& bucket : buckets) {
+            stor.leafs_.reserve(leafs.size_approx());
+            stor.leafs_.insert(stor.leafs_.end(), bucket.begin(), bucket.end());
+          }
+        },
+        storage);
     Assert(view.GetRoot().GetId() == root_node_id);
     return result;
   }

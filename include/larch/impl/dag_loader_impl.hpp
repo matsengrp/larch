@@ -234,11 +234,13 @@ static std::string CompactGenomeToString(Node node) {
   //   result += " [X]";
   // }
   result += "\\n";
-  size_t count = 0;
-  for (auto [pos, base] : node.Const().GetCompactGenome()) {
-    result += std::to_string(pos.value);
-    result += base;
-    result += ++count % 3 == 0 ? "\\n" : " ";
+  if constexpr (decltype(node)::template contains_feature<CompactGenome>) {
+    size_t count = 0;
+    for (auto [pos, base] : node.Const().GetCompactGenome()) {
+      result += std::to_string(pos.value);
+      result += base;
+      result += ++count % 3 == 0 ? "\\n" : " ";
+    }
   }
   return result;
 }

@@ -56,6 +56,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
             nullptr});
 #endif
         auto& storage = bucket.back();
+    // MADAGToDOT(storage.spr->View(), std::cout);
     // storage.spr->View().GetRoot().Validate(true);
 #ifndef NDEBUG
         for (auto i : storage.spr->View().Const().GetLeafs()) {
@@ -199,6 +200,10 @@ template <typename CRTP, typename SampleDAG>
 UncondensedMergeDAGStorage BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage() {
   UncondensedMATViewStorage mv_storage;
   mv_storage.View().SetMAT(std::addressof(sample_mat_tree_));
+  mv_storage.View().BuildRootAndLeafs();
+  // MADAGToDOT(mv_storage.View(), std::cout);
+  Assert(mv_storage.View().GetRoot().GetId().value == MV_UA_NODE_ID);
+  mv_storage.View().GetRoot().Validate(true, false);
 
   UncondensedMergeDAGStorage storage =
       UncondensedMergeDAGStorage::Consume(std::move(mv_storage));
