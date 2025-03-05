@@ -223,18 +223,18 @@ FragmentStorage<Target> AddFragmentStorage(const Target& target,
 }
 
 template <typename DAG>
-auto GetFullDAG(DAG&& dag) {
-  static_assert(std::remove_reference_t<DAG>::role == Role::View);
-  static_assert(std::remove_reference_t<DAG>::component == Component::DAG);
+auto GetFullDAG(DAG dag) {
+  static_assert(DAG::role == Role::View);
+  static_assert(DAG::component == Component::DAG);
   return dag;
 }
 
 template <typename DAG, template <typename, typename> typename Base>
-auto GetFullDAG(DAGView<FragmentStorage<DAG>, Base>&& dag) {
+auto GetFullDAG(DAGView<FragmentStorage<DAG>, Base> dag) {
   return dag.GetStorage().GetTargetStorage().View();
 }
 
 template <typename DAG, template <typename, typename> typename Base>
-auto GetFullDAG(DAGView<const FragmentStorage<DAG>, Base>&& dag) {
+auto GetFullDAG(DAGView<const FragmentStorage<DAG>, Base> dag) {
   return dag.GetStorage().GetTargetStorage().View();
 }
