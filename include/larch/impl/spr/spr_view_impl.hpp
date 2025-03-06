@@ -258,8 +258,11 @@ CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGe
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNonrootAnchorNode() const {
   auto node = static_cast<const CRTP&>(*this).Const();
-  if (node.IsMoveSource() or node.IsMoveTarget()) {
+  if (node.IsMoveSource()) {
     return true;
+  }
+  if (node.IsMoveTarget()) {
+    return false;
   }
   if (node.IsMoveNew() or node.HasChangedTopology()) {
     return false;
@@ -403,6 +406,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   auto& dag = static_cast<const CRTP&>(*this);
+
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
   auto oldest_changed = dag.GetOldestChangedNode().GetSingleParent().GetParent();
@@ -1159,7 +1163,6 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
     dst_parent_node.AddEdge({dst_parent_clade_ctr}, new_edge, true);
     new_node.SetSingleParent(new_edge);
   }
-
   Assert(new_node.GetParentsCount() == 1);
   Assert(dag.GetNodesCount() ==
          (has_unifurcation_after_move ? old_num_nodes : old_num_nodes + 1));
@@ -1220,6 +1223,11 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
     }
   };
   mark_changed(dag.GetOldSourceParent());
+  mark_changed(dag.GetMoveTarget().GetOld().GetSingleParent().GetParent());
+  mark_changed(dag.GetNodeFromMAT(move.dst));
+  mark_changed(dag.GetNodeFromMAT(move.src));
+  mark_changed(dag.GetNodeFromMAT(move.dst->parent));
+  mark_changed(dag.GetNodeFromMAT(move.src->parent));
   mark_changed(dag.GetMoveNew());
 
   return true;

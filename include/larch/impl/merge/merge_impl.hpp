@@ -330,13 +330,12 @@ void Merge::ComputeResultEdgeMutations(Edge edge, const EdgeLabel& label) {
   Assert(label.GetParent().GetCompactGenome());
   const CompactGenome& parent = *label.GetParent().GetCompactGenome();
 
-  if (edge.GetChild().IsLeaf()) {
+  if (edge.GetChild().GetCladesCount() < 1) {
     std::string sid = label.GetChild().GetSampleId()->ToString();
     const CompactGenome* child = sample_id_to_cg_map_.find(sid);
     if (child == nullptr) {
       return;
     }
-
     edge.SetEdgeMutations(CompactGenome::ToEdgeMutations(
         ResultDAG().GetReferenceSequence(), parent, *child));
   } else {

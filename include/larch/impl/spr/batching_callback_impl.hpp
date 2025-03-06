@@ -142,14 +142,16 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
       merge_.AddDAGs(
           all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
 
-      // FOR DEBUGGING: alternative "serialized" merging of fragments to check them
-      for (auto& i : all) {
-        auto frag = i.fragment->View();
-        MADAGToDOT(frag, std::cout);
-        std::vector dags = {frag};
-        merge_.AddDAGs(dags);
-        MADAGToDOT(merge_.GetResult(), std::cout);
-      }
+      //// FOR DEBUGGING: alternative "serialized" merging of fragments to check them
+      //for (auto& i : all) {
+      //  auto frag = i.fragment->View();
+      //  MADAGToDOT(frag, std::cout);
+      //  MADAGToDOT(i.spr->View(), std::cout);
+      //  std::vector dags = {frag};
+      //  merge_.AddDAGs(dags);
+      //  MADAGToDOT(merge_.GetResult(), std::cout);
+      //Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
+      //}
 
       Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
     }
