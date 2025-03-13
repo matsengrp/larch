@@ -17,12 +17,12 @@ struct ExtraStorage {
 
   template <typename Feature>
   auto& GetFeatureStorage() {
-    return std::get<Feature>(features_storage_);
+    return tuple_get<Feature, FeatureEquivalent>(features_storage_);
   }
 
   template <typename Feature>
   const auto& GetFeatureStorage() const {
-    return std::get<Feature>(features_storage_);
+    return tuple_get<Feature, FeatureEquivalent>(features_storage_);
   }
 
   template <typename Storage>

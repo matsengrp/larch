@@ -53,6 +53,176 @@ struct MATNodeStorage {
   inline MATNodeStorage Copy() const { return {}; }
 };
 
+struct MATEdgeStorage {
+  MOVE_ONLY(MATEdgeStorage);
+  MATEdgeStorage() = default;
+
+  inline MATEdgeStorage Copy() const { return {}; }
+
+  mutable EdgeMutations mutations_;
+};
+
+template <typename DAG>
+struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
+  using Node = typename DAG::NodeView;
+  using Edge = typename DAG::EdgeView;
+
+  MATChildrenRange() : done(true) {}
+  MATChildrenRange(
+      std::tuple<Node, std::reference_wrapper<const MAT::Tree>, MAT::Node*, bool>
+          access,
+      size_t count, const DAGNeighbors* ovlay)
+      : access_{access}, clades_count{count}, overlaid{ovlay} {
+    if (overlaid) {
+      if (overlaid->GetClades().empty()) {
+        done = true;
+      }
+      return;
+    }
+    if (mat_node() == nullptr or mat_node()->children.empty()) {
+      if (is_ua()) {
+        c_node_id = dag_node()
+                        .template GetFeatureExtraStorage<MATNodeStorage>()
+                        .mat_tree_->root->node_id;
+      } else {
+        done = true;
+      }
+    } else {
+      child_iter = mat_node()->children.begin();
+      c_node_id = (*child_iter)->node_id;
+      if (not condensed()) {
+        // check if this child node needs uncondensing
+        cn_id_iter = storage().condensed_nodes_.find(NodeId{c_node_id});
+        if (cn_id_iter != storage().condensed_nodes_.end()) {
+          cn_str = cn_id_iter->second.begin();
+          c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
+        }
+      }
+    }
+  }
+
+  using Storage =
+      decltype(std::declval<Node>().template GetFeatureExtraStorage<MATNodeStorage>());
+
+  bool empty() const {
+    if (overlaid) {
+      return overlaid->GetClades().empty();
+    }
+    return clades_count == 0;
+  }
+
+  size_t size() const {
+    if (overlaid) {
+      return overlaid->GetClades().size();
+    }
+    return clades_count;
+  }
+
+ private:
+  friend ranges::range_access;
+
+  Edge read() const {
+    if (overlaid) {
+      return Edge{dag_node().GetDAG(),
+                  EdgeId{overlaid->GetClades().at(overlaid_iter).at(0)}};
+    }
+    return Edge{dag_node().GetDAG(), EdgeId{c_node_id}};
+  }
+
+  bool equal(ranges::default_sentinel_t) const { return is_done(); }
+
+  void next() {
+    if (overlaid) {
+      if (overlaid_iter + 1 >= overlaid->GetClades().size()) {
+        done = true;
+        return;
+      }
+      ++overlaid_iter;
+      return;
+    }
+    if (is_done()) {
+      return;
+    }
+    if (is_ua()) {
+      done = true;
+      return;
+    }
+    if (condensed()) {
+      if (++child_iter != mat_node()->children.end()) {
+        c_node_id = (*child_iter)->node_id;
+      } else {
+        done = true;
+      }
+    } else {
+      if (not advance_condensed()) {
+        if (not advance_child()) {
+          done = true;
+        } else {
+          c_node_id = (*child_iter)->node_id;
+          cn_id_iter = storage().condensed_nodes_.find(NodeId{c_node_id});
+          if (cn_id_iter != storage().condensed_nodes_.end()) {
+            cn_str = cn_id_iter->second.begin();
+            c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
+          }
+        }
+      }
+      if (not done) {
+        if (cn_id_iter == storage().condensed_nodes_.end() or
+            cn_str == cn_id_iter->second.end()) {
+          c_node_id = (*child_iter)->node_id;
+        } else {
+          c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
+        }
+      }
+    }
+  }
+
+  bool advance_condensed() {
+    if (cn_id_iter == storage().condensed_nodes_.end()) {
+      return false;
+    }
+    if (cn_str == cn_id_iter->second.end()) {
+      return false;
+    }
+    return ++cn_str != cn_id_iter->second.end();
+  }
+
+  bool advance_child() {
+    if (child_iter == mat_node()->children.end()) {
+      return false;
+    }
+    return ++child_iter != mat_node()->children.end();
+  }
+
+  static constexpr bool condensed() {
+    return CheckIsCondensed<decltype(std::get<0>(access_.value()).GetDAG())>::value;
+  }
+
+  Node dag_node() const { return std::get<0>(access_.value()); }
+
+  MAT::Node* mat_node() const { return std::get<2>(access_.value()); }
+
+  Storage& storage() const {
+    return dag_node().template GetFeatureExtraStorage<MATNodeStorage>();
+  }
+
+  bool is_ua() const { return std::get<3>(access_.value()); }
+
+  bool is_done() const { return done or not access_.has_value(); }
+
+  std::optional<
+      std::tuple<Node, std::reference_wrapper<const MAT::Tree>, MAT::Node*, bool>>
+      access_;
+  decltype(std::declval<MAT::Node>().children.begin()) child_iter = {};
+  decltype(std::declval<Storage>().condensed_nodes_.begin()) cn_id_iter = {};
+  decltype(cn_id_iter->second.begin()) cn_str = {};
+  size_t c_node_id = NoId;
+  bool done = false;
+  size_t clades_count = 0;
+  const DAGNeighbors* overlaid = nullptr;
+  size_t overlaid_iter = 0;
+};
+
 template <>
 struct ExtraFeatureStorage<MATNodeStorage> {
   ExtraFeatureStorage() = default;
@@ -65,7 +235,7 @@ struct ExtraFeatureStorage<MATNodeStorage> {
   std::map<std::string, size_t> sampleid_to_mat_node_id_map_;
   size_t condensed_nodes_count_ = 0;
   std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
-  std::function<const Neighbors*(NodeId)> overlay_access_;
+  std::function<const DAGNeighbors*(NodeId)> overlay_access_;
   size_t max_id_ = 0;
 };
 
@@ -93,8 +263,6 @@ struct ExtraFeatureConstView<MATNodeStorage, CRTP> {
     return typename CRTP::NodeView{dag, NodeId{mat_node->node_id}};
   }
 };
-
-struct MATEdgeStorage;
 
 template <typename CRTP>
 struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
@@ -197,7 +365,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto* overlaid = get_overlaid(dag_node);
     size_t node_id = MV_UA_NODE_ID;  // mat.root->node_id;
     if (overlaid) {
-      node_id = overlaid->clades_.at(clade.value).at(0).value;
+      node_id = overlaid->GetClades().at(clade.value).at(0).value;
     } else {
       if constexpr (CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
         if (not is_ua) {
@@ -226,7 +394,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto [dag_node, mat, mat_node, is_ua] = access();
     auto* overlaid = get_overlaid(dag_node);
     if (overlaid) {
-      return overlaid->parents_.size();
+      return overlaid->GetParents().size();
     }
     if (is_ua) {
       return 0;
@@ -239,7 +407,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto [dag_node, mat, mat_node, is_ua] = access();
     auto* overlaid = get_overlaid(dag_node);
     if (overlaid) {
-      return overlaid->clades_.size();
+      return overlaid->GetClades().size();
     }
     if (is_ua) {
       return 1;
@@ -273,166 +441,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto* overlaid = get_overlaid(dag_node);
     auto dag = dag_node.GetDAG();
 
-    using Node = typename decltype(dag)::NodeView;
-    using Edge = typename decltype(dag)::EdgeView;
-
-    struct Result : ranges::view_facade<Result> {
-      Result() : done(true) {}
-      Result(std::tuple<Node, std::reference_wrapper<const MAT::Tree>, MAT::Node*, bool>
-                 access,
-             size_t count, const Neighbors* ovlay)
-          : access_{access}, clades_count{count}, overlaid{ovlay} {
-        if (overlaid) {
-          if (overlaid->clades_.empty()) {
-            done = true;
-          }
-          return;
-        }
-        if (mat_node() == nullptr or mat_node()->children.empty()) {
-          if (is_ua()) {
-            c_node_id = dag_node()
-                            .template GetFeatureExtraStorage<MATNodeStorage>()
-                            .mat_tree_->root->node_id;
-          } else {
-            done = true;
-          }
-        } else {
-          child_iter = mat_node()->children.begin();
-          c_node_id = (*child_iter)->node_id;
-          if (not condensed()) {
-            // check if this child node needs uncondensing
-            cn_id_iter = storage().condensed_nodes_.find(NodeId{c_node_id});
-            if (cn_id_iter != storage().condensed_nodes_.end()) {
-              cn_str = cn_id_iter->second.begin();
-              c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
-            }
-          }
-        }
-      }
-
-      using Storage = decltype(std::declval<Node>()
-                                   .template GetFeatureExtraStorage<MATNodeStorage>());
-
-      bool empty() const {
-        if (overlaid) {
-          return overlaid->clades_.empty();
-        }
-        return clades_count == 0;
-      }
-
-      size_t size() const {
-        if (overlaid) {
-          return overlaid->clades_.size();
-        }
-        return clades_count;
-      }
-
-     private:
-      friend ranges::range_access;
-
-      Edge read() const {
-        if (overlaid) {
-          return Edge{dag_node().GetDAG(),
-                      EdgeId{overlaid->clades_.at(overlaid_iter).at(0)}};
-        }
-        return Edge{dag_node().GetDAG(), EdgeId{c_node_id}};
-      }
-
-      bool equal(ranges::default_sentinel_t) const { return is_done(); }
-
-      void next() {
-        if (overlaid) {
-          if (overlaid_iter + 1 >= overlaid->clades_.size()) {
-            done = true;
-            return;
-          }
-          ++overlaid_iter;
-          return;
-        }
-        if (is_done()) {
-          return;
-        }
-        if (is_ua()) {
-          done = true;
-          return;
-        }
-        if (condensed()) {
-          if (++child_iter != mat_node()->children.end()) {
-            c_node_id = (*child_iter)->node_id;
-          } else {
-            done = true;
-          }
-        } else {
-          if (not advance_condensed()) {
-            if (not advance_child()) {
-              done = true;
-            } else {
-              c_node_id = (*child_iter)->node_id;
-              cn_id_iter = storage().condensed_nodes_.find(NodeId{c_node_id});
-              if (cn_id_iter != storage().condensed_nodes_.end()) {
-                cn_str = cn_id_iter->second.begin();
-                c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
-              }
-            }
-          }
-          if (not done) {
-            if (cn_id_iter == storage().condensed_nodes_.end() or
-                cn_str == cn_id_iter->second.end()) {
-              c_node_id = (*child_iter)->node_id;
-            } else {
-              c_node_id = storage().sampleid_to_mat_node_id_map_.at(*cn_str);
-            }
-          }
-        }
-      }
-
-      bool advance_condensed() {
-        if (cn_id_iter == storage().condensed_nodes_.end()) {
-          return false;
-        }
-        if (cn_str == cn_id_iter->second.end()) {
-          return false;
-        }
-        return ++cn_str != cn_id_iter->second.end();
-      }
-
-      bool advance_child() {
-        if (child_iter == mat_node()->children.end()) {
-          return false;
-        }
-        return ++child_iter != mat_node()->children.end();
-      }
-
-      static constexpr bool condensed() {
-        return CheckIsCondensed<decltype(std::get<0>(access_.value()).GetDAG())>::value;
-      }
-
-      Node dag_node() const { return std::get<0>(access_.value()); }
-
-      MAT::Node* mat_node() const { return std::get<2>(access_.value()); }
-
-      Storage& storage() const {
-        return dag_node().template GetFeatureExtraStorage<MATNodeStorage>();
-      }
-
-      bool is_ua() const { return std::get<3>(access_.value()); }
-
-      bool is_done() const { return done or not access_.has_value(); }
-
-      std::optional<
-          std::tuple<Node, std::reference_wrapper<const MAT::Tree>, MAT::Node*, bool>>
-          access_;
-      decltype(std::declval<MAT::Node>().children.begin()) child_iter = {};
-      decltype(std::declval<Storage>().condensed_nodes_.begin()) cn_id_iter = {};
-      decltype(cn_id_iter->second.begin()) cn_str = {};
-      size_t c_node_id = NoId;
-      bool done = false;
-      size_t clades_count = 0;
-      const Neighbors* overlaid = nullptr;
-      size_t overlaid_iter = 0;
-    };
-
-    return Result{access(), GetCladesCount(), overlaid};
+    return MATChildrenRange<decltype(dag)>{access(), GetCladesCount(), overlaid};
   }
 
   auto GetSingleParent() const {
@@ -440,7 +449,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto* overlaid = get_overlaid(dag_node);
     auto dag = dag_node.GetDAG();
     if (overlaid) {
-      return typename decltype(dag)::EdgeView{dag, overlaid->parents_.at(0)};
+      return typename decltype(dag)::EdgeView{dag, overlaid->GetParents().at(0)};
     }
     Assert(not is_ua);
     if constexpr (not CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
@@ -521,7 +530,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto* overlaid = get_overlaid(dag_node);
     auto dag = dag_node.GetDAG();
     if (overlaid) {
-      for (auto p : overlaid->parents_) {
+      for (auto p : overlaid->GetParents()) {
         auto e = dag.Get(p);
         if (e.GetParentId() == node) {
           return true;
@@ -562,7 +571,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto* overlaid = get_overlaid(dag_node);
     auto dag = dag_node.GetDAG();
     if (overlaid) {
-      for (auto c : overlaid->clades_) {
+      for (auto c : overlaid->GetClades()) {
         for (auto e : c) {
           auto child_id = dag.Get(e).GetChildId();
           if (node == child_id) {
@@ -650,7 +659,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   }
 
   template <typename Node>
-  const Neighbors* get_overlaid(Node dag_node) const {
+  const DAGNeighbors* get_overlaid(Node dag_node) const {
     auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
     std::unique_lock lock{*storage.mtx_};
     if (storage.overlay_access_) {
@@ -663,7 +672,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {
   void SetOverlayAccess(
-      std::function<const Neighbors*(NodeId)>&& overlay_access) const {
+      std::function<const DAGNeighbors*(NodeId)>&& overlay_access) const {
     auto& dag_node = static_cast<const CRTP&>(*this);
     auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
     std::unique_lock lock{*storage.mtx_};
@@ -672,32 +681,32 @@ struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {
 
   void ClearConnections() const {
     auto dag_node = static_cast<const CRTP&>(*this);
-    Neighbors* overlaid = const_cast<Neighbors*>(get_overlaid(dag_node));
+    DAGNeighbors* overlaid = const_cast<DAGNeighbors*>(get_overlaid(dag_node));
     if (overlaid) {
-      overlaid->parents_.clear();
-      overlaid->clades_.clear();
+      overlaid->GetParentsMutable().clear();
+      overlaid->GetCladesMutable().clear();
     } else {
       throw std::runtime_error("Not implemented");
     }
   }
   void SetSingleParent(EdgeId parent) const {
     auto dag_node = static_cast<const CRTP&>(*this);
-    Neighbors* overlaid = const_cast<Neighbors*>(get_overlaid(dag_node));
+    DAGNeighbors* overlaid = const_cast<DAGNeighbors*>(get_overlaid(dag_node));
     if (overlaid) {
-      overlaid->parents_.clear();
-      overlaid->parents_ = std::vector{parent};
+      overlaid->GetParentsMutable().clear();
+      overlaid->GetParentsMutable() = std::vector{parent};
     } else {
       throw std::runtime_error("Not implemented");
     }
   }
   void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent) const {
     auto dag_node = static_cast<const CRTP&>(*this);
-    Neighbors* overlaid = const_cast<Neighbors*>(get_overlaid(dag_node));
+    DAGNeighbors* overlaid = const_cast<DAGNeighbors*>(get_overlaid(dag_node));
     if (overlaid) {
       if (this_node_is_parent) {
-        GetOrInsert(overlaid->clades_, clade).push_back(id);
+        GetOrInsert(overlaid->GetCladesMutable(), clade).push_back(id);
       } else {
-        overlaid->parents_.push_back(id);
+        overlaid->GetParentsMutable().push_back(id);
       }
     } else {
       throw std::runtime_error("Not implemented");
@@ -706,7 +715,7 @@ struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {
 
  private:
   template <typename Node>
-  const Neighbors* get_overlaid(Node dag_node) const {
+  const DAGNeighbors* get_overlaid(Node dag_node) const {
     auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
     std::unique_lock lock{*storage.mtx_};
     if (storage.overlay_access_) {
@@ -714,15 +723,6 @@ struct FeatureMutableView<MATNodeStorage, CRTP, Tag> {
     }
     return nullptr;
   }
-};
-
-struct MATEdgeStorage {
-  MOVE_ONLY(MATEdgeStorage);
-  MATEdgeStorage() = default;
-
-  inline MATEdgeStorage Copy() const { return {}; }
-
-  mutable EdgeMutations mutations_;
 };
 
 template <>
@@ -1023,7 +1023,8 @@ struct MATElementsContainerBase {
   using ElementStorageT =
       std::conditional_t<C == Component::Node, MATNodeStorage, MATEdgeStorage>;
   using FeatureTypes =
-      std::conditional_t<C == Component::Node, std::tuple<ElementStorageT, Neighbors>,
+      std::conditional_t<C == Component::Node,
+                         std::tuple<ElementStorageT, DAGNeighbors>,
                          std::tuple<ElementStorageT, Endpoints, EdgeMutations>>;
   using AllFeatureTypes = FeatureTypes;
 
@@ -1031,7 +1032,7 @@ struct MATElementsContainerBase {
 
   template <typename Feature>
   static const bool contains_element_feature =
-      tuple_contains_v<AllFeatureTypes, Feature>;
+      tuple_contains_v<AllFeatureTypes, Feature, FeatureEquivalent>;
 
   template <typename CRTP>
   struct ConstElementViewBase : FeatureConstView<ElementStorageT, CRTP> {};
@@ -1096,24 +1097,25 @@ struct MATElementsContainerBase {
   template <typename Feature, typename E>
   const auto& GetFeatureStorage(Id<C> id, E elem) const {
     if constexpr (C == Component::Node) {
-      if constexpr (std::is_same_v<Feature, Neighbors>) {
+      if constexpr (FeatureEquivalent<Feature, Neighbors>::value) {
         std::unique_lock lock{*mtx_};
-        Neighbors& result = std::get<Neighbors>(features_storage_.at(id));
+        DAGNeighbors& result = std::get<DAGNeighbors>(features_storage_.at(id));
         if (id.value == MV_UA_NODE_ID) {
           std::vector<EdgeId> clade;
           clade.push_back(EdgeId{GetMAT().root->node_id});
-          result.clades_.push_back(std::move(clade));
+          result.GetCladesMutable().push_back(std::move(clade));
         } else {
-          result.parents_.push_back(elem.GetSingleParent());
+          result.GetParentsMutable().push_back(elem.GetSingleParent());
           for (auto i : elem.GetClades()) {
-            result.clades_.push_back(ranges::to_vector(i | Transform::GetId()));
+            result.GetCladesMutable().push_back(
+                ranges::to_vector(i | Transform::GetId()));
           }
         }
         return result;
       }
       // TODO
     } else {
-      if constexpr (std::is_same_v<Feature, Neighbors>) {
+      if constexpr (FeatureEquivalent<Feature, Neighbors>::value) {
         Fail("Not supported");
       }
       if (features_storage_.empty()) {

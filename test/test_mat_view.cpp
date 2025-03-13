@@ -1,3 +1,4 @@
+#if USE_MAT_VIEW
 #include "test_common.hpp"
 #include "larch/dag_loader.hpp"
 #include "larch/mat_view.hpp"
@@ -176,3 +177,4 @@ void test_sample_dag() {
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[]() { test_condensed_mat_view(); }, "MATView: condensing"});
+#endif

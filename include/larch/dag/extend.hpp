@@ -32,7 +32,7 @@ struct Nodes {
   struct ExtraMutableView : ExtraFeatureMutableView<Fs, CRTP>... {};
   template <typename Feature>
   static const bool contains_element_feature =
-      tuple_contains_v<std::tuple<Fs...>, Feature>;
+      tuple_contains_v<std::tuple<Fs...>, Feature, FeatureEquivalent>;
 };
 
 template </*IdContinuity Cont, */ typename... Fs>
@@ -55,7 +55,7 @@ struct Edges {
 
   template <typename Feature>
   static const bool contains_element_feature =
-      tuple_contains_v<std::tuple<Fs...>, Feature>;
+      tuple_contains_v<std::tuple<Fs...>, Feature, FeatureEquivalent>;
 };
 
 template <typename... Fs>

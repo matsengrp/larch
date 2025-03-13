@@ -35,6 +35,10 @@ struct finally {
   Fn fn_;
 };
 
+enum class IdContinuity { Dense, Sparse };
+
+enum class Ordering { Ordered, Unordered };
+
 struct NodeId;
 struct EdgeId;
 struct CladeIdx;
@@ -95,8 +99,7 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   }
 #else
 #define Assert(x) \
-  {               \
-  }
+  {}
 #endif
 
 [[noreturn]] inline void Fail(const char* msg) {
@@ -140,19 +143,39 @@ constexpr bool is_specialization_v = is_specialization<L, R>::value;
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-template <typename, typename>
+template <typename, typename, template <typename, typename> typename>
 struct tuple_contains {};
 
-template <typename... Types, typename Type>
-struct tuple_contains<std::tuple<Types...>, Type>
-    : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
+template <typename... Types, typename Type, template <typename, typename> typename Comp>
+struct tuple_contains<std::tuple<Types...>, Type, Comp>
+    : std::bool_constant<(Comp<Types, Type>::value || ...)> {};
+template <typename... Types, typename Type, template <typename, typename> typename Comp>
+struct tuple_contains<const std::tuple<Types...>, Type, Comp>
+    : std::bool_constant<(Comp<Types, Type>::value || ...)> {};
 
-template <typename... Types, typename Type>
-struct tuple_contains<const std::tuple<Types...>, Type>
-    : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
+template <typename Tuple, typename Type, template <typename, typename> typename Comp>
+inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type, Comp>::value;
 
-template <typename Tuple, typename Type>
-inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
+//////////////////////////////////////////////////////////////////////////////////////
+
+template <typename T, template <typename, typename> typename Comp, typename Tuple,
+          size_t I = 0>
+constexpr auto& tuple_get(Tuple& x) {
+  if constexpr (I < std::tuple_size_v<Tuple>) {
+    using E = std::remove_const_t<std::tuple_element_t<I, Tuple>>;
+    if constexpr (Comp<T, E>::value) {
+      return std::get<I>(x);
+    } else {
+      if constexpr (I + 1 < std::tuple_size_v<Tuple>) {
+        return tuple_get<T, Comp, Tuple, I + 1>(x);
+      } else {
+        static_assert(!"Not found");
+      }
+    }
+  } else {
+    static_assert(!"Not found");
+  }
+}
 
 //////////////////////////////////////////////////////////////////////////////////////
 

@@ -5,10 +5,10 @@
 #include <type_traits>
 
 #include "larch/common.hpp"
-#include "larch/id_container.hpp"
 
 #define DAG_DECLARATIONS
 #include "larch/dag/dag_common.hpp"
+#include "larch/id_container.hpp"
 #include "larch/dag/element_storage.hpp"
 #include "larch/dag/elements_container.hpp"
 #include "larch/dag/dag_storage.hpp"

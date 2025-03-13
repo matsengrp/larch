@@ -1,9 +1,9 @@
 #include "test_common.hpp"
 #include "larch/dag_loader.hpp"
+#if USE_MAT_VIEW
 #include "larch/mat_view.hpp"
+#endif
 #include "sample_dag.hpp"
-
-using Storage = CondensedMADAGStorage;
 
 static void test_overlay_dag(std::string_view input_dag_path,
                              std::string_view refseq_path) {
@@ -38,6 +38,9 @@ static void test_overlay_dag(std::string_view input_dag_path,
   TestAssert(not overlay_node.GetCompactGenome().empty());
   TestAssert(input_node.GetCompactGenome() != overlay_node.GetCompactGenome());
 }
+
+#if USE_MAT_VIEW
+using Storage = CondensedMADAGStorage;
 
 static void test_overlay_mat_view() {
   // create a MAT from which we can build a MATView
@@ -115,7 +118,7 @@ static void test_overlay_mat_view() {
 
   overlay_old_parent.SetOverlay<Neighbors>();
   overlay_child_sib_1.SetOverlay<Neighbors>();
-  //overlay_child_sib_2.SetOverlay<Neighbors>();
+  // overlay_child_sib_2.SetOverlay<Neighbors>();
   overlay_old_parent_edge.SetOverlay<Endpoints>();
   overlay_child_sib_edge_1.SetOverlay<Endpoints>();
   overlay_child_sib_edge_2.SetOverlay<Endpoints>();
@@ -137,11 +140,13 @@ static void test_overlay_mat_view() {
   TestAssert(overlay_edge.GetChild().ContainsParent(overlay_edge.GetParent()));
   TestAssert(overlay_edge.GetParent().ContainsChild(overlay_edge.GetChild()));
 
-  // make the overlay_dag a valid tree-shaped DAG by removing the old parent's stored connection to overlay_child
+  // make the overlay_dag a valid tree-shaped DAG by removing the old parent's stored
+  // connection to overlay_child
   overlay_child_sib_edge_1.Set(overlay_old_parent, overlay_child_sib_1, {0});
   overlay_child_sib_edge_2.Set(overlay_old_parent, overlay_child_sib_2, {1});
   overlay_old_parent.ClearConnections();
-  overlay_old_parent_edge.Set(overlay_old_parent_edge_parent, overlay_old_parent, {overlay_old_parent_clade});
+  overlay_old_parent_edge.Set(overlay_old_parent_edge_parent, overlay_old_parent,
+                              {overlay_old_parent_clade});
   overlay_old_parent.SetSingleParent(overlay_old_parent_edge);
   overlay_old_parent.AddEdge({0}, overlay_child_sib_edge_1, true);
   overlay_old_parent.AddEdge({1}, overlay_child_sib_edge_2, true);
@@ -156,11 +161,11 @@ static void test_overlay_mat_view() {
   auto child_node_1 = overlay_dag.Get(NodeId({8}));
   auto child_node_2 = overlay_dag.Get(NodeId({9}));
   auto child_node_3 = overlay_dag.Get(NodeId({3}));
-  auto parent_node  = overlay_dag.Get(NodeId({10}));
+  auto parent_node = overlay_dag.Get(NodeId({10}));
   auto child_edge_1 = child_node_1.GetSingleParent();
   auto child_edge_2 = child_node_2.GetSingleParent();
   auto child_edge_3 = child_node_3.GetSingleParent();
-  auto parent_edge  = parent_node.GetSingleParent();
+  auto parent_edge = parent_node.GetSingleParent();
 
   if (not child_node_1.IsOverlaid<Neighbors>()) {
     child_node_1.SetOverlay<Neighbors>();
@@ -187,7 +192,7 @@ static void test_overlay_mat_view() {
     parent_edge.SetOverlay<Endpoints>();
   }
 
-  // OPERATIONS: 
+  // OPERATIONS:
   // - create a cherry of child_nodes 1 and 2 with new_node as the parent of this cherry
   // - and set new_node and child_node_3 as children of parent_node.
   // step 1: clear parent node
@@ -229,6 +234,7 @@ static void test_overlay_mat_view() {
   // make sure the current overlay is a valid one
   overlay_dag.GetRoot().Validate(true, false);
 }
+#endif
 
 [[maybe_unused]] static const auto test_added0 =
     add_test({[] {
@@ -236,6 +242,7 @@ static void test_overlay_mat_view() {
                                  "data/20D_from_fasta/refseq.txt.gz");
               },
               "Overlay: DAG"});
-
+#if USE_MAT_VIEW
 [[maybe_unused]] static const auto test_added1 =
     add_test({[] { test_overlay_mat_view(); }, "Overlay: MATView"});
+#endif

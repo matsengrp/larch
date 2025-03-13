@@ -7,7 +7,7 @@ template <Component C, typename ElementStorageT, IdContinuity IdCont,
 template <typename Feature>
 inline constexpr bool ElementsContainer<C, ElementStorageT, IdCont,
                                         Features...>::contains_element_feature =
-    tuple_contains_v<std::tuple<Features...>, Feature> or
+    tuple_contains_v<std::tuple<Features...>, Feature, FeatureEquivalent> or
     ElementStorageT::template contains_element_feature<Feature>;
 
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
@@ -53,8 +53,8 @@ template <Component C, typename ElementStorageT, IdContinuity IdCont,
 template <typename Feature, typename E>
 auto& ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(
     Id<C> id, E) {
-  if constexpr (tuple_contains_v<std::tuple<Features...>, Feature>) {
-    return std::get<Feature>(features_storage_.at(id));
+  if constexpr (tuple_contains_v<std::tuple<Features...>, Feature, FeatureEquivalent>) {
+    return tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id));
   } else {
     return elements_storage_.at(id).template GetFeatureStorage<Feature>();
   }
@@ -66,8 +66,8 @@ template <typename Feature, typename E>
 const auto&
 ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(Id<C> id,
                                                                               E) const {
-  if constexpr (tuple_contains_v<std::tuple<Features...>, Feature>) {
-    return std::get<Feature>(features_storage_.at(id));
+  if constexpr (tuple_contains_v<std::tuple<Features...>, Feature, FeatureEquivalent>) {
+    return tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id));
   } else {
     return elements_storage_.at(id).template GetFeatureStorage<Feature>();
   }
@@ -78,10 +78,13 @@ template <Component C, typename ElementStorageT, IdContinuity IdCont,
 template <typename Feature>
 auto& ElementsContainer<C, ElementStorageT, IdCont,
                         Features...>::GetFeatureExtraStorage() {
-  if constexpr (tuple_contains_v<decltype(extra_features_storage_), Feature>) {
-    return std::get<ExtraFeatureStorage<Feature>>(extra_features_storage_);
+  if constexpr (tuple_contains_v<decltype(extra_features_storage_), Feature,
+                                 FeatureEquivalent>) {
+    return tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
+        extra_features_storage_);
   } else {
-    return std::get<ExtraFeatureStorage<Feature>>(elements_extra_features_storage_);
+    return tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
+        elements_extra_features_storage_);
   }
 }
 
@@ -90,9 +93,12 @@ template <Component C, typename ElementStorageT, IdContinuity IdCont,
 template <typename Feature>
 const auto& ElementsContainer<C, ElementStorageT, IdCont,
                               Features...>::GetFeatureExtraStorage() const {
-  if constexpr (tuple_contains_v<decltype(extra_features_storage_), Feature>) {
-    return std::get<ExtraFeatureStorage<Feature>>(extra_features_storage_);
+  if constexpr (tuple_contains_v<decltype(extra_features_storage_), Feature,
+                                 FeatureEquivalent>) {
+    return tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
+        extra_features_storage_);
   } else {
-    return std::get<ExtraFeatureStorage<Feature>>(elements_extra_features_storage_);
+    return tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
+        elements_extra_features_storage_);
   }
 }

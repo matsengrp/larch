@@ -8,10 +8,6 @@
 #include "larch/common.hpp"
 #include "larch/contiguous_map.hpp"
 
-enum class IdContinuity { Dense, Sparse };
-
-enum class Ordering { Ordered, Unordered };
-
 static inline constexpr IdContinuity DefIdCont = IdContinuity::Sparse;
 
 template <typename Id, typename T, IdContinuity Cont = DefIdCont,
@@ -220,3 +216,11 @@ class IdContainer {
   IdContainer(const IdContainer&) = default;
   mutable storage_type data_;
 };
+
+template <typename Lhs, typename Rhs>
+struct ContainerEquivalent : std::false_type {};
+
+template <typename Lhs, typename Rhs, typename Id, IdContinuity Cont, Ordering Ord>
+struct ContainerEquivalent<IdContainer<Id, Lhs, Cont, Ord>,
+                           IdContainer<Id, Rhs, Cont, Ord>>
+    : FeatureEquivalent<Lhs, Rhs> {};

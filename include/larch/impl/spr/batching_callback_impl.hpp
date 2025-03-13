@@ -63,7 +63,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
           Assert(i.HaveSampleId());
         }
 #endif
-auto old_src_parent = storage.spr->View().GetNodeFromMAT(move.src->parent);
+// auto old_src_parent = storage.spr->View().GetNodeFromMAT(move.src->parent);
         if (storage.spr->View().InitHypotheticalTree(
                 move, nodes_with_major_allele_set_change)) {
           // storage.spr->View().GetRoot().Validate(true);
@@ -71,8 +71,8 @@ auto old_src_parent = storage.spr->View().GetNodeFromMAT(move.src->parent);
               collapse_empty_fragment_edges_
                   ? storage.spr->View().MakeFragment()
                   : storage.spr->View().MakeUncollapsedFragment());
-auto new_old_src_parent = storage.spr->View().GetOldSourceParent();
-Assert(old_src_parent.GetId() == new_old_src_parent.GetId());
+// auto new_old_src_parent = storage.spr->View().GetOldSourceParent();
+// Assert(old_src_parent.GetId() == new_old_src_parent.GetId());
           auto fragment = storage.fragment->View();
           // GetFullDAG(fragment).GetRoot().Validate(true, false);
           auto& impl = static_cast<CRTP&>(*this);

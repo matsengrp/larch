@@ -10,10 +10,10 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsOverlaid() const {
   auto& storage = element_view.GetDAG().GetStorage();
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     if (storage.GetTarget().template ContainsId<CRTP>(id)) {
-      auto it =
-          std::get<OverlayFeatureStorageType<NodeId, F>>(storage.replaced_node_storage_)
-              .find(id);
-      return it != std::get<OverlayFeatureStorageType<NodeId, F>>(
+      auto it = tuple_get<OverlayFeatureStorageType<NodeId, F>, ContainerEquivalent>(
+                    storage.replaced_node_storage_)
+                    .find(id);
+      return it != tuple_get<OverlayFeatureStorageType<NodeId, F>, ContainerEquivalent>(
                        storage.replaced_node_storage_)
                        .end();
     } else {
@@ -21,10 +21,10 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsOverlaid() const {
     }
   } else {
     if (storage.GetTarget().template ContainsId<CRTP>(id)) {
-      auto it =
-          std::get<OverlayFeatureStorageType<EdgeId, F>>(storage.replaced_edge_storage_)
-              .find(id);
-      return it != std::get<OverlayFeatureStorageType<EdgeId, F>>(
+      auto it = tuple_get<OverlayFeatureStorageType<EdgeId, F>, ContainerEquivalent>(
+                    storage.replaced_edge_storage_)
+                    .find(id);
+      return it != tuple_get<OverlayFeatureStorageType<EdgeId, F>, ContainerEquivalent>(
                        storage.replaced_edge_storage_)
                        .end();
     } else {
@@ -84,13 +84,14 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
   }
 
   if constexpr (IsMATView<CRTP> and std::is_same_v<decltype(id), NodeId> and
-                std::is_same_v<F, Neighbors>) {
+                FeatureEquivalent<F, Neighbors>::value) {
     auto dag = element_view.GetDAG();
-    element_view.SetOverlayAccess([&storage, dag](NodeId nid) -> const Neighbors* {
+    element_view.SetOverlayAccess([&storage, dag](NodeId nid) -> const DAGNeighbors* {
       if (not dag.Get(nid).template IsOverlaid<F>()) {
         return nullptr;
       }
-      return std::addressof(storage.template GetFeatureStorageImpl<F>(storage, nid));
+      return std::addressof(
+          storage.template GetFeatureStorageImpl<DAGNeighbors>(storage, nid));
     });
   }
 
@@ -99,7 +100,8 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
       "Attempted to SetOverlay on a Feature not supported by given DAG Element.");
   if constexpr (std::is_same_v<decltype(id), NodeId>) {
     Assert(storage.GetTarget().template ContainsId<CRTP>(id));
-    auto& replaced_node_storage = std::get<OverlayFeatureStorageType<NodeId, F>>(
+    auto& replaced_node_storage = tuple_get<OverlayFeatureStorageType<NodeId, F>,
+                                            ContainerEquivalent>(
         element_view.GetDAG().GetStorage().GetTargetStorage().replaced_node_storage_);
     Assert(replaced_node_storage.find(id) == replaced_node_storage.end());
     if constexpr (std::is_copy_assignable_v<F>) {
@@ -110,7 +112,8 @@ auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {
     }
   } else {
     Assert(storage.GetTarget().template ContainsId<CRTP>(id));
-    auto& replaced_edge_storage = std::get<OverlayFeatureStorageType<EdgeId, F>>(
+    auto& replaced_edge_storage = tuple_get<OverlayFeatureStorageType<EdgeId, F>,
+                                            ContainerEquivalent>(
         element_view.GetDAG().GetStorage().GetTargetStorage().replaced_edge_storage_);
     Assert(replaced_edge_storage.find(id) == replaced_edge_storage.end());
     if constexpr (std::is_copy_assignable_v<F>) {
@@ -335,12 +338,12 @@ auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
                               OverlayStorageType::TargetView::is_mutable,
                           F&, const F&> {
   if (self.GetTarget().template ContainsId<TargetView>(id)) {
-    auto it =
-        std::get<OverlayFeatureStorageType<NodeId, F>>(self.replaced_node_storage_)
-            .find(id);
-    if (it ==
-        std::get<OverlayFeatureStorageType<NodeId, F>>(self.replaced_node_storage_)
-            .end()) {
+    auto it = tuple_get<OverlayFeatureStorageType<NodeId, F>, ContainerEquivalent>(
+                  self.replaced_node_storage_)
+                  .find(id);
+    if (it == tuple_get<OverlayFeatureStorageType<NodeId, F>, ContainerEquivalent>(
+                  self.replaced_node_storage_)
+                  .end()) {
       if constexpr (not std::is_const_v<OverlayStorageType> and
                     OverlayStorageType::TargetView::is_mutable) {
         Fail("Can't modify non-overlaid node");
@@ -350,7 +353,7 @@ auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
       return it->second;
     }
   } else {
-    return std::get<F>(self.added_node_storage_.at(
+    return tuple_get<F, FeatureEquivalent>(self.added_node_storage_.at(
         id.value -
         self.GetTarget().template GetNextAvailableNodeId<TargetView>().value));
   }
@@ -365,12 +368,12 @@ auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
                               OverlayStorageType::TargetView::is_mutable,
                           F&, const F&> {
   if (self.GetTarget().template ContainsId<TargetView>(id)) {
-    auto it =
-        std::get<OverlayFeatureStorageType<EdgeId, F>>(self.replaced_edge_storage_)
-            .find(id);
-    if (it ==
-        std::get<OverlayFeatureStorageType<EdgeId, F>>(self.replaced_edge_storage_)
-            .end()) {
+    auto it = tuple_get<OverlayFeatureStorageType<EdgeId, F>, ContainerEquivalent>(
+                  self.replaced_edge_storage_)
+                  .find(id);
+    if (it == tuple_get<OverlayFeatureStorageType<EdgeId, F>, ContainerEquivalent>(
+                  self.replaced_edge_storage_)
+                  .end()) {
       if constexpr (not std::is_const_v<OverlayStorageType> and
                     OverlayStorageType::TargetView::is_mutable) {
         Fail("Can't modify non-overlaid edge");
@@ -381,7 +384,7 @@ auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
       return it->second;
     }
   } else {
-    return std::get<F>(self.added_edge_storage_.at(
+    return tuple_get<F, FeatureEquivalent>(self.added_edge_storage_.at(
         id.value -
         self.GetTarget().template GetNextAvailableEdgeId<TargetView>().value));
   }

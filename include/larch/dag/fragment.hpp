@@ -64,7 +64,7 @@ struct FragmentElementsContainer {
   const std::vector<Id<C>> ids_;
   std::conditional_t<
       C == Component::Node,
-      IdContainer<NodeId, Neighbors, IdContinuity::Sparse, Ordering::Ordered>,
+      IdContainer<NodeId, DAGNeighbors, IdContinuity::Sparse, Ordering::Ordered>,
       std::tuple<>>
       fragment_element_features_;
 };
@@ -156,9 +156,8 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
 
     auto view = result.View();
     for (auto node : view.GetNodes()) {
-      Neighbors& storage =
-          result.GetNodesContainer().template GetFeatureStorage<Neighbors>(node.GetId(),
-                                                                           0);
+      auto& storage = result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
+          node.GetId(), 0);
       storage = {};
     }
     for (auto edge : view.GetEdges()) {
@@ -166,14 +165,15 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
       Assert(edge.GetChildId().value != NoId && "Edge has no child");
       Assert(edge.GetClade().value != NoId && "Edge has no clade index");
       Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
-      Neighbors& parent_storage =
+      auto& parent_storage =
           result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
               edge.GetParentId(), 0);
-      GetOrInsert(parent_storage.clades_, edge.GetClade()).push_back(edge.GetId());
-      Neighbors& child_storage =
+      GetOrInsert(parent_storage.GetCladesMutable(), edge.GetClade())
+          .push_back(edge.GetId());
+      auto& child_storage =
           result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
               edge.GetChildId(), 0);
-      child_storage.parents_.push_back(edge.GetId());
+      child_storage.GetParentsMutable().push_back(edge.GetId());
     }
     Connections& storage = result.template GetFeatureStorage<Connections>();
     storage.root_ = {NoId};

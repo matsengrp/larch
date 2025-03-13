@@ -54,6 +54,11 @@ struct ComponentType<EdgeId> {
 template <typename Id>
 inline constexpr const auto ComponentOf = ComponentType<Id>::value;
 
+template <typename Lhs, typename Rhs>
+struct FeatureEquivalent
+    : std::bool_constant<std::is_same_v<Lhs, Rhs> or std::is_base_of_v<Lhs, Rhs> or
+                         std::is_base_of_v<Rhs, Lhs>> {};
+
 /**
  * Used by specialization on the Feature parameter to add functions to
  * an attachable feature. Functions declared in FeatureConstView are

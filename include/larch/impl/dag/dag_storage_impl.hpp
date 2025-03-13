@@ -197,10 +197,11 @@ struct DefaultDAGStorage;
 
 template <>
 struct LongNameOf<DefaultDAGStorage> {
-  using type = DAGStorage<DefaultDAGStorage,
-                          ElementsContainer<Component::Node, ElementStorage<Neighbors>>,
-                          ElementsContainer<Component::Edge, ElementStorage<Endpoints>>,
-                          ExtraStorage<Connections>>;
+  using type =
+      DAGStorage<DefaultDAGStorage,
+                 ElementsContainer<Component::Node, ElementStorage<DAGNeighbors>>,
+                 ElementsContainer<Component::Edge, ElementStorage<Endpoints>>,
+                 ExtraStorage<Connections>>;
 };
 
 struct DefaultDAGStorage : LongNameOf<DefaultDAGStorage>::type {

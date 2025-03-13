@@ -8,15 +8,29 @@
 struct Neighbors {
   MOVE_ONLY(Neighbors);
   Neighbors() = default;
+};
 
-  inline Neighbors Copy() const {
-    Neighbors result;
+struct DAGNeighbors : Neighbors {
+  MOVE_ONLY(DAGNeighbors);
+  DAGNeighbors() = default;
+
+  inline DAGNeighbors Copy() const {
+    DAGNeighbors result;
     result.parents_ = parents_;
     result.clades_ = clades_;
     result.leafs_below_ = leafs_below_;
     return result;
   }
 
+  auto GetParents() const { return parents_ | ranges::view::all; }
+  auto GetClades() const { return clades_ | ranges::view::all; }
+  auto GetLeafsBelow() const { return leafs_below_ | ranges::view::all; }
+
+  auto& GetParentsMutable() { return parents_; }
+  auto& GetCladesMutable() { return clades_; }
+  auto& GetLeafsBelowMutable() { return leafs_below_; }
+
+ private:
   std::vector<EdgeId> parents_;
   std::vector<std::vector<EdgeId>> clades_;
   std::vector<std::vector<NodeId>> leafs_below_;
@@ -58,3 +72,12 @@ struct FeatureMutableView<Neighbors, CRTP, Tag> {
   void ChangeChild(CladeIdx clade, EdgeId from, EdgeId to) const;
   void CalculateLeafsBelow() const;
 };
+
+template <typename CRTP, typename Tag>
+struct FeatureConstView<DAGNeighbors, CRTP, Tag>
+    : FeatureConstView<Neighbors, CRTP, Tag> {};
+
+template <typename CRTP, typename Tag>
+struct FeatureMutableView<DAGNeighbors, CRTP, Tag>
+    : FeatureMutableView<Neighbors, CRTP, Tag> {};
+
