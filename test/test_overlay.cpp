@@ -37,6 +37,20 @@ static void test_overlay_dag(std::string_view input_dag_path,
 
   TestAssert(not overlay_node.GetCompactGenome().empty());
   TestAssert(input_node.GetCompactGenome() != overlay_node.GetCompactGenome());
+
+  auto overlay_connections_node = overlay_dag.Get(NodeId{7});
+  auto overlay_connections_edge = overlay_connections_node.GetSingleParent();
+  auto old_parent_node = overlay_connections_node.GetSingleParent().GetParent().GetId();
+  auto new_parent_node = overlay_dag.Get(NodeId{10});
+  auto new_parent_num_clades = new_parent_node.GetCladesCount();
+  new_parent_node.SetOverlay<Neighbors>();
+  overlay_connections_node.SetOverlay<Neighbors>();
+  overlay_connections_edge.SetOverlay<Endpoints>();
+  overlay_connections_edge.Set(new_parent_node, overlay_connections_node, {new_parent_num_clades});
+  new_parent_node.AddEdge({new_parent_num_clades}, overlay_connections_edge, true);
+  overlay_connections_node.SetSingleParent(overlay_connections_edge);
+
+  TestAssert(overlay_connections_node.GetDAG().GetOriginal().Get(overlay_connections_node).GetSingleParent().GetParent().GetId() == old_parent_node)
 }
 
 #if USE_MAT_VIEW
@@ -230,6 +244,8 @@ static void test_overlay_mat_view() {
   TestAssert(child_node_2.ContainsParent(new_node));
   TestAssert(new_edge.GetParent() == parent_node);
   TestAssert(new_edge.GetChild() == new_node);
+
+  TestAssert(child_node_1.GetDAG().GetOriginal().Get(child_node_1).GetSingleParent().GetParent().GetId() == parent_node.GetId())
 
   // make sure the current overlay is a valid one
   overlay_dag.GetRoot().Validate(true, false);
