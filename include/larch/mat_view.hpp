@@ -737,7 +737,7 @@ struct ExtraFeatureStorage<MATEdgeStorage> {
   std::map<std::string, size_t> sampleid_to_mat_node_id_map_;
   size_t condensed_nodes_count_ = 0;
   std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
-  std::function<const Endpoints*(EdgeId)> overlay_access_;
+  std::function<const DAGEndpoints*(EdgeId)> overlay_access_;
   std::function<const EdgeMutations*(EdgeId)> overlay_access_mutations_;
   size_t max_id_ = 0;
 };
@@ -973,7 +973,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   }
 
   template <typename Edge>
-  const Endpoints* get_overlaid(Edge dag_edge) const {
+  const DAGEndpoints* get_overlaid(Edge dag_edge) const {
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
     std::unique_lock lock{*storage.mtx_};
     if (storage.overlay_access_) {
@@ -996,7 +996,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {
   void SetOverlayAccess(
-      std::function<const Endpoints*(EdgeId)>&& overlay_access_endpoints,
+      std::function<const DAGEndpoints*(EdgeId)>&& overlay_access_endpoints,
       std::function<const EdgeMutations*(EdgeId)>&& overlay_access_mutations) const {
     auto& dag_edge = static_cast<const CRTP&>(*this);
     auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
@@ -1007,7 +1007,7 @@ struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {
 
   void Set(NodeId parent, NodeId child, CladeIdx clade) const {
     auto& storage =
-        static_cast<const CRTP&>(*this).template GetFeatureStorage<Endpoints>();
+        static_cast<const CRTP&>(*this).template GetFeatureStorage<DAGEndpoints>();
     Assert(parent.value != NoId);
     Assert(child.value != NoId);
     Assert(parent.value != child.value);
@@ -1025,7 +1025,7 @@ struct MATElementsContainerBase {
   using FeatureTypes =
       std::conditional_t<C == Component::Node,
                          std::tuple<ElementStorageT, DAGNeighbors>,
-                         std::tuple<ElementStorageT, Endpoints, EdgeMutations>>;
+                         std::tuple<ElementStorageT, DAGEndpoints, EdgeMutations>>;
   using AllFeatureTypes = FeatureTypes;
 
   static constexpr IdContinuity id_continuity = IdContinuity::Sparse;
@@ -1121,7 +1121,7 @@ struct MATElementsContainerBase {
       if (features_storage_.empty()) {
         features_storage_.resize(GetMAT().get_size_upper());
       }
-      return std::get<Feature>(features_storage_.at(id));
+      return tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id));
     }
   }
 

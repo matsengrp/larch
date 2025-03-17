@@ -8,9 +8,11 @@
 struct Endpoints {
   MOVE_ONLY(Endpoints);
   Endpoints() = default;
+};
 
-  inline Endpoints Copy() const {
-    Endpoints result;
+struct DAGEndpoints : Endpoints {
+  inline DAGEndpoints Copy() const {
+    DAGEndpoints result;
     result.parent_ = parent_;
     result.child_ = child_;
     result.clade_ = clade_;
@@ -42,3 +44,11 @@ struct FeatureMutableView<Endpoints, CRTP, Tag> {
   void SetChild(NodeId child) const;
   void SetClade(CladeIdx clade) const;
 };
+
+template <typename CRTP, typename Tag>
+struct FeatureConstView<DAGEndpoints, CRTP, Tag>
+    : FeatureConstView<Endpoints, CRTP, Tag> {};
+
+template <typename CRTP, typename Tag>
+struct FeatureMutableView<DAGEndpoints, CRTP, Tag>
+    : FeatureMutableView<Endpoints, CRTP, Tag> {};

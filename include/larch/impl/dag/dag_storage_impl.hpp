@@ -200,7 +200,7 @@ struct LongNameOf<DefaultDAGStorage> {
   using type =
       DAGStorage<DefaultDAGStorage,
                  ElementsContainer<Component::Node, ElementStorage<DAGNeighbors>>,
-                 ElementsContainer<Component::Edge, ElementStorage<Endpoints>>,
+                 ElementsContainer<Component::Edge, ElementStorage<DAGEndpoints>>,
                  ExtraStorage<Connections>>;
 };
 
