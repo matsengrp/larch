@@ -19,6 +19,33 @@ struct DAGEndpoints : Endpoints {
     return result;
   }
 
+  template <typename CRTP>
+  NodeId GetParent(const CRTP*) const {
+    return parent_;
+  }
+  template <typename CRTP>
+  NodeId GetChild(const CRTP*) const {
+    return child_;
+  }
+  template <typename CRTP>
+  CladeIdx GetClade(const CRTP*) const {
+    return clade_;
+  }
+
+  template <typename CRTP>
+  void SetParent(const CRTP*, NodeId parent) {
+    parent_ = parent;
+  }
+  template <typename CRTP>
+  void SetChild(const CRTP*, NodeId child) {
+    child_ = child;
+  }
+  template <typename CRTP>
+  void SetClade(const CRTP*, CladeIdx clade) {
+    clade_ = clade;
+  }
+
+ private:
   NodeId parent_;
   NodeId child_;
   CladeIdx clade_;

@@ -168,12 +168,14 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
       auto& parent_storage =
           result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
               edge.GetParentId(), 0);
-      GetOrInsert(parent_storage.GetCladesMutable(), edge.GetClade())
+      auto parent_node = edge.GetParent();
+      GetOrInsert(parent_storage.GetCladesMutable(&parent_node), edge.GetClade())
           .push_back(edge.GetId());
       auto& child_storage =
           result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
               edge.GetChildId(), 0);
-      child_storage.GetParentsMutable().push_back(edge.GetId());
+      auto child_node = edge.GetChild();
+      child_storage.GetParentsMutable(&child_node).push_back(edge.GetId());
     }
     Connections& storage = result.template GetFeatureStorage<Connections>();
     storage.root_ = {NoId};

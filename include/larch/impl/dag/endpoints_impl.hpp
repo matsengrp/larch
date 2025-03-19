@@ -16,17 +16,17 @@ auto FeatureConstView<Endpoints, CRTP, Tag>::GetChild() const {
 
 template <typename CRTP, typename Tag>
 CladeIdx FeatureConstView<Endpoints, CRTP, Tag>::GetClade() const {
-  return GetFeatureStorage(this).clade_;
+  return GetFeatureStorage(this).GetClade(static_cast<const CRTP*>(this));
 }
 
 template <typename CRTP, typename Tag>
 NodeId FeatureConstView<Endpoints, CRTP, Tag>::GetParentId() const {
-  return GetFeatureStorage(this).parent_;
+  return GetFeatureStorage(this).GetParent(static_cast<const CRTP*>(this));
 }
 
 template <typename CRTP, typename Tag>
 NodeId FeatureConstView<Endpoints, CRTP, Tag>::GetChildId() const {
-  return GetFeatureStorage(this).child_;
+  return GetFeatureStorage(this).GetChild(static_cast<const CRTP*>(this));
 }
 
 template <typename CRTP, typename Tag>
@@ -56,25 +56,25 @@ void FeatureMutableView<Endpoints, CRTP, Tag>::Set(NodeId parent, NodeId child,
   Assert(child.value != NoId);
   Assert(parent.value != child.value);
   Assert(clade.value != NoId);
-  GetFeatureStorage(this).parent_ = parent;
-  GetFeatureStorage(this).child_ = child;
-  GetFeatureStorage(this).clade_ = clade;
+  GetFeatureStorage(this).SetParent(static_cast<const CRTP*>(this), parent);
+  GetFeatureStorage(this).SetChild(static_cast<const CRTP*>(this), child);
+  GetFeatureStorage(this).SetClade(static_cast<const CRTP*>(this), clade);
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Endpoints, CRTP, Tag>::SetParent(NodeId parent) const {
   Assert(parent.value != NoId);
-  GetFeatureStorage(this).parent_ = parent;
+  GetFeatureStorage(this).SetParent(static_cast<const CRTP*>(this), parent);
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Endpoints, CRTP, Tag>::SetChild(NodeId child) const {
   Assert(child.value != NoId);
-  GetFeatureStorage(this).child_ = child;
+  GetFeatureStorage(this).SetChild(static_cast<const CRTP*>(this), child);
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Endpoints, CRTP, Tag>::SetClade(CladeIdx clade) const {
   Assert(clade.value != NoId);
-  GetFeatureStorage(this).clade_ = clade;
+  GetFeatureStorage(this).SetClade(static_cast<const CRTP*>(this), clade);
 }

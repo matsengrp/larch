@@ -22,13 +22,31 @@ struct DAGNeighbors : Neighbors {
     return result;
   }
 
-  auto GetParents() const { return parents_ | ranges::view::all; }
-  auto GetClades() const { return clades_ | ranges::view::all; }
-  auto GetLeafsBelow() const { return leafs_below_ | ranges::view::all; }
+  template <typename CRTP>
+  auto GetParents(const CRTP*) const {
+    return parents_ | ranges::view::all;
+  }
+  template <typename CRTP>
+  auto GetClades(const CRTP*) const {
+    return clades_ | ranges::view::all;
+  }
+  template <typename CRTP>
+  auto GetLeafsBelow(const CRTP*) const {
+    return leafs_below_ | ranges::view::all;
+  }
 
-  auto& GetParentsMutable() { return parents_; }
-  auto& GetCladesMutable() { return clades_; }
-  auto& GetLeafsBelowMutable() { return leafs_below_; }
+  template <typename CRTP>
+  auto& GetParentsMutable(const CRTP*) {
+    return parents_;
+  }
+  template <typename CRTP>
+  auto& GetCladesMutable(const CRTP*) {
+    return clades_;
+  }
+  template <typename CRTP>
+  auto& GetLeafsBelowMutable(const CRTP*) {
+    return leafs_below_;
+  }
 
  private:
   std::vector<EdgeId> parents_;
@@ -80,4 +98,3 @@ struct FeatureConstView<DAGNeighbors, CRTP, Tag>
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<DAGNeighbors, CRTP, Tag>
     : FeatureMutableView<Neighbors, CRTP, Tag> {};
-

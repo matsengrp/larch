@@ -75,6 +75,20 @@ template <typename Feature, typename CRTP, typename Tag = Feature>
 struct FeatureMutableView;
 /** @} */
 
+template <typename CRTP, typename... Fs>
+struct ToFeatureConstBase : FeatureConstView<Fs, CRTP, Fs>... {};
+
+template <typename CRTP, typename... Fs>
+struct ToFeatureConstBase<CRTP, std::tuple<Fs...>> : FeatureConstView<Fs, CRTP, Fs>... {
+};
+
+template <typename CRTP, typename... Fs>
+struct ToFeatureMutableBase : FeatureMutableView<Fs, CRTP, Fs>... {};
+
+template <typename CRTP, typename... Fs>
+struct ToFeatureMutableBase<CRTP, std::tuple<Fs...>>
+    : FeatureMutableView<Fs, CRTP, Fs>... {};
+
 /**
  * A per-element feature can have some additional functions, that are exposed
  * in the DAG view, rather than the element view.

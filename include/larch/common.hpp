@@ -109,6 +109,11 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
   throw std::runtime_error(msg);
 }
 
+template <typename ReturnType = void>
+[[noreturn]] ReturnType* Unreachable() {
+  Fail("Unreachable");
+}
+
 #define MOVE_ONLY(x)                    \
   x(x&&) noexcept = default;            \
   x(const x&) = delete;                 \
