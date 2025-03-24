@@ -279,9 +279,10 @@ void test_vcf_compatible() {
   dag_storage.View().RecomputeEdgeMutations();
   for (auto leaf : dag.GetLeafs()) {
     for (auto parent_edge : leaf.GetParents()) {
-      auto leaf_cg = leaf.GetCompactGenome().Copy();
-      auto parent_cg = parent_edge.GetParent().GetCompactGenome().Copy();
-      auto edge_mutations_from_dag = parent_edge.GetEdgeMutations().Copy();
+      auto leaf_cg = leaf.GetCompactGenome().Copy(&leaf);
+      auto parent_cg =
+          parent_edge.GetParent().GetCompactGenome().template Copy<void>(nullptr);
+      auto edge_mutations_from_dag = parent_edge.GetEdgeMutations().Copy(&parent_edge);
       ContiguousMap<MutationPosition, MutationBase> current_edge_mutations;
       for (auto posval : parent_edge.GetEdgeMutations()) {
         current_edge_mutations[posval.first] = posval.second.second;

@@ -51,10 +51,10 @@ void ElementsContainer<C, ElementStorageT, IdCont, Features...>::Clear() {
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
 template <typename Feature, typename E>
-auto& ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(
+auto ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(
     Id<C> id, E) {
   if constexpr (tuple_contains_v<std::tuple<Features...>, Feature, FeatureEquivalent>) {
-    return tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id));
+    return std::ref(tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id)));
   } else {
     return elements_storage_.at(id).template GetFeatureStorage<Feature>();
   }
@@ -63,11 +63,10 @@ auto& ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStor
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
 template <typename Feature, typename E>
-const auto&
-ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(Id<C> id,
-                                                                              E) const {
+auto ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(
+    Id<C> id, E) const {
   if constexpr (tuple_contains_v<std::tuple<Features...>, Feature, FeatureEquivalent>) {
-    return tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id));
+    return std::cref(tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id)));
   } else {
     return elements_storage_.at(id).template GetFeatureStorage<Feature>();
   }
@@ -76,29 +75,29 @@ ElementsContainer<C, ElementStorageT, IdCont, Features...>::GetFeatureStorage(Id
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
 template <typename Feature>
-auto& ElementsContainer<C, ElementStorageT, IdCont,
-                        Features...>::GetFeatureExtraStorage() {
+auto ElementsContainer<C, ElementStorageT, IdCont,
+                       Features...>::GetFeatureExtraStorage() {
   if constexpr (tuple_contains_v<decltype(extra_features_storage_), Feature,
                                  FeatureEquivalent>) {
-    return tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
-        extra_features_storage_);
+    return std::ref(tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
+        extra_features_storage_));
   } else {
-    return tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
-        elements_extra_features_storage_);
+    return std::ref(tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
+        elements_extra_features_storage_));
   }
 }
 
 template <Component C, typename ElementStorageT, IdContinuity IdCont,
           typename... Features>
 template <typename Feature>
-const auto& ElementsContainer<C, ElementStorageT, IdCont,
-                              Features...>::GetFeatureExtraStorage() const {
+auto ElementsContainer<C, ElementStorageT, IdCont,
+                       Features...>::GetFeatureExtraStorage() const {
   if constexpr (tuple_contains_v<decltype(extra_features_storage_), Feature,
                                  FeatureEquivalent>) {
-    return tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
-        extra_features_storage_);
+    return std::cref(tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
+        extra_features_storage_));
   } else {
-    return tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
-        elements_extra_features_storage_);
+    return std::cref(tuple_get<ExtraFeatureStorage<Feature>, FeatureEquivalent>(
+        elements_extra_features_storage_));
   }
 }

@@ -166,11 +166,12 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase,
           IdContinuity Cont>
 template <typename Feature>
-auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                       Cont>::GetFeatureStorage() {
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                      Cont>::GetFeatureStorage() {
   if constexpr (tuple_contains_v<decltype(additional_dag_features_storage_), Feature,
                                  FeatureEquivalent>) {
-    return tuple_get<Feature, FeatureEquivalent>(additional_dag_features_storage_);
+    return std::ref(
+        tuple_get<Feature, FeatureEquivalent>(additional_dag_features_storage_));
   } else {
     return GetTarget().template GetFeatureStorage<Feature>();
   }
@@ -180,11 +181,12 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase,
           IdContinuity Cont>
 template <typename Feature>
-const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                             Cont>::GetFeatureStorage() const {
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                      Cont>::GetFeatureStorage() const {
   if constexpr (tuple_contains_v<decltype(additional_dag_features_storage_), Feature,
                                  FeatureEquivalent>) {
-    return tuple_get<Feature, FeatureEquivalent>(additional_dag_features_storage_);
+    return std::cref(
+        tuple_get<Feature, FeatureEquivalent>(additional_dag_features_storage_));
   } else {
     return GetTarget().template GetFeatureStorage<Feature>();
   }
@@ -194,13 +196,14 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase,
           IdContinuity Cont>
 template <typename F>
-auto&& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                        Cont>::GetFeatureStorage(NodeId id) {
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                      Cont>::GetFeatureStorage(NodeId id) {
   if constexpr (tuple_contains_v<
                     std::remove_reference_t<
                         decltype(additional_node_features_storage_.at(NodeId{0}))>,
                     F, FeatureEquivalent>) {
-    return tuple_get<F, FeatureEquivalent>(additional_node_features_storage_.at(id));
+    return std::ref(
+        tuple_get<F, FeatureEquivalent>(additional_node_features_storage_.at(id)));
   } else {
     return GetTarget().template GetFeatureStorage<F>(id);
   }
@@ -210,12 +213,13 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase,
           IdContinuity Cont>
 template <typename F>
-const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                             Cont>::GetFeatureStorage(NodeId id) const {
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                      Cont>::GetFeatureStorage(NodeId id) const {
   if constexpr (tuple_contains_v<typename decltype(additional_node_features_storage_)::
                                      value_type::second_type,
                                  F, FeatureEquivalent>) {
-    return tuple_get<F, FeatureEquivalent>(additional_node_features_storage_.at(id));
+    return std::cref(
+        tuple_get<F, FeatureEquivalent>(additional_node_features_storage_.at(id)));
   } else {
     return GetTarget().template GetFeatureStorage<F>(id);
   }
@@ -225,12 +229,13 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase,
           IdContinuity Cont>
 template <typename F>
-auto&& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                        Cont>::GetFeatureStorage(EdgeId id) {
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                      Cont>::GetFeatureStorage(EdgeId id) {
   if constexpr (tuple_contains_v<typename decltype(additional_edge_features_storage_)::
                                      value_type::second_type,
                                  F, FeatureEquivalent>) {
-    return tuple_get<F, FeatureEquivalent>(additional_edge_features_storage_.at(id));
+    return std::ref(
+        tuple_get<F, FeatureEquivalent>(additional_edge_features_storage_.at(id)));
   } else {
     return GetTarget().template GetFeatureStorage<F>(id);
   }
@@ -240,12 +245,13 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase,
           IdContinuity Cont>
 template <typename F>
-const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                             Cont>::GetFeatureStorage(EdgeId id) const {
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                      Cont>::GetFeatureStorage(EdgeId id) const {
   if constexpr (tuple_contains_v<typename decltype(additional_edge_features_storage_)::
                                      value_type::second_type,
                                  F, FeatureEquivalent>) {
-    return tuple_get<F, FeatureEquivalent>(additional_edge_features_storage_.at(id));
+    return std::cref(
+        tuple_get<F, FeatureEquivalent>(additional_edge_features_storage_.at(id)));
   } else {
     return GetTarget().template GetFeatureStorage<F>(id);
   }
@@ -255,18 +261,18 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase,
           IdContinuity Cont>
 template <Component C, typename F>
-auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                       Cont>::GetFeatureExtraStorage() {
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                      Cont>::GetFeatureExtraStorage() {
   if constexpr (std::remove_reference_t<Target>::template contains_element_feature<C,
                                                                                    F>) {
     return GetTarget().template GetFeatureExtraStorage<C, F>();
   } else {
     if constexpr (C == Component::Node) {
-      return tuple_get<ExtraFeatureStorage<F>, FeatureEquivalent>(
-          additional_node_extra_features_storage_);
+      return std::ref(tuple_get<ExtraFeatureStorage<F>, FeatureEquivalent>(
+          additional_node_extra_features_storage_));
     } else {
-      return tuple_get<ExtraFeatureStorage<F>, FeatureEquivalent>(
-          additional_edge_extra_features_storage_);
+      return std::ref(tuple_get<ExtraFeatureStorage<F>, FeatureEquivalent>(
+          additional_edge_extra_features_storage_));
     }
   }
 }
@@ -275,17 +281,17 @@ template <typename ShortName, typename Target, typename Arg0, typename Arg1,
           typename Arg2, template <typename, typename> typename ViewBase,
           IdContinuity Cont>
 template <Component C, typename F>
-const auto& ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
-                             Cont>::GetFeatureExtraStorage() const {
+auto ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                      Cont>::GetFeatureExtraStorage() const {
   if constexpr (Target::template contains_element_feature<C, F>) {
     return GetTarget().template GetFeatureExtraStorage<C, F>();
   } else {
     if constexpr (C == Component::Node) {
-      return tuple_get<ExtraFeatureStorage<F>, FeatureEquivalent>(
-          additional_node_extra_features_storage_);
+      return std::cref(tuple_get<ExtraFeatureStorage<F>, FeatureEquivalent>(
+          additional_node_extra_features_storage_));
     } else {
-      return tuple_get<ExtraFeatureStorage<F>, FeatureEquivalent>(
-          additional_edge_extra_features_storage_);
+      return std::cref(tuple_get<ExtraFeatureStorage<F>, FeatureEquivalent>(
+          additional_edge_extra_features_storage_));
     }
   }
 }

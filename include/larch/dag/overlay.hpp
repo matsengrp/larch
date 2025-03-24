@@ -2,8 +2,6 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
-class EdgeMutations;
-
 struct Overlay {};
 
 template <typename CRTP, typename Tag>
@@ -32,7 +30,8 @@ struct FeatureMutableView<OverlayDAG, CRTP, Tag> {};
 
 template <typename Id, typename Feature>
 using OverlayFeatureStorageType =
-    IdContainer<Id, Feature, IdContinuity::Sparse, Ordering::Unordered>;
+    IdContainer<Id, typename OverlayFeatureType<Feature>::store_type,
+                IdContinuity::Sparse, Ordering::Unordered>;
 
 namespace {
 template <typename>
@@ -184,28 +183,28 @@ struct OverlayDAGStorage {
   void InitializeEdges(size_t size);
 
   template <typename F>
-  auto& GetFeatureStorage();
+  auto GetFeatureStorage();
 
   template <typename F>
-  const auto& GetFeatureStorage() const;
+  auto GetFeatureStorage() const;
 
   template <typename F>
-  auto& GetFeatureStorage(NodeId id);
+  auto GetFeatureStorage(NodeId id);
 
   template <typename F>
-  const auto& GetFeatureStorage(NodeId id) const;
+  auto GetFeatureStorage(NodeId id) const;
 
   template <typename F>
-  auto& GetFeatureStorage(EdgeId id);
+  auto GetFeatureStorage(EdgeId id);
 
   template <typename F>
-  const auto& GetFeatureStorage(EdgeId id) const;
+  auto GetFeatureStorage(EdgeId id) const;
 
   template <Component C, typename F>
-  auto& GetFeatureExtraStorage();
+  auto GetFeatureExtraStorage();
 
   template <Component C, typename F>
-  const auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
   auto& GetTargetStorage() { return *this; }
   auto& GetTargetStorage() const { return *this; }
@@ -218,16 +217,10 @@ struct OverlayDAGStorage {
   auto GetTarget() const;
 
   template <typename F, typename OverlayStorageType>
-  static auto GetFeatureStorageImpl(OverlayStorageType& self, NodeId id)
-      -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
-                                OverlayStorageType::TargetView::is_mutable,
-                            F&, const F&>;
+  static auto GetFeatureStorageImpl(OverlayStorageType& self, NodeId id);
 
   template <typename F, typename OverlayStorageType>
-  static auto GetFeatureStorageImpl(OverlayStorageType& self, EdgeId id)
-      -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
-                                OverlayStorageType::TargetView::is_mutable,
-                            F&, const F&>;
+  static auto GetFeatureStorageImpl(OverlayStorageType& self, EdgeId id);
 
   template <typename, typename, typename>
   friend struct FeatureConstView;

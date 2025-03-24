@@ -14,25 +14,25 @@ bool FeatureConstView<Connections, CRTP, Tag>::IsTree() const {
 }
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Connections, CRTP, Tag>::HaveRoot() const {
-  return GetFeatureStorage(this).root_.value != NoId;
+  return GetFeatureStorage(this).get().root_.value != NoId;
 }
 
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Connections, CRTP, Tag>::GetRoot() const {
   auto& dag = static_cast<const CRTP&>(*this);
   using Node = typename CRTP::NodeView;
-  return Node{dag, GetFeatureStorage(this).root_};
+  return Node{dag, GetFeatureStorage(this).get().root_};
 }
 
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Connections, CRTP, Tag>::GetLeafs() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return GetFeatureStorage(this).leafs_ | Transform::ToNodes(dag);
+  return GetFeatureStorage(this).get().leafs_ | Transform::ToNodes(dag);
 }
 
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Connections, CRTP, Tag>::GetLeafsCount() const {
-  return GetFeatureStorage(this).leafs_.size();
+  return GetFeatureStorage(this).get().leafs_.size();
 }
 
 template <typename CRTP, typename Tag>
@@ -57,7 +57,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs() const {
-  auto& storage = GetFeatureStorage(this);
+  auto& storage = GetFeatureStorage(this).get();
   auto& dag = static_cast<const CRTP&>(*this);
   storage.root_ = {NoId};
   storage.leafs_ = {};
@@ -94,8 +94,9 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs() const {
 }
 
 template <typename CRTP, typename Tag>
-void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs(NodeId fragment_root) const {
-  auto& storage = GetFeatureStorage(this);
+void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs(
+    NodeId fragment_root) const {
+  auto& storage = GetFeatureStorage(this).get();
   auto& dag = static_cast<const CRTP&>(*this);
   storage.root_ = {NoId};
   storage.leafs_ = {};
@@ -133,7 +134,7 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs(NodeId fragme
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::AddLeaf(NodeId id) const {
-  auto& storage = GetFeatureStorage(this);
+  auto& storage = GetFeatureStorage(this).get();
   // TODO make leafs ContiguousSet ?
   if (std::find(storage.leafs_.begin(), storage.leafs_.end(), id) ==
       storage.leafs_.end()) {

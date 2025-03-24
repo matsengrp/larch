@@ -25,10 +25,10 @@ size_t FragmentElementsContainer<Target, C>::GetCount() const {
 
 template <typename Target, Component C>
 template <typename Feature, typename E>
-auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id, E) {
+auto FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id, E) {
   Assert(ranges::contains(ids_, id));
   if constexpr (FeatureEquivalent<Feature, Neighbors>::value) {
-    return fragment_element_features_.at(id);
+    return std::ref(fragment_element_features_.at(id));
   } else {
     return target_.GetStorage().template GetFeatureStorage<Feature>(id);
   }
@@ -36,10 +36,10 @@ auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id, E) {
 
 template <typename Target, Component C>
 template <typename Feature, typename E>
-const auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id, E) const {
+auto FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id, E) const {
   Assert(ranges::contains(ids_, id));
   if constexpr (FeatureEquivalent<Feature, Neighbors>::value) {
-    return fragment_element_features_.at(id);
+    return std::cref(fragment_element_features_.at(id));
   } else {
     return target_.Const().GetStorage().template GetFeatureStorage<Feature>(id);
   }
@@ -47,12 +47,12 @@ const auto& FragmentElementsContainer<Target, C>::GetFeatureStorage(Id<C> id, E)
 
 template <typename Target, Component C>
 template <typename Feature>
-auto& FragmentElementsContainer<Target, C>::GetFeatureExtraStorage() {
+auto FragmentElementsContainer<Target, C>::GetFeatureExtraStorage() {
   return target_.GetStorage().template GetFeatureExtraStorage<C, Feature>();
 }
 
 template <typename Target, Component C>
 template <typename Feature>
-const auto& FragmentElementsContainer<Target, C>::GetFeatureExtraStorage() const {
+auto FragmentElementsContainer<Target, C>::GetFeatureExtraStorage() const {
   return target_.Const().GetStorage().template GetFeatureExtraStorage<C, Feature>();
 }

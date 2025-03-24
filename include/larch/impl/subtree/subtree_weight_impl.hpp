@@ -280,7 +280,7 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTree(NodeType input_node,
   if constexpr (decltype(result_node)::template contains_feature<MappedNodes>) {
     result_node.SetOriginalId(input_node.GetId());
   }
-  result_node = input_node.GetCompactGenome().Copy();
+  result_node = input_node.GetCompactGenome().Copy(&input_node);
   result_node = SampleId{input_node.GetSampleId()};
 
   CladeIdx clade_idx{0};
@@ -293,7 +293,7 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTree(NodeType input_node,
     auto result_edge =
         result.AppendEdge(result_node_id, result_child_id, input_edge.GetClade());
 
-    result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
+    result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy(&input_edge));
 
     ExtractTree(input_edge.GetChild(), result_child_id, weight_ops, edge_selector,
                 result);
@@ -311,7 +311,7 @@ void SubtreeWeight<WeightOps, DAG>::ExtractSubset(
   if constexpr (decltype(result_node)::template contains_feature<MappedNodes>) {
     result_node.SetOriginalId(input_node.GetId());
   }
-  result_node = input_node.GetCompactGenome().Copy();
+  result_node = input_node.GetCompactGenome().Copy(&input_node);
   result_node = SampleId{input_node.GetSampleId()};
 
   mapped_id.insert({input_node.GetId(), result_node});
@@ -331,12 +331,12 @@ void SubtreeWeight<WeightOps, DAG>::ExtractSubset(
         NodeId result_child_id = mapped_id[input_node_child.GetId()];
         auto result_edge =
             result.AppendEdge(result_node_id, result_child_id, clade_idx);
-        result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
+        result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy(&input_edge));
       } else {
         NodeId result_child_id = result.AppendNode();
         auto result_edge =
             result.AppendEdge(result_node_id, result_child_id, clade_idx);
-        result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
+        result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy(&input_edge));
         ExtractSubset(input_node_child, result_child_id, weight_ops, edge_selector,
                       mapped_id, result);
         mapped_id.insert({input_node_child.GetId(), result_child_id});

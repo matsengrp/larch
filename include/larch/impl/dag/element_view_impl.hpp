@@ -36,12 +36,12 @@ Id<C> ElementView<C, DAGViewType>::GetId() const {
 
 template <Component C, typename DAGViewType>
 template <typename Feature>
-auto& ElementView<C, DAGViewType>::GetFeatureStorage() const {
+auto ElementView<C, DAGViewType>::GetFeatureStorage() const {
   return dag_view_.template GetFeatureStorage<Feature>(id_);
 }
 
 template <Component C, typename DAGViewType>
 template <typename Feature>
-auto& ElementView<C, DAGViewType>::GetFeatureExtraStorage() const {
+auto ElementView<C, DAGViewType>::GetFeatureExtraStorage() const {
   return dag_view_.template GetFeatureExtraStorage<C, Feature>();
 }

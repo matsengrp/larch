@@ -212,7 +212,7 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
   for (auto leaf_node : dag.Const().GetLeafs()) {
     Assert(leaf_node.HaveSampleId());
     std::string sid = leaf_node.GetSampleId().value();
-    sample_id_to_cg_map_.insert({sid, leaf_node.GetCompactGenome().Copy()});
+    sample_id_to_cg_map_.insert({sid, leaf_node.GetCompactGenome().Copy(&leaf_node)});
   }
 }
 

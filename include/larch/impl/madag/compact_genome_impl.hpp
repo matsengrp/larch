@@ -173,7 +173,8 @@ auto CompactGenome::end() const -> decltype(mutations_.end()) {
 
 bool CompactGenome::empty() const { return mutations_.empty(); }
 
-CompactGenome CompactGenome::Copy() const {
+template <typename CRTP>
+CompactGenome CompactGenome::Copy(const CRTP*) const {
   CompactGenome result{mutations_.Copy(), hash_};
   return result;
 }
@@ -248,13 +249,13 @@ bool std::equal_to<CompactGenome>::operator()(const CompactGenome& lhs,
 template <typename CRTP, typename Tag>
 const CompactGenome& FeatureConstView<CompactGenome, CRTP, Tag>::GetCompactGenome()
     const {
-  return GetFeatureStorage(this);
+  return GetFeatureStorage(this).get();
 }
 
 template <typename CRTP, typename Tag>
 // NOLINTNEXTLINE(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
 auto& FeatureMutableView<CompactGenome, CRTP, Tag>::operator=(
     CompactGenome&& compact_genome) const {
-  GetFeatureStorage(this) = std::forward<CompactGenome>(compact_genome);
+  GetFeatureStorage(this).get() = std::forward<CompactGenome>(compact_genome);
   return *this;
 }

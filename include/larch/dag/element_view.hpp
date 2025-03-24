@@ -44,10 +44,10 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
   Id<C> GetId() const;
 
   template <typename Feature>
-  auto& GetFeatureStorage() const;
+  auto GetFeatureStorage() const;
 
   template <typename Feature>
-  auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
  private:
   DAGViewType dag_view_;

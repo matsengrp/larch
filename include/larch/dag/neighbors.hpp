@@ -10,11 +10,19 @@ struct Neighbors {
   Neighbors() = default;
 };
 
-struct DAGNeighbors : Neighbors {
-  MOVE_ONLY(DAGNeighbors);
-  DAGNeighbors() = default;
+template <typename CRTP>
+struct FeatureConstView<Neighbors, CRTP, Neighbors> {
+  static_assert(false, "Neighbors is an abstract feature");
+};
 
-  inline DAGNeighbors Copy() const {
+template <typename CRTP>
+struct FeatureMutableView<Neighbors, CRTP, Neighbors> {
+  static_assert(false, "Neighbors is an abstract feature");
+};
+
+struct DAGNeighbors : Neighbors {
+  template <typename CRTP>
+  inline DAGNeighbors Copy(const CRTP*) const {
     DAGNeighbors result;
     result.parents_ = parents_;
     result.clades_ = clades_;
@@ -28,11 +36,13 @@ struct DAGNeighbors : Neighbors {
   }
   template <typename CRTP>
   auto GetClades(const CRTP*) const {
-    return clades_ | ranges::view::all;
+    return clades_ |
+           ranges::views::transform([](auto& i) { return i | ranges::view::all; });
   }
   template <typename CRTP>
   auto GetLeafsBelow(const CRTP*) const {
-    return leafs_below_ | ranges::view::all;
+    return leafs_below_ |
+           ranges::views::transform([](auto& i) { return i | ranges::view::all; });
   }
 
   template <typename CRTP>
@@ -56,6 +66,7 @@ struct DAGNeighbors : Neighbors {
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<Neighbors, CRTP, Tag> {
+  static_assert(std::is_base_of_v<Neighbors, std::decay_t<Tag>>);
   auto GetParents() const;
   auto GetClades() const;
   auto GetClade(CladeIdx clade) const;
@@ -77,10 +88,54 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
   bool ContainsChild(NodeId node) const;
   std::string ParentsToString() const;
   std::string ChildrenToString() const;
+
+ private:
+  auto GetStorageParents() const {
+    auto storage = GetFeatureStorage(this);
+    auto* self = static_cast<const CRTP*>(this);
+    if constexpr (is_variant_v<decltype(storage)>) {
+      using Var = variant_range<
+          std::variant<decltype(std::get<0>(storage).get().GetParents(self)),
+                       decltype(std::get<1>(storage).get().GetParents(self))>>;
+      return std::visit([self](auto& x) { return Var{x.get().GetParents(self)}; },
+                        storage);
+    } else {
+      return GetFeatureStorage(this).get().GetParents(self);
+    }
+  }
+
+  auto GetStorageClades() const {
+    auto storage = GetFeatureStorage(this);
+    auto* self = static_cast<const CRTP*>(this);
+    if constexpr (is_variant_v<decltype(storage)>) {
+      using Var = variant_range<
+          std::variant<decltype(std::get<0>(storage).get().GetClades(self)),
+                       decltype(std::get<1>(storage).get().GetClades(self))>>;
+      return std::visit([self](auto& x) { return Var{x.get().GetClades(self)}; },
+                        storage);
+    } else {
+      return GetFeatureStorage(this).get().GetClades(self);
+    }
+  }
+
+  auto GetStorageLeafsBelow() const {
+    auto storage = GetFeatureStorage(this);
+    auto* self = static_cast<const CRTP*>(this);
+    if constexpr (is_variant_v<decltype(storage)>) {
+      using Var = variant_range<
+          std::variant<decltype(std::get<0>(storage).get().GetLeafsBelow(self)),
+                       decltype(std::get<1>(storage).get().GetLeafsBelow(self))>>;
+      return std::visit([self](auto& x) { return Var{x.get().GetLeafsBelow(self)}; },
+                        storage);
+    } else {
+      return GetFeatureStorage(this).get().GetLeafsBelow(self);
+    }
+  }
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<Neighbors, CRTP, Tag> {
+  static_assert(std::is_base_of_v<Neighbors, std::decay_t<Tag>>);
   void ClearConnections() const;
   void AddEdge(CladeIdx clade, EdgeId id, bool this_node_is_parent) const;
   void RemoveParent(EdgeId edge) const;
@@ -89,6 +144,24 @@ struct FeatureMutableView<Neighbors, CRTP, Tag> {
   void RemoveChild(CladeIdx clade, EdgeId child) const;
   void ChangeChild(CladeIdx clade, EdgeId from, EdgeId to) const;
   void CalculateLeafsBelow() const;
+
+ private:
+  auto& GetStorage() const {
+    auto storage = GetFeatureStorage(this);
+    if constexpr (is_variant_v<decltype(storage)>) {
+      if (not std::holds_alternative<std::reference_wrapper<DAGNeighbors>>(storage)) {
+        Fail("Only DAGNeighbors can be modified");
+      }
+      return std::get<std::reference_wrapper<DAGNeighbors>>(storage).get();
+    } else {
+      if constexpr (not std::is_same_v<decltype(storage),
+                                       std::reference_wrapper<DAGNeighbors>>) {
+        Fail("Only DAGNeighbors can be modified");
+      } else {
+        return GetFeatureStorage(this).get();
+      }
+    }
+  }
 };
 
 template <typename CRTP, typename Tag>

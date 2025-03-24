@@ -3,12 +3,12 @@
 #endif
 
 template <typename CRTP, typename Feature, typename Tag>
-auto& GetFeatureStorage(const FeatureMutableView<Feature, CRTP, Tag>* feature) {
+auto GetFeatureStorage(const FeatureMutableView<Feature, CRTP, Tag>* feature) {
   return static_cast<const CRTP&>(*feature).template GetFeatureStorage<Tag>();
 }
 
 template <typename CRTP, typename Feature, typename Tag>
-const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* feature) {
+auto GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* feature) {
   return static_cast<const CRTP&>(*feature).Const().template GetFeatureStorage<Tag>();
 }
 

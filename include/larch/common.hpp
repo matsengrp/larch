@@ -9,6 +9,7 @@
 #include <typeinfo>
 #include <random>
 #include <optional>
+#include <variant>
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -20,6 +21,8 @@
 #pragma GCC diagnostic pop
 
 #define MV_UA_NODE_ID 100000
+
+static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
 
 template <typename T>
 struct type_identity {
@@ -35,6 +38,95 @@ struct finally {
   Fn fn_;
 };
 
+///////////////////////////////////////////////////////
+
+template <typename T>
+struct is_variant : std::false_type {};
+
+template <typename... Args>
+struct is_variant<std::variant<Args...>> : std::true_type {};
+
+template <typename T>
+static constexpr const bool is_variant_v = is_variant<T>::value;
+
+template <typename>
+struct variant_range_iter;
+
+template <typename... Ts>
+struct variant_range_iter<std::variant<Ts...>> {
+  template <typename T>
+  using pair_type =
+      decltype(std::make_pair(std::declval<T>().begin(), std::declval<T>().end()));
+  using type = std::variant<pair_type<Ts>...>;
+};
+
+template <typename>
+struct variant_range_nested_helper;
+
+template <typename... Ts>
+struct variant_range_nested_helper<std::variant<Ts...>> {
+  using type = std::variant<decltype(*std::declval<Ts>().begin())...>;
+  static_assert((ranges::range<Ts> and ...));
+};
+
+template <typename Var>
+class variant_range : public ranges::view_facade<variant_range<Var>> {
+ public:
+  variant_range() = default;
+  variant_range(Var&& var) {
+    std::visit(
+        [this](auto&& x) {
+          using pair_type =
+              typename variant_range_iter<Var>::template pair_type<decltype(x)>;
+          pair_type pair = std::make_pair(x.begin(), x.end());
+          iter_.template emplace<pair_type>(std::move(pair));
+          if constexpr (ranges::sized_range<std::decay_t<decltype(x)>>) {
+            size_ = static_cast<size_t>(x.size());
+          } else {
+            size_ = NoId;
+          }
+        },
+        std::forward<Var>(var));
+  }
+
+  size_t size() const {
+    if (size_ == NoId) {
+      throw std::runtime_error{"Range not sized"};
+    }
+    return size_;
+  }
+
+  size_t empty() const { return size() == 0; }
+
+ private:
+  friend ranges::range_access;
+
+  decltype(auto) read() const {
+    return std::visit(
+        [](auto&& x) {
+          if constexpr (ranges::range<decltype(*x.first)>) {
+            using Nested = typename variant_range_nested_helper<Var>::type;
+            return variant_range<Nested>{Nested{*x.first}};
+          } else {
+            return *x.first;
+          }
+        },
+        iter_);
+  }
+
+  bool equal(ranges::default_sentinel_t) const {
+    return std::visit([](auto& x) { return x.first == x.second; }, iter_);
+  }
+
+  void next() {
+    std::visit([](auto& x) { ++x.first; }, iter_);
+  }
+
+  typename variant_range_iter<Var>::type iter_;
+  size_t size_ = 0;
+};
+///////////////////////////////////////////////////////
+
 enum class IdContinuity { Dense, Sparse };
 
 enum class Ordering { Ordered, Unordered };
@@ -42,8 +134,6 @@ enum class Ordering { Ordered, Unordered };
 struct NodeId;
 struct EdgeId;
 struct CladeIdx;
-
-static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
 
 template <typename T, typename Id>
 [[nodiscard]] static T& GetOrInsert(std::vector<T>& data, Id id) {

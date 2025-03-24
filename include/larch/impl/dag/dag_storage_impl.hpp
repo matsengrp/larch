@@ -124,40 +124,40 @@ void DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
 template <typename Feature>
-auto&& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                  ViewBase>::GetFeatureStorage(NodeId id) {
+auto DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                ViewBase>::GetFeatureStorage(NodeId id) {
   return nodes_container_.template GetFeatureStorage<Feature>(id, View().Get(id));
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
 template <typename Feature>
-const auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                       ViewBase>::GetFeatureStorage(NodeId id) const {
+auto DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                ViewBase>::GetFeatureStorage(NodeId id) const {
   return nodes_container_.template GetFeatureStorage<Feature>(id, View().Get(id));
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
 template <typename Feature>
-auto&& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                  ViewBase>::GetFeatureStorage(EdgeId id) {
+auto DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                ViewBase>::GetFeatureStorage(EdgeId id) {
   return edges_container_.template GetFeatureStorage<Feature>(id, View().Get(id));
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
 template <typename Feature>
-const auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                       ViewBase>::GetFeatureStorage(EdgeId id) const {
+auto DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                ViewBase>::GetFeatureStorage(EdgeId id) const {
   return edges_container_.template GetFeatureStorage<Feature>(id, View().Get(id));
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
 template <Component C, typename Feature>
-auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                 ViewBase>::GetFeatureExtraStorage() {
+auto DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                ViewBase>::GetFeatureExtraStorage() {
   if constexpr (C == Component::Node) {
     return nodes_container_.template GetFeatureExtraStorage<Feature>();
   } else {
@@ -168,8 +168,8 @@ auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
 template <Component C, typename Feature>
-const auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                       ViewBase>::GetFeatureExtraStorage() const {
+auto DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                ViewBase>::GetFeatureExtraStorage() const {
   if constexpr (C == Component::Node) {
     return nodes_container_.template GetFeatureExtraStorage<Feature>();
   } else {
@@ -180,16 +180,16 @@ const auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorage
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
 template <typename Feature>
-auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                 ViewBase>::GetFeatureStorage() {
+auto DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                ViewBase>::GetFeatureStorage() {
   return features_storage_.template GetFeatureStorage<Feature>();
 }
 
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
           typename ExtraStorageT, template <typename, typename> typename ViewBase>
 template <typename Feature>
-const auto& DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
-                       ViewBase>::GetFeatureStorage() const {
+auto DAGStorage<ShortName, NodesContainerT, EdgesContainerT, ExtraStorageT,
+                ViewBase>::GetFeatureStorage() const {
   return features_storage_.template GetFeatureStorage<Feature>();
 }
 

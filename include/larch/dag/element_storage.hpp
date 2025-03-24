@@ -32,10 +32,10 @@ struct ElementStorage {
   MOVE_ONLY(ElementStorage);
 
   template <typename F>
-  auto& GetFeatureStorage();
+  auto GetFeatureStorage();
 
   template <typename F>
-  const auto& GetFeatureStorage() const;
+  auto GetFeatureStorage() const;
 
  private:
   std::tuple<Fs...> features_storage_;

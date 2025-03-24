@@ -120,25 +120,25 @@ void DAGView<Storage, Base>::InitializeEdges(size_t size) const {
 
 template <typename Storage, template <typename, typename> typename Base>
 template <typename Feature>
-auto& DAGView<Storage, Base>::GetFeatureStorage() const {
+auto DAGView<Storage, Base>::GetFeatureStorage() const {
   return GetStorage().template GetFeatureStorage<Feature>();
 }
 
 template <typename Storage, template <typename, typename> typename Base>
 template <typename Feature>
-auto&& DAGView<Storage, Base>::GetFeatureStorage(NodeId id) const {
+auto DAGView<Storage, Base>::GetFeatureStorage(NodeId id) const {
   return GetStorage().template GetFeatureStorage<Feature>(id);
 }
 
 template <typename Storage, template <typename, typename> typename Base>
 template <typename Feature>
-auto&& DAGView<Storage, Base>::GetFeatureStorage(EdgeId id) const {
+auto DAGView<Storage, Base>::GetFeatureStorage(EdgeId id) const {
   return GetStorage().template GetFeatureStorage<Feature>(id);
 }
 
 template <typename Storage, template <typename, typename> typename Base>
 template <Component C, typename Feature>
-auto& DAGView<Storage, Base>::GetFeatureExtraStorage() const {
+auto DAGView<Storage, Base>::GetFeatureExtraStorage() const {
   return GetStorage().template GetFeatureExtraStorage<C, Feature>();
 }
 

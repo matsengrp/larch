@@ -52,7 +52,8 @@ inline nuc_one_hot base_to_singleton(MutationBase base) {
 }
 
 struct HypotheticalNode {
-  HypotheticalNode Copy() const {
+  template <typename CRTP>
+  HypotheticalNode Copy(const CRTP*) const {
     return {changed_base_sites_.Copy(), has_changed_topology_};
   }
 
@@ -181,7 +182,7 @@ struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
   //                                   std::vector<NodeId> dst) const;
   bool InitHypotheticalTree(const Profitable_Moves& move,
                             const std::vector<Node_With_Major_Allele_Set_Change>&
-                                nodes_with_major_allele_set_change);
+                                nodes_with_major_allele_set_change) const;
 };
 
 template <typename Target>

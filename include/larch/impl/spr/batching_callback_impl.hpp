@@ -63,7 +63,7 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
           Assert(i.HaveSampleId());
         }
 #endif
-// auto old_src_parent = storage.spr->View().GetNodeFromMAT(move.src->parent);
+        // auto old_src_parent = storage.spr->View().GetNodeFromMAT(move.src->parent);
         if (storage.spr->View().InitHypotheticalTree(
                 move, nodes_with_major_allele_set_change)) {
           // storage.spr->View().GetRoot().Validate(true);
@@ -71,8 +71,8 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
               collapse_empty_fragment_edges_
                   ? storage.spr->View().MakeFragment()
                   : storage.spr->View().MakeUncollapsedFragment());
-// auto new_old_src_parent = storage.spr->View().GetOldSourceParent();
-// Assert(old_src_parent.GetId() == new_old_src_parent.GetId());
+          // auto new_old_src_parent = storage.spr->View().GetOldSourceParent();
+          // Assert(old_src_parent.GetId() == new_old_src_parent.GetId());
           auto fragment = storage.fragment->View();
           // GetFullDAG(fragment).GetRoot().Validate(true, false);
           auto& impl = static_cast<CRTP&>(*this);
@@ -147,15 +147,15 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
           all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
 
       //// FOR DEBUGGING: alternative "serialized" merging of fragments to check them
-      //for (auto& i : all) {
-      //  auto frag = i.fragment->View();
-      //  MADAGToDOT(frag, std::cout);
-      //  MADAGToDOT(i.spr->View(), std::cout);
-      //  std::vector dags = {frag};
-      //  merge_.AddDAGs(dags);
-      //  MADAGToDOT(merge_.GetResult(), std::cout);
-      //Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
-      //}
+      // for (auto& i : all) {
+      //   auto frag = i.fragment->View();
+      //   MADAGToDOT(frag, std::cout);
+      //   MADAGToDOT(i.spr->View(), std::cout);
+      //   std::vector dags = {frag};
+      //   merge_.AddDAGs(dags);
+      //   MADAGToDOT(merge_.GetResult(), std::cout);
+      // Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
+      // }
 
       Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
     }
@@ -234,7 +234,8 @@ UncondensedMergeDAGStorage BatchingCallback<CRTP, SampleDAG>::CreateMATViewStora
     if (node.IsLeaf()) {
       std::string sample_id = "";
       if (node.GetMATNode() == nullptr) {
-        auto& node_storage = node.template GetFeatureExtraStorage<MATNodeStorage>();
+        auto& node_storage =
+            node.template GetFeatureExtraStorage<MATNodeStorage>().get();
         sample_id = node_storage.node_id_to_sampleid_map_.at(node.GetId());
       } else {
         sample_id = sample_mat_tree_.get_node_name(node.GetMATNode()->node_id);

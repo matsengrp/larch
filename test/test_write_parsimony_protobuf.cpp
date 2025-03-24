@@ -26,10 +26,10 @@ bool compare_treedags(DAG1 dag1, DAG2 dag2) {
 
   std::unordered_set<CompactGenome> dag1_cgs, dag2_cgs;
   for (auto node : dag1.GetNodes()) {
-    dag1_cgs.emplace(node.GetCompactGenome().Copy());
+    dag1_cgs.emplace(node.GetCompactGenome().Copy(&node));
   }
   for (auto node : dag2.GetNodes()) {
-    dag2_cgs.emplace(node.GetCompactGenome().Copy());
+    dag2_cgs.emplace(node.GetCompactGenome().Copy(&node));
   }
   if (dag1_cgs != dag2_cgs) {
     return false;
@@ -39,10 +39,10 @@ bool compare_treedags(DAG1 dag1, DAG2 dag2) {
   std::vector<EdgeMutations> dag2_ems;
 
   for (auto edge : dag1.GetEdges()) {
-    dag1_ems.emplace_back(edge.GetEdgeMutations().Copy());
+    dag1_ems.emplace_back(edge.GetEdgeMutations().Copy(&edge));
   }
   for (auto edge : dag2.GetEdges()) {
-    dag2_ems.emplace_back(edge.GetEdgeMutations().Copy());
+    dag2_ems.emplace_back(edge.GetEdgeMutations().Copy(&edge));
   }
 
   if (not(dag1_ems.empty() or dag2_ems.empty())) {

@@ -17,7 +17,10 @@ struct SampleId {
   size_t hash_ = 0;
   std::optional<std::string> sample_id_;
 
-  inline SampleId Copy() const { return SampleId(sample_id_); }
+  template <typename CRTP>
+  inline SampleId Copy(const CRTP*) const {
+    return SampleId(sample_id_);
+  }
 
   inline bool empty() const {
     if (not sample_id_.has_value()) {
@@ -45,7 +48,7 @@ template <typename CRTP, typename Tag>
 struct FeatureConstView<SampleId, CRTP, Tag> {
   const std::optional<std::string>& GetSampleId() const;
 
-  inline bool HaveSampleId() const { return not GetFeatureStorage(this).empty(); }
+  inline bool HaveSampleId() const { return not GetFeatureStorage(this).get().empty(); }
 };
 
 template <typename CRTP, typename Tag>

@@ -45,14 +45,14 @@ struct FragmentElementsContainer {
   Id<C> GetNextAvailableId() const { return target_.template GetNextAvailableId<C>(); }
 
   template <typename Feature, typename E>
-  auto& GetFeatureStorage(Id<C> id, E elem);
+  auto GetFeatureStorage(Id<C> id, E elem);
   template <typename Feature, typename E>
-  const auto& GetFeatureStorage(Id<C> id, E elem) const;
+  auto GetFeatureStorage(Id<C> id, E elem) const;
 
   template <typename Feature>
-  auto& GetFeatureExtraStorage();
+  auto GetFeatureExtraStorage();
   template <typename Feature>
-  const auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
   template <typename VT>
   auto All() const {
@@ -87,18 +87,18 @@ struct FragmentExtraStorage {
   using Base = typename Target::StorageType::ExtraStorageType::template Base<T, CRTP>;
 
   template <typename Feature>
-  auto& GetFeatureStorage() {
+  auto GetFeatureStorage() {
     if constexpr (std::is_same_v<Feature, Connections>) {
-      return connections_;
+      return std::ref(connections_);
     } else {
       return target_.GetStorage().template GetFeatureStorage<Feature>();
     }
   }
 
   template <typename Feature>
-  const auto& GetFeatureStorage() const {
+  auto GetFeatureStorage() const {
     if constexpr (std::is_same_v<Feature, Connections>) {
-      return connections_;
+      return std::cref(connections_);
     } else {
       return target_.GetStorage().template GetFeatureStorage<Feature>();
     }
@@ -155,61 +155,7 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
         FragmentExtraStorage<Target>{target, root_node_id}};
 
     auto view = result.View();
-    for (auto node : view.GetNodes()) {
-      auto& storage = result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
-          node.GetId(), 0);
-      storage = {};
-    }
-    for (auto edge : view.GetEdges()) {
-      Assert(edge.GetParentId().value != NoId && "Edge has no parent");
-      Assert(edge.GetChildId().value != NoId && "Edge has no child");
-      Assert(edge.GetClade().value != NoId && "Edge has no clade index");
-      Assert(edge.GetParentId() != edge.GetChildId() && "Edge is looped");
-      auto& parent_storage =
-          result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
-              edge.GetParentId(), 0);
-      auto parent_node = edge.GetParent();
-      GetOrInsert(parent_storage.GetCladesMutable(&parent_node), edge.GetClade())
-          .push_back(edge.GetId());
-      auto& child_storage =
-          result.GetNodesContainer().template GetFeatureStorage<Neighbors>(
-              edge.GetChildId(), 0);
-      auto child_node = edge.GetChild();
-      child_storage.GetParentsMutable(&child_node).push_back(edge.GetId());
-    }
-    Connections& storage = result.template GetFeatureStorage<Connections>();
-    storage.root_ = {NoId};
-    storage.leafs_ = {};
-    std::atomic<size_t> root_id{NoId};
-    Reduction<std::vector<NodeId>> leafs{32};
-    SeqForEach(view.GetNodes() | Transform::GetId(), [&](NodeId nid) {
-      auto node = view.Get(nid);
-      // for (auto clade : node.GetClades()) {
-      //   Assert(not clade.empty() && "Empty clade");
-      // }
-      if ((node.IsUA()) or (node.GetId() == root_node_id)) {
-        const size_t previous = root_id.exchange(node.GetId().value);
-        if (previous != NoId) {
-          std::cout << "Duplicate root: " << previous << " and " << node.GetId().value
-                    << "\n";
-        }
-        Assert(previous == NoId);
-      }
-      if (node.IsLeaf()) {
-        leafs.AddElement([](std::vector<NodeId>& ls, NodeId id) { ls.push_back(id); },
-                         node);
-      }
-    });
-    Assert(root_id.load() != NoId);
-    storage.root_.value = root_id.load();
-    leafs.GatherAndClear(
-        [&leafs](auto buckets, auto& stor) {
-          for (auto&& bucket : buckets) {
-            stor.leafs_.reserve(leafs.size_approx());
-            stor.leafs_.insert(stor.leafs_.end(), bucket.begin(), bucket.end());
-          }
-        },
-        storage);
+    view.BuildConnections();
     Assert(view.GetRoot().GetId() == root_node_id);
     return result;
   }

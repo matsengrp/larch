@@ -59,6 +59,13 @@ struct FeatureEquivalent
     : std::bool_constant<std::is_same_v<Lhs, Rhs> or std::is_base_of_v<Lhs, Rhs> or
                          std::is_base_of_v<Rhs, Lhs>> {};
 
+template <typename Feature>
+struct OverlayFeatureType {
+  using store_type = Feature;
+  using const_view_type = std::reference_wrapper<const Feature>;
+  using mutable_view_type = std::reference_wrapper<Feature>;
+};
+
 /**
  * Used by specialization on the Feature parameter to add functions to
  * an attachable feature. Functions declared in FeatureConstView are
@@ -76,18 +83,17 @@ struct FeatureMutableView;
 /** @} */
 
 template <typename CRTP, typename... Fs>
-struct ToFeatureConstBase : FeatureConstView<Fs, CRTP, Fs>... {};
+struct ToFeatureConstBase : FeatureConstView<Fs, CRTP>... {};
 
 template <typename CRTP, typename... Fs>
-struct ToFeatureConstBase<CRTP, std::tuple<Fs...>> : FeatureConstView<Fs, CRTP, Fs>... {
+struct ToFeatureConstBase<CRTP, std::tuple<Fs...>> : FeatureConstView<Fs, CRTP>... {};
+
+template <typename CRTP, typename... Fs>
+struct ToFeatureMutableBase : FeatureMutableView<Fs, CRTP>... {};
+
+template <typename CRTP, typename... Fs>
+struct ToFeatureMutableBase<CRTP, std::tuple<Fs...>> : FeatureMutableView<Fs, CRTP>... {
 };
-
-template <typename CRTP, typename... Fs>
-struct ToFeatureMutableBase : FeatureMutableView<Fs, CRTP, Fs>... {};
-
-template <typename CRTP, typename... Fs>
-struct ToFeatureMutableBase<CRTP, std::tuple<Fs...>>
-    : FeatureMutableView<Fs, CRTP, Fs>... {};
 
 /**
  * A per-element feature can have some additional functions, that are exposed
@@ -147,10 +153,15 @@ struct DefaultViewBase {
  * @{
  */
 template <typename CRTP, typename Feature, typename Tag>
-auto& GetFeatureStorage(const FeatureMutableView<Feature, CRTP, Tag>* feature);
+auto GetFeatureStorage(const FeatureMutableView<Feature, CRTP, Tag>* feature);
 
 template <typename CRTP, typename Feature, typename Tag>
-const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* feature);
+auto GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* feature);
+
+template <typename T>
+auto GetFeatureStorage(T) {
+  static_assert(false, "Accepts const Feature{Const, Mutable}View*");
+}
 /** @} */
 
 struct NodeId {

@@ -51,7 +51,8 @@ class CompactGenome {
 
   inline bool empty() const;
 
-  [[nodiscard]] inline CompactGenome Copy() const;
+  template <typename CRTP>
+  [[nodiscard]] inline CompactGenome Copy(const CRTP*) const;
 
   inline void AddParentEdge(const EdgeMutations& mutations, const CompactGenome& parent,
                             std::string_view reference_sequence);

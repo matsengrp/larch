@@ -9,12 +9,12 @@ inline constexpr bool ElementStorage<Fs...>::contains_element_feature =
 
 template <typename... Fs>
 template <typename F>
-auto& ElementStorage<Fs...>::GetFeatureStorage() {
-  return tuple_get<F, FeatureEquivalent>(features_storage_);
+auto ElementStorage<Fs...>::GetFeatureStorage() {
+  return std::ref(tuple_get<F, FeatureEquivalent>(features_storage_));
 }
 
 template <typename... Fs>
 template <typename F>
-const auto& ElementStorage<Fs...>::GetFeatureStorage() const {
-  return tuple_get<F, FeatureEquivalent>(features_storage_);
+auto ElementStorage<Fs...>::GetFeatureStorage() const {
+  return std::cref(tuple_get<F, FeatureEquivalent>(features_storage_));
 }

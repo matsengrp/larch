@@ -22,7 +22,10 @@ EdgeMutations::EdgeMutations(
     ContiguousMap<MutationPosition, std::pair<MutationBase, MutationBase>>&& mutations)
     : mutations_{std::forward<decltype(mutations_)>(mutations)} {}
 
-EdgeMutations EdgeMutations::Copy() const { return EdgeMutations{mutations_.Copy()}; }
+template <typename CRTP>
+EdgeMutations EdgeMutations::Copy(const CRTP*) const {
+  return EdgeMutations{mutations_.Copy()};
+}
 
 auto EdgeMutations::begin() const -> decltype(mutations_.begin()) {
   return mutations_.begin();
@@ -81,17 +84,17 @@ std::string EdgeMutations::ToString() const {
 template <typename CRTP, typename Tag>
 const EdgeMutations& FeatureConstView<EdgeMutations, CRTP, Tag>::GetEdgeMutations()
     const {
-  return GetFeatureStorage(this);
+  return GetFeatureStorage(this).get();
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<EdgeMutations, CRTP, Tag>::SetEdgeMutations(
     EdgeMutations&& edge_mutations) const {
-  GetFeatureStorage(this) = std::forward<EdgeMutations>(edge_mutations);
+  GetFeatureStorage(this).get() = std::forward<EdgeMutations>(edge_mutations);
 }
 
 template <typename CRTP, typename Tag>
 EdgeMutations& FeatureMutableView<EdgeMutations, CRTP, Tag>::GetMutableEdgeMutations()
     const {
-  return GetFeatureStorage(this);
+  return GetFeatureStorage(this).get();
 }

@@ -64,14 +64,14 @@ struct ElementsContainer {
   void Clear();
 
   template <typename Feature, typename E>
-  auto& GetFeatureStorage(Id<C> id, E elem);
+  auto GetFeatureStorage(Id<C> id, E elem);
   template <typename Feature, typename E>
-  const auto& GetFeatureStorage(Id<C> id, E elem) const;
+  auto GetFeatureStorage(Id<C> id, E elem) const;
 
   template <typename Feature>
-  auto& GetFeatureExtraStorage();
+  auto GetFeatureExtraStorage();
   template <typename Feature>
-  const auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
   template <typename VT>
   auto All() const {

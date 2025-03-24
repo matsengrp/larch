@@ -50,14 +50,20 @@ struct MATNodeStorage {
   MOVE_ONLY(MATNodeStorage);
   MATNodeStorage() = default;
 
-  inline MATNodeStorage Copy() const { return {}; }
+  template <typename CRTP>
+  inline MATNodeStorage Copy(const CRTP*) const {
+    return {};
+  }
 };
 
 struct MATEdgeStorage {
   MOVE_ONLY(MATEdgeStorage);
   MATEdgeStorage() = default;
 
-  inline MATEdgeStorage Copy() const { return {}; }
+  template <typename CRTP>
+  inline MATEdgeStorage Copy(const CRTP*) const {
+    return {};
+  }
 
   mutable EdgeMutations mutations_;
 };
@@ -77,6 +83,7 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
       if (is_ua()) {
         c_node_id = dag_node()
                         .template GetFeatureExtraStorage<MATNodeStorage>()
+                        .get()
                         .mat_tree_->root->node_id;
       } else {
         done = true;
@@ -95,8 +102,9 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
     }
   }
 
-  using Storage =
-      decltype(std::declval<Node>().template GetFeatureExtraStorage<MATNodeStorage>());
+  using Storage = decltype(std::declval<Node>()
+                               .template GetFeatureExtraStorage<MATNodeStorage>()
+                               .get());
 
   bool empty() const { return clades_count == 0; }
 
@@ -173,7 +181,7 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
   MAT::Node* mat_node() const { return std::get<2>(access_.value()); }
 
   Storage& storage() const {
-    return dag_node().template GetFeatureExtraStorage<MATNodeStorage>();
+    return dag_node().template GetFeatureExtraStorage<MATNodeStorage>().get();
   }
 
   bool is_ua() const { return std::get<3>(access_.value()); }
@@ -192,8 +200,9 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
 };
 
 struct MATNeighbors : Neighbors {
-  inline MATNeighbors Copy() const {
-    MATNeighbors result;
+  template <typename CRTP>
+  inline DAGNeighbors Copy(const CRTP*) const {
+    DAGNeighbors result;
     return result;
   }
 
@@ -214,7 +223,11 @@ struct MATNeighbors : Neighbors {
   }
 
   template <typename CRTP>
-  auto GetLeafsBelow(const CRTP* crtp) const {}
+  auto GetLeafsBelow(const CRTP* crtp) const {
+    Fail("Leafs below not available on MATView");
+    static const std::array<NodeId, 1> empty = {{NoId}};
+    return empty | ranges::views::take(0);
+  }
 
   template <typename CRTP>
   auto& GetParentsMutable(const CRTP*) {
@@ -241,7 +254,8 @@ struct MATNeighbors : Neighbors {
     Assert(not is_ua);
     if constexpr (not CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
       if (mat_node == nullptr) {
-        auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
+        auto& storage =
+            dag_node.template GetFeatureExtraStorage<MATNodeStorage>().get();
         auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_node.GetId());
         Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
         auto condensed_mat_node_str =
@@ -295,7 +309,7 @@ struct MATNeighbors : Neighbors {
     }
     // TODO: add case for uncondensed nodes
     //  something like this, only better:
-    auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
+    auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>().get();
     size_t ct = 0;
     for (auto* c : mat_node->children) {
       auto c_node_id = c->node_id;
@@ -324,6 +338,15 @@ struct MATNeighbors : Neighbors {
   }
 };
 
+template <>
+struct OverlayFeatureType<MATNeighbors> {
+  using store_type = DAGNeighbors;
+  using const_view_type = std::variant<std::reference_wrapper<const DAGNeighbors>,
+                                       std::reference_wrapper<const MATNeighbors>>;
+  using mutable_view_type = std::variant<std::reference_wrapper<DAGNeighbors>,
+                                         std::reference_wrapper<MATNeighbors>>;
+};
+
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATNeighbors, CRTP, Tag>
     : FeatureConstView<Neighbors, CRTP, Tag> {};
@@ -333,8 +356,9 @@ struct FeatureMutableView<MATNeighbors, CRTP, Tag>
     : FeatureMutableView<Neighbors, CRTP, Tag> {};
 
 struct MATEndpoints : Endpoints {
-  inline MATEndpoints Copy() const {
-    MATEndpoints result;
+  template <typename CRTP>
+  inline DAGEndpoints Copy(const CRTP*) const {
+    DAGEndpoints result;
     return result;
   }
 
@@ -347,7 +371,7 @@ struct MATEndpoints : Endpoints {
     // if it's an edge above a condensed node
     if (mat_node == nullptr) {
       [[maybe_unused]] auto& storage =
-          dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+          dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>().get();
       [[maybe_unused]] auto cn_id_str =
           storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
       Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
@@ -389,7 +413,7 @@ struct MATEndpoints : Endpoints {
       }
     } else {
       // if it's an edge above a condensed node
-      auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+      auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>().get();
       if (mat_node == nullptr) {
         auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
         Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
@@ -454,6 +478,15 @@ struct MATEndpoints : Endpoints {
   }
 };
 
+template <>
+struct OverlayFeatureType<MATEndpoints> {
+  using store_type = DAGEndpoints;
+  using const_view_type = std::variant<std::reference_wrapper<const DAGEndpoints>,
+                                       std::reference_wrapper<const MATEndpoints>>;
+  using mutable_view_type = std::variant<std::reference_wrapper<DAGEndpoints>,
+                                         std::reference_wrapper<MATEndpoints>>;
+};
+
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATEndpoints, CRTP, Tag>
     : FeatureConstView<Endpoints, CRTP, Tag> {};
@@ -481,6 +514,7 @@ struct ExtraFeatureConstView<MATNodeStorage, CRTP> {
   const MAT::Tree& GetMAT() const {
     auto& dag = static_cast<const CRTP&>(*this);
     auto* mat = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
+                    .get()
                     .mat_tree_;
     Assert(mat != nullptr);
     return *mat;
@@ -507,9 +541,9 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
     Assert(mat != nullptr);
     auto& dag = static_cast<const CRTP&>(*this);
     auto& node_storage =
-        dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>();
+        dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>().get();
     auto& edge_storage =
-        dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>();
+        dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>().get();
 
     node_storage.mat_tree_ = mat;
     edge_storage.mat_tree_ = mat;
@@ -605,6 +639,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     auto dag_node = static_cast<const CRTP&>(*this);
     auto dag = dag_node.GetDAG();
     return dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
+        .get()
         .ua_node_id_;
   }
 
@@ -613,9 +648,11 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     NodeId id = dag_node.GetId();
     auto dag = dag_node.GetDAG();
     auto& mat = *dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
+                     .get()
                      .mat_tree_;
     auto* mat_node = mat.get_node(id.value);
     bool is_ua = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
+                     .get()
                      .ua_node_id_ == id;
     // if ((not is_ua) and (mat_node == nullptr)) {
     //   auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
@@ -629,16 +666,6 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     //   }
     // }
     return std::make_tuple(dag_node, std::ref(mat), mat_node, is_ua);
-  }
-
-  template <typename Node>
-  const DAGNeighbors* get_overlaid(Node dag_node) const {
-    auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
-    std::unique_lock lock{*storage.mtx_};
-    if (storage.overlay_access_) {
-      return storage.overlay_access_(dag_node.GetId());
-    }
-    return nullptr;
   }
 };
 
@@ -656,18 +683,12 @@ struct ExtraFeatureStorage<MATEdgeStorage> {
   std::map<NodeId, std::string> node_id_to_sampleid_map_;
   std::map<std::string, size_t> sampleid_to_mat_node_id_map_;
   size_t condensed_nodes_count_ = 0;
-  std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
-  std::function<const EdgeMutations*(EdgeId)> overlay_access_mutations_;
   size_t max_id_ = 0;
 };
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   // const EdgeMutations& GetEdgeMutations() const {
-  //   auto* overlaid = get_overlaid_mutations(static_cast<const CRTP&>(*this));
-  //   if (overlaid != nullptr) {
-  //     return *overlaid;
-  //   }
   //   auto [dag_edge, mat, mat_node, is_ua] = access();
   //   auto& storage = dag_edge.template GetFeatureStorage<MATEdgeStorage>();
   //   auto& id_storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
@@ -707,6 +728,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     EdgeId id = dag_edge.GetId();
     auto dag = dag_edge.GetDAG();
     auto& mat = *dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>()
+                     .get()
                      .mat_tree_;
     Assert((id.value == MV_UA_NODE_ID) or (id.value < mat.get_size_upper()));
     MAT::Node* mat_node = mat.get_node(id.value);
@@ -714,7 +736,7 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     bool is_ua =
         mat_node != nullptr ? ((mat.root->node_id == mat_node->node_id)) : false;
     if ((not is_ua) and (mat_node == nullptr)) {
-      auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+      auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>().get();
       // if (storage.condensed_nodes_.find(NodeId{id.value}) ==
       //     storage.condensed_nodes_.end()) {
       if (storage.node_id_to_sampleid_map_.find(NodeId{id.value}) ==
@@ -725,28 +747,10 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 
     return std::make_tuple(dag_edge, std::ref(mat), mat_node, is_ua);
   }
-
-  template <typename Edge>
-  const EdgeMutations* get_overlaid_mutations(Edge dag_edge) const {
-    auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
-    std::unique_lock lock{*storage.mtx_};
-    if (storage.overlay_access_mutations_) {
-      return storage.overlay_access_mutations_(dag_edge.GetId());
-    }
-    return nullptr;
-  }
 };
 
 template <typename CRTP, typename Tag>
-struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {
-  void SetOverlayAccess(
-      std::function<const EdgeMutations*(EdgeId)>&& overlay_access_mutations) const {
-    auto& dag_edge = static_cast<const CRTP&>(*this);
-    auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
-    std::unique_lock lock{*storage.mtx_};
-    storage.overlay_access_mutations_ = std::move(overlay_access_mutations);
-  }
-};
+struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {};
 
 template <Component C, bool>
 struct MATElementsContainerBase {
@@ -825,54 +829,31 @@ struct MATElementsContainerBase {
   }
 
   template <typename Feature, typename E>
-  const auto& GetFeatureStorage(Id<C> id, E /*elem*/) const {
-    if constexpr (C == Component::Node) {
-      if constexpr (FeatureEquivalent<Feature, Neighbors>::value) {
-        std::unique_lock lock{*mtx_};
-        MATNeighbors& result = std::get<MATNeighbors>(features_storage_.at(id));
-        // if (id.value == MV_UA_NODE_ID) {
-        //   std::vector<EdgeId> clade;
-        //   clade.push_back(EdgeId{GetMAT().root->node_id});
-        //   result.GetCladesMutable().push_back(std::move(clade));
-        // } else {
-        //   result.GetParentsMutable().push_back(elem.GetSingleParent());
-        //   for (auto i : elem.GetClades()) {
-        //     result.GetCladesMutable().push_back(
-        //         ranges::to_vector(i | Transform::GetId()));
-        //   }
-        // }
-        return result;
-      }
-      // TODO
-    } else {
-      if constexpr (FeatureEquivalent<Feature, Neighbors>::value) {
-        Fail("Not supported");
-      }
-      if (features_storage_.empty()) {
-        features_storage_.resize(GetMAT().get_size_upper());
-      }
-      return tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id));
-    }
-  }
-
-  template <typename Feature, typename E>
-  auto& GetFeatureStorage(Id<C> id, E /*elem*/) {
+  auto GetFeatureStorage(Id<C> id, E /*elem*/) const {
     if (features_storage_.empty()) {
       features_storage_.resize(GetMAT().get_size_upper());
     }
-    return tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id));
+    return std::cref(tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id)));
+  }
+
+  template <typename Feature, typename E>
+  auto GetFeatureStorage(Id<C> id, E /*elem*/) {
+    if (features_storage_.empty()) {
+      features_storage_.resize(GetMAT().get_size_upper());
+    }
+    return std::ref(tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id)));
   }
 
   template <typename Feature>
-  auto& GetFeatureExtraStorage() {
+  auto GetFeatureExtraStorage() {
     static_assert(std::is_same_v<Feature, ElementStorageT>);
-    return extra_storage_;
+    return std::ref(extra_storage_);
   }
 
   template <typename Feature>
-  const auto& GetFeatureExtraStorage() const {
+  auto GetFeatureExtraStorage() const {
     static_assert(std::is_same_v<Feature, ElementStorageT>);
-    return extra_storage_;
+    return std::cref(extra_storage_);
   }
 
   template <typename VT>

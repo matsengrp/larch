@@ -261,28 +261,28 @@ struct ExtendDAGStorage {
   void ClearEdges();
 
   template <typename F>
-  auto& GetFeatureStorage();
+  auto GetFeatureStorage();
 
   template <typename F>
-  const auto& GetFeatureStorage() const;
+  auto GetFeatureStorage() const;
 
   template <typename F>
-  auto&& GetFeatureStorage(NodeId id);
+  auto GetFeatureStorage(NodeId id);
 
   template <typename F>
-  const auto& GetFeatureStorage(NodeId id) const;
+  auto GetFeatureStorage(NodeId id) const;
 
   template <typename F>
-  auto&& GetFeatureStorage(EdgeId id);
+  auto GetFeatureStorage(EdgeId id);
 
   template <typename F>
-  const auto& GetFeatureStorage(EdgeId id) const;
+  auto GetFeatureStorage(EdgeId id) const;
 
   template <Component C, typename F>
-  auto& GetFeatureExtraStorage();
+  auto GetFeatureExtraStorage();
 
   template <Component C, typename F>
-  const auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
   auto& GetTargetStorage() { return *this; }
   auto& GetTargetStorage() const { return *this; }

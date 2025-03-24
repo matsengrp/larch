@@ -158,11 +158,9 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
   void OnReassignedStates(const MAT::Tree& tree) {
     for (auto leaf_node : tree.get_leaves()) {
-      auto new_cg =
-          sample_.GetNodeFromMAT(sample_.GetMAT().get_node(leaf_node->node_id))
-              .GetCompactGenome()
-              .Copy();
-      mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
+      auto node = sample_.GetNodeFromMAT(sample_.GetMAT().get_node(leaf_node->node_id));
+      auto new_cg = node.GetCompactGenome().Copy(&node);
+      mat_node_to_cg_map_[leaf_node] = std::move(new_cg);
     }
   }
 

@@ -6,16 +6,17 @@ template <typename Feature>
 const Feature ExtraFeatureStorage<Deduplicate<Feature>>::empty_ = {};
 
 template <typename CRTP, typename Feature>
-auto& GetFeatureStorage(
+auto GetFeatureStorage(
     const FeatureConstView<Feature, CRTP, Deduplicate<Feature>>* feature) {
   const Feature* result = static_cast<const CRTP&>(*feature)
                               .template GetFeatureStorage<Deduplicate<Feature>>()
+                              .get()
                               .feature_;
   // TODO Assert(result);
   if (not result) {
-    return ExtraFeatureStorage<Deduplicate<Feature>>::empty_;
+    return std::cref(ExtraFeatureStorage<Deduplicate<Feature>>::empty_);
   }
-  return *result;
+  return std::cref(*result);
 }
 
 template <typename Feature, typename CRTP>
@@ -24,11 +25,13 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
     Feature&& feature) const {
   auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<Deduplicate<Feature>>()
+                           .get()
                            .deduplicated_;
   const Feature* result =
       std::addressof(deduplicated.insert(std::forward<Feature>(feature)).first);
   static_cast<const CRTP&>(*this)
       .template GetFeatureStorage<Deduplicate<Feature>>()
+      .get()
       .feature_ = result;
   return *this;
 }
@@ -39,6 +42,7 @@ auto& FeatureMutableView<Deduplicate<Feature>, CRTP>::operator=(
     const Feature* feature) const {
   static_cast<const CRTP&>(*this)
       .template GetFeatureStorage<Deduplicate<Feature>>()
+      .get()
       .feature_ = feature;
   return *this;
 }
@@ -52,6 +56,7 @@ const Feature* ExtraFeatureConstView<Deduplicate<Feature>, CRTP>::FindDeduplicat
           : Component::Edge;
   auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<C, Deduplicate<Feature>>()
+                           .get()
                            .deduplicated_;
   auto result = deduplicated.find(feature);
   if (not result.has_value()) {
@@ -71,8 +76,11 @@ ExtraFeatureMutableView<Deduplicate<Feature>, CRTP>::AddDeduplicated(
           : Component::Edge;
   auto& deduplicated = static_cast<const CRTP&>(*this)
                            .template GetFeatureExtraStorage<C, Deduplicate<Feature>>()
+                           .get()
                            .deduplicated_;
 
-  auto result = deduplicated.insert(feature, [](const auto& x) { return x.Copy(); });
+  auto result = deduplicated.insert(feature, [this](const auto& x) {
+    return x.Copy(static_cast<const CRTP*>(this));
+  });
   return {std::addressof(result.first), result.second};
 }

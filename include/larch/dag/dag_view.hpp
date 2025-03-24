@@ -136,13 +136,13 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   void InitializeEdges(size_t size) const;
 
   template <typename Feature>
-  auto& GetFeatureStorage() const;
+  auto GetFeatureStorage() const;
   template <typename Feature>
-  auto&& GetFeatureStorage(NodeId id) const;
+  auto GetFeatureStorage(NodeId id) const;
   template <typename Feature>
-  auto&& GetFeatureStorage(EdgeId id) const;
+  auto GetFeatureStorage(EdgeId id) const;
   template <Component C, typename Feature>
-  auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
   Storage& GetStorage() const;
 

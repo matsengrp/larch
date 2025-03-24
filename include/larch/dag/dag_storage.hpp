@@ -16,13 +16,13 @@ struct ExtraStorage {
   struct Base : T<Features, CRTP>... {};
 
   template <typename Feature>
-  auto& GetFeatureStorage() {
-    return tuple_get<Feature, FeatureEquivalent>(features_storage_);
+  auto GetFeatureStorage() {
+    return std::ref(tuple_get<Feature, FeatureEquivalent>(features_storage_));
   }
 
   template <typename Feature>
-  const auto& GetFeatureStorage() const {
-    return tuple_get<Feature, FeatureEquivalent>(features_storage_);
+  auto GetFeatureStorage() const {
+    return std::cref(tuple_get<Feature, FeatureEquivalent>(features_storage_));
   }
 
   template <typename Storage>
@@ -156,28 +156,28 @@ struct DAGStorage {
   void ClearEdges();
 
   template <typename Feature>
-  auto&& GetFeatureStorage(NodeId id);
+  auto GetFeatureStorage(NodeId id);
 
   template <typename Feature>
-  const auto& GetFeatureStorage(NodeId id) const;
+  auto GetFeatureStorage(NodeId id) const;
 
   template <typename Feature>
-  auto&& GetFeatureStorage(EdgeId id);
+  auto GetFeatureStorage(EdgeId id);
 
   template <typename Feature>
-  const auto& GetFeatureStorage(EdgeId id) const;
+  auto GetFeatureStorage(EdgeId id) const;
 
   template <Component C, typename Feature>
-  auto& GetFeatureExtraStorage();
+  auto GetFeatureExtraStorage();
 
   template <Component C, typename Feature>
-  const auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
   template <typename Feature>
-  auto& GetFeatureStorage();
+  auto GetFeatureStorage();
 
   template <typename Feature>
-  const auto& GetFeatureStorage() const;
+  auto GetFeatureStorage() const;
 
   auto& GetTargetStorage() { return features_storage_.GetTargetStorage(*this); }
   auto& GetTargetStorage() const { return features_storage_.GetTargetStorage(*this); }
