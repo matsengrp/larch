@@ -1,6 +1,7 @@
 #pragma once
 
 #include "larch/mat_conversion.hpp"
+#include "larch/debug.hpp"
 
 template <typename DAGStorageType, typename DAGViewType>
 struct CondensedViewBase : DefaultViewBase<DAGStorageType, DAGViewType> {
@@ -624,11 +625,15 @@ struct MATValidator {
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   MAT::Node* GetMATNode() const {
+    debug_.use();
     auto [dag_node, mat, mat_node, is_ua] = access();
     return mat_node;
   }
 
-  bool HaveMATNode() const { return GetMATNode() != nullptr; }
+  bool HaveMATNode() const {
+    debug_.use();
+    return GetMATNode() != nullptr;
+  }
 
  private:
   friend struct MATNeighbors;
@@ -636,6 +641,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   static inline std::vector<MAT::Node*> empty_node{nullptr};
 
   NodeId GetUA() const {
+    debug_.use();
     auto dag_node = static_cast<const CRTP&>(*this);
     auto dag = dag_node.GetDAG();
     return dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
@@ -644,6 +650,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   }
 
   auto access() const {
+    debug_.use();
     auto dag_node = static_cast<const CRTP&>(*this);
     NodeId id = dag_node.GetId();
     auto dag = dag_node.GetDAG();
@@ -667,6 +674,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     // }
     return std::make_tuple(dag_node, std::ref(mat), mat_node, is_ua);
   }
+  Debug debug_;
 };
 
 template <typename CRTP, typename Tag>

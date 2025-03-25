@@ -34,7 +34,7 @@ if(USE_USHER)
   FetchContent_MakeAvailable(oneTBB-src)
 
   include(${onetbb-src_SOURCE_DIR}/cmake/TBBBuild.cmake)
-  tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w" CXX="g++82")
+  tbb_build(TBB_ROOT ${onetbb-src_SOURCE_DIR} CONFIG_DIR TBB_DIR MAKE_ARGS tbb_cpf=1 CFLAGS="-w" CXXFLAGS="-Wno-changes-meaning")
 
   find_package(TBB REQUIRED tbbmalloc tbbmalloc_proxy tbb_preview)
   find_package(MPI REQUIRED)
@@ -87,6 +87,12 @@ ExternalProject_Add(range-v3
   PREFIX range-v3
   INSTALL_DIR range-v3/install
 )
+
+FetchContent_Declare(cpptrace
+  GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
+  GIT_TAG v0.8.2
+  GIT_PROGRESS true)
+FetchContent_MakeAvailable(cpptrace)
 
 if(${USE_HTSLIB})
   ExternalProject_Add(htslib
@@ -200,6 +206,7 @@ function(larch_link_opts PRODUCT)
     target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/lib)
     target_link_libraries(${PRODUCT} PUBLIC -lhts)
   endif()
+  target_link_libraries(${PRODUCT} PUBLIC cpptrace::cpptrace)
 endfunction()
 
 function(larch_executable PRODUCT)

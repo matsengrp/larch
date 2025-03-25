@@ -2,6 +2,8 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+#include "larch/debug.hpp"
+
 /**
  * Basic per-node feature.
  */
@@ -91,6 +93,7 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
 
  private:
   auto GetStorageParents() const {
+    debug_.use();
     auto storage = GetFeatureStorage(this);
     auto* self = static_cast<const CRTP*>(this);
     if constexpr (is_variant_v<decltype(storage)>) {
@@ -100,11 +103,12 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
       return std::visit([self](auto& x) { return Var{x.get().GetParents(self)}; },
                         storage);
     } else {
-      return GetFeatureStorage(this).get().GetParents(self);
+      return storage.get().GetParents(self);
     }
   }
 
   auto GetStorageClades() const {
+    debug_.use();
     auto storage = GetFeatureStorage(this);
     auto* self = static_cast<const CRTP*>(this);
     if constexpr (is_variant_v<decltype(storage)>) {
@@ -114,11 +118,12 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
       return std::visit([self](auto& x) { return Var{x.get().GetClades(self)}; },
                         storage);
     } else {
-      return GetFeatureStorage(this).get().GetClades(self);
+      return storage.get().GetClades(self);
     }
   }
 
   auto GetStorageLeafsBelow() const {
+    debug_.use();
     auto storage = GetFeatureStorage(this);
     auto* self = static_cast<const CRTP*>(this);
     if constexpr (is_variant_v<decltype(storage)>) {
@@ -128,9 +133,10 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
       return std::visit([self](auto& x) { return Var{x.get().GetLeafsBelow(self)}; },
                         storage);
     } else {
-      return GetFeatureStorage(this).get().GetLeafsBelow(self);
+      return storage.get().GetLeafsBelow(self);
     }
   }
+  Debug debug_;
 };
 
 template <typename CRTP, typename Tag>
@@ -147,6 +153,7 @@ struct FeatureMutableView<Neighbors, CRTP, Tag> {
 
  private:
   auto& GetStorage() const {
+    debug_.use();
     auto storage = GetFeatureStorage(this);
     if constexpr (is_variant_v<decltype(storage)>) {
       if (not std::holds_alternative<std::reference_wrapper<DAGNeighbors>>(storage)) {
@@ -158,10 +165,11 @@ struct FeatureMutableView<Neighbors, CRTP, Tag> {
                                        std::reference_wrapper<DAGNeighbors>>) {
         Fail("Only DAGNeighbors can be modified");
       } else {
-        return GetFeatureStorage(this).get();
+        return storage.get();
       }
     }
   }
+  Debug debug_;
 };
 
 template <typename CRTP, typename Tag>
