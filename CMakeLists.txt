@@ -13,6 +13,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 option(USE_USHER "Use matOptimize" yes)
 option(USE_MAT_VIEW "Use MATView" yes)
+option(USE_CPPTRACE "Use cpptrace" no)
 
 if(USE_USHER)
     set(TBB_VERSION "2019_U9")
@@ -88,11 +89,13 @@ ExternalProject_Add(range-v3
   INSTALL_DIR range-v3/install
 )
 
+if(USE_CPPTRACE)
 FetchContent_Declare(cpptrace
   GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
   GIT_TAG v0.8.2
   GIT_PROGRESS true)
 FetchContent_MakeAvailable(cpptrace)
+endif()
 
 if(${USE_HTSLIB})
   ExternalProject_Add(htslib
@@ -136,6 +139,10 @@ function(larch_compile_opts PRODUCT)
 
   if(${USE_MAT_VIEW})
     target_compile_options(${PRODUCT} PUBLIC -DUSE_MAT_VIEW)
+  endif()
+
+  if(${USE_CPPTRACE})
+    target_compile_options(${PRODUCT} PUBLIC -DUSE_CPPTRACE)
   endif()
 
   if(${USE_ASAN})
@@ -206,7 +213,10 @@ function(larch_link_opts PRODUCT)
     target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/lib)
     target_link_libraries(${PRODUCT} PUBLIC -lhts)
   endif()
-  target_link_libraries(${PRODUCT} PUBLIC cpptrace::cpptrace)
+
+  if(${USE_CPPTRACE})
+    target_link_libraries(${PRODUCT} PUBLIC cpptrace::cpptrace)
+  endif()
 endfunction()
 
 function(larch_executable PRODUCT)

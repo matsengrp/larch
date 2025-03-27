@@ -251,6 +251,7 @@ struct MATNeighbors : Neighbors {
  private:
   template <typename CRTP>
   EdgeId GetSingleParent(const CRTP* crtp) const {
+    DebugUse(crtp);
     auto [dag_node, mat, mat_node, is_ua] = access_const(crtp);
     Assert(not is_ua);
     if constexpr (not CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
@@ -625,13 +626,13 @@ struct MATValidator {
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   MAT::Node* GetMATNode() const {
-    debug_.use();
+    LARCH_DEBUG_USE;
     auto [dag_node, mat, mat_node, is_ua] = access();
     return mat_node;
   }
 
   bool HaveMATNode() const {
-    debug_.use();
+    LARCH_DEBUG_USE;
     return GetMATNode() != nullptr;
   }
 
@@ -641,7 +642,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   static inline std::vector<MAT::Node*> empty_node{nullptr};
 
   NodeId GetUA() const {
-    debug_.use();
+    LARCH_DEBUG_USE;
     auto dag_node = static_cast<const CRTP&>(*this);
     auto dag = dag_node.GetDAG();
     return dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
@@ -650,7 +651,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   }
 
   auto access() const {
-    debug_.use();
+    LARCH_DEBUG_USE;
     auto dag_node = static_cast<const CRTP&>(*this);
     NodeId id = dag_node.GetId();
     auto dag = dag_node.GetDAG();
@@ -674,7 +675,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     // }
     return std::make_tuple(dag_node, std::ref(mat), mat_node, is_ua);
   }
-  Debug debug_;
+  LARCH_DEBUG_THIS;
 };
 
 template <typename CRTP, typename Tag>

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef USE_CPPTRACE
+
 #include <cpptrace/cpptrace.hpp>
 #include <cpptrace/formatting.hpp>
 
@@ -10,6 +12,8 @@ enum class DebugState { Undef, Constructed, MovedFrom, Destructed };
 enum class DebugConstructType { Undef, Default, Move, Copy };
 enum class DebugAssignType { Undef, Move, Copy };
 enum class DebugMoveFromType { Undef, Construct, Assign };
+
+struct Debug;
 
 struct DebugItem {
   DebugState state = DebugState::Undef;
@@ -186,14 +190,14 @@ struct DebugItem {
   [[noreturn]] void fail(const char* msg) const {
     cpptrace::formatter formatter = cpptrace::get_default_formatter();
     formatter.paths(cpptrace::formatter::path_mode::basename);
-    formatter.snippets(true);
-    formatter.snippet_context(5);
     std::cout << "\n\nLarchDebug: " << msg << "\n";
     print(generate_trace(), formatter);
     std::cout << "\nConstructed at trace:\n";
     print(construct_trace, formatter);
     std::cout << "\nMoved from trace:\n";
     print(move_from_trace, formatter);
+    std::cout << "\nAssign to trace:\n";
+    print(last_assign_to_trace, formatter);
     std::cout << "\nDestructed trace:\n";
     print(destruct_trace, formatter);
     Fail(msg);
@@ -201,28 +205,33 @@ struct DebugItem {
 
   void print(const cpptrace::stacktrace& trace,
              const cpptrace::formatter& formatter) const {
+    size_t frame_no = 0;
     for (auto& i : trace.frames) {
-      if (i.filename.find("include/larch") != std::string::npos) {
+      if (i.filename.find("include/larch") != std::string::npos and
+          i.symbol.find("Debug::") != 0 and i.symbol.find("DebugItem::") != 0) {
+        std::cout << "#" << frame_no << "  ";
         formatter.print(std::cout, i);
+        std::cout << "\n" << cpptrace::get_snippet(i.filename, i.line.value(), 5, true);
         std::cout << "\n\n";
       }
+      ++frame_no;
     }
   }
 
   cpptrace::stacktrace generate_trace() const {
     // return {};
-    return cpptrace::generate_trace();
+    return cpptrace::generate_trace(0, 200);
   }
 };
 
 struct DebugBucket {
-  mutable std::mutex mutex;
-  std::unordered_map<const void*, DebugItem> items;
+  mutable std::recursive_mutex mutex;
+  std::unordered_map<const Debug*, DebugItem> items;
 };
 
-static inline DebugBucket& GetDebugBucket(const void* ptr) {
+static inline DebugBucket& GetDebugBucket(const Debug* ptr) {
   static std::array<DebugBucket, 32> buckets_{};
-  return buckets_.at(std::hash<const void*>()(ptr) % buckets_.size());
+  return buckets_.at(std::hash<const Debug*>()(ptr) % buckets_.size());
 }
 
 struct Debug {
@@ -241,58 +250,34 @@ struct Debug {
   Debug(Debug&& other) {
     DebugBucket& bucket = GetDebugBucket(this);
     DebugBucket& bucket_other = GetDebugBucket(&other);
-    std::unique_lock lock{bucket.mutex};
-    if (&bucket == &bucket_other) {
-      bucket.items[this].move_constructor_to();
-      bucket_other.items[&other].move_constructor_from();
-    } else {
-      std::unique_lock lock_other{bucket_other.mutex};
-      bucket.items[this].move_constructor_to();
-      bucket_other.items[&other].move_constructor_from();
-    }
+    std::scoped_lock lock{bucket.mutex, bucket_other.mutex};
+    bucket_other.items[&other].move_constructor_from();
+    bucket.items[this].move_constructor_to();
   }
 
   Debug& operator=(Debug&& other) {
     DebugBucket& bucket = GetDebugBucket(this);
     DebugBucket& bucket_other = GetDebugBucket(&other);
-    std::unique_lock lock{bucket.mutex};
-    if (&bucket == &bucket_other) {
-      bucket.items[this].move_assignment_to();
-      bucket_other.items[&other].move_assignment_from();
-    } else {
-      std::unique_lock lock_other{bucket_other.mutex};
-      bucket.items[this].move_assignment_to();
-      bucket_other.items[&other].move_assignment_from();
-    }
+    std::scoped_lock lock{bucket.mutex, bucket_other.mutex};
+    bucket_other.items[&other].move_assignment_from();
+    bucket.items[this].move_assignment_to();
     return *this;
   }
 
   Debug(const Debug& other) {
     DebugBucket& bucket = GetDebugBucket(this);
     DebugBucket& bucket_other = GetDebugBucket(&other);
-    std::unique_lock lock{bucket.mutex};
-    if (&bucket == &bucket_other) {
-      bucket.items[this].copy_constructor_to();
-      bucket_other.items[&other].copy_constructor_from();
-    } else {
-      std::unique_lock lock_other{bucket_other.mutex};
-      bucket.items[this].copy_constructor_to();
-      bucket_other.items[&other].copy_constructor_from();
-    }
+    std::scoped_lock lock{bucket.mutex, bucket_other.mutex};
+    bucket_other.items[&other].copy_constructor_from();
+    bucket.items[this].copy_constructor_to();
   }
 
   Debug& operator=(const Debug& other) {
     DebugBucket& bucket = GetDebugBucket(this);
     DebugBucket& bucket_other = GetDebugBucket(&other);
-    std::unique_lock lock{bucket.mutex};
-    if (&bucket == &bucket_other) {
-      bucket.items[this].copy_assignment_to();
-      bucket_other.items[&other].copy_assignment_from();
-    } else {
-      std::unique_lock lock_other{bucket_other.mutex};
-      bucket.items[this].copy_assignment_to();
-      bucket_other.items[&other].copy_assignment_from();
-    }
+    std::scoped_lock lock{bucket.mutex, bucket_other.mutex};
+    bucket_other.items[&other].copy_assignment_from();
+    bucket.items[this].copy_assignment_to();
     return *this;
   }
 
@@ -308,3 +293,22 @@ struct Debug {
 
  private:
 };
+
+template <typename T>
+void DebugUse(const T* x) {
+  x->debug_.use();
+}
+
+#define LARCH_DEBUG_THIS                 \
+  template <typename DEBARGT_>           \
+  friend void DebugUse(const DEBARGT_*); \
+  Debug debug_
+#define LARCH_DEBUG_USE debug_.use()
+
+#else
+
+#define LARCH_DEBUG_THIS static_assert(true)
+#define LARCH_DEBUG_USE
+#define DebugUse(x)
+
+#endif
