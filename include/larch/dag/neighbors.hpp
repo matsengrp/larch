@@ -97,9 +97,9 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
     auto storage = GetFeatureStorage(this);
     auto* self = static_cast<const CRTP*>(this);
     if constexpr (is_variant_v<decltype(storage)>) {
-      using Var = variant_range<
-          std::variant<decltype(std::get<0>(storage).get().GetParents(self)),
-                       decltype(std::get<1>(storage).get().GetParents(self))>>;
+      using Var =
+          variant_of_views<decltype(std::get<0>(storage).get().GetParents(self)),
+                           decltype(std::get<1>(storage).get().GetParents(self))>;
       return std::visit([self](auto& x) { return Var{x.get().GetParents(self)}; },
                         storage);
     } else {
@@ -112,9 +112,9 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
     auto storage = GetFeatureStorage(this);
     auto* self = static_cast<const CRTP*>(this);
     if constexpr (is_variant_v<decltype(storage)>) {
-      using Var = variant_range<
-          std::variant<decltype(std::get<0>(storage).get().GetClades(self)),
-                       decltype(std::get<1>(storage).get().GetClades(self))>>;
+      using Var =
+          variant_of_views<decltype(std::get<0>(storage).get().GetClades(self)),
+                           decltype(std::get<1>(storage).get().GetClades(self))>;
       return std::visit([self](auto& x) { return Var{x.get().GetClades(self)}; },
                         storage);
     } else {
@@ -127,9 +127,9 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
     auto storage = GetFeatureStorage(this);
     auto* self = static_cast<const CRTP*>(this);
     if constexpr (is_variant_v<decltype(storage)>) {
-      using Var = variant_range<
-          std::variant<decltype(std::get<0>(storage).get().GetLeafsBelow(self)),
-                       decltype(std::get<1>(storage).get().GetLeafsBelow(self))>>;
+      using Var =
+          variant_of_views<decltype(std::get<0>(storage).get().GetLeafsBelow(self)),
+                           decltype(std::get<1>(storage).get().GetLeafsBelow(self))>;
       return std::visit([self](auto& x) { return Var{x.get().GetLeafsBelow(self)}; },
                         storage);
     } else {

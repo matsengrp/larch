@@ -25,6 +25,14 @@
 static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
 
 template <typename T>
+struct remove_cvref {
+  using type = std::remove_cv_t<std::remove_reference_t<T>>;
+};
+
+template <typename T>
+using remove_cvref_t = typename remove_cvref<T>::type;
+
+template <typename T>
 struct type_identity {
   using type = T;
 };
@@ -49,82 +57,161 @@ struct is_variant<std::variant<Args...>> : std::true_type {};
 template <typename T>
 static constexpr const bool is_variant_v = is_variant<T>::value;
 
-template <typename>
-struct variant_range_iter;
+///////////////////////////////////////////////////////
 
-template <typename... Ts>
-struct variant_range_iter<std::variant<Ts...>> {
-  template <typename T>
-  using pair_type =
-      decltype(std::make_pair(std::declval<T>().begin(), std::declval<T>().end()));
-  using type = std::variant<pair_type<Ts>...>;
+template <typename T>
+using value_t_helper = ranges::iter_value_t<ranges::iterator_t<T>>;
+
+template <typename... Views>
+struct variant_of_views_helper {
+  static_assert(sizeof...(Views) > 0);
+  static_assert((ranges::view_<std::remove_reference_t<Views>> and ...));
+
+  using value_t = value_t_helper<
+      std::tuple_element_t<0, std::tuple<std::remove_reference_t<Views>...>>>;
+
+  constexpr static bool has_nested = ranges::range<value_t>;
+
+  static_assert(has_nested or
+                (std::is_convertible_v<value_t_helper<std::remove_reference_t<Views>>,
+                                       value_t> and
+                 ...));
+
+  using views_variant_t = std::variant<remove_cvref_t<Views>...>;
+
+  using iter_variant_t = std::variant<ranges::iterator_t<const Views&>...>;
+
+  static constexpr auto index_seq = std::index_sequence_for<Views...>{};
+
+  template <size_t... I>
+  static bool iters_equal(const iter_variant_t& lhs, const iter_variant_t& rhs,
+                          std::index_sequence<I...>) {
+    if (lhs.index() != rhs.index()) {
+      return false;
+    }
+    return ((I == lhs.index() and std::get<I>(lhs) == std::get<I>(rhs)) or ...);
+  }
 };
 
-template <typename>
-struct variant_range_nested_helper;
+template <typename...>
+class variant_of_views;
 
-template <typename... Ts>
-struct variant_range_nested_helper<std::variant<Ts...>> {
-  using type = std::variant<decltype(*std::declval<Ts>().begin())...>;
-  static_assert((ranges::range<Ts> and ...));
+template <typename... Views>
+struct variant_of_views_nested_helper {
+  static_assert(variant_of_views_helper<Views...>::has_nested);
+  using variant_of_views_t =
+      variant_of_views<value_t_helper<std::remove_reference_t<Views>>...>;
 };
 
-template <typename Var>
-class variant_range : public ranges::view_facade<variant_range<Var>> {
+template <typename... Views>
+class variant_of_views_iterator {
+  using helper = variant_of_views_helper<Views...>;
+
  public:
-  variant_range() = default;
-  variant_range(Var&& var) {
-    std::visit(
-        [this](auto&& x) {
-          using pair_type =
-              typename variant_range_iter<Var>::template pair_type<decltype(x)>;
-          pair_type pair = std::make_pair(x.begin(), x.end());
-          iter_.template emplace<pair_type>(std::move(pair));
-          if constexpr (ranges::sized_range<std::decay_t<decltype(x)>>) {
-            size_ = static_cast<size_t>(x.size());
-          } else {
-            size_ = NoId;
-          }
-        },
-        std::forward<Var>(var));
+  using iterator_category = std::input_iterator_tag;
+  using value_type = typename helper::value_t;
+  using difference_type = std::ptrdiff_t;
+
+  variant_of_views_iterator() = default;
+  variant_of_views_iterator(const variant_of_views_iterator&) = default;
+  variant_of_views_iterator& operator=(const variant_of_views_iterator&) = default;
+
+  variant_of_views_iterator(const typename helper::iter_variant_t& iter)
+      : iter_{iter} {}
+
+  bool operator==(const variant_of_views_iterator& other) const {
+    return helper::iters_equal(iter_, other.iter_, helper::index_seq);
+  }
+
+  bool operator!=(const variant_of_views_iterator& other) const {
+    return not(*this == other);
+  }
+
+  decltype(auto) operator*() const {
+    if constexpr (helper::has_nested) {
+      return std::visit(
+          [](auto& x) {
+            using nested =
+                typename variant_of_views_nested_helper<Views...>::variant_of_views_t;
+            return nested{*x};
+          },
+          iter_);
+    } else {
+      return std::visit([](auto& x) { return *x; }, iter_);
+    }
+  }
+
+  variant_of_views_iterator& operator++() {
+    std::visit([](auto& x) { ++x; }, iter_);
+    return *this;
+  }
+
+  void operator++(int) { ++*this; }
+
+ private:
+  template <
+      typename Sentinel,
+      typename = std::enable_if_t<
+          (ranges::sentinel_for<Sentinel, ranges::iterator_t<remove_cvref_t<Views>>> or
+           ...)>>
+  friend bool operator==(const variant_of_views_iterator<Views...>& iter,
+                         Sentinel&& sent) {
+    return iter.iter_ == sent;
+  }
+
+  template <
+      typename Sentinel,
+      typename = std::enable_if_t<
+          (ranges::sentinel_for<Sentinel, ranges::iterator_t<remove_cvref_t<Views>>> or
+           ...)>>
+  friend bool operator==(Sentinel&& sent,
+                         const variant_of_views_iterator<Views...>& iter) {
+    return iter.iter_ == sent;
+  }
+
+  typename helper::iter_variant_t iter_;
+};
+
+template <typename... Views>
+class variant_of_views {
+  using helper = variant_of_views_helper<Views...>;
+  using iterator = variant_of_views_iterator<Views...>;
+
+ public:
+  variant_of_views() = default;
+  variant_of_views(const variant_of_views<Views...>&) = default;
+  variant_of_views(variant_of_views<Views...>&&) = default;
+  variant_of_views(variant_of_views<Views...>&) = default;
+  variant_of_views& operator=(const variant_of_views<Views...>&) = default;
+  variant_of_views& operator=(variant_of_views<Views...>&&) = default;
+
+  template <typename T>
+  variant_of_views(T&& view) : view_{std::forward<T>(view)} {}
+
+  iterator begin() const {
+    return std::visit([](auto& x) { return iterator{x.begin()}; }, view_);
+  }
+
+  iterator end() const {
+    // TODO return x.end(); needs common_view conversion
+    return std::visit([](auto& x) { return iterator{x.begin()}; }, view_);
   }
 
   size_t size() const {
-    if (size_ == NoId) {
-      throw std::runtime_error{"Range not sized"};
-    }
-    return size_;
+    return std::visit([](auto& x) { return static_cast<size_t>(x.size()); }, view_);
   }
 
-  size_t empty() const { return size() == 0; }
+  bool empty() const {
+    return std::visit([](auto& x) { return x.empty(); }, view_);
+  }
 
  private:
-  friend ranges::range_access;
-
-  decltype(auto) read() const {
-    return std::visit(
-        [](auto&& x) {
-          if constexpr (ranges::range<decltype(*x.first)>) {
-            using Nested = typename variant_range_nested_helper<Var>::type;
-            return variant_range<Nested>{Nested{*x.first}};
-          } else {
-            return *x.first;
-          }
-        },
-        iter_);
-  }
-
-  bool equal(ranges::default_sentinel_t) const {
-    return std::visit([](auto& x) { return x.first == x.second; }, iter_);
-  }
-
-  void next() {
-    std::visit([](auto& x) { ++x.first; }, iter_);
-  }
-
-  typename variant_range_iter<Var>::type iter_;
-  size_t size_ = 0;
+  typename helper::views_variant_t view_;
 };
+
+template <typename... Views>
+constexpr bool ranges::enable_view<variant_of_views<Views...>> = true;
+
 ///////////////////////////////////////////////////////
 
 enum class IdContinuity { Dense, Sparse };

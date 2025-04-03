@@ -14,6 +14,9 @@ endif()
 option(USE_USHER "Use matOptimize" yes)
 option(USE_MAT_VIEW "Use MATView" yes)
 option(USE_CPPTRACE "Use cpptrace" no)
+option(USE_ASAN "Use asan" no)
+option(USE_TSAN "Use tsan" no)
+option(USE_HTSLIB "Use htslib" no)
 
 if(USE_USHER)
     set(TBB_VERSION "2019_U9")
@@ -77,6 +80,7 @@ FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download
 FetchContent_MakeAvailable(json)
 
 include(ExternalProject)
+
 ExternalProject_Add(range-v3
   GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
   GIT_TAG 0.12.0
@@ -97,7 +101,7 @@ FetchContent_Declare(cpptrace
 FetchContent_MakeAvailable(cpptrace)
 endif()
 
-if(${USE_HTSLIB})
+if(USE_HTSLIB)
   ExternalProject_Add(htslib
     GIT_REPOSITORY https://github.com/samtools/htslib.git
     GIT_TAG 1.17
@@ -133,21 +137,24 @@ function(larch_compile_opts PRODUCT)
     target_compile_options(${PRODUCT} PUBLIC -fno-omit-frame-pointer -fno-stack-protector)
   endif()
 
-  if(${USE_USHER})
+  if(USE_USHER)
     target_compile_options(${PRODUCT} PUBLIC -DUSE_USHER)
   endif()
 
-  if(${USE_MAT_VIEW})
+  if(USE_MAT_VIEW)
     target_compile_options(${PRODUCT} PUBLIC -DUSE_MAT_VIEW)
   endif()
 
-  if(${USE_CPPTRACE})
+  if(USE_CPPTRACE)
     target_compile_options(${PRODUCT} PUBLIC -DUSE_CPPTRACE)
   endif()
 
-  if(${USE_ASAN})
-    target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
-  elseif(${USE_TSAN})
+  target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
+  add_dependencies(${PRODUCT} range-v3)
+
+  if(USE_ASAN)
+    target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address -fno-sanitize-recover)
+  elseif(USE_TSAN)
     target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=thread)
   endif()
 
@@ -155,10 +162,9 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR}/deps/usher)
-  target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/range-v3/install/include)
-  add_dependencies(${PRODUCT} range-v3)
 
-  if(${USE_HTSLIB})
+  if(USE_HTSLIB)
+    target_compile_options(${PRODUCT} PUBLIC -DUSE_HTSLIB)
     target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/include)
     add_dependencies(${PRODUCT} htslib)
   endif()
@@ -166,7 +172,7 @@ endfunction()
 
 FIND_PACKAGE(Boost COMPONENTS program_options iostreams filesystem date_time REQUIRED)
 
-if(${USE_USHER})
+if(USE_USHER)
   include_directories(deps/usher/)
   file(GLOB MATOPTIMIZE_SRC
     "deps/usher/src/matOptimize/apply_move/*.cpp"
@@ -192,9 +198,9 @@ endif()
 function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
 
-  if(${USE_ASAN})
-    target_link_libraries(${PRODUCT} PUBLIC -lasan -lubsan)
-  elseif(${USE_TSAN})
+  if(USE_ASAN)
+    target_link_libraries(${PRODUCT} PUBLIC -lasan)
+  elseif(USE_TSAN)
     target_link_libraries(${PRODUCT} PUBLIC -ltsan)
   endif()
 
@@ -203,18 +209,18 @@ function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
 
-  if(${USE_USHER})
+  if(USE_USHER)
     target_link_libraries(${PRODUCT} PUBLIC ${TBB_IMPORTED_TARGETS} -lstdc++fs)
   else()
     target_link_libraries(${PRODUCT} PUBLIC TBB::tbb)
   endif()
 
-  if(${USE_HTSLIB})
+  if(USE_HTSLIB)
     target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install/lib)
     target_link_libraries(${PRODUCT} PUBLIC -lhts)
   endif()
 
-  if(${USE_CPPTRACE})
+  if(USE_CPPTRACE)
     target_link_libraries(${PRODUCT} PUBLIC cpptrace::cpptrace)
   endif()
 endfunction()
@@ -234,22 +240,22 @@ add_library(larch
 larch_compile_opts(larch)
 target_compile_options(larch PRIVATE ${STRICT_WARNINGS})
 
-if(${USE_ASAN})
+if(USE_ASAN)
 else()
   target_compile_options(larch PRIVATE -Wstack-usage=2048)
 endif()
 
 larch_link_opts(larch)
 
-if(${USE_USHER})
+if(USE_USHER)
   add_library(usher
     ${MATOPTIMIZE_SRC}
     src/usher_globals.cpp)
   target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer -DUSE_USHER)
 
-  if(${USE_ASAN})
-    target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
-  elseif(${USE_TSAN})
+  if(USE_ASAN)
+    target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address -fno-sanitize-recover)
+  elseif(USE_TSAN)
     target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=thread)
   endif()
 
@@ -309,7 +315,7 @@ larch_executable(larch-test
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 
-if(${USE_USHER})
+if(USE_USHER)
   target_link_libraries(larch-test PUBLIC larch-usher-glue usher)
   add_dependencies(larch-test larch-usher-glue)
   set_target_properties(larch-test
@@ -323,7 +329,7 @@ larch_executable(larch-dagutil
 larch_executable(larch-dag2dot
   tools/larch-dag2dot.cpp)
 
-if(${USE_USHER})
+if(USE_USHER)
   larch_executable(larch-usher
     tools/larch-usher.cpp
   )

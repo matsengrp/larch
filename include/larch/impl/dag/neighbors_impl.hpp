@@ -16,7 +16,7 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetParents() const {
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetClades() const {
   auto dag = static_cast<const CRTP&>(*this).GetDAG();
-  return GetStorageClades() | ranges::views::transform([dag](const auto& clade) {
+  return GetStorageClades() | ranges::views::transform([dag](auto&& clade) {
            return clade | Transform::ToEdges(dag);
          });
 }
@@ -80,8 +80,7 @@ bool FeatureConstView<Neighbors, CRTP, Tag>::IsTreeRoot() const {
 
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Neighbors, CRTP, Tag>::IsLeaf() const {
-  return ranges::all_of(GetStorageClades(),
-                        [](const auto& clade) { return clade.empty(); });
+  return ranges::all_of(GetStorageClades(), [](auto&& clade) { return clade.empty(); });
 }
 
 template <typename CRTP, typename Tag>

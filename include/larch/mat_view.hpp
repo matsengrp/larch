@@ -107,18 +107,41 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
                                .template GetFeatureExtraStorage<MATNodeStorage>()
                                .get());
 
-  bool empty() const { return clades_count == 0; }
+  bool empty() const {
+    // LARCH_DEBUG_USE;
+    return clades_count == 0;
+  }
 
-  size_t size() const { return clades_count; }
+  size_t size() const {
+    // LARCH_DEBUG_USE;
+    return clades_count;
+  }
 
  private:
   friend ranges::range_access;
 
-  EdgeId read() const { return EdgeId{c_node_id}; }
+  EdgeId read() const {
+    // LARCH_DEBUG_USE;
+    return EdgeId{c_node_id};
+  }
 
-  bool equal(ranges::default_sentinel_t) const { return is_done(); }
+  bool equal(ranges::default_sentinel_t) const {
+    // LARCH_DEBUG_USE;
+    return is_done();
+  }
+
+  bool equal(const MATChildrenRange& other) const {
+    if (is_done()) {
+      return other.is_done();
+    }
+    if (other.is_done()) {
+      return is_done();
+    }
+    return c_node_id == other.c_node_id;
+  }
 
   void next() {
+    // LARCH_DEBUG_USE;
     if (is_done()) {
       return;
     }
@@ -198,6 +221,7 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
   size_t c_node_id = NoId;
   bool done = false;
   size_t clades_count = 0;
+  // LARCH_DEBUG_THIS;
 };
 
 struct MATNeighbors : Neighbors {
@@ -209,24 +233,43 @@ struct MATNeighbors : Neighbors {
 
   template <typename CRTP>
   auto GetParents(const CRTP* crtp) const {
+    static_assert(CRTP::role == Role::View);
+    struct Result {
+      Result() { std::cout << "GetParents Result() " << this << "\n"; }
+      ~Result() { std::cout << "GetParents ~Result() " << this << "\n"; }
+      EdgeId id;
+#ifdef USE_CPPTRACE
+      Debug debug_ = {};
+#endif
+    };
+    Result result;
+    result.id = GetParentsCount(crtp) == 0 ? EdgeId{NoId} : GetSingleParent(crtp);
     return ranges::views::iota(size_t{0}, GetParentsCount(crtp)) |
-           ranges::views::transform(
-               [this, crtp](size_t) { return GetSingleParent(crtp); });
+           ranges::views::transform([res = result /*
+                 this, dag_storage = std::ref(crtp->GetDAG().GetStorage()),
+                 id = crtp->GetId()*/
+    ] /*__attribute__((no_sanitize_address))*/ (size_t) {
+             std::cout << "GetParents use Result " << &res << "\n";
+             DebugUse(&res);
+             return res.id;
+             // typename CRTP::DAGType dag{dag_storage.get()};
+             // CRTP view = dag.Get(id);
+             // return GetSingleParent(&view);
+           });
   }
 
   template <typename CRTP>
   auto GetClades(const CRTP* crtp) const {
-    auto [dag_node, mat, mat_node, is_ua] = access_const(crtp);
-    return GetChildren(crtp) | ranges::views::transform([dag_node](EdgeId child) {
+    return GetChildren(crtp) | ranges::views::transform([](EdgeId child) {
              return ranges::views::iota(child.value, child.value + 1) |
                     Transform::ToId<Component::Edge>();
            });
   }
 
   template <typename CRTP>
-  auto GetLeafsBelow(const CRTP* crtp) const {
+  auto GetLeafsBelow(const CRTP*) const {
     Fail("Leafs below not available on MATView");
-    static const std::array<NodeId, 1> empty = {{NoId}};
+    static const std::array<NodeId, 1> empty = {{{NoId}}};
     return empty | ranges::views::take(0);
   }
 
@@ -251,7 +294,7 @@ struct MATNeighbors : Neighbors {
  private:
   template <typename CRTP>
   EdgeId GetSingleParent(const CRTP* crtp) const {
-    DebugUse(crtp);
+    // DebugUse(crtp);
     auto [dag_node, mat, mat_node, is_ua] = access_const(crtp);
     Assert(not is_ua);
     if constexpr (not CheckIsCondensed<decltype(dag_node.GetDAG())>::value) {
@@ -626,13 +669,13 @@ struct MATValidator {
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   MAT::Node* GetMATNode() const {
-    LARCH_DEBUG_USE;
+    // LARCH_DEBUG_USE;
     auto [dag_node, mat, mat_node, is_ua] = access();
     return mat_node;
   }
 
   bool HaveMATNode() const {
-    LARCH_DEBUG_USE;
+    // LARCH_DEBUG_USE;
     return GetMATNode() != nullptr;
   }
 
@@ -642,7 +685,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   static inline std::vector<MAT::Node*> empty_node{nullptr};
 
   NodeId GetUA() const {
-    LARCH_DEBUG_USE;
+    // LARCH_DEBUG_USE;
     auto dag_node = static_cast<const CRTP&>(*this);
     auto dag = dag_node.GetDAG();
     return dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
@@ -651,7 +694,7 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   }
 
   auto access() const {
-    LARCH_DEBUG_USE;
+    // LARCH_DEBUG_USE;
     auto dag_node = static_cast<const CRTP&>(*this);
     NodeId id = dag_node.GetId();
     auto dag = dag_node.GetDAG();
@@ -675,7 +718,9 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     // }
     return std::make_tuple(dag_node, std::ref(mat), mat_node, is_ua);
   }
-  LARCH_DEBUG_THIS;
+
+ private:
+  // LARCH_DEBUG_THIS;
 };
 
 template <typename CRTP, typename Tag>
@@ -700,7 +745,8 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   // const EdgeMutations& GetEdgeMutations() const {
   //   auto [dag_edge, mat, mat_node, is_ua] = access();
   //   auto& storage = dag_edge.template GetFeatureStorage<MATEdgeStorage>();
-  //   auto& id_storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>();
+  //   auto& id_storage = dag_edge.template
+  //   GetFeatureExtraStorage<MATEdgeStorage>();
 
   //   if (mat_node == nullptr) {
   //     [[maybe_unused]] auto cn_id_str =
@@ -710,8 +756,9 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
   //         id_storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
   //     [[maybe_unused]] auto condensed_mat_node_iter =
   //         id_storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
-  //     Assert(condensed_mat_node_iter != id_storage.reversed_condensed_nodes_.end());
-  //     mat_node = id_storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
+  //     Assert(condensed_mat_node_iter !=
+  //     id_storage.reversed_condensed_nodes_.end()); mat_node =
+  //     id_storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
   //   }
   //   Assert(mat_node != nullptr);
   //   if (storage.mutations_.empty()) {
