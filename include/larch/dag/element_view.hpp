@@ -35,7 +35,7 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
   ElementView& operator=(const ElementView& other) = default;
 
   bool operator==(const ElementView& other) const {
-    LARCH_DEBUG_USE;
+    // LARCH_DEBUG_USE;
     return dag_view_ == other.dag_view_ and id_ == other.id_;
   }
 
@@ -55,7 +55,7 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
  private:
   DAGViewType dag_view_;
   Id<C> id_;
-  LARCH_DEBUG_THIS;
+  // LARCH_DEBUG_THIS;
 };
 
 template <typename Id, typename DAGViewType>

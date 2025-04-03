@@ -66,6 +66,7 @@ template <typename... Views>
 struct variant_of_views_helper {
   static_assert(sizeof...(Views) > 0);
   static_assert((ranges::view_<std::remove_reference_t<Views>> and ...));
+  static_assert((ranges::common_range<std::remove_reference_t<Views>> and ...));
 
   using value_t = value_t_helper<
       std::tuple_element_t<0, std::tuple<std::remove_reference_t<Views>...>>>;
@@ -193,8 +194,7 @@ class variant_of_views {
   }
 
   iterator end() const {
-    // TODO return x.end(); needs common_view conversion
-    return std::visit([](auto& x) { return iterator{x.begin()}; }, view_);
+    return std::visit([](auto& x) { return iterator{x.end()}; }, view_);
   }
 
   size_t size() const {

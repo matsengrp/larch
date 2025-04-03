@@ -61,7 +61,7 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   }
 
   bool operator==(const DAGView& other) const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     return std::addressof(GetStorage()) == std::addressof(other.GetStorage());
   }
 
@@ -92,7 +92,7 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
   size_t GetEdgesCount() const;
   template <Component C>
   size_t GetElementsCount() const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     if constexpr (C == Component::Node) {
       return GetNodesCount();
     } else {
@@ -103,31 +103,31 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
   template <Component C, typename VT>
   Id<C> GetNextAvailableId() const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     return GetStorage().template GetNextAvailableId<C, VT>();
   }
 
   template <typename VT>
   NodeId GetNextAvailableNodeId() const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     return GetNextAvailableId<Component::Node, VT>();
   }
 
   template <typename VT>
   EdgeId GetNextAvailableEdgeId() const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     return GetNextAvailableId<Component::Edge, VT>();
   }
 
   template <typename VT>
   bool ContainsId(NodeId id) const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     return GetStorage().template ContainsId<VT>(id);
   }
 
   template <typename VT>
   bool ContainsId(EdgeId id) const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     return GetStorage().template ContainsId<VT>(id);
   }
 
@@ -157,5 +157,5 @@ struct DAGView : Base<Storage, DAGView<Storage, Base>>::DAGViewBase {
 
  private:
   Storage* dag_storage_ = nullptr;
-  LARCH_DEBUG_THIS;
+  // LARCH_DEBUG_THIS;
 };

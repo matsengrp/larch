@@ -93,7 +93,7 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
 
  private:
   auto GetStorageParents() const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     auto storage = GetFeatureStorage(this);
     auto* self = static_cast<const CRTP*>(this);
     if constexpr (is_variant_v<decltype(storage)>) {
@@ -108,7 +108,7 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
   }
 
   auto GetStorageClades() const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     auto storage = GetFeatureStorage(this);
     auto* self = static_cast<const CRTP*>(this);
     if constexpr (is_variant_v<decltype(storage)>) {
@@ -123,7 +123,7 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
   }
 
   auto GetStorageLeafsBelow() const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     auto storage = GetFeatureStorage(this);
     auto* self = static_cast<const CRTP*>(this);
     if constexpr (is_variant_v<decltype(storage)>) {
@@ -136,7 +136,7 @@ struct FeatureConstView<Neighbors, CRTP, Tag> {
       return storage.get().GetLeafsBelow(self);
     }
   }
-  LARCH_DEBUG_THIS;
+  // LARCH_DEBUG_THIS;
 };
 
 template <typename CRTP, typename Tag>
@@ -153,7 +153,7 @@ struct FeatureMutableView<Neighbors, CRTP, Tag> {
 
  private:
   auto& GetStorage() const {
-    LARCH_DEBUG_USE;
+    //   LARCH_DEBUG_USE;
     auto storage = GetFeatureStorage(this);
     if constexpr (is_variant_v<decltype(storage)>) {
       if (not std::holds_alternative<std::reference_wrapper<DAGNeighbors>>(storage)) {
@@ -169,7 +169,7 @@ struct FeatureMutableView<Neighbors, CRTP, Tag> {
       }
     }
   }
-  LARCH_DEBUG_THIS;
+  // LARCH_DEBUG_THIS;
 };
 
 template <typename CRTP, typename Tag>

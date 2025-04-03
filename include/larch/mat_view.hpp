@@ -234,28 +234,10 @@ struct MATNeighbors : Neighbors {
   template <typename CRTP>
   auto GetParents(const CRTP* crtp) const {
     static_assert(CRTP::role == Role::View);
-    struct Result {
-      Result() { std::cout << "GetParents Result() " << this << "\n"; }
-      ~Result() { std::cout << "GetParents ~Result() " << this << "\n"; }
-      EdgeId id;
-#ifdef USE_CPPTRACE
-      Debug debug_ = {};
-#endif
-    };
-    Result result;
-    result.id = GetParentsCount(crtp) == 0 ? EdgeId{NoId} : GetSingleParent(crtp);
-    return ranges::views::iota(size_t{0}, GetParentsCount(crtp)) |
-           ranges::views::transform([res = result /*
-                 this, dag_storage = std::ref(crtp->GetDAG().GetStorage()),
-                 id = crtp->GetId()*/
-    ] /*__attribute__((no_sanitize_address))*/ (size_t) {
-             std::cout << "GetParents use Result " << &res << "\n";
-             DebugUse(&res);
-             return res.id;
-             // typename CRTP::DAGType dag{dag_storage.get()};
-             // CRTP view = dag.Get(id);
-             // return GetSingleParent(&view);
-           });
+    const size_t count = GetParentsCount(crtp);
+    const EdgeId result = count == 0 ? EdgeId{NoId} : GetSingleParent(crtp);
+    return ranges::views::iota(size_t{0}, count) |
+           ranges::views::transform([result](size_t) { return result; });
   }
 
   template <typename CRTP>
@@ -335,7 +317,8 @@ struct MATNeighbors : Neighbors {
   auto GetChildren(const CRTP* crtp) const {
     auto [dag_node, mat, mat_node, is_ua] = access_const(crtp);
     auto dag = dag_node.GetDAG();
-    return MATChildrenRange<decltype(dag)>{access_const(crtp), GetCladesCount(crtp)};
+    return MATChildrenRange<decltype(dag)>{access_const(crtp), GetCladesCount(crtp)} |
+           ranges::views::common;
   }
 
   template <typename CRTP>
