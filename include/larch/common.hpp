@@ -374,11 +374,11 @@ constexpr auto& tuple_get(Tuple& x) {
       if constexpr (I + 1 < std::tuple_size_v<Tuple>) {
         return tuple_get<T, Comp, Tuple, I + 1>(x);
       } else {
-        static_assert(!"Not found");
+        static_assert(sizeof(T) == NoId, "Not found");
       }
     }
   } else {
-    static_assert(!"Not found");
+    static_assert(sizeof(T) == NoId, "Not found");
   }
 }
 

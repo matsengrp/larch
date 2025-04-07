@@ -160,7 +160,7 @@ auto GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* feature);
 
 template <typename T>
 auto GetFeatureStorage(T) {
-  static_assert(false, "Accepts const Feature{Const, Mutable}View*");
+  static_assert(sizeof(T) == NoId, "Accepts const Feature{Const, Mutable}View*");
 }
 /** @} */
 

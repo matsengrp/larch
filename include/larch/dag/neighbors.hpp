@@ -14,12 +14,12 @@ struct Neighbors {
 
 template <typename CRTP>
 struct FeatureConstView<Neighbors, CRTP, Neighbors> {
-  static_assert(false, "Neighbors is an abstract feature");
+  static_assert(sizeof(CRTP) == NoId, "Neighbors is an abstract feature");
 };
 
 template <typename CRTP>
 struct FeatureMutableView<Neighbors, CRTP, Neighbors> {
-  static_assert(false, "Neighbors is an abstract feature");
+  static_assert(sizeof(CRTP) == NoId, "Neighbors is an abstract feature");
 };
 
 struct DAGNeighbors : Neighbors {

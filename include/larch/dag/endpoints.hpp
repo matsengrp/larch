@@ -12,12 +12,12 @@ struct Endpoints {
 
 template <typename CRTP>
 struct FeatureConstView<Endpoints, CRTP, Endpoints> {
-  static_assert(false, "Endpoints is an abstract feature");
+  static_assert(sizeof(CRTP) == NoId, "Endpoints is an abstract feature");
 };
 
 template <typename CRTP>
 struct FeatureMutableView<Endpoints, CRTP, Endpoints> {
-  static_assert(false, "Endpoints is an abstract feature");
+  static_assert(sizeof(CRTP) == NoId, "Endpoints is an abstract feature");
 };
 
 struct DAGEndpoints : Endpoints {
