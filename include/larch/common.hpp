@@ -10,6 +10,12 @@
 #include <random>
 #include <optional>
 #include <variant>
+#include <mutex>
+#include <shared_mutex>
+#include <execution>
+#include <thread>
+#include <atomic>
+#include <iostream>
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -19,6 +25,8 @@
 #pragma GCC diagnostic ignored "-Wstack-usage="
 #include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
+
+#include "larch/debug.hpp"
 
 #define MV_UA_NODE_ID 100000
 
@@ -264,7 +272,18 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #define TOSTRING(x) STRINGIFY(x)
 
 #ifndef NDEBUG
-#include <iostream>
+#ifdef USE_CPPTRACE
+#define Assert(x)                                                       \
+  {                                                                     \
+    if (not(x)) {                                                       \
+      std::cerr << "Assert failed: \"" #x "\" in " __FILE__             \
+                   ":" TOSTRING(__LINE__) "\n";                         \
+      DebugItem::print_current_trace();                                 \
+      throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
+                               ":" TOSTRING(__LINE__));                 \
+    }                                                                   \
+  }
+#else
 #define Assert(x)                                                       \
   {                                                                     \
     if (not(x)) {                                                       \
@@ -274,6 +293,7 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
                                ":" TOSTRING(__LINE__));                 \
     }                                                                   \
   }
+#endif
 #else
 #define Assert(x) \
   {}
@@ -282,6 +302,9 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 [[noreturn]] inline void Fail(const char* msg) {
 #ifndef NDEBUG
   std::cerr << msg << "\n";
+#endif
+#ifdef USE_CPPTRACE
+  DebugItem::print_current_trace();
 #endif
   throw std::runtime_error(msg);
 }

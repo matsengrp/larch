@@ -40,7 +40,9 @@ struct ToOverlayStorage;
 template <typename... Features>
 struct ToOverlayStorage<std::tuple<Features...>> {
   template <typename Id>
-  using type = std::tuple<OverlayFeatureStorageType<Id, Features>...>;
+  using replaced_type = std::tuple<OverlayFeatureStorageType<Id, Features>...>;
+  using added_type =
+      std::vector<std::tuple<typename OverlayFeatureType<Features>::store_type...>>;
 };
 
 }  // namespace
@@ -229,12 +231,12 @@ struct OverlayDAGStorage {
   friend struct FeatureMutableView;
 
   Target target_;
-  typename ToOverlayStorage<AllNodeFeatures>::template type<NodeId>
+  typename ToOverlayStorage<AllNodeFeatures>::template replaced_type<NodeId>
       replaced_node_storage_;
-  typename ToOverlayStorage<AllEdgeFeatures>::template type<EdgeId>
+  typename ToOverlayStorage<AllEdgeFeatures>::template replaced_type<EdgeId>
       replaced_edge_storage_;
-  std::vector<AllNodeFeatures> added_node_storage_;
-  std::vector<AllEdgeFeatures> added_edge_storage_;
+  typename ToOverlayStorage<AllNodeFeatures>::added_type added_node_storage_;
+  typename ToOverlayStorage<AllEdgeFeatures>::added_type added_edge_storage_;
 };
 
 template <typename ShortName, typename DAG>

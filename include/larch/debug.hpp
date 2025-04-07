@@ -5,8 +5,6 @@
 #include <cpptrace/cpptrace.hpp>
 #include <cpptrace/formatting.hpp>
 
-#include "larch/parallel/parallel_common.hpp"
-
 enum class DebugState { Undef, Constructed, MovedFrom, Destructed };
 
 enum class DebugConstructType { Undef, Default, Move, Copy };
@@ -186,6 +184,12 @@ struct DebugItem {
     }
   }
 
+  static void print_current_trace() {
+    cpptrace::formatter formatter = cpptrace::get_default_formatter();
+    formatter.paths(cpptrace::formatter::path_mode::basename);
+    print(generate_trace(), formatter);
+  }
+
  private:
   [[noreturn]] void fail(const char* msg) const {
     cpptrace::formatter formatter = cpptrace::get_default_formatter();
@@ -200,11 +204,11 @@ struct DebugItem {
     print(last_assign_to_trace, formatter);
     std::cout << "\nDestructed trace:\n";
     print(destruct_trace, formatter);
-    Fail(msg);
+    throw std::runtime_error(msg);
   }
 
-  void print(const cpptrace::stacktrace& trace,
-             const cpptrace::formatter& formatter) const {
+  static void print(const cpptrace::stacktrace& trace,
+                    const cpptrace::formatter& formatter) {
     size_t frame_no = 0;
     for (auto& i : trace.frames) {
       if (i.filename.find("include/larch") != std::string::npos and
@@ -218,8 +222,7 @@ struct DebugItem {
     }
   }
 
-  cpptrace::stacktrace generate_trace() const {
-    // return {};
+  static cpptrace::stacktrace generate_trace() {
     return cpptrace::generate_trace(0, 200);
   }
 };
@@ -286,7 +289,7 @@ struct Debug {
     std::unique_lock lock{bucket.mutex};
     auto it = bucket.items.find(this);
     if (it == bucket.items.end()) {
-      Fail("Item not found");
+      throw std::runtime_error("Item not found");
     }
     it->second.use();
   }

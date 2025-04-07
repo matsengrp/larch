@@ -319,13 +319,14 @@ auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
       if constexpr (is_mutable) {
         Fail("Can't modify non-overlaid node");
       } else {
-        return Result{self.GetTarget().template GetFeatureStorage<F>(id)};
+        return Result{std::cref(self.GetTarget().template GetFeatureStorage<F>(id))};
       }
     } else {
       return Result{std::ref(it->second)};
     }
   } else {
-    return Result{std::ref(tuple_get<F, FeatureEquivalent>(self.added_node_storage_.at(
+    return Result{std::ref(tuple_get<typename OverlayFeatureType<F>::store_type,
+                                     FeatureEquivalent>(self.added_node_storage_.at(
         id.value -
         self.GetTarget().template GetNextAvailableNodeId<TargetView>().value)))};
   }
@@ -360,7 +361,8 @@ auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
       return Result{std::ref(it->second)};
     }
   } else {
-    return Result{std::ref(tuple_get<F, FeatureEquivalent>(self.added_edge_storage_.at(
+    return Result{std::ref(tuple_get<typename OverlayFeatureType<F>::store_type,
+                                     FeatureEquivalent>(self.added_edge_storage_.at(
         id.value -
         self.GetTarget().template GetNextAvailableEdgeId<TargetView>().value)))};
   }
