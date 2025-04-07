@@ -359,16 +359,7 @@ bool FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::HasUnifurcationAfterMov
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldSourceParent() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  if (dag.HasUnifurcationAfterMove()) {
-    return dag.GetMoveSource()
-        .GetOld()
-        .GetSingleParent()
-        .GetParent()
-        .GetSingleParent()
-        .GetParent();
-  } else {
-    return dag.GetMoveSource().GetOld().GetSingleParent().GetParent();
-  }
+  return dag.GetOriginal().Get(dag.GetMoveSource().GetId()).GetSingleParent().GetParent();
 }
 
 template <typename Node>
