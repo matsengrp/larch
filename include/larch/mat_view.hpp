@@ -226,8 +226,12 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
 
 struct MATNeighbors : Neighbors {
   template <typename CRTP>
-  inline DAGNeighbors Copy(const CRTP*) const {
+  inline DAGNeighbors Copy(const CRTP* crtp) const {
     DAGNeighbors result;
+    result.GetParentsMutable(crtp) = ranges::to_vector(GetParents(crtp));
+    for (auto i : GetClades(crtp)) {
+      result.GetCladesMutable(crtp).push_back(std::move(ranges::to_vector(i)));
+    }
     return result;
   }
 
@@ -385,8 +389,11 @@ struct FeatureMutableView<MATNeighbors, CRTP, Tag>
 
 struct MATEndpoints : Endpoints {
   template <typename CRTP>
-  inline DAGEndpoints Copy(const CRTP*) const {
+  inline DAGEndpoints Copy(const CRTP* crtp) const {
     DAGEndpoints result;
+    result.SetParent(crtp, GetParent(crtp));
+    result.SetChild(crtp, GetChild(crtp));
+    result.SetClade(crtp, GetClade(crtp));
     return result;
   }
 
