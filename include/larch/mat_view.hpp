@@ -833,6 +833,19 @@ struct MATElementsContainerBase {
       EdgeMutations& storage = std::get<EdgeMutations>(features_storage_[id]);
       if (storage.empty()) {
         MAT::Node* mat_node = elem.GetChild().GetMATNode();
+        // check if the edge and its child node are uncondensed from a condensed node
+        // in the MAT, since in this case we need to extract the condensed node/edge's mutations.
+        if (mat_node == nullptr) {
+          if (extra_storage_.node_id_to_sampleid_map_.find(NodeId{id.value}) !=
+            extra_storage_.node_id_to_sampleid_map_.end()) {
+            // find the ID of the condensed node in the MAT
+            auto condensed_mat_node_str =
+                extra_storage_.node_id_to_sampleid_map_.at(NodeId{id.value});
+            // set mat_node to point to the condensed node
+            mat_node =
+                extra_storage_.reversed_condensed_nodes_.at(condensed_mat_node_str);
+          }
+        }
         storage = EdgeMutations{
             mat_node->mutations |
             ranges::views::transform(
