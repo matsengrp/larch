@@ -65,8 +65,6 @@ struct MATEdgeStorage {
   inline MATEdgeStorage Copy(const CRTP*) const {
     return {};
   }
-
-  mutable EdgeMutations mutations_;
 };
 
 template <typename DAG>
@@ -695,17 +693,6 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
     bool is_ua = dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
                      .get()
                      .ua_node_id_ == id;
-    // if ((not is_ua) and (mat_node == nullptr)) {
-    //   auto& storage = dag_node.template GetFeatureExtraStorage<MATNodeStorage>();
-    //   if (storage.node_id_to_sampleid_map_.find(id) ==
-    //       storage.node_id_to_sampleid_map_.end()) {
-    //     std::unique_lock lock{*storage.mtx_};
-    //     if ((not storage.overlay_access_) or
-    //         storage.overlay_access_(dag_node.GetId()) == nullptr) {
-    //       is_ua = true;
-    //     }
-    //   }
-    // }
     return std::make_tuple(dag_node, std::ref(mat), mat_node, is_ua);
   }
 
@@ -732,40 +719,6 @@ struct ExtraFeatureStorage<MATEdgeStorage> {
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
-  // const EdgeMutations& GetEdgeMutations() const {
-  //   auto [dag_edge, mat, mat_node, is_ua] = access();
-  //   auto& storage = dag_edge.template GetFeatureStorage<MATEdgeStorage>();
-  //   auto& id_storage = dag_edge.template
-  //   GetFeatureExtraStorage<MATEdgeStorage>();
-
-  //   if (mat_node == nullptr) {
-  //     [[maybe_unused]] auto cn_id_str =
-  //         id_storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
-  //     Assert(cn_id_str != id_storage.node_id_to_sampleid_map_.end());
-  //     [[maybe_unused]] auto condensed_mat_node_str =
-  //         id_storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
-  //     [[maybe_unused]] auto condensed_mat_node_iter =
-  //         id_storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
-  //     Assert(condensed_mat_node_iter !=
-  //     id_storage.reversed_condensed_nodes_.end()); mat_node =
-  //     id_storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
-  //   }
-  //   Assert(mat_node != nullptr);
-  //   if (storage.mutations_.empty()) {
-  //     storage.mutations_ = EdgeMutations{
-  //         mat_node->mutations |
-  //         ranges::views::transform(
-  //             [](const MAT::Mutation& mut)
-  //                 -> std::pair<MutationPosition, std::pair<char, char>> {
-  //               static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
-  //               return {{static_cast<size_t>(mut.get_position())},
-  //                       {decode.at(one_hot_to_two_bit(mut.get_par_one_hot())),
-  //                        decode.at(one_hot_to_two_bit(mut.get_mut_one_hot()))}};
-  //             })};
-  //   }
-  //   return storage.mutations_;
-  // }
-
  private:
   friend struct MATEndpoints;
 
@@ -827,7 +780,7 @@ struct MATElementsContainerBase {
   struct ExtraMutableElementViewBase : ExtraFeatureMutableView<ElementStorageT, CRTP> {
   };
 
-  MATElementsContainerBase() = default;
+  MOVE_ONLY_DEF_CTOR(MATElementsContainerBase);
 
   template <typename VT>
   size_t GetCount() const {
@@ -875,19 +828,35 @@ struct MATElementsContainerBase {
   }
 
   template <typename Feature, typename E>
-  auto GetFeatureStorage(Id<C> id, E /*elem*/) const {
-    if (features_storage_.empty()) {
-      features_storage_.resize(GetMAT().get_size_upper());
+  auto GetFeatureStorage(Id<C> id, E elem) const {
+    if constexpr (std::is_same_v<Feature, EdgeMutations>) {
+      EdgeMutations& storage = std::get<EdgeMutations>(features_storage_[id]);
+      if (storage.empty()) {
+        MAT::Node* mat_node = elem.GetChild().GetMATNode();
+        storage = EdgeMutations{
+            mat_node->mutations |
+            ranges::views::transform(
+                [](const MAT::Mutation& mut)
+                    -> std::pair<MutationPosition, std::pair<char, char>> {
+                  static const std::array<char, 4> decode = {'A', 'C', 'G', 'T'};
+                  return {{static_cast<size_t>(mut.get_position())},
+                          {decode.at(one_hot_to_two_bit(mut.get_par_one_hot())),
+                           decode.at(one_hot_to_two_bit(mut.get_mut_one_hot()))}};
+                })};
+      }
+      return std::cref(storage);
     }
-    return std::cref(tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id)));
+    return std::cref(tuple_get<Feature, FeatureEquivalent>(features_storage_[id]));
   }
 
   template <typename Feature, typename E>
-  auto GetFeatureStorage(Id<C> id, E /*elem*/) {
-    if (features_storage_.empty()) {
-      features_storage_.resize(GetMAT().get_size_upper());
+  auto GetFeatureStorage(Id<C> id, E elem) {
+    if constexpr (std::is_same_v<Feature, EdgeMutations>) {
+      static_cast<const MATElementsContainerBase*>(this)
+          ->template GetFeatureStorage<Feature>(id, elem);
     }
-    return std::ref(tuple_get<Feature, FeatureEquivalent>(features_storage_.at(id)));
+    // TODO static_assert(not std::is_same_v<Feature, EdgeMutations>);
+    return std::ref(tuple_get<Feature, FeatureEquivalent>(features_storage_[id]));
   }
 
   template <typename Feature>
@@ -966,7 +935,6 @@ struct MATElementsContainerBase {
 
   mutable IdContainer<Id<C>, AllFeatureTypes, id_continuity> features_storage_ = {};
   ExtraFeatureStorage<ElementStorageT> extra_storage_ = {};
-  std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
 };
 
 class UncondensedNodesContainer

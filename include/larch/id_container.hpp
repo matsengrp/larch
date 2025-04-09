@@ -170,6 +170,7 @@ class IdContainer {
       data_.resize(size);
     } else {
       data_.reserve(size);
+      // TODO Fail("Can't resize sparse container");
     }
   }
 

@@ -215,7 +215,7 @@ template <typename Edge>
 static std::string EdgeMutationsToString(Edge edge) {
   std::string result;
   size_t count = 0;
-  for (auto [pos, muts] : edge.GetEdgeMutations()) {
+  for (auto [pos, muts] : edge.Const().GetEdgeMutations()) {
     result += muts.first;
     result += std::to_string(pos.value);
     result += muts.second;
@@ -257,7 +257,8 @@ void MADAGToDOT(DAG dag, iostream& out) {
   for (auto edge : dag.Const().GetEdges()) {
     out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
         << CompactGenomeToString(edge.GetChild()) << "\"";
-    out << "[ headlabel=\"" << "[" << edge.GetId().value << "]  ";
+    out << "[ headlabel=\""
+        << "[" << edge.GetId().value << "]  ";
     out << EdgeMutationsToString(edge);
     out << "\" ]\n";
   }
