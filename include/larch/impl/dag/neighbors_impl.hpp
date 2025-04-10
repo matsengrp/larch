@@ -146,11 +146,11 @@ void CheckCycle(Edge edge, VisitedType& visited_finished, std::deque<EdgeId>& pa
 
 struct SampleId;
 
-template <typename Node>
-void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] bool recursive,
-                  [[maybe_unused]] bool allow_dag) {
-#if 0
+template <typename CRTP, typename Tag>
+void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
+    [[maybe_unused]] bool recursive, [[maybe_unused]] bool allow_dag) const {
 #ifndef NDEBUG
+  auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
   if (node.IsUA()) {
     // Assert(dag.HaveUA());
@@ -164,7 +164,7 @@ void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] bool recursive,
   }
   ContiguousSet<std::string> sample_ids;
   if (node.IsLeaf()) {
-    Assert(storage.CladesRange(&node).empty());
+    Assert(GetStorageClades().empty());
     using NodeT = std::remove_reference_t<decltype(node)>;
     if constexpr (NodeT::template contains_feature<SampleId> or
                   NodeT::template contains_feature<Deduplicate<SampleId>>) {
@@ -176,17 +176,17 @@ void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] bool recursive,
       }
     }
   }
-  for (auto&& i : storage.CladesRange(&node)) {
+  for (auto&& i : GetStorageClades()) {
     Assert(not i.empty());
   }
   if (not allow_dag) {
-    if (storage.ParentsRange(&node).size() > 1) {
+    if (GetStorageParents().size() > 1) {
       throw std::runtime_error{std::string{"Multiple parents at node "} +
                                std::to_string(node.GetId().value)};
     }
   }
-  if (not storage.ParentsRange(&node).empty()) {
-    auto edge = dag.Get(storage.ParentsRange(&node).at(0));
+  if (not GetStorageParents().empty()) {
+    auto edge = dag.Get(*GetStorageParents().begin());
     if (edge.GetChild().GetId() != node.GetId()) {
       throw std::runtime_error{std::string{"Mismatch parent at node "} +
                                std::to_string(node.GetId().value) + " : " +
@@ -197,7 +197,7 @@ void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] bool recursive,
     Assert(node.IsUA());
   }
   CladeIdx cidx{0};
-  for (auto&& clade : storage.CladesRange(&node)) {
+  for (auto&& clade : GetStorageClades()) {
     CladeIdx i{cidx.value++};
     if (not allow_dag) {
       if (clade.size() != 1) {
@@ -210,7 +210,7 @@ void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] bool recursive,
                                  std::to_string(i.value) + " : " + children};
       }
     }
-    auto edge = dag.Get(clade.at(0));
+    auto edge = dag.Get(*clade.begin());
     if (edge.GetParent().GetId() != node.GetId()) {
       throw std::runtime_error{std::string{"Mismatch child edge id at node "} +
                                std::to_string(node.GetId().value) + ", clade " +
@@ -279,14 +279,6 @@ void ValidateImpl([[maybe_unused]] Node node, [[maybe_unused]] bool recursive,
     Assert(ranges::equal(leafs1, leafs2));
   }
 #endif
-#endif
-}
-
-template <typename CRTP, typename Tag>
-void FeatureConstView<Neighbors, CRTP, Tag>::Validate(bool recursive,
-                                                      bool allow_dag) const {
-  auto node = static_cast<const CRTP&>(*this).Const();
-  ValidateImpl(node, recursive, allow_dag);
 }
 
 template <typename CRTP, typename Tag>

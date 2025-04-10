@@ -636,24 +636,6 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
   }
 };
 
-template <typename T>
-struct MATValidator {
-  MATValidator(const T& storage) : storage_{storage} {}
-
-  template <typename CRTP>
-  auto CladesRange(const CRTP* crtp) const {
-    return storage_.GetClades(crtp);
-  }
-
-  template <typename CRTP>
-  auto ParentsRange(const CRTP* crtp) const {
-    return storage_.GetParents(crtp);
-  }
-
- private:
-  const T& storage_;
-};
-
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   MAT::Node* GetMATNode() const {
@@ -834,10 +816,11 @@ struct MATElementsContainerBase {
       if (storage.empty()) {
         MAT::Node* mat_node = elem.GetChild().GetMATNode();
         // check if the edge and its child node are uncondensed from a condensed node
-        // in the MAT, since in this case we need to extract the condensed node/edge's mutations.
+        // in the MAT, since in this case we need to extract the condensed node/edge's
+        // mutations.
         if (mat_node == nullptr) {
           if (extra_storage_.node_id_to_sampleid_map_.find(NodeId{id.value}) !=
-            extra_storage_.node_id_to_sampleid_map_.end()) {
+              extra_storage_.node_id_to_sampleid_map_.end()) {
             // find the ID of the condensed node in the MAT
             auto condensed_mat_node_str =
                 extra_storage_.node_id_to_sampleid_map_.at(NodeId{id.value});
