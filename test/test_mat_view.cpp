@@ -176,6 +176,11 @@ void test_sample_dag3() {
   test_mat_view_impl(dag_storage.View());
 }
 
+void test_sample_dag4() {
+  MADAGStorage dag_storage = make_sample_dag_noncontiguous_node_id();
+  test_mat_view_impl(dag_storage.View());
+}
+
 [[maybe_unused]] static const auto test_added0 =
     add_test({[]() { test_sample_dag1(); }, "MATView: sample dag"});
 
@@ -185,12 +190,15 @@ void test_sample_dag3() {
 [[maybe_unused]] static const auto test_added2 =
     add_test({[]() { test_sample_dag3(); }, "MATView: sample dag maximal UA NodeId"});
 
-[[maybe_unused]] static const auto test_added3 = add_test(
+[[maybe_unused]] static const auto test_added3 =
+    add_test({[]() { test_sample_dag4(); }, "MATView: sample dag noncontiguous UA NodeId"});
+
+[[maybe_unused]] static const auto test_added4 = add_test(
     {[]() {
        test_mat_view("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz", "");
      },
      "MATView: seedtree"});
 
-[[maybe_unused]] static const auto test_added4 =
+[[maybe_unused]] static const auto test_added5 =
     add_test({[]() { test_condensed_mat_view(); }, "MATView: condensing"});
 #endif
