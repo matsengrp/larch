@@ -631,6 +631,7 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
     edge_storage.max_id_ = max_id;
 
     size_t ua_node_id = 0;
+    mat->fix_node_idx();
     if (mat->get_node(0) != nullptr) {
       size_t count = mat->get_node_idx() + 1;
       if constexpr (not CheckIsCondensed<CRTP>::value) {
@@ -893,13 +894,6 @@ struct MATElementsContainerBase {
     }
     if constexpr (C == Component::Node) {
       return ranges::views::iota(size_t{0}, iota_max) |
-             ranges::views::transform([this](size_t i) -> size_t {
-               if (i == 0) {
-                 return extra_storage_.ua_node_id_.value;
-               } else {
-                 return i - 1;
-               }
-             }) |
              ranges::views::filter([this](size_t i) {
                if constexpr (is_condensed) {
                  return GetMAT().get_node(i) != nullptr or

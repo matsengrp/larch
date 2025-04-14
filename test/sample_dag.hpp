@@ -109,7 +109,7 @@
   dag.AddEdge({edge_id++}, {7}, {2}, {1}).GetMutableEdgeMutations()[{1}] = {'T', 'G'};
   dag.AddEdge({edge_id++}, {8}, {3}, {0}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
   dag.AddEdge({edge_id++}, {8}, {4}, {1}).GetMutableEdgeMutations()[{1}] = {'C', 'A'};
-  dag.AddEdge({edge_id++}, {9}, {0}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
+  dag.AddEdge({edge_id++}, {9}, {5}, {0}).GetMutableEdgeMutations()[{1}] = {'A', 'C'};
   dag.AddEdge({edge_id++}, {9}, {6}, {1}).GetMutableEdgeMutations()[{1}] = {'A', 'T'};
   dag.AddEdge({edge_id++}, {8}, {7}, {2}).GetMutableEdgeMutations()[{1}] = {'C', 'T'};
   dag.AddEdge({edge_id++}, {0}, {8}, {0}).GetMutableEdgeMutations()[{1}] = {'G', 'C'};
