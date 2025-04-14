@@ -893,7 +893,7 @@ struct MATElementsContainerBase {
       iota_max += extra_storage_.condensed_nodes_count_;
     }
     if constexpr (C == Component::Node) {
-      return ranges::views::iota(size_t{0}, iota_max) |
+      return ranges::views::iota(size_t{0}, iota_max + 1) |
              ranges::views::filter([this](size_t i) {
                if constexpr (is_condensed) {
                  return GetMAT().get_node(i) != nullptr or
