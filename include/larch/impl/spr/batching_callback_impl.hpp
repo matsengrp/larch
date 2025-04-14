@@ -220,7 +220,6 @@ UncondensedMergeDAGStorage BatchingCallback<CRTP, SampleDAG>::CreateMATViewStora
   mv_storage.View().SetMAT(std::addressof(sample_mat_tree_));
   // mv_storage.View().BuildRootAndLeafs();
   // MADAGToDOT(mv_storage.View(), std::cout);
-  // Assert(mv_storage.View().GetRoot().GetId().value == MV_UA_NODE_ID);
   // mv_storage.View().GetRoot().Validate(true, false);
 
   UncondensedMergeDAGStorage storage =

@@ -580,11 +580,7 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
 
     node_storage.mat_tree_ = mat;
     edge_storage.mat_tree_ = mat;
-    size_t ua_node_id = MV_UA_NODE_ID;
     size_t num_nodes = mat->get_size_upper();
-    Assert(mat->get_node(ua_node_id) == nullptr);
-    node_storage.ua_node_id_ = NodeId{ua_node_id};
-    edge_storage.ua_node_id_ = NodeId{ua_node_id};
     auto& cn = node_storage.condensed_nodes_;
 
     size_t last_uncondensed_node_id = 1;
@@ -633,6 +629,19 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
     }
     node_storage.max_id_ = max_id;
     edge_storage.max_id_ = max_id;
+
+    size_t ua_node_id = 0;
+    if (mat->get_node(0) != nullptr) {
+      size_t count = mat->get_node_idx() + 1;
+      if constexpr (not CheckIsCondensed<CRTP>::value) {
+        count -= node_storage.condensed_nodes_.size();
+        count += node_storage.condensed_nodes_count_;
+      }
+      ua_node_id = count;
+    }
+    Assert(mat->get_node(ua_node_id) == nullptr);
+    node_storage.ua_node_id_ = NodeId{ua_node_id};
+    edge_storage.ua_node_id_ = NodeId{ua_node_id};
   }
 };
 
@@ -711,7 +720,10 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     auto& mat = *dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>()
                      .get()
                      .mat_tree_;
-    Assert((id.value == MV_UA_NODE_ID) or (id.value < mat.get_size_upper()));
+    Assert((id.value == dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>()
+                            .get()
+                            .ua_node_id_.value) or
+           (id.value < mat.get_size_upper()));
     MAT::Node* mat_node = mat.get_node(id.value);
 
     bool is_ua =
@@ -790,7 +802,7 @@ struct MATElementsContainerBase {
 
   template <typename VT>
   bool ContainsId(Id<C> id) const {
-    if (id.value == MV_UA_NODE_ID or id.value == extra_storage_.ua_node_id_.value) {
+    if (id.value == extra_storage_.ua_node_id_.value) {
       if constexpr (C == Component::Node) {
         return true;
       } else {
@@ -881,9 +893,9 @@ struct MATElementsContainerBase {
     }
     if constexpr (C == Component::Node) {
       return ranges::views::iota(size_t{0}, iota_max) |
-             ranges::views::transform([](size_t i) -> size_t {
+             ranges::views::transform([this](size_t i) -> size_t {
                if (i == 0) {
-                 return MV_UA_NODE_ID;
+                 return extra_storage_.ua_node_id_.value;
                } else {
                  return i - 1;
                }
@@ -904,10 +916,10 @@ struct MATElementsContainerBase {
       return ranges::views::iota(size_t{0}, iota_max + 1) |
              ranges::views::filter([this](size_t i) {
                if constexpr (is_condensed) {
-                 return GetMAT().get_node(i) != nullptr and i != MV_UA_NODE_ID and
+                 return GetMAT().get_node(i) != nullptr and
                         i != extra_storage_.ua_node_id_.value;
                }
-               return (GetMAT().get_node(i) != nullptr and i != MV_UA_NODE_ID and
+               return (GetMAT().get_node(i) != nullptr and
                        i != extra_storage_.ua_node_id_.value) or
                       (extra_storage_.node_id_to_sampleid_map_.find(NodeId{i}) !=
                        extra_storage_.node_id_to_sampleid_map_.end());

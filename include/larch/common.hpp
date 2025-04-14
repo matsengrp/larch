@@ -28,8 +28,6 @@
 
 #include "larch/debug.hpp"
 
-#define MV_UA_NODE_ID 100000
-
 static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
 
 template <typename T>

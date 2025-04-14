@@ -144,9 +144,7 @@ class IdContainer {
       }
       return {data_.back().first.value + 1};
     } else {
-      auto keys = data_ | ranges::views::keys | ranges::views::filter([](auto& i) {
-                    return i.value != MV_UA_NODE_ID;
-                  });
+      auto keys = data_ | ranges::views::keys;
       auto result = ranges::max_element(keys);  // TODO linear search
       if (result == keys.end()) {
         return {0};
