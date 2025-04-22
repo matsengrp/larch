@@ -29,8 +29,8 @@ void test_mat_view_impl(DAGView dag) {
   mat.condense_leaves(condense_arg);
   mat.fix_node_idx();
 
-  std::cout << "\nDAG view\n";
-  MADAGToDOT(dag, std::cout);
+  // std::cout << "\nDAG view\n";
+  // MADAGToDOT(dag, std::cout);
 
   // Create MAT View
   CondensedMATViewStorage matview_storage;
@@ -43,14 +43,14 @@ void test_mat_view_impl(DAGView dag) {
   mv.RecomputeCompactGenomes<IdContinuity::Sparse>();
   mv.GetRoot().Validate(true, false);
 
-  std::cout << "\nCondensed MAT view\n";
-  MADAGToDOT(mv, std::cout);
+  // std::cout << "\nCondensed MAT view\n";
+  // MADAGToDOT(mv, std::cout);
 
   auto umv = mv.GetUncondensed();
   static_assert(not umv.IsCondensed());
 
-  std::cout << "\nUnndensed MAT view\n";
-  MADAGToDOT(umv, std::cout);
+  // std::cout << "\nUnndensed MAT view\n";
+  // MADAGToDOT(umv, std::cout);
 
   // check BuildFromMAT
   auto dag_from_mat = AddMATConversion(MergeDAGStorage<>::EmptyDefault());
@@ -66,14 +66,14 @@ void test_mat_view_impl(DAGView dag) {
 
   Merge merge(mv.GetReferenceSequence());
 
-  std::cout << "\n\nMAT view\n";
-  MADAGToDOT(merge_mv.View(), std::cout);
+  // std::cout << "\n\nMAT view\n";
+  // MADAGToDOT(merge_mv.View(), std::cout);
 
   merge.AddDAG(merge_mv.View());
   merge.GetResult().GetRoot().Validate(true, true);
 
-  std::cout << "\n\nMerge result\n";
-  MADAGToDOT(merge.GetResult(), std::cout);
+  // std::cout << "\n\nMerge result\n";
+  // MADAGToDOT(merge.GetResult(), std::cout);
 }
 
 void test_condensed_mat_view() {
@@ -90,8 +90,8 @@ void test_condensed_mat_view() {
   mat_conv.View().GetRoot().Validate(true);
   check_MAT_MADAG_Eq(mat, dag);
 
-  std::cout << "\n\nDAG view\n";
-  MADAGToDOT(dag_storage.View(), std::cout);
+  // std::cout << "\n\nDAG view\n";
+  // MADAGToDOT(dag_storage.View(), std::cout);
 
   // optimal labelings for MAT (this disambiguates the leaf nodes so they can be
   // condensed) NOTE: ordinarily, reassign_states optimizes internal node labels and
@@ -128,8 +128,8 @@ void test_condensed_mat_view() {
   umv.RecomputeCompactGenomes<IdContinuity::Sparse>(true);
 
   merge_umv.View().SampleIdsFromCG();
-  std::cout << "\n\nUncondensed MAT view\n";
-  MADAGToDOT(merge_umv.View(), std::cout);
+  // std::cout << "\n\nUncondensed MAT view\n";
+  // MADAGToDOT(merge_umv.View(), std::cout);
 
   // FIXME umv.GetRoot().Validate(true, false);
 
@@ -138,8 +138,8 @@ void test_condensed_mat_view() {
                                    Extend::Empty<>, Extend::Empty<>, DefaultViewBase,
                                    IdContinuity::Sparse>::FromView(mv);
   merge_mv.View().SampleIdsFromCG();
-  std::cout << "\n\nCondensed MAT view\n";
-  MADAGToDOT(merge_mv.View(), std::cout);
+  // std::cout << "\n\nCondensed MAT view\n";
+  // MADAGToDOT(merge_mv.View(), std::cout);
 
   // TODO: check that mat and mat_view(condensed=True) are equal
 }
@@ -179,8 +179,8 @@ void test_sample_dag3() {
 [[maybe_unused]] static const auto test_added0 =
     add_test({[]() { test_sample_dag1(); }, "MATView: sample dag"});
 
-[[maybe_unused]] static const auto test_added1 =
-    add_test({[]() { test_sample_dag2(); }, "MATView: sample dag non-extremal UA NodeId"});
+[[maybe_unused]] static const auto test_added1 = add_test(
+    {[]() { test_sample_dag2(); }, "MATView: sample dag non-extremal UA NodeId"});
 
 [[maybe_unused]] static const auto test_added2 =
     add_test({[]() { test_sample_dag3(); }, "MATView: sample dag maximal UA NodeId"});

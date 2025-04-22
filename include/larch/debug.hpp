@@ -211,7 +211,8 @@ struct DebugItem {
                     const cpptrace::formatter& formatter) {
     size_t frame_no = 0;
     for (auto& i : trace.frames) {
-      if (i.filename.find("include/larch") != std::string::npos and
+      if ((i.filename.find("include/larch") != std::string::npos or
+           i.filename.find("test/test_") != std::string::npos) and
           i.symbol.find("Debug::") != 0 and i.symbol.find("DebugItem::") != 0) {
         std::cout << "#" << frame_no << "  ";
         formatter.print(std::cout, i);

@@ -853,6 +853,7 @@ struct MATElementsContainerBase {
       }
       return std::cref(storage);
     }
+    std::unique_lock lock{*mtx_};
     return std::cref(tuple_get<Feature, FeatureEquivalent>(features_storage_[id]));
   }
 
@@ -895,7 +896,7 @@ struct MATElementsContainerBase {
              ranges::views::transform([iota_max, this](size_t i) {
                if (i > iota_max + 1) {
                  if (extra_storage_.ua_node_id_.value > iota_max + 1) {
-                   return  extra_storage_.ua_node_id_.value;
+                   return extra_storage_.ua_node_id_.value;
                  }
                  return iota_max + 2;
                }
@@ -942,6 +943,7 @@ struct MATElementsContainerBase {
     return *extra_storage_.mat_tree_;
   }
 
+  mutable std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
   mutable IdContainer<Id<C>, AllFeatureTypes, id_continuity> features_storage_ = {};
   ExtraFeatureStorage<ElementStorageT> extra_storage_ = {};
 };

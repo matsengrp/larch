@@ -477,55 +477,59 @@ inline size_t optimize_inner_loop(
   std::iota(idxs.begin(), idxs.end(), 0);
 
   ParallelForEach(idxs, [&](size_t) {
-    MAT::Node* src = nodes_to_search.at(random_node());
-    if (src->parent == nullptr) {
-      return;
-    }
-    MAT::Node* dst = [&] {
-      while (true) {
-      outer:
-        MAT::Node* result = nodes_to_search.at(random_node());
-        if (result != src and result->parent != nullptr and result != src->parent) {
-          MAT::Node* parent = result->parent;
-          while (parent != nullptr) {
-            if (parent == src) {
-              goto outer;
+    retry:
+      MAT::Node* src = nodes_to_search.at(random_node());
+      if (src->parent == nullptr) {
+        goto retry;
+      }
+      MAT::Node* dst = [&] {
+        while (true) {
+        outer:
+          MAT::Node* result = nodes_to_search.at(random_node());
+          if (result != src and result->parent != nullptr and result != src->parent) {
+            MAT::Node* parent = result->parent;
+            while (parent != nullptr) {
+              if (parent == src) {
+                goto outer;
+              }
+              parent = parent->parent;
             }
-            parent = parent->parent;
+            return result;
           }
-          return result;
+        }
+      }();
+      std::set<MAT::Node*> parents;
+      MAT::Node* lca = nullptr;
+      MAT::Node* src_parent = src;
+      MAT::Node* dst_parent = dst;
+      while (lca == nullptr and (src_parent != nullptr or dst_parent != nullptr)) {
+        if (src_parent != nullptr and not parents.insert(src_parent).second) {
+          lca = src_parent;
+          break;
+        } else {
+          if (src_parent != nullptr) {
+            src_parent = src_parent->parent;
+          }
+        }
+        if (dst_parent != nullptr and not parents.insert(dst_parent).second) {
+          lca = dst_parent;
+          break;
+        } else {
+          if (dst_parent != nullptr) {
+            dst_parent = dst_parent->parent;
+          }
         }
       }
-    }();
-    std::set<MAT::Node*> parents;
-    MAT::Node* lca = nullptr;
-    MAT::Node* src_parent = src;
-    MAT::Node* dst_parent = dst;
-    while (lca == nullptr and (src_parent != nullptr or dst_parent != nullptr)) {
-      if (src_parent != nullptr and not parents.insert(src_parent).second) {
-        lca = src_parent;
-        break;
-      } else {
-        if (src_parent != nullptr) {
-          src_parent = src_parent->parent;
-        }
+      Assert(lca != nullptr);
+      Assert(src != dst);
+      if (lca->parent == nullptr) {
+        goto retry;
       }
-      if (dst_parent != nullptr and not parents.insert(dst_parent).second) {
-        lca = dst_parent;
-        break;
-      } else {
-        if (dst_parent != nullptr) {
-          dst_parent = dst_parent->parent;
-        }
-      }
-    }
-    Assert(lca != nullptr);
-    Assert(src != dst);
-    Profitable_Moves move{-1, src, dst, lca};
-    int best_score_change = 0;
-    std::vector<Node_With_Major_Allele_Set_Change> node_with_major_allele_set_change;
+      Profitable_Moves move{-1, src, dst, lca};
+      int best_score_change = 0;
+      std::vector<Node_With_Major_Allele_Set_Change> node_with_major_allele_set_change;
 
-    callback(move, best_score_change, node_with_major_allele_set_change);
+      callback(move, best_score_change, node_with_major_allele_set_change);
   });
 
   std::ignore = t;

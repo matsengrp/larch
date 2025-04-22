@@ -22,6 +22,16 @@ struct Test {
 
 bool add_test(const Test& test) noexcept;
 
+#ifdef USE_CPPTRACE
+#define TestAssert(x)                                                       \
+  {                                                                         \
+    if (not(x)) {                                                           \
+      DebugItem::print_current_trace();                                     \
+      throw std::runtime_error("TestAssert failed: \"" #x "\" in " __FILE__ \
+                               ":" TOSTRING(__LINE__));                     \
+    }                                                                       \
+  }
+#else
 #define TestAssert(x)                                                       \
   {                                                                         \
     if (not(x)) {                                                           \
@@ -29,6 +39,7 @@ bool add_test(const Test& test) noexcept;
                                ":" TOSTRING(__LINE__));                     \
     }                                                                       \
   }
+#endif
 
 #define TestThrow(x)                                                       \
   {                                                                        \
