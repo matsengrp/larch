@@ -822,8 +822,12 @@ struct MATElementsContainerBase {
 
   template <typename Feature, typename E>
   auto GetFeatureStorage(Id<C> id, E elem) const {
+    auto& feat_storage = [this](Id<C> i) -> auto& {
+      std::unique_lock lock{*mtx_};
+      return features_storage_[i];
+    }(id);
     if constexpr (std::is_same_v<Feature, EdgeMutations>) {
-      EdgeMutations& storage = std::get<EdgeMutations>(features_storage_[id]);
+      EdgeMutations& storage = std::get<EdgeMutations>(feat_storage);
       if (storage.empty()) {
         MAT::Node* mat_node = elem.GetChild().GetMATNode();
         // check if the edge and its child node are uncondensed from a condensed node
@@ -852,9 +856,9 @@ struct MATElementsContainerBase {
                 })};
       }
       return std::cref(storage);
+    } else {
+      return std::cref(tuple_get<Feature, FeatureEquivalent>(feat_storage));
     }
-    std::unique_lock lock{*mtx_};
-    return std::cref(tuple_get<Feature, FeatureEquivalent>(features_storage_[id]));
   }
 
   template <typename Feature, typename E>

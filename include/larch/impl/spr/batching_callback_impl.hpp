@@ -62,8 +62,8 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
         for (auto i : storage.spr->View().Const().GetLeafs()) {
           Assert(i.HaveSampleId());
         }
-#endif
         auto old_src_parent = storage.spr->View().GetNodeFromMAT(move.src->parent);
+#endif
         if (storage.spr->View().InitHypotheticalTree(
                 move, nodes_with_major_allele_set_change)) {
           // storage.spr->View().GetRoot().Validate(true);
@@ -71,8 +71,10 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
               collapse_empty_fragment_edges_
                   ? storage.spr->View().MakeFragment()
                   : storage.spr->View().MakeUncollapsedFragment());
+#ifndef NDEBUG
           auto new_old_src_parent = storage.spr->View().GetOldSourceParent();
           Assert(old_src_parent.GetId() == new_old_src_parent.GetId());
+#endif
           auto fragment = storage.fragment->View();
           // GetFullDAG(fragment).GetRoot().Validate(true, false);
           auto& impl = static_cast<CRTP&>(*this);
@@ -142,7 +144,9 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
     });
     std::unique_lock lock{merge_mtx_};
     if (not all.empty()) {
+#ifndef NDEBUG
       auto orig_num_leafs = merge_.GetResult().GetLeafsCount();
+#endif
       merge_.AddDAGs(
           all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
 
@@ -157,7 +161,9 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
       // Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
       // }
 
+#ifndef NDEBUG
       Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
+#endif
     }
     merge_.AddDAGs(std::vector{reassigned_states});
     // merge_.GetResult().GetRoot().Validate(true, true);
