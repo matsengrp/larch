@@ -55,8 +55,8 @@ else()
   FetchContent_MakeAvailable(oneTBB)
 endif()
 
-include(protobuf.cmake)
-# find_package(Protobuf REQUIRED)
+# include(protobuf.cmake)
+find_package(Protobuf REQUIRED)
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
