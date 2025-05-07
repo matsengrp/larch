@@ -15,6 +15,10 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
       : sample_dag_{sample_dag}, merge_{merge} {};
 
   using Storage = MergeDAGStorage<>;
+  static auto MakeMATConversionStorage() {
+    return AddMATConversion(Storage::Consume(DefaultDAGStorage{}));
+  }
+  using MATConversionStorage = decltype(MakeMATConversionStorage());
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   [[maybe_unused]] std::vector<Node_With_Major_Allele_Set_Change>&
@@ -24,7 +28,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
     auto storage = [this](std::string ref_seq) {
       MAT::Tree* mat = sample_mat_.load();
       TestAssert(mat != nullptr);
-      auto mat_conv = AddMATConversion(Storage{});
+      MATConversionStorage mat_conv = MakeMATConversionStorage();
       mat_conv.View().BuildFromMAT(*mat, ref_seq);
       check_edge_mutations(mat_conv.View().Const());
       mat_conv.View().RecomputeCompactGenomes(true);
@@ -48,7 +52,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   }
 
   void operator()(MAT::Tree& tree) {
-    decltype(AddMATConversion(Storage{{}})) storage;
+    MATConversionStorage storage = MakeMATConversionStorage();
     storage.View().BuildFromMAT(tree, sample_dag_.GetReferenceSequence());
     storage.View().RecomputeCompactGenomes(true);
     {
@@ -74,8 +78,7 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
 
   DAG sample_dag_;
   MergeT& merge_;
-  decltype(AddMATConversion(Storage{{}})) reassigned_states_storage_ =
-      AddMATConversion(Storage{});
+  MATConversionStorage reassigned_states_storage_ = MakeMATConversionStorage();
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
 };

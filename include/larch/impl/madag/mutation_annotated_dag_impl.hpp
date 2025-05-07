@@ -73,8 +73,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
   using Node = typename decltype(dag)::NodeView;
 
   auto ComputeCGFromMutation =
-      [&dag, this](ContiguousMap<MutationPosition, MutationBase>&& new_muts,
-                   Node for_node) {
+      [this](ContiguousMap<MutationPosition, MutationBase>&& new_muts, Node for_node) {
         CompactGenome new_cg =
             for_node.GetCompactGenome().Copy(static_cast<const CRTP*>(this));
         new_cg.ApplyChanges(new_muts);

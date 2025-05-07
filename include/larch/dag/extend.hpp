@@ -295,8 +295,8 @@ struct ExtendDAGStorage {
   auto GetTarget() const;
 
   Target target_;
-  typename OnNodes::Storage<Cont> additional_node_features_storage_;
-  typename OnEdges::Storage<Cont> additional_edge_features_storage_;
+  typename OnNodes::template Storage<Cont> additional_node_features_storage_;
+  typename OnEdges::template Storage<Cont> additional_edge_features_storage_;
   typename OnDAG::Storage additional_dag_features_storage_;
   typename OnNodes::ExtraStorage additional_node_extra_features_storage_;
   typename OnEdges::ExtraStorage additional_edge_extra_features_storage_;

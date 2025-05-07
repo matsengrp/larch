@@ -23,18 +23,20 @@ struct FragmentElementsContainer {
       TargetStorage::template contains_element_feature<C, Feature>;
 
   template <typename CRTP>
-  struct ConstElementViewBase : TargetStorage::ConstElementViewBase<C, CRTP> {};
+  struct ConstElementViewBase : TargetStorage::template ConstElementViewBase<C, CRTP> {
+  };
   template <typename CRTP>
-  struct MutableElementViewBase : TargetStorage::MutableElementViewBase<C, CRTP> {
+  struct MutableElementViewBase
+      : TargetStorage::template MutableElementViewBase<C, CRTP> {
     using TargetStorage::template MutableElementViewBase<C, CRTP>::operator=;
   };
 
   template <typename CRTP>
-  struct ExtraConstElementViewBase : TargetContainer::ExtraConstElementViewBase<CRTP> {
-  };
+  struct ExtraConstElementViewBase
+      : TargetContainer::template ExtraConstElementViewBase<CRTP> {};
   template <typename CRTP>
   struct ExtraMutableElementViewBase
-      : TargetContainer::ExtraMutableElementViewBase<CRTP> {};
+      : TargetContainer::template ExtraMutableElementViewBase<CRTP> {};
 
   FragmentElementsContainer(Target target, std::vector<Id<C>>&& ids);
   MOVE_ONLY(FragmentElementsContainer);
