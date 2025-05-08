@@ -285,11 +285,12 @@ struct MATNeighbors : Neighbors {
       if (mat_node == nullptr) {
         auto& storage =
             dag_node.template GetFeatureExtraStorage<MATNodeStorage>().get();
-        auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_node.GetId());
+        [[maybe_unused]] auto cn_id_str =
+            storage.node_id_to_sampleid_map_.find(dag_node.GetId());
         Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
         auto condensed_mat_node_str =
             storage.node_id_to_sampleid_map_.at(dag_node.GetId());
-        auto condensed_mat_node_iter =
+        [[maybe_unused]] auto condensed_mat_node_iter =
             storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
         Assert(condensed_mat_node_iter != storage.reversed_condensed_nodes_.end());
         auto& condensed_mat_node =
@@ -448,13 +449,17 @@ struct MATEndpoints : Endpoints {
       // if it's an edge above a condensed node
       auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>().get();
       if (mat_node == nullptr) {
+#ifndef NDEBUG
         auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
         Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
+#endif
         auto condensed_mat_node_str =
             storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
+#ifndef NDEBUG
         auto condensed_mat_node_iter =
             storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
         Assert(condensed_mat_node_iter != storage.reversed_condensed_nodes_.end());
+#endif
         mat_node = storage.reversed_condensed_nodes_.at(condensed_mat_node_str);
       }
       Assert(mat_node != nullptr);

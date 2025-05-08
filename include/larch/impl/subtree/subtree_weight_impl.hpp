@@ -286,6 +286,8 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTree(NodeType input_node,
   CladeIdx clade_idx{0};
   for (auto clade : input_node.GetClades()) {
     Assert(not clade.empty());
+
+    std::ignore = clade;
     auto input_edge = edge_selector(input_node, clade_idx);
     ++clade_idx.value;
 
@@ -320,7 +322,7 @@ void SubtreeWeight<WeightOps, DAG>::ExtractSubset(
   for (auto clade : input_node.GetClades()) {
     Assert(not clade.empty());
 
-    std::ignore = clade_idx;
+    std::ignore = clade;
     auto input_edges = edge_selector(input_node, clade_idx);
 
     for (auto edge_id : input_edges) {
