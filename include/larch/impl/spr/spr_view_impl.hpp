@@ -259,7 +259,7 @@ template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsNonrootAnchorNode() const {
   auto node = static_cast<const CRTP&>(*this).Const();
   if (node.IsMoveSource()) {
-    return true;
+    return false;
   }
   if (node.IsMoveTarget()) {
     return false;
@@ -1162,12 +1162,24 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
       current_node = dag.Get(current_node).GetSingleParent().GetParent();
     }
   };
+
   mark_changed(dag.GetOldSourceParent());
   mark_changed(dag.GetMoveTarget().GetOld().GetSingleParent().GetParent());
   mark_changed(dag.GetNodeFromMAT(move.dst));
   mark_changed(dag.GetNodeFromMAT(move.src));
   mark_changed(dag.GetNodeFromMAT(move.dst->parent));
   mark_changed(dag.GetNodeFromMAT(move.src->parent));
+  // for the case of a unifurcation after move, we need to check both pre-move grandparents 
+  if (move.dst->parent != nullptr) {
+    if (move.dst->parent->parent != nullptr) {
+      mark_changed(dag.GetNodeFromMAT(move.dst->parent->parent));
+    }
+  }
+  if (move.src->parent != nullptr) {
+    if (move.src->parent->parent != nullptr) {
+      mark_changed(dag.GetNodeFromMAT(move.src->parent->parent));
+    }
+  }
   mark_changed(dag.GetMoveNew());
 
   return true;
