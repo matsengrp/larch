@@ -359,7 +359,10 @@ bool FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::HasUnifurcationAfterMov
 template <typename DAG, typename CRTP, typename Tag>
 auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldSourceParent() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetOriginal().Get(dag.GetMoveSource().GetId()).GetSingleParent().GetParent();
+  return dag.GetOriginal()
+      .Get(dag.GetMoveSource().GetId())
+      .GetSingleParent()
+      .GetParent();
 }
 
 template <typename Node>
@@ -414,6 +417,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
   NodeId oldest_node = collapsed.first.front();
 
+#ifndef NDEBUG
   for (auto node_id : collapsed.first) {
     auto node = dag.Get(node_id);
     if (not node.IsUA() and not node.IsMoveNew()) {
@@ -425,6 +429,8 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
       }
     }
   }
+#endif
+
   for (auto node_id : collapsed.first) {
     if (dag.Get(node_id).IsUA()) {
       oldest_node = node_id;

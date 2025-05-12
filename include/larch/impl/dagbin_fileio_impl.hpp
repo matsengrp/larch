@@ -41,7 +41,7 @@ MADAGStorage<> DagbinFileIO::ReadDAG(std::string_view path) {
   for (auto [section_begpos, section_id] : labeled_linked_list) {
     [[maybe_unused]] auto true_section_id = ReadData<SectionId>(infile);
     Assert(section_id == true_section_id);
-    auto section_endpos = ReadData<std::streampos>(infile);
+    [[maybe_unused]] auto section_endpos = ReadData<std::streampos>(infile);
 
     read_section(section_id);
     [[maybe_unused]] auto true_section_endpos = infile.tellg();
