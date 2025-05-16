@@ -29,7 +29,7 @@ void check_edge_mutations_helper(Node dag_node, const all_mutated_t& all_mutated
           std::cout << "On edge " << edge_id.value << " from " << dag_node.GetId().value
                     << " to " << child.GetChildId().value << " at position "
                     << edge_mut.first.value << " expected reference " << expected
-                    << " but got " << actual_par << "\n";
+                    << " but got " << actual_par.ToChar() << "\n";
         }
       } else {
         auto expected = ins_result.first->second.nuc;
@@ -41,7 +41,7 @@ void check_edge_mutations_helper(Node dag_node, const all_mutated_t& all_mutated
                     << ins_result.first->second.edge_id.value << "from "
                     << ins_result.first->second.par_node_id.value << " to "
                     << ins_result.first->second.child_node_id.value << " but got "
-                    << actual_par << "\n";
+                    << actual_par.ToChar() << "\n";
         }
         ins_result.first->second.child_node_id = child.GetChildId();
         ins_result.first->second.par_node_id = dag_node.GetId();

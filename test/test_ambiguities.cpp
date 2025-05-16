@@ -3,7 +3,7 @@
 #include "larch/dag_loader.hpp"
 
 [[maybe_unused]] static auto build_node_sequence_map(
-    MADAGStorage<> &dag_storage, bool include_nonleaf_nodes = false) {
+    MADAGStorage<>& dag_storage, bool include_nonleaf_nodes = false) {
   NodeSeqMap node_seq_map;
   auto dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
@@ -16,7 +16,7 @@
 }
 
 [[maybe_unused]] static auto verify_dag_mutations_are_valid(
-    MADAGStorage<> &dag_storage) {
+    MADAGStorage<>& dag_storage) {
   using Edge = MutableMADAG::EdgeView;
   auto dag = dag_storage.View();
 
@@ -24,9 +24,9 @@
     const auto ref_seq = dag.GetReferenceSequence();
     auto parent = dag.Get(edge.GetParent());
     auto child = dag.Get(edge.GetChild());
-    const auto &edge_muts = edge.GetEdgeMutations();
-    const auto &parent_cg = parent.GetCompactGenome();
-    const auto &child_cg = child.GetCompactGenome();
+    const auto& edge_muts = edge.GetEdgeMutations();
+    const auto& parent_cg = parent.GetCompactGenome();
+    const auto& child_cg = child.GetCompactGenome();
     auto test_muts = CompactGenome::ToEdgeMutations(ref_seq, parent_cg, child_cg);
     return (edge_muts == test_muts);
   };
@@ -38,7 +38,7 @@
 }
 
 [[maybe_unused]] static auto verify_compact_genomes_compatible_with_leaves(
-    MADAGStorage<> &dag_storage, NodeSeqMap &truth_leaf_seq_map,
+    MADAGStorage<>& dag_storage, NodeSeqMap& truth_leaf_seq_map,
     bool do_print_failure = true) {
   auto dag = dag_storage.View();
   auto dag_leaf_seq_map = build_node_sequence_map(dag_storage, false);
@@ -55,8 +55,8 @@
   return true;
 }
 
-[[maybe_unused]] static void write_dag_to_file(MADAGStorage<> &dag_storage,
-                                               const std::string &output_filename) {
+[[maybe_unused]] static void write_dag_to_file(MADAGStorage<>& dag_storage,
+                                               const std::string& output_filename) {
   std::ofstream os;
   auto dag = dag_storage.View();
   os.open(output_filename);
@@ -110,7 +110,7 @@
   }
   TestAssert((MutationBase{'N'}.IsAmbiguous()) &&
              "Test_1b: MutationBase found incorrectly unambiguous.");
-  TestAssert((MutationBase{{0, 1, 0, 1}}.IsAmbiguous()) &&
+  TestAssert((MutationBase{'C', 'T'}.IsAmbiguous()) &&
              "Test_1c: MutationBase found incorrectly unambiguous.");
 
   // (2) Test ambiguous comparisons of bases.
@@ -120,33 +120,33 @@
     TestAssert((MutationBase{'N'}.IsCompatible(MutationBase{base})) &&
                "Test_2b: AmbiguousCompare found incorrectly incompatible.");
   }
-  TestAssert((MutationBase{{1, 1, 1, 1}}.IsCompatible(MutationBase{{1, 1, 1, 1}})) &&
+  TestAssert((MutationBase{'A', 'C', 'G', 'T'}.IsCompatible(
+                 MutationBase{'A', 'C', 'G', 'T'})) &&
              "Test_2c: AmbiguousCompare found incorrectly incompatible.");
-  TestAssert(not(MutationBase{{0, 0, 1, 1}}.IsCompatible(MutationBase{{1, 1, 0, 0}})) &&
+  TestAssert(not(MutationBase{'G', 'T'}.IsCompatible(MutationBase{'A', 'C'})) &&
              "Test_2d: AmbiguousCompare found incorrectly compatible.");
 
-  TestAssert(
-      (MutationBase{{0, 1, 1, 0}}.GetFirstBase() == MutationBase{{0, 1, 0, 0}}) &&
-      "Test_2e: GetFirstBase does not return correct value.");
-  TestAssert((MutationBase{{0, 1, 1, 0}}.GetFirstCommonBase(
-                  MutationBase{{0, 0, 1, 1}}) == MutationBase{{0, 0, 1, 0}}) &&
+  TestAssert((MutationBase{'C', 'G'}.GetFirstBase() == MutationBase{'C'}) &&
+             "Test_2e: GetFirstBase does not return correct value.");
+  TestAssert((MutationBase{'C', 'G'}.GetFirstCommonBase(MutationBase{'G', 'T'}) ==
+              MutationBase{'G'}) &&
              "Test_2f: GetFirstCommonBase does not return correct value.");
-  TestAssert((MutationBase{{1, 1, 1, 0}}.GetCommonBases(MutationBase{{0, 1, 1, 1}}) ==
-              MutationBase{{0, 1, 1, 0}}) &&
+  TestAssert((MutationBase{'A', 'C', 'G'}.GetCommonBases(MutationBase{'C', 'G', 'T'}) ==
+              MutationBase{'C', 'G'}) &&
              "Test_2g: GetCommonBases does not return correct value.");
 
   // (3) Test that ambiguous leaves are compatible with unambiguous leaves.
 
   for (auto node : amb_dag.GetLeafs()) {
-    auto &cg_1 = amb_dag.Get(node.GetId()).GetCompactGenome();
-    auto &cg_2 = unamb_dag.Get(node.GetId()).GetCompactGenome();
+    auto& cg_1 = amb_dag.Get(node.GetId()).GetCompactGenome();
+    auto& cg_2 = unamb_dag.Get(node.GetId()).GetCompactGenome();
     bool cgs_compatible = cg_1.IsCompatible(cg_2, unamb_dag.GetReferenceSequence());
     cgs_compatible &= cg_2.IsCompatible(cg_1, unamb_dag.GetReferenceSequence());
     TestAssert((cgs_compatible) &&
                "Test_3a: Ambiguous Compact Genomes incorrectly found incompatible.");
   }
-  auto &cg_1 = unamb_dag.Get(NodeId{1}).GetCompactGenome();
-  auto &cg_2 = unamb_dag.Get(NodeId{2}).GetCompactGenome();
+  auto& cg_1 = unamb_dag.Get(NodeId{1}).GetCompactGenome();
+  auto& cg_2 = unamb_dag.Get(NodeId{2}).GetCompactGenome();
   bool cgs_compatible = cg_1.IsCompatible(cg_2, unamb_dag.GetReferenceSequence());
   cgs_compatible &= cg_1.IsCompatible(cg_2, unamb_dag.GetReferenceSequence());
   TestAssert(not(cgs_compatible) &&
@@ -155,16 +155,16 @@
   // (4) Test that edge ambiguous leaves don't form edge mutations.
   std::vector<EdgeId> amb_edge_ids{{{2}, {4}}};
   for (auto edge_id : amb_edge_ids) {
-    auto &edge_mut_1 = unamb_dag.Get(edge_id).GetEdgeMutations();
-    auto &edge_mut_2 = amb_dag.Get(edge_id).GetEdgeMutations();
+    auto& edge_mut_1 = unamb_dag.Get(edge_id).GetEdgeMutations();
+    auto& edge_mut_2 = amb_dag.Get(edge_id).GetEdgeMutations();
     TestAssert((edge_mut_1.size() > edge_mut_2.size()) &&
                "Test_4a: Number of Ambiguous Edge Mutations incorrectly >= Unambigous "
                "Edge Mutations.");
   }
   std::vector<EdgeId> unamb_edge_ids{{{1}, {3}}};
   for (auto edge_id : unamb_edge_ids) {
-    auto &edge_mut_1 = unamb_dag.Get(edge_id).GetEdgeMutations();
-    auto &edge_mut_2 = amb_dag.Get(edge_id).GetEdgeMutations();
+    auto& edge_mut_1 = unamb_dag.Get(edge_id).GetEdgeMutations();
+    auto& edge_mut_2 = amb_dag.Get(edge_id).GetEdgeMutations();
     TestAssert((edge_mut_1.size() == edge_mut_2.size()) &&
                "Test_4b: Number of Ambiguous Edge Mutations with no ambiguities "
                "incorrectly != Unambigous Edge Mutations.");
