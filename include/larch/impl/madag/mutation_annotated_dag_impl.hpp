@@ -177,7 +177,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG(
       Assert(not id.empty());
       if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
         auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-            SampleId{id});
+            SampleId::Make(id));
         leaf = id_iter.first;
       } else {
         leaf.SetSampleId(id);

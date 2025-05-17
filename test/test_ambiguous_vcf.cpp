@@ -110,7 +110,7 @@ std::ostream& operator<<(std::ostream& os, const MAT::Mutation mut) {
       auto full_str_id = prefix + std::to_string(node.GetId().value);
       if constexpr (decltype(node)::template contains_feature<Deduplicate<SampleId>>) {
         auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-            SampleId{full_str_id});
+            SampleId::Make(full_str_id));
         node = id_iter.first;
       } else {
         node.SetSampleId({full_str_id});
@@ -269,7 +269,7 @@ void test_vcf_compatible() {
   // make sure that each of the leaves in dag match exactly one key of id_to_cg_map
   for (auto leaf_id : dag.GetLeafs()) {
     if (leaf_id.GetSampleId().has_value()) {
-      TestAssert(id_to_cg_map.find(leaf_id.GetSampleId().value()) !=
+      TestAssert(id_to_cg_map.find(std::string{leaf_id.GetSampleId().value()}) !=
                  id_to_cg_map.end());
     }
   }

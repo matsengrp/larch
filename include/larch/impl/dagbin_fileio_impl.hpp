@@ -55,7 +55,7 @@ MADAGStorage<> DagbinFileIO::ReadDAG(std::string_view path) {
 
   for (auto node : dag.GetNodes()) {
     if (node.IsLeaf() and not node.HaveSampleId()) {
-      node = SampleId{node.GetCompactGenome().ToString()};
+      node = SampleId::Make(node.GetCompactGenome().ToString());
     }
   }
   Assert(header.has_value());
@@ -158,19 +158,19 @@ void DagbinFileIO::AppendDAG(DAG dag, std::string_view path) {
 }
 
 template <typename T, typename iostream>
-T DagbinFileIO::ReadData(iostream &infile) {
+T DagbinFileIO::ReadData(iostream& infile) {
   T data;
-  infile.read(reinterpret_cast<char *>(&data), sizeof(data));
+  infile.read(reinterpret_cast<char*>(&data), sizeof(data));
   return data;
 }
 
 template <typename T, typename iostream>
-void DagbinFileIO::WriteData(iostream &outfile, const T data) {
-  outfile.write(reinterpret_cast<const char *>(&data), sizeof(data));
+void DagbinFileIO::WriteData(iostream& outfile, const T data) {
+  outfile.write(reinterpret_cast<const char*>(&data), sizeof(data));
 }
 
 template <typename iostream>
-std::string DagbinFileIO::ReadString(iostream &infile) {
+std::string DagbinFileIO::ReadString(iostream& infile) {
   auto str_len = ReadData<size_t>(infile);
   std::string str(str_len, '\0');
   infile.read(&str[0], str_len);
@@ -178,14 +178,14 @@ std::string DagbinFileIO::ReadString(iostream &infile) {
 }
 
 template <typename iostream>
-void DagbinFileIO::WriteString(iostream &outfile, const std::string &str) {
+void DagbinFileIO::WriteString(iostream& outfile, const std::string& str) {
   WriteData(outfile, str.size());
   outfile.write(str.c_str(), str.size());
 }
 
 template <typename iostream>
 std::vector<std::pair<std::streampos, DagbinFileIO::SectionId>>
-DagbinFileIO::ReadLabeledLinkedList(iostream &infile) {
+DagbinFileIO::ReadLabeledLinkedList(iostream& infile) {
   std::vector<std::pair<std::streampos, SectionId>> offsets;
   auto start_pos = infile.tellg();
 
@@ -209,7 +209,7 @@ DagbinFileIO::ReadLabeledLinkedList(iostream &infile) {
 }
 
 template <typename iostream>
-std::vector<std::streampos> DagbinFileIO::ReadLinkedList(iostream &infile) {
+std::vector<std::streampos> DagbinFileIO::ReadLinkedList(iostream& infile) {
   std::vector<std::streampos> offsets;
   auto start_pos = infile.tellg();
 
@@ -228,8 +228,8 @@ std::vector<std::streampos> DagbinFileIO::ReadLinkedList(iostream &infile) {
 }
 
 template <typename iostream>
-void DagbinFileIO::WriteLinkedList(iostream &outfile,
-                                   const std::vector<std::streampos> &offsets) {
+void DagbinFileIO::WriteLinkedList(iostream& outfile,
+                                   const std::vector<std::streampos>& offsets) {
   auto start_pos = outfile.tellp();
 
   for (size_t i = 1; i < offsets.size(); i++) {
@@ -243,43 +243,43 @@ void DagbinFileIO::WriteLinkedList(iostream &outfile,
 }
 
 template <typename iostream>
-bool DagbinFileIO::CheckMagicNumber(iostream &infile, bool do_assert) {
+bool DagbinFileIO::CheckMagicNumber(iostream& infile, bool do_assert) {
   std::vector<unsigned char> magic_number(MAGIC_NUMBER.size());
-  infile.read(reinterpret_cast<char *>(magic_number.data()), MAGIC_NUMBER.size());
-  if (do_assert) Assert(magic_number == MAGIC_NUMBER)
-  return (magic_number == MAGIC_NUMBER);
+  infile.read(reinterpret_cast<char*>(magic_number.data()), MAGIC_NUMBER.size());
+  if (do_assert)
+    Assert(magic_number == MAGIC_NUMBER) return (magic_number == MAGIC_NUMBER);
 }
 
 template <typename iostream>
-void DagbinFileIO::WriteMagicNumber(iostream &outfile) {
-  outfile.write(reinterpret_cast<const char *>(MAGIC_NUMBER.data()),
+void DagbinFileIO::WriteMagicNumber(iostream& outfile) {
+  outfile.write(reinterpret_cast<const char*>(MAGIC_NUMBER.data()),
                 MAGIC_NUMBER.size());
 }
 
 template <typename iostream, typename DAG>
-DagbinFileIO::Header DagbinFileIO::ReadHeader(iostream &infile, DAG dag) {
+DagbinFileIO::Header DagbinFileIO::ReadHeader(iostream& infile, DAG dag) {
   std::ignore = dag;
   return ReadData<Header>(infile);
 }
 
 template <typename iostream, typename DAG>
-void DagbinFileIO::WriteHeader(iostream &outfile, const DAG dag) {
+void DagbinFileIO::WriteHeader(iostream& outfile, const DAG dag) {
   Header header = {dag.GetNodesCount(), dag.GetEdgesCount(), dag.GetLeafsCount()};
   WriteData<Header>(outfile, header);
 }
 
 template <typename iostream, typename DAG>
-void DagbinFileIO::ReadReferenceSequence(iostream &infile, DAG dag) {
+void DagbinFileIO::ReadReferenceSequence(iostream& infile, DAG dag) {
   dag.SetReferenceSequence(ReadString(infile));
 }
 
 template <typename iostream, typename DAG>
-void DagbinFileIO::WriteReferenceSequence(iostream &outfile, const DAG dag) {
+void DagbinFileIO::WriteReferenceSequence(iostream& outfile, const DAG dag) {
   WriteString(outfile, dag.GetReferenceSequence());
 }
 
 template <typename iostream, typename DAG>
-void DagbinFileIO::ReadNodes(iostream &infile, DAG dag) {
+void DagbinFileIO::ReadNodes(iostream& infile, DAG dag) {
   // write node count
   auto node_count = ReadData<size_t>(infile);
 
@@ -290,13 +290,13 @@ void DagbinFileIO::ReadNodes(iostream &infile, DAG dag) {
     auto node_is_leaf = ReadData<bool>(infile);
     if (node_is_leaf) {
       auto sample_id = ReadString(infile);
-      new_node = SampleId{sample_id};
+      new_node = SampleId::Make(sample_id);
     }
   }
 }
 
 template <typename iostream, typename DAG>
-void DagbinFileIO::WriteNodes(iostream &outfile, const DAG dag,
+void DagbinFileIO::WriteNodes(iostream& outfile, const DAG dag,
                               std::optional<size_t> min_id_opt,
                               std::optional<size_t> max_id_opt) {
   size_t min_id = min_id_opt.value_or(0);
@@ -316,7 +316,7 @@ void DagbinFileIO::WriteNodes(iostream &outfile, const DAG dag,
     WriteData(outfile, node.GetId());
     WriteData(outfile, node.IsLeaf());
     if (node.IsLeaf()) {
-      WriteString(outfile, node.GetSampleId().value());
+      WriteString(outfile, std::string{node.GetSampleId().value()});
     }
     node_count++;
   }
@@ -329,7 +329,7 @@ void DagbinFileIO::WriteNodes(iostream &outfile, const DAG dag,
 }
 
 template <typename iostream, typename DAG>
-void DagbinFileIO::ReadEdges(iostream &infile, DAG dag) {
+void DagbinFileIO::ReadEdges(iostream& infile, DAG dag) {
   // read edge_count
   auto edge_count = ReadData<size_t>(infile);
 
@@ -355,7 +355,7 @@ void DagbinFileIO::ReadEdges(iostream &infile, DAG dag) {
 }
 
 template <typename iostream, typename DAG>
-void DagbinFileIO::WriteEdges(iostream &outfile, const DAG dag,
+void DagbinFileIO::WriteEdges(iostream& outfile, const DAG dag,
                               std::optional<size_t> min_id_opt,
                               std::optional<size_t> max_id_opt) {
   size_t min_id = min_id_opt.value_or(0);

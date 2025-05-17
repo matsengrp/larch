@@ -247,7 +247,7 @@ UncondensedMergeDAGStorage BatchingCallback<CRTP, SampleDAG>::CreateMATViewStora
       }
       Assert(not sample_id.empty());
       auto id_iter = view.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-          SampleId{std::move(sample_id)});
+          SampleId::Make(std::move(sample_id)));
       node = id_iter.first;
     }
   }

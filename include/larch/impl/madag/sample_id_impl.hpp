@@ -1,3 +1,12 @@
+std::size_t std::hash<SampleIdStorage>::operator()(
+    const SampleIdStorage& sid) const noexcept {
+  return sid.Hash();
+}
+
+bool std::equal_to<SampleIdStorage>::operator()(
+    const SampleIdStorage& lhs, const SampleIdStorage& rhs) const noexcept {
+  return lhs.Value() == rhs.Value();
+}
 
 const SampleId* SampleId::GetEmpty() {
   static const SampleId empty = {};
@@ -10,21 +19,27 @@ std::size_t std::hash<SampleId>::operator()(const SampleId& sid) const noexcept 
 
 bool std::equal_to<SampleId>::operator()(const SampleId& lhs,
                                          const SampleId& rhs) const noexcept {
-  if (lhs.hash_ != rhs.hash_) {
-    return false;
-  }
-  return lhs.sample_id_ == rhs.sample_id_;
+  return lhs.target_ == rhs.target_;
 }
 
 template <typename CRTP, typename Tag>
-const std::optional<std::string>& FeatureConstView<SampleId, CRTP, Tag>::GetSampleId()
+std::optional<std::string_view> FeatureConstView<SampleId, CRTP, Tag>::GetSampleId()
     const {
-  return GetFeatureStorage(this).get().sample_id_;
+  auto* target_ = GetFeatureStorage(this).get().target_;
+  if (not target_) {
+    return std::nullopt;
+  } else {
+    return target_->Value();
+  }
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<SampleId, CRTP, Tag>::SetSampleId(
-    const std::optional<std::string>& sample_id) const {
-  GetFeatureStorage(this).get().hash_ = SampleId::ComputeHash(sample_id);
-  GetFeatureStorage(this).get().sample_id_ = sample_id;
+    std::optional<std::string_view> sample_id) const {
+  if (not sample_id.has_value()) {
+    GetFeatureStorage(this).get().target_ = nullptr;
+  } else {
+    GetFeatureStorage(this).get().target_ =
+        &SampleIdStorage::Get(std::string{sample_id.value()});
+  }
 }

@@ -230,7 +230,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
                                 Deduplicate<SampleId>>) {
                 auto id_iter =
                     dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-                        SampleId{sample_id});
+                        SampleId::Make(sample_id));
                 node = id_iter.first;
               } else {
                 node.SetSampleId(sample_id);
@@ -254,7 +254,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
                             Deduplicate<SampleId>>) {
             auto id_iter =
                 dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-                    SampleId{sample_id});
+                    SampleId::Make(sample_id));
             dag_child_node = id_iter.first;
           } else {
             dag_child_node.SetSampleId(sample_id);
@@ -275,7 +275,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
       Assert(not sample_id.empty());
       if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
         auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-            SampleId{sample_id});
+            SampleId::Make(sample_id));
         leaf = id_iter.first;
       } else {
         leaf.SetSampleId(sample_id);
@@ -303,7 +303,8 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildHelper(Node dag_node,
     const auto& mutations = edge.GetEdgeMutations();
     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
     size_t node_id = edge.GetChild().GetId().value;
-    auto node_name = edge.GetChild().GetSampleId().value_or(std::to_string(node_id));
+    std::string node_name{
+        edge.GetChild().GetSampleId().value_or(std::to_string(node_id))};
     auto* node = new MAT::Node(node_id);
     edge.GetChild().SetMATNode(node);
     node->clade_annotations.resize(new_tree.get_num_annotations(), "");
