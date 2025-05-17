@@ -828,8 +828,7 @@ struct MATElementsContainerBase {
   template <typename Feature, typename E>
   auto GetFeatureStorage(Id<C> id, E elem) const {
     auto& feat_storage = [this](Id<C> i) -> auto& {
-      std::unique_lock lock{*mtx_};
-      return features_storage_[i];
+      return features_storage_[i.value];
     }(id);
     if constexpr (std::is_same_v<Feature, EdgeMutations>) {
       EdgeMutations& storage = std::get<EdgeMutations>(feat_storage);
@@ -873,7 +872,7 @@ struct MATElementsContainerBase {
           ->template GetFeatureStorage<Feature>(id, elem);
     }
     // TODO static_assert(not std::is_same_v<Feature, EdgeMutations>);
-    return std::ref(tuple_get<Feature, FeatureEquivalent>(features_storage_[id]));
+    return std::ref(tuple_get<Feature, FeatureEquivalent>(features_storage_[id.value]));
   }
 
   template <typename Feature>
@@ -952,8 +951,7 @@ struct MATElementsContainerBase {
     return *extra_storage_.mat_tree_;
   }
 
-  mutable std::unique_ptr<std::mutex> mtx_ = std::make_unique<std::mutex>();
-  mutable IdContainer<Id<C>, AllFeatureTypes, id_continuity> features_storage_ = {};
+  mutable ConcurrentSparseIdMap<AllFeatureTypes> features_storage_;
   ExtraFeatureStorage<ElementStorageT> extra_storage_ = {};
 };
 

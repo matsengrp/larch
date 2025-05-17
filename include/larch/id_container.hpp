@@ -222,3 +222,58 @@ template <typename Lhs, typename Rhs, typename Id, IdContinuity Cont, Ordering O
 struct ContainerEquivalent<IdContainer<Id, Lhs, Cont, Ord>,
                            IdContainer<Id, Rhs, Cont, Ord>>
     : FeatureEquivalent<Lhs, Rhs> {};
+
+/////////////////////////////////////////////////////////////////////////////
+
+template <typename T, size_t N = 32>
+class ConcurrentSparseIdMap {
+ public:
+  ConcurrentSparseIdMap() = default;
+  MOVE_ONLY(ConcurrentSparseIdMap);
+
+  template <typename... Args>
+  std::pair<T&, bool> emplace(size_t id, Args&&... args) {
+    auto& [values, mutex] = GetBucket(id);
+    std::unique_lock write_lock{mutex};
+    auto result = values.emplace(id, std::forward<Args>(args)...);
+    return std::make_pair(std::ref(result.first->second), result.second);
+  }
+
+  T& operator[](size_t id) {
+    auto& [values, mutex] = GetBucket(id);
+    std::shared_lock lock{mutex};
+    auto it = values.find(id);
+    if (it != values.end()) {
+      return it->second;
+    }
+    lock.unlock();
+    std::unique_lock write_lock{mutex};
+    return values[id];
+  }
+
+  const T& at(size_t id) const {
+    auto& [values, mutex] = GetBucket(id);
+    std::shared_lock lock{mutex};
+    return values.at(id);
+  }
+
+  T& at(size_t id) {
+    auto& [values, mutex] = GetBucket(id);
+    std::shared_lock lock{mutex};
+    return values.at(id);
+  }
+
+ private:
+  struct Bucket {
+    std::unordered_map<size_t, T> values;
+    mutable std::shared_mutex mutex;
+  };
+
+  Bucket& GetBucket(size_t id) noexcept { return buckets_->operator[](id % N); }
+  const Bucket& GetBucket(size_t id) const noexcept {
+    return buckets_->operator[](id % N);
+  }
+
+  std::unique_ptr<std::array<Bucket, N>> buckets_ =
+      std::make_unique<std::array<Bucket, N>>();
+};
