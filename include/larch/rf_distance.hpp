@@ -89,7 +89,7 @@ struct LeafSetKey {
         return false;
       }
       for (size_t j = 0; j < lhs_clade.size(); ++j) {
-        if (lhs_clade[j]->sample_id_ != rhs_clade[j]->sample_id_) {
+        if (not std::equal_to<SampleId>{}(*lhs_clade[j], *rhs_clade[j])) {
           return false;
         }
       }
