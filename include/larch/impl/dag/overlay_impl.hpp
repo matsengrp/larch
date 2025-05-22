@@ -41,18 +41,6 @@ bool FeatureConstView<Overlay, CRTP, Tag>::IsAppended() const {
   return not target_dag.template ContainsId<CRTP>(id);
 }
 
-namespace {
-
-template <typename, typename = void>
-constexpr bool IsMATView = false;
-
-template <typename T>
-constexpr bool
-    IsMATView<T, std::void_t<decltype(std::declval<T>().GetDAG().IsCondensed())>> =
-        true;
-
-}  // namespace
-
 template <typename CRTP, typename Tag>
 template <typename F>
 auto FeatureMutableView<Overlay, CRTP, Tag>::SetOverlay() const {

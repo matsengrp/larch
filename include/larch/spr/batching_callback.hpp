@@ -7,12 +7,11 @@
 #include "larch/merge/merge.hpp"
 #include "larch/mat_view.hpp"
 
-template <typename CRTP, typename SampleDAG>
+template <typename CRTP>
 class BatchingCallback : public Move_Found_Callback {
  public:
-  BatchingCallback(Merge& merge, SampleDAG sample_dag);
-  BatchingCallback(Merge& merge, SampleDAG sample_dag,
-                   bool collapse_empty_fragment_edges);
+  BatchingCallback(Merge& merge);
+  BatchingCallback(Merge& merge, bool collapse_empty_fragment_edges);
 
   virtual ~BatchingCallback() {
     auto lock = WriteLock(mat_mtx_);
@@ -108,7 +107,6 @@ class BatchingCallback : public Move_Found_Callback {
 #endif
 
   Merge& merge_;
-  SampleDAG sample_dag_;
   bool collapse_empty_fragment_edges_;
 
   std::unique_ptr<ReassignedStatesStorage> reassigned_states_storage_ =

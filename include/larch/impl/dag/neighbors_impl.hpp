@@ -172,7 +172,7 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
                                                 decltype(dag.GetStorage())>>,
                                             FragmentStorage>) {
         Assert(node.HaveSampleId());
-        Assert(sample_ids.insert(node.GetSampleId().value()).second);
+        Assert(sample_ids.insert(std::string{node.GetSampleId().value()}).second);
       }
     }
   }

@@ -19,12 +19,9 @@ struct Empty_Callback : public Move_Found_Callback {
   auto GetMATNodeToCGMap() { return std::map<MAT::Node*, CompactGenome>{}; }
 };
 
-template <typename SampleDAG>
-struct Test_Move_Found_Callback
-    : public BatchingCallback<Test_Move_Found_Callback<SampleDAG>, SampleDAG> {
-  explicit Test_Move_Found_Callback(Merge& merge, SampleDAG sample_dag)
-      : BatchingCallback<Test_Move_Found_Callback<SampleDAG>, SampleDAG>{merge,
-                                                                         sample_dag} {};
+struct Test_Move_Found_Callback : public BatchingCallback<Test_Move_Found_Callback> {
+  explicit Test_Move_Found_Callback(Merge& merge)
+      : BatchingCallback<Test_Move_Found_Callback>{merge} {};
 
   template <typename SPRView, typename FragmentType>
   std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment,
@@ -96,7 +93,7 @@ static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
     sample.View().BuildMAT(mat);
     sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View().Const());
-    Test_Move_Found_Callback callback{merge, sample.View()};
+    Test_Move_Found_Callback callback{merge};
     std::cout << "Optimizing\n";
     // Empty_Callback callback;
     optimized_dags.push_back(

@@ -1,20 +1,17 @@
 #include "larch/benchmark.hpp"
 
-template <typename CRTP, typename SampleDAG>
-BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag)
-    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {}
-template <typename CRTP, typename SampleDAG>
-BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag,
-                                                    bool collapse_empty_fragment_edges)
-    : merge_{merge},
-      sample_dag_{sample_dag},
-      collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {}
+template <typename CRTP>
+BatchingCallback<CRTP>::BatchingCallback(Merge& merge)
+    : merge_{merge}, collapse_empty_fragment_edges_{true} {}
+template <typename CRTP>
+BatchingCallback<CRTP>::BatchingCallback(Merge& merge,
+                                         bool collapse_empty_fragment_edges)
+    : merge_{merge}, collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {}
 
-template <typename CRTP, typename SampleDAG>
-bool BatchingCallback<CRTP, SampleDAG>::operator()(
-    Profitable_Moves& move, int best_score_change,
-    std::vector<Node_With_Major_Allele_Set_Change>&
-        nodes_with_major_allele_set_change) {
+template <typename CRTP>
+bool BatchingCallback<CRTP>::operator()(Profitable_Moves& move, int best_score_change,
+                                        std::vector<Node_With_Major_Allele_Set_Change>&
+                                            nodes_with_major_allele_set_change) {
   Assert(move.src != nullptr);
   Assert(move.dst != nullptr);
 
@@ -115,8 +112,8 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
       });
 }
 
-template <typename CRTP, typename SampleDAG>
-void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
+template <typename CRTP>
+void BatchingCallback<CRTP>::operator()(MAT::Tree& tree) {
   std::cout << "Larch-Usher callback Applying " << applied_moves_count_.load() << "\n"
             << std::flush;
   applied_moves_count_.store(0);
@@ -179,8 +176,8 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
   static_cast<CRTP&>(*this).OnRadius();
 }
 
-template <typename CRTP, typename SampleDAG>
-void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
+template <typename CRTP>
+void BatchingCallback<CRTP>::OnReassignedStates(MAT::Tree& tree) {
   applied_moves_count_.store(0);
   Assert(reassigned_states_storage_);
   auto reassigned_states = reassigned_states_storage_->View();
@@ -203,25 +200,25 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   }
 }
 
-template <typename CRTP, typename SampleDAG>
-Merge& BatchingCallback<CRTP, SampleDAG>::GetMerge() {
+template <typename CRTP>
+Merge& BatchingCallback<CRTP>::GetMerge() {
   return merge_;
 }
 
-template <typename CRTP, typename SampleDAG>
-size_t BatchingCallback<CRTP, SampleDAG>::GetAppliedMovesCount() {
+template <typename CRTP>
+size_t BatchingCallback<CRTP>::GetAppliedMovesCount() {
   return applied_moves_count_.load();
 }
 
-template <typename CRTP, typename SampleDAG>
-auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
+template <typename CRTP>
+auto BatchingCallback<CRTP>::GetMappedStorage() {
   Assert(reassigned_states_storage_);
   return reassigned_states_storage_->View();
 }
 
 #if USE_MAT_VIEW
-template <typename CRTP, typename SampleDAG>
-UncondensedMergeDAGStorage BatchingCallback<CRTP, SampleDAG>::CreateMATViewStorage() {
+template <typename CRTP>
+UncondensedMergeDAGStorage BatchingCallback<CRTP>::CreateMATViewStorage() {
   UncondensedMATViewStorage mv_storage;
   mv_storage.View().SetMAT(std::addressof(sample_mat_tree_));
   // mv_storage.View().BuildRootAndLeafs();
@@ -267,9 +264,9 @@ UncondensedMergeDAGStorage BatchingCallback<CRTP, SampleDAG>::CreateMATViewStora
   return storage;
 }
 #else
-template <typename CRTP, typename SampleDAG>
-void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
-                                                         std::string_view ref_seq) {
+template <typename CRTP>
+void BatchingCallback<CRTP>::CreateMATStorage(MAT::Tree& tree,
+                                              std::string_view ref_seq) {
   sample_mat_storage_ =
       std::make_unique<MATStorage>(AddMATConversion(Storage::EmptyDefault()));
   auto view = sample_mat_storage_->View();
