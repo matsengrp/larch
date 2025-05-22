@@ -28,7 +28,7 @@ class BatchingCallback : public Move_Found_Callback {
 #if USE_MAT_VIEW
   using Storage = MergeDAGStorage<>;
   using MATStorage = UncondensedMergeDAGStorage;
-  using SPRType = decltype(AddSPRStorage(std::declval<MATStorage>()));
+  using SPRType = decltype(AddSPRStorage(std::declval<MATStorage>().View()));
   using ReassignedStatesStorage =
       decltype(AddMappedNodes(AddMATConversion(MergeDAGStorage<>::EmptyDefault())));
   using FragmentType = FragmentStorage<decltype(std::declval<SPRType>().View())>;
@@ -101,7 +101,7 @@ class BatchingCallback : public Move_Found_Callback {
   MAT::Tree sample_mat_tree_;
   std::string sample_refseq_;
 
-  UncondensedMergeDAGStorage CreateMATViewStorage();
+  void CreateMATViewStorage(MAT::Tree& tree, std::string_view ref_seq);
 #else
   void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq);
 #endif

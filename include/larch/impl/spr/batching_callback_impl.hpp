@@ -43,15 +43,11 @@ bool BatchingCallback<CRTP>::operator()(Profitable_Moves& move, int best_score_c
        &nodes_with_major_allele_set_change](auto& bucket) -> bool {
         std::shared_lock lock{mat_mtx_};
 
-#if USE_MAT_VIEW
-        bucket.push_back(MoveStorage{
-            std::make_unique<SPRType>(AddSPRStorage(CreateMATViewStorage())), nullptr});
-#else
         Assert(sample_mat_storage_ != nullptr);
         bucket.push_back(MoveStorage{
             std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
             nullptr});
-#endif
+
         auto& storage = bucket.back();
     // MADAGToDOT(storage.spr->View(), std::cout);
     // storage.spr->View().GetRoot().Validate(true);
@@ -168,7 +164,7 @@ void BatchingCallback<CRTP>::operator()(MAT::Tree& tree) {
   {
     std::unique_lock lock{mat_mtx_};
 #if USE_MAT_VIEW
-    SetSample(tree, merge_.GetResult().GetReferenceSequence());
+    CreateMATViewStorage(tree, merge_.GetResult().GetReferenceSequence());
 #else
     CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
 #endif
@@ -193,7 +189,7 @@ void BatchingCallback<CRTP>::OnReassignedStates(MAT::Tree& tree) {
   {
     std::unique_lock lock{mat_mtx_};
 #if USE_MAT_VIEW
-    SetSample(tree, merge_.GetResult().GetReferenceSequence());
+    CreateMATViewStorage(tree, merge_.GetResult().GetReferenceSequence());
 #else
     CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
 #endif
@@ -218,15 +214,17 @@ auto BatchingCallback<CRTP>::GetMappedStorage() {
 
 #if USE_MAT_VIEW
 template <typename CRTP>
-UncondensedMergeDAGStorage BatchingCallback<CRTP>::CreateMATViewStorage() {
+void BatchingCallback<CRTP>::CreateMATViewStorage(MAT::Tree& tree,
+                                                  std::string_view ref_seq) {
+  SetSample(tree, std::string{ref_seq});
   UncondensedMATViewStorage mv_storage;
   mv_storage.View().SetMAT(std::addressof(sample_mat_tree_));
   // mv_storage.View().BuildRootAndLeafs();
   // MADAGToDOT(mv_storage.View(), std::cout);
   // mv_storage.View().GetRoot().Validate(true, false);
 
-  UncondensedMergeDAGStorage storage =
-      UncondensedMergeDAGStorage::Consume(std::move(mv_storage));
+  sample_mat_storage_ = std::make_unique<MATStorage>(std::move(mv_storage));
+  UncondensedMergeDAGStorage& storage = *sample_mat_storage_;
   auto view = storage.View();
   view.SetReferenceSequence(sample_refseq_);
   view.BuildRootAndLeafs();
@@ -261,7 +259,6 @@ UncondensedMergeDAGStorage BatchingCallback<CRTP>::CreateMATViewStorage() {
     }
   */
   view.RecomputeCompactGenomes(true);
-  return storage;
 }
 #else
 template <typename CRTP>

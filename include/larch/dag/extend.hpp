@@ -287,9 +287,10 @@ struct ExtendDAGStorage {
   auto& GetTargetStorage() { return *this; }
   auto& GetTargetStorage() const { return *this; }
 
+  explicit ExtendDAGStorage(Target&& target);
+
  private:
   friend ShortName;
-  explicit ExtendDAGStorage(Target&& target);
 
   auto GetTarget();
   auto GetTarget() const;
