@@ -71,7 +71,7 @@ struct Test_Move_Found_Callback : public BatchingCallback<Test_Move_Found_Callba
 }
 
 static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
-  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{input_dag});
