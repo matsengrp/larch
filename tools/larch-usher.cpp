@@ -130,33 +130,27 @@ using Storage = MergeDAGStorage<>;
 using ReassignedStatesStorage =
     decltype(AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
 
-template <typename SampleDAG>
 struct Treebased_Move_Found_Callback
-    : public BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>, SampleDAG> {
+    : public BatchingCallback<Treebased_Move_Found_Callback> {
   MOVE_ONLY_VIRT_DTOR(Treebased_Move_Found_Callback);
 
-  Treebased_Move_Found_Callback(Merge& merge, SampleDAG sample_dag,
-                                std::pair<int, int> move_score_coeffs)
-      : BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag},
+  Treebased_Move_Found_Callback(Merge& merge, std::pair<int, int> move_score_coeffs)
+      : BatchingCallback<Treebased_Move_Found_Callback>{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
-  Treebased_Move_Found_Callback(Merge& merge, SampleDAG sample_dag)
-      : BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag},
+  Treebased_Move_Found_Callback(Merge& merge)
+      : BatchingCallback<Treebased_Move_Found_Callback>{merge},
         move_score_coeffs_{1, 1} {};
 
-  Treebased_Move_Found_Callback(Merge& merge, SampleDAG sample_dag,
-                                std::pair<int, int> move_score_coeffs,
+  Treebased_Move_Found_Callback(Merge& merge, std::pair<int, int> move_score_coeffs,
                                 bool collapse_empty_fragment_edges)
-      : BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+      : BatchingCallback<Treebased_Move_Found_Callback>{merge,
+                                                        collapse_empty_fragment_edges},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
-  Treebased_Move_Found_Callback(Merge& merge, SampleDAG sample_dag,
-                                bool collapse_empty_fragment_edges)
-      : BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+  Treebased_Move_Found_Callback(Merge& merge, bool collapse_empty_fragment_edges)
+      : BatchingCallback<Treebased_Move_Found_Callback>{merge,
+                                                        collapse_empty_fragment_edges},
         move_score_coeffs_{1, 1} {};
 
   template <typename SPRView, typename FragmentType>
@@ -238,23 +232,20 @@ struct Treebased_Move_Found_Callback
     return {false, move.score_change <= 0};
   }
 
-  void OnRadius() {};
+  void OnRadius(){};
 
   std::pair<int, int> move_score_coeffs_;
 };
 
-template <typename SampleDAG>
 struct Merge_All_Moves_Found_Callback
-    : public BatchingCallback<Merge_All_Moves_Found_Callback<SampleDAG>, SampleDAG> {
+    : public BatchingCallback<Merge_All_Moves_Found_Callback> {
   MOVE_ONLY_VIRT_DTOR(Merge_All_Moves_Found_Callback);
-  Merge_All_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag)
-      : BatchingCallback<Merge_All_Moves_Found_Callback<SampleDAG>, SampleDAG>{
-            merge, sample_dag} {};
+  Merge_All_Moves_Found_Callback(Merge& merge)
+      : BatchingCallback<Merge_All_Moves_Found_Callback>{merge} {};
 
-  Merge_All_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
-                                 bool collapse_empty_fragment_edges)
-      : BatchingCallback<Merge_All_Moves_Found_Callback<SampleDAG>, SampleDAG>{
-            merge, sample_dag, collapse_empty_fragment_edges} {};
+  Merge_All_Moves_Found_Callback(Merge& merge, bool collapse_empty_fragment_edges)
+      : BatchingCallback<Merge_All_Moves_Found_Callback>{
+            merge, collapse_empty_fragment_edges} {};
 
   template <typename SPRView, typename FragmentType>
   std::pair<bool, bool> OnMove(SPRView /*spr*/, const FragmentType& /*fragment*/,
@@ -266,44 +257,38 @@ struct Merge_All_Moves_Found_Callback
     return {true, true};
   }
 
-  void OnRadius() {};
+  void OnRadius(){};
 };
 
-template <typename SampleDAG>
 struct Merge_All_Profitable_Moves_Found_Callback
-    : public BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
-                              SampleDAG> {
+    : public BatchingCallback<Merge_All_Profitable_Moves_Found_Callback> {
   MOVE_ONLY_VIRT_DTOR(Merge_All_Profitable_Moves_Found_Callback);
 
-  Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
+  Merge_All_Profitable_Moves_Found_Callback(Merge& merge,
                                             std::pair<int, int> move_score_coeffs)
-      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag},
-        sample_dag_{sample_dag},
+      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback>{merge},
         merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
-  Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag)
-      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag},
-        sample_dag_{sample_dag},
+  Merge_All_Profitable_Moves_Found_Callback(Merge& merge)
+      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback>{merge},
         merge_{merge},
         move_score_coeffs_{1, 1} {};
 
-  Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
+  Merge_All_Profitable_Moves_Found_Callback(Merge& merge,
                                             std::pair<int, int> move_score_coeffs,
                                             bool collapse_empty_fragment_edges)
-      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
-        sample_dag_{sample_dag},
+      : BatchingCallback<
+            Merge_All_Profitable_Moves_Found_Callback>{merge,
+                                                       collapse_empty_fragment_edges},
         merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
-  Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
+  Merge_All_Profitable_Moves_Found_Callback(Merge& merge,
                                             bool collapse_empty_fragment_edges)
-      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
-        sample_dag_{sample_dag},
+      : BatchingCallback<
+            Merge_All_Profitable_Moves_Found_Callback>{merge,
+                                                       collapse_empty_fragment_edges},
         merge_{merge},
         move_score_coeffs_{1, 1} {};
 
@@ -386,9 +371,8 @@ struct Merge_All_Profitable_Moves_Found_Callback
     return {move.score_change <= 0, move.score_change <= 0};
   }
 
-  void OnRadius() {};
+  void OnRadius(){};
 
-  SampleDAG sample_dag_;
   Merge& merge_;
   ReassignedStatesStorage reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage::EmptyDefault()));
@@ -397,46 +381,35 @@ struct Merge_All_Profitable_Moves_Found_Callback
   std::pair<int, int> move_score_coeffs_;
 };
 
-template <typename SampleDAG>
 struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
-    : public BatchingCallback<
-          Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>, SampleDAG> {
+    : public BatchingCallback<Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback> {
   MOVE_ONLY_VIRT_DTOR(Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback);
 
   Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(
-      Merge& merge, SampleDAG sample_dag, std::pair<int, int> move_score_coeffs)
-      : BatchingCallback<
-            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
-            SampleDAG>{merge, sample_dag},
-        sample_dag_{sample_dag},
+      Merge& merge, std::pair<int, int> move_score_coeffs)
+      : BatchingCallback<Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback>{merge},
         merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
-  Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(Merge& merge,
-                                                       SampleDAG sample_dag)
-      : BatchingCallback<
-            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
-            SampleDAG>{merge, sample_dag},
-        sample_dag_{sample_dag},
+  Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(Merge& merge)
+      : BatchingCallback<Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback>{merge},
         merge_{merge},
         move_score_coeffs_{1, 1} {};
 
   Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(
-      Merge& merge, SampleDAG sample_dag, std::pair<int, int> move_score_coeffs,
+      Merge& merge, std::pair<int, int> move_score_coeffs,
       bool collapse_empty_fragment_edges)
       : BatchingCallback<
-            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
-            SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
-        sample_dag_{sample_dag},
+            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback>{merge,
+                                                                  collapse_empty_fragment_edges},
         merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
   Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(
-      Merge& merge, SampleDAG sample_dag, bool collapse_empty_fragment_edges)
+      Merge& merge, bool collapse_empty_fragment_edges)
       : BatchingCallback<
-            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
-            SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
-        sample_dag_{sample_dag},
+            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback>{merge,
+                                                                  collapse_empty_fragment_edges},
         merge_{merge},
         move_score_coeffs_{1, 1} {};
 
@@ -519,9 +492,8 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     return {move.score_change <= 0, false};
   }
 
-  void OnRadius() {};
+  void OnRadius(){};
 
-  SampleDAG sample_dag_;
   Merge& merge_;
   ReassignedStatesStorage reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage::EmptyDefault()));
@@ -955,31 +927,22 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     check_edge_mutations(sample_tree.View().Const());
 
     if (callback_config == CallbackMethod::AllMoves) {
-      Merge_All_Moves_Found_Callback callback{merge, sample_tree.View(),
-                                              collapse_empty_fragment_edges};
+      Merge_All_Moves_Found_Callback callback{merge, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesFixedTree) {
       Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback callback{
-          merge,
-          sample_tree.View(),
-          {move_coeff_nodes, move_coeff_pscore},
-          collapse_empty_fragment_edges};
+          merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesTreeBased) {
-      Treebased_Move_Found_Callback callback{merge,
-                                             sample_tree.View(),
-                                             {move_coeff_nodes, move_coeff_pscore},
-                                             collapse_empty_fragment_edges};
+      Treebased_Move_Found_Callback callback{
+          merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMoves) {
       Merge_All_Profitable_Moves_Found_Callback callback{
-          merge,
-          sample_tree.View(),
-          {move_coeff_nodes, move_coeff_pscore},
-          collapse_empty_fragment_edges};
+          merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else {
