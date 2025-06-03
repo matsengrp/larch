@@ -13,7 +13,6 @@ class NodeLabel;
  * CompactGenomes.
  */
 class LeafSet {
-  using UniqueData = const SampleId*;
   std::vector<std::vector<UniqueData>> clades_ = {};
   size_t hash_ = {};
 

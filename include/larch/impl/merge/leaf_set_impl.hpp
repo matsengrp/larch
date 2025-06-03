@@ -59,7 +59,7 @@ bool LeafSet::empty() const { return clades_.empty(); }
 
 size_t LeafSet::size() const { return clades_.size(); }
 
-std::vector<LeafSet::UniqueData> LeafSet::ToParentClade(UniqueData sample_id) const {
+std::vector<UniqueData> LeafSet::ToParentClade(UniqueData sample_id) const {
   std::vector<UniqueData> result = ranges::to_vector(clades_ | ranges::views::join);
   if (result.empty()) {
     result.push_back(sample_id);
@@ -77,16 +77,15 @@ size_t LeafSet::ParentCladeSize() const {
   return result;
 }
 
-const std::vector<std::vector<LeafSet::UniqueData>>& LeafSet::GetClades() const {
+const std::vector<std::vector<UniqueData>>& LeafSet::GetClades() const {
   return clades_;
 }
 
 std::string LeafSet::ToString() const {
   std::string result = "{";
   for (const auto& clade : GetClades()) {
-    for (const auto* cg : clade) {
-      Assert(cg != nullptr);
-      result += cg->ToString();
+    for (UniqueData cg : clade) {
+      result += cg.ToString();
       result += ", ";
     }
     result += "; ";
@@ -117,8 +116,8 @@ size_t LeafSet::ComputeHash(
     const std::vector<std::vector<UniqueData>>& clades) noexcept {
   size_t hash = 0;
   for (const auto& clade : clades) {
-    for (const auto* leaf : clade) {
-      hash = HashCombine(hash, leaf->Hash());
+    for (UniqueData leaf : clade) {
+      hash = HashCombine(hash, leaf.Hash());
     }
   }
   return hash;

@@ -69,8 +69,8 @@ struct LeafSetKey {
   size_t operator()(const LeafSet* key) const {
     size_t hash = 0;
     for (const auto& clade : key->GetClades()) {
-      for (const auto* leaf : clade) {
-        hash = HashCombine(hash, leaf->Hash());
+      for (UniqueData leaf : clade) {
+        hash = HashCombine(hash, leaf.Hash());
       }
     }
     return hash;
@@ -89,7 +89,7 @@ struct LeafSetKey {
         return false;
       }
       for (size_t j = 0; j < lhs_clade.size(); ++j) {
-        if (not std::equal_to<SampleId>{}(*lhs_clade[j], *rhs_clade[j])) {
+        if (not std::equal_to<SampleId>{}(lhs_clade[j], rhs_clade[j])) {
           return false;
         }
       }
@@ -130,7 +130,7 @@ struct SumRFDistance_ {
           auto& label = GetReferenceDAG().GetResultNodeLabels().at(node);
           std::set<std::string> leafs;
           for (auto l : label.GetLeafSet()->ToParentClade(label.GetSampleId())) {
-            leafs.insert(l->ToString());
+            leafs.insert(l.ToString());
           }
           return leafs;
         }();
@@ -158,7 +158,7 @@ struct SumRFDistance_ {
       auto& label = GetComputeDAG().GetResultNodeLabels().at(edge.GetChild());
       std::set<std::string> leafs;
       for (auto l : label.GetLeafSet()->ToParentClade(label.GetSampleId())) {
-        leafs.insert(l->ToString());
+        leafs.insert(l.ToString());
       }
       return leafs;
     }();

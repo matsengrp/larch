@@ -91,13 +91,13 @@
 
 void check_edge_mutations(MADAG madag);
 
-std::vector<std::vector<const SampleId*>> clades_union(
-    const std::vector<std::vector<const SampleId*>>& lhs,
-    const std::vector<std::vector<const SampleId*>>& rhs) {
-  std::vector<std::vector<const SampleId*>> result;
+std::vector<std::vector<UniqueData>> clades_union(
+    const std::vector<std::vector<UniqueData>>& lhs,
+    const std::vector<std::vector<UniqueData>>& rhs) {
+  std::vector<std::vector<UniqueData>> result;
 
   for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-    std::vector<const SampleId*> clade{lhs_clade};
+    std::vector<UniqueData> clade{lhs_clade};
     clade.insert(clade.end(), rhs_clade.begin(), rhs_clade.end());
     ranges::sort(clade);
     ranges::unique(clade);
@@ -108,13 +108,13 @@ std::vector<std::vector<const SampleId*>> clades_union(
   return result;
 }
 
-std::vector<std::vector<const SampleId*>> clades_difference(
-    const std::vector<std::vector<const SampleId*>>& lhs,
-    const std::vector<std::vector<const SampleId*>>& rhs) {
-  std::vector<std::vector<const SampleId*>> result;
+std::vector<std::vector<UniqueData>> clades_difference(
+    const std::vector<std::vector<UniqueData>>& lhs,
+    const std::vector<std::vector<UniqueData>>& rhs) {
+  std::vector<std::vector<UniqueData>> result;
 
   for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-    std::vector<const SampleId*> clade;
+    std::vector<UniqueData> clade;
     std::set_difference(lhs_clade.begin(), lhs_clade.end(), rhs_clade.begin(),
                         rhs_clade.end(), std::inserter(clade, clade.begin()));
     ranges::sort(clade);
@@ -161,14 +161,14 @@ struct Treebased_Move_Found_Callback
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
       auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
-        std::vector<const SampleId*> ls;
+        std::vector<UniqueData> ls;
         for (auto leaf_node : leaf_node_ids) {
-          auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
-          ls.push_back(&sid);
+          SampleId sid = spr.Const().Get(leaf_node).GetSampleId();
+          ls.push_back(sid);
         }
         ranges::sort(ls);
         ranges::unique(ls);
-        std::vector<std::vector<const SampleId*>> to_ret;
+        std::vector<std::vector<UniqueData>> to_ret;
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
@@ -300,14 +300,14 @@ struct Merge_All_Profitable_Moves_Found_Callback
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
       auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
-        std::vector<const SampleId*> ls;
+        std::vector<UniqueData> ls;
         for (auto leaf_node : leaf_node_ids) {
-          auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
-          ls.push_back(&sid);
+          SampleId sid = spr.Const().Get(leaf_node).GetSampleId();
+          ls.push_back(sid);
         }
         ranges::sort(ls);
         ranges::unique(ls);
-        std::vector<std::vector<const SampleId*>> to_ret;
+        std::vector<std::vector<UniqueData>> to_ret;
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
@@ -420,15 +420,16 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
                                /*nodes_with_major_allele_set_change*/) {
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
-      auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
-        std::vector<const SampleId*> ls;
+      auto make_leaf_set = [&](const std::vector<NodeId>& leaf_node_ids) {
+        std::vector<SampleId> ls;
         for (auto leaf_node : leaf_node_ids) {
-          auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
-          ls.push_back(&sid);
+          auto sid = spr.Const().Get(leaf_node).GetSampleId();
+          Assert(sid.has_value());
+          ls.push_back(SampleId::Make(sid.value()));
         }
         ranges::sort(ls);
         ranges::unique(ls);
-        std::vector<std::vector<const SampleId*>> to_ret;
+        std::vector<std::vector<UniqueData>> to_ret;
         to_ret.push_back(std::move(ls));
         return to_ret;
       };

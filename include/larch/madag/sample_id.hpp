@@ -34,8 +34,14 @@ class SampleIdStorage {
   const std::string value_;
 };
 
+struct SampleId;
+using UniqueData = SampleId;
+
 struct SampleId {
-  MOVE_ONLY(SampleId);
+  SampleId(SampleId&&) noexcept = default;
+  SampleId(const SampleId&) noexcept = default;
+  SampleId& operator=(SampleId&&) noexcept = default;
+  SampleId& operator=(const SampleId&) noexcept = default;
 
   SampleId() : target_{nullptr} {}
 
@@ -67,21 +73,54 @@ struct SampleId {
     return target_->Hash();
   }
 
-  inline static const SampleId* GetEmpty();
+  inline static UniqueData GetEmpty();
 
  private:
   template <typename>
   friend struct std::equal_to;
+  template <typename>
+  friend struct std::less;
   template <typename, typename, typename>
   friend struct FeatureConstView;
   template <typename, typename, typename>
   friend struct FeatureMutableView;
+
+  friend bool operator==(const SampleId& lhs, const SampleId& rhs) noexcept;
+  friend bool operator!=(const SampleId& lhs, const SampleId& rhs) noexcept;
+  friend bool operator<(const SampleId& lhs, const SampleId& rhs) noexcept;
+  friend bool operator>(const SampleId& lhs, const SampleId& rhs) noexcept;
+  friend bool operator<=(const SampleId& lhs, const SampleId& rhs) noexcept;
+  friend bool operator>=(const SampleId& lhs, const SampleId& rhs) noexcept;
 
   SampleId(std::string&& x) : target_{&SampleIdStorage::Get(std::move(x))} {}
   SampleId(const SampleIdStorage* x) : target_{x} {}
 
   const SampleIdStorage* target_;
 };
+
+inline bool operator==(const SampleId& lhs, const SampleId& rhs) noexcept {
+  return lhs.target_ == rhs.target_;
+}
+
+inline bool operator!=(const SampleId& lhs, const SampleId& rhs) noexcept {
+  return lhs.target_ != rhs.target_;
+}
+
+inline bool operator<(const SampleId& lhs, const SampleId& rhs) noexcept {
+  return lhs.target_ < rhs.target_;
+}
+
+inline bool operator>(const SampleId& lhs, const SampleId& rhs) noexcept {
+  return lhs.target_ > rhs.target_;
+}
+
+inline bool operator<=(const SampleId& lhs, const SampleId& rhs) noexcept {
+  return lhs.target_ <= rhs.target_;
+}
+
+inline bool operator>=(const SampleId& lhs, const SampleId& rhs) noexcept {
+  return lhs.target_ >= rhs.target_;
+}
 
 template <>
 struct std::hash<SampleId> {
@@ -90,6 +129,11 @@ struct std::hash<SampleId> {
 
 template <>
 struct std::equal_to<SampleId> {
+  inline bool operator()(const SampleId& lhs, const SampleId& rhs) const noexcept;
+};
+
+template <>
+struct std::less<SampleId> {
   inline bool operator()(const SampleId& lhs, const SampleId& rhs) const noexcept;
 };
 

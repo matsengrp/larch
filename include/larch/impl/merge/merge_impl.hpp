@@ -162,7 +162,7 @@ void Merge::ComputeResultEdgeMutations() {
 
           if (result_dag.Get(child_node).IsLeaf()) {
             const CompactGenome& child =
-                sample_id_to_cg_map.at(label.GetChild().GetSampleId()->ToString());
+                sample_id_to_cg_map.at(label.GetChild().GetSampleId().ToString());
 
             result_dag.Get(edge_id).SetEdgeMutations(CompactGenome::ToEdgeMutations(
                 result_dag.GetReferenceSequence(), parent, child));
@@ -199,7 +199,7 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
       auto id_iter =
           ResultDAG().template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
               SampleId::Make(node.Const().GetSampleId().value()));
-      labels.at(node).SetSampleId(id_iter.first);
+      labels.at(node).SetSampleId(*id_iter.first);
     } else {
       if (not node.GetCompactGenome().empty()) {
         auto cg_iter = ResultDAG()
@@ -331,7 +331,7 @@ void Merge::ComputeResultEdgeMutations(Edge edge, const EdgeLabel& label) {
   const CompactGenome& parent = *label.GetParent().GetCompactGenome();
 
   if (edge.GetChild().GetCladesCount() < 1) {
-    std::string sid = label.GetChild().GetSampleId()->ToString();
+    std::string sid = label.GetChild().GetSampleId().ToString();
     const CompactGenome* child = sample_id_to_cg_map_.find(sid);
     if (child == nullptr) {
       return;

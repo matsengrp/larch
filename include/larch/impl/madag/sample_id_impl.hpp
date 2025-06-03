@@ -8,10 +8,7 @@ bool std::equal_to<SampleIdStorage>::operator()(
   return lhs.Value() == rhs.Value();
 }
 
-const SampleId* SampleId::GetEmpty() {
-  static const SampleId empty = {};
-  return &empty;
-}
+UniqueData SampleId::GetEmpty() { return {}; }
 
 std::size_t std::hash<SampleId>::operator()(const SampleId& sid) const noexcept {
   return sid.Hash();
@@ -20,6 +17,11 @@ std::size_t std::hash<SampleId>::operator()(const SampleId& sid) const noexcept 
 bool std::equal_to<SampleId>::operator()(const SampleId& lhs,
                                          const SampleId& rhs) const noexcept {
   return lhs.target_ == rhs.target_;
+}
+
+bool std::less<SampleId>::operator()(const SampleId& lhs,
+                                     const SampleId& rhs) const noexcept {
+  return lhs.target_ < rhs.target_;
 }
 
 template <typename CRTP, typename Tag>

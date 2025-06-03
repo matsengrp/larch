@@ -380,7 +380,9 @@ struct OverlayFeatureType<MATNeighbors> {
 
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATNeighbors, CRTP, Tag>
-    : FeatureConstView<Neighbors, CRTP, Tag> {};
+    : FeatureConstView<Neighbors, CRTP, Tag> {
+  bool IsCondensedInMAT() { return CheckIsCondensed<CRTP>::value; }
+};
 
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATNeighbors, CRTP, Tag>
