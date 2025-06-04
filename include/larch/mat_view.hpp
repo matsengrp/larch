@@ -573,6 +573,25 @@ struct ExtraFeatureConstView<MATNodeStorage, CRTP> {
     auto& dag = static_cast<const CRTP&>(*this);
     return typename CRTP::NodeView{dag, NodeId{mat_node->node_id}};
   }
+
+  auto GetUncondensedNodeFromMAT(MATNodePtr node) const {
+    auto& dag = static_cast<const CRTP&>(*this);
+    auto dag_node = GetNodeFromMAT(node);
+    auto& storage =
+        dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>().get();
+
+    std::vector<NodeId> to_ret;
+    auto it = storage.condensed_nodes_.find(dag_node.GetId());
+    if (it != storage.condensed_nodes_.end()) {
+      to_ret = ranges::to_vector(
+          it->second | ranges::views::transform([&](const std::string& x) -> NodeId {
+            return NodeId{storage.sampleid_to_mat_node_id_map_.at(x)};
+          }));
+    } else {
+      to_ret.push_back(dag_node.GetId());
+    }
+    return to_ret;
+  }
 };
 
 template <typename CRTP>

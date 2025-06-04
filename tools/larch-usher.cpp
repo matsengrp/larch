@@ -163,8 +163,9 @@ struct Treebased_Move_Found_Callback
       auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
         std::vector<UniqueData> ls;
         for (auto leaf_node : leaf_node_ids) {
-          SampleId sid = spr.Const().Get(leaf_node).GetSampleId();
-          ls.push_back(sid);
+          auto sid = spr.Const().Get(leaf_node).GetSampleId();
+          Assert(sid.has_value());
+          ls.push_back(SampleId::Make(sid.value()));
         }
         ranges::sort(ls);
         ranges::unique(ls);
@@ -302,8 +303,9 @@ struct Merge_All_Profitable_Moves_Found_Callback
       auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
         std::vector<UniqueData> ls;
         for (auto leaf_node : leaf_node_ids) {
-          SampleId sid = spr.Const().Get(leaf_node).GetSampleId();
-          ls.push_back(sid);
+          auto sid = spr.Const().Get(leaf_node).GetSampleId();
+          Assert(sid.has_value());
+          ls.push_back(SampleId::Make(sid.value()));
         }
         ranges::sort(ls);
         ranges::unique(ls);
