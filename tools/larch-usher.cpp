@@ -179,7 +179,7 @@ struct Treebased_Move_Found_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.src)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -189,7 +189,7 @@ struct Treebased_Move_Found_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.dst)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -319,7 +319,7 @@ struct Merge_All_Profitable_Moves_Found_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.src)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -329,7 +329,7 @@ struct Merge_All_Profitable_Moves_Found_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.dst)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -441,7 +441,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.src)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -451,7 +451,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.dst)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
