@@ -208,11 +208,12 @@ struct Treebased_Move_Found_Callback
                       hypothetical_node.GetOld().GetMATNode()->node_id ==
                           move.dst->node_id or
                       hypothetical_node.GetOld().GetMATNode()->is_root())) {
+                auto nid = hypothetical_node.GetOld().GetMATNode()->node_id;
                 const auto& current_leaf_sets =
                     this->GetMerge()
                         .GetResultNodeLabels()
                         .at(this->GetMappedStorage()
-                                .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                                .GetNodeFromMAT(this->GetMappedStorage().GetMAT().get_node(nid))
                                 .GetOriginalId())
                         .GetLeafSet()
                         ->GetClades();
@@ -472,11 +473,12 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
                       hypothetical_node.GetOld().GetMATNode()->node_id ==
                           move.dst->node_id or
                       hypothetical_node.GetOld().GetMATNode()->is_root())) {
+                auto nid = hypothetical_node.GetOld().GetMATNode()->node_id;
                 const auto& current_leaf_sets =
                     this->GetMerge()
                         .GetResultNodeLabels()
                         .at(this->GetMappedStorage()
-                                .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                                .GetNodeFromMAT(this->GetMappedStorage().GetMAT().get_node(nid))
                                 .GetOriginalId())
                         .GetLeafSet()
                         ->GetClades();
