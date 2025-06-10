@@ -1,7 +1,7 @@
 template <typename CRTP, typename Tag>
 const std::string&
 FeatureConstView<ReferenceSequence, CRTP, Tag>::GetReferenceSequence() const {
-  return GetFeatureStorage(this).reference_sequence_;
+  return GetFeatureStorage(this).get().reference_sequence_;
 }
 
 template <typename CRTP, typename Tag>
@@ -23,7 +23,7 @@ bool FeatureConstView<ReferenceSequence, CRTP, Tag>::HaveUA() const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SetReferenceSequence(
     std::string_view reference_sequence) const {
-  GetFeatureStorage(this).reference_sequence_ = reference_sequence;
+  GetFeatureStorage(this).get().reference_sequence_ = reference_sequence;
 }
 
 template <typename CRTP, typename Tag>
@@ -73,8 +73,9 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::
   using Node = typename decltype(dag)::NodeView;
 
   auto ComputeCGFromMutation =
-      [&dag](ContiguousMap<MutationPosition, MutationBase>&& new_muts, Node for_node) {
-        CompactGenome new_cg = for_node.GetCompactGenome().Copy();
+      [this](ContiguousMap<MutationPosition, MutationBase>&& new_muts, Node for_node) {
+        CompactGenome new_cg =
+            for_node.GetCompactGenome().Copy(static_cast<const CRTP*>(this));
         new_cg.ApplyChanges(new_muts);
         for_node = std::move(new_cg);
       };
@@ -98,22 +99,27 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::AddUA(
   Node root = dag.GetRoot();
   Node ua_node = dag.AppendNode();
   Edge ua_edge = dag.AppendEdge(ua_node, root, {0});
-  ua_edge.SetEdgeMutations(mutations_at_root.Copy());
+  ua_edge.SetEdgeMutations(mutations_at_root.Copy(static_cast<const CRTP*>(this)));
   dag.BuildConnections();
   dag.AssertUA();
 }
 
 template <typename CRTP, typename Tag>
+template <IdContinuity Cont>
 void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
     bool recompute_leaves) const {
   auto dag = static_cast<const CRTP&>(*this);
   using Node = typename decltype(dag)::NodeView;
   using Edge = typename decltype(dag)::EdgeView;
 
-  std::vector<CompactGenome> new_cgs;
-  new_cgs.resize(dag.GetNodesCount());
+  auto max_id = dag.GetNodesCount();
+  for (auto node : dag.GetNodes()) {
+    max_id = max_id > node.GetId().value ? max_id : node.GetId().value;
+  }
+  IdContainer<NodeId, CompactGenome, Cont> new_cgs;
+  new_cgs.resize(max_id + 1);
   auto ComputeCG = [&new_cgs, dag](auto& self, Node for_node) {
-    CompactGenome& compact_genome = new_cgs.at(for_node.GetId().value);
+    CompactGenome& compact_genome = new_cgs.at(for_node.GetId());
     if (for_node.IsUA()) {
       compact_genome = {};
       return;
@@ -124,10 +130,9 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
     Edge edge = for_node.GetFirstParent();
     self(self, edge.GetParent());
     const EdgeMutations& mutations = edge.GetEdgeMutations();
-    const CompactGenome& parent = new_cgs.at(edge.GetParentId().value);
+    const CompactGenome& parent = new_cgs.at(edge.GetParentId());
     compact_genome.AddParentEdge(mutations, parent, dag.GetReferenceSequence());
   };
-
   for (Node node : dag.GetNodes()) {
     if (recompute_leaves || !node.IsLeaf()) {
       ComputeCG(ComputeCG, node);
@@ -135,7 +140,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
   }
   for (Node node : dag.GetNodes()) {
     if (recompute_leaves || !node.IsLeaf()) {
-      node = std::move(new_cgs.at(node.GetId().value));
+      node = std::move(new_cgs.at(node.GetId()));
     }
   }
 #ifndef NDEBUG
@@ -144,7 +149,10 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
   for (Node node : dag.GetNodes()) {
     if (node.IsLeaf()) {
       bool success =
-          leaf_cgs.insert({node.GetCompactGenome().Copy(), node.GetId()}).second;
+          leaf_cgs
+              .insert({node.GetCompactGenome().Copy(static_cast<const CRTP*>(this)),
+                       node.GetId()})
+              .second;
       if (not success) {
         // std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
         //           << node.GetId().value << " also seen at "
@@ -169,7 +177,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::SampleIdsFromCG(
       Assert(not id.empty());
       if constexpr (decltype(leaf)::template contains_feature<Deduplicate<SampleId>>) {
         auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-            SampleId{id});
+            SampleId::Make(id));
         leaf = id_iter.first;
       } else {
         leaf.SetSampleId(id);

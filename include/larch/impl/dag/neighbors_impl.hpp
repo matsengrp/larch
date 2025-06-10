@@ -10,14 +10,13 @@
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetParents() const {
   auto dag = static_cast<const CRTP&>(*this).GetDAG();
-  return GetFeatureStorage(this).parents_ | Transform::ToEdges(dag);
+  return GetStorageParents() | Transform::ToEdges(dag);
 }
 
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetClades() const {
   auto dag = static_cast<const CRTP&>(*this).GetDAG();
-  return GetFeatureStorage(this).clades_ |
-         ranges::views::transform([dag](const std::vector<EdgeId>& clade) {
+  return GetStorageClades() | ranges::views::transform([dag](auto&& clade) {
            return clade | Transform::ToEdges(dag);
          });
 }
@@ -25,17 +24,17 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetClades() const {
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetClade(CladeIdx clade) const {
   auto dag = static_cast<const CRTP&>(*this).GetDAG();
-  return GetFeatureStorage(this).clades_.at(clade.value) | Transform::ToEdges(dag);
+  return GetStorageClades().at(clade.value) | Transform::ToEdges(dag);
 }
 
 template <typename CRTP, typename Tag>
 size_t FeatureConstView<Neighbors, CRTP, Tag>::GetParentsCount() const {
-  return GetFeatureStorage(this).parents_.size();
+  return static_cast<size_t>(GetStorageParents().size());
 }
 
 template <typename CRTP, typename Tag>
 size_t FeatureConstView<Neighbors, CRTP, Tag>::GetCladesCount() const {
-  return GetFeatureStorage(this).clades_.size();
+  return static_cast<size_t>(GetStorageClades().size());
 }
 
 template <typename CRTP, typename Tag>
@@ -68,7 +67,7 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetFirstClade() const {
 
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Neighbors, CRTP, Tag>::IsUA() const {
-  return GetFeatureStorage(this).parents_.empty();
+  return GetStorageParents().empty();
 }
 
 template <typename CRTP, typename Tag>
@@ -81,15 +80,13 @@ bool FeatureConstView<Neighbors, CRTP, Tag>::IsTreeRoot() const {
 
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Neighbors, CRTP, Tag>::IsLeaf() const {
-  return ranges::all_of(GetFeatureStorage(this).clades_,
-                        [](const auto& clade) { return clade.empty(); });
+  return ranges::all_of(GetStorageClades(), [](auto&& clade) { return clade.empty(); });
 }
 
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetLeafsBelow() const {
   auto dag = static_cast<const CRTP&>(*this).GetDAG();
-  return GetFeatureStorage(this).leafs_below_ |
-         ranges::views::transform([dag](const std::vector<NodeId>& i) {
+  return GetStorageLeafsBelow() | ranges::views::transform([dag](auto&& i) {
            return i | Transform::ToNodes(dag);
          });
 }
@@ -155,22 +152,19 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
 #ifndef NDEBUG
   auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
-  auto& storage = GetFeatureStorage(this);
   if (node.IsUA()) {
     // Assert(dag.HaveUA());
     Assert(node.GetId() == dag.GetRoot());
-  } else {
+  } else if (allow_dag) {
     size_t children_count = 0;
     for ([[maybe_unused]] auto child : node.GetChildren()) {
       ++children_count;
     }
     Assert(children_count != 1);
   }
-#ifndef NDEBUG
   ContiguousSet<std::string> sample_ids;
-#endif
   if (node.IsLeaf()) {
-    Assert(storage.clades_.empty());
+    Assert(GetStorageClades().empty());
     using NodeT = std::remove_reference_t<decltype(node)>;
     if constexpr (NodeT::template contains_feature<SampleId> or
                   NodeT::template contains_feature<Deduplicate<SampleId>>) {
@@ -178,32 +172,33 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
                                                 decltype(dag.GetStorage())>>,
                                             FragmentStorage>) {
         Assert(node.HaveSampleId());
-#ifndef NDEBUG
-        Assert(sample_ids.insert(node.GetSampleId().value()).second);
-#endif
+        Assert(sample_ids.insert(std::string{node.GetSampleId().value()}).second);
       }
     }
   }
-  for (auto& i : storage.clades_) {
+  for (auto&& i : GetStorageClades()) {
     Assert(not i.empty());
   }
   if (not allow_dag) {
-    if (storage.parents_.size() > 1) {
+    if (GetStorageParents().size() > 1) {
       throw std::runtime_error{std::string{"Multiple parents at node "} +
                                std::to_string(node.GetId().value)};
     }
   }
-  if (not storage.parents_.empty()) {
-    auto edge = dag.Get(storage.parents_.at(0));
+  if (not GetStorageParents().empty()) {
+    auto edge = dag.Get(*GetStorageParents().begin());
     if (edge.GetChild().GetId() != node.GetId()) {
       throw std::runtime_error{std::string{"Mismatch parent at node "} +
                                std::to_string(node.GetId().value) + " : " +
                                std::to_string(edge.GetChildId().value) +
                                ", should be " + std::to_string(node.GetId().value)};
     }
+  } else {
+    Assert(node.IsUA());
   }
-  for (CladeIdx i{0}; i.value < storage.clades_.size(); ++i.value) {
-    auto& clade = storage.clades_.at(i.value);
+  CladeIdx cidx{0};
+  for (auto&& clade : GetStorageClades()) {
+    CladeIdx i{cidx.value++};
     if (not allow_dag) {
       if (clade.size() != 1) {
         std::string children;
@@ -215,7 +210,7 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
                                  std::to_string(i.value) + " : " + children};
       }
     }
-    auto edge = dag.Get(clade.at(0));
+    auto edge = dag.Get(*clade.begin());
     if (edge.GetParent().GetId() != node.GetId()) {
       throw std::runtime_error{std::string{"Mismatch child edge id at node "} +
                                std::to_string(node.GetId().value) + ", clade " +
@@ -241,10 +236,20 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
     for ([[maybe_unused]] auto i : dag.GetNodes()) {
       ++node_count;
     }
+
+    if (node_count != dag.GetNodesCount()) {
+      std::cout << "node_count: " << node_count
+                << "  dag.GetNodesCount(): " << dag.GetNodesCount() << "\n";
+    }
     Assert(node_count == dag.GetNodesCount());
     size_t edge_count = 0;
     for ([[maybe_unused]] auto i : dag.GetEdges()) {
       ++edge_count;
+    }
+    if (edge_count != dag.GetEdgesCount()) {
+      std::cout << "edge_count: " << edge_count
+                << "  dag.GetEdgesCount(): " << dag.GetEdgesCount() << "\n"
+                << std::flush;
     }
     Assert(edge_count == dag.GetEdgesCount());
     if (not allow_dag) {
@@ -278,23 +283,24 @@ void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Neighbors, CRTP, Tag>::ClearConnections() const {
-  GetFeatureStorage(this).parents_.clear();
-  GetFeatureStorage(this).clades_.clear();
+  GetStorage().GetParentsMutable(static_cast<const CRTP*>(this)).clear();
+  GetStorage().GetCladesMutable(static_cast<const CRTP*>(this)).clear();
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Neighbors, CRTP, Tag>::AddEdge(CladeIdx clade, EdgeId id,
                                                        bool this_node_is_parent) const {
   if (this_node_is_parent) {
-    GetOrInsert(GetFeatureStorage(this).clades_, clade).push_back(id);
+    GetOrInsert(GetStorage().GetCladesMutable(static_cast<const CRTP*>(this)), clade)
+        .push_back(id);
   } else {
-    GetFeatureStorage(this).parents_.push_back(id);
+    GetStorage().GetParentsMutable(static_cast<const CRTP*>(this)).push_back(id);
   }
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Neighbors, CRTP, Tag>::RemoveParent(EdgeId edge) const {
-  auto& parents = GetFeatureStorage(this).parents_;
+  auto& parents = GetStorage().GetParentsMutable(static_cast<const CRTP*>(this));
   auto it = ranges::find(parents, edge);
   Assert(it != parents.end());
   parents.erase(it);
@@ -303,7 +309,7 @@ void FeatureMutableView<Neighbors, CRTP, Tag>::RemoveParent(EdgeId edge) const {
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Neighbors, CRTP, Tag>::ChangeParent(EdgeId from,
                                                             EdgeId to) const {
-  auto& parents = GetFeatureStorage(this).parents_;
+  auto& parents = GetStorage().GetParentsMutable(static_cast<const CRTP*>(this));
   auto it = ranges::find(parents, from);
   Assert(it != parents.end());
   *it = to;
@@ -311,7 +317,7 @@ void FeatureMutableView<Neighbors, CRTP, Tag>::ChangeParent(EdgeId from,
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Neighbors, CRTP, Tag>::SetSingleParent(EdgeId parent) const {
-  auto& parents = GetFeatureStorage(this).parents_;
+  auto& parents = GetStorage().GetParentsMutable(static_cast<const CRTP*>(this));
   parents.clear();
   parents.push_back(parent);
 }
@@ -320,7 +326,7 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<Neighbors, CRTP, Tag>::RemoveChild(CladeIdx clade,
                                                            EdgeId child) const {
   auto node = static_cast<const CRTP&>(*this);
-  auto& clades = GetFeatureStorage(this).clades_;
+  auto& clades = GetStorage().GetCladesMutable(static_cast<const CRTP*>(this));
   auto& children = clades.at(clade.value);
   auto it = ranges::find(children, child);
   Assert(it != children.end());
@@ -338,7 +344,7 @@ void FeatureMutableView<Neighbors, CRTP, Tag>::RemoveChild(CladeIdx clade,
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Neighbors, CRTP, Tag>::ChangeChild(CladeIdx clade, EdgeId from,
                                                            EdgeId to) const {
-  auto& clades = GetFeatureStorage(this).clades_;
+  auto& clades = GetStorage().GetCladesMutable(static_cast<const CRTP*>(this));
   auto& children = clades.at(clade.value);
   auto it = ranges::find(children, from);
   Assert(it != children.end());
@@ -367,7 +373,7 @@ void FeatureMutableView<Neighbors, CRTP, Tag>::CalculateLeafsBelow() const {
         [](NodeId lhs, NodeId rhs) { return lhs.value < rhs.value; });
     result.push_back(std::move(clade_leafs));
   }
-  GetFeatureStorage(this).leafs_below_ = std::move(result);
+  GetStorage().GetLeafsBelowMutable(static_cast<const CRTP*>(this)) = std::move(result);
 }
 
 template <typename CRTP, typename Tag>

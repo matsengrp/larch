@@ -54,6 +54,18 @@ struct ComponentType<EdgeId> {
 template <typename Id>
 inline constexpr const auto ComponentOf = ComponentType<Id>::value;
 
+template <typename Lhs, typename Rhs>
+struct FeatureEquivalent
+    : std::bool_constant<std::is_same_v<Lhs, Rhs> or std::is_base_of_v<Lhs, Rhs> or
+                         std::is_base_of_v<Rhs, Lhs>> {};
+
+template <typename Feature>
+struct OverlayFeatureType {
+  using store_type = Feature;
+  using const_view_type = std::reference_wrapper<const Feature>;
+  using mutable_view_type = std::reference_wrapper<Feature>;
+};
+
 /**
  * Used by specialization on the Feature parameter to add functions to
  * an attachable feature. Functions declared in FeatureConstView are
@@ -69,6 +81,19 @@ struct FeatureConstView;
 template <typename Feature, typename CRTP, typename Tag = Feature>
 struct FeatureMutableView;
 /** @} */
+
+template <typename CRTP, typename... Fs>
+struct ToFeatureConstBase : FeatureConstView<Fs, CRTP>... {};
+
+template <typename CRTP, typename... Fs>
+struct ToFeatureConstBase<CRTP, std::tuple<Fs...>> : FeatureConstView<Fs, CRTP>... {};
+
+template <typename CRTP, typename... Fs>
+struct ToFeatureMutableBase : FeatureMutableView<Fs, CRTP>... {};
+
+template <typename CRTP, typename... Fs>
+struct ToFeatureMutableBase<CRTP, std::tuple<Fs...>> : FeatureMutableView<Fs, CRTP>... {
+};
 
 /**
  * A per-element feature can have some additional functions, that are exposed
@@ -128,10 +153,15 @@ struct DefaultViewBase {
  * @{
  */
 template <typename CRTP, typename Feature, typename Tag>
-auto& GetFeatureStorage(const FeatureMutableView<Feature, CRTP, Tag>* feature);
+auto GetFeatureStorage(const FeatureMutableView<Feature, CRTP, Tag>* feature);
 
 template <typename CRTP, typename Feature, typename Tag>
-const auto& GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* feature);
+auto GetFeatureStorage(const FeatureConstView<Feature, CRTP, Tag>* feature);
+
+template <typename T>
+auto GetFeatureStorage(T) {
+  static_assert(sizeof(T) == NoId, "Accepts const Feature{Const, Mutable}View*");
+}
 /** @} */
 
 struct NodeId {
@@ -213,13 +243,14 @@ struct CombineBases<std::tuple<Ts...>> : Ts... {
 template <typename T>
 auto ViewOf(T&& dag);
 
-template <typename, template <typename, typename> typename = DefaultViewBase>
+template <typename, template <typename, typename> typename>
 struct DAGView;
 
 template <typename...>
 struct ExtraStorage;
 
-template <typename, typename, typename, typename>
+template <typename, typename, typename, typename,
+          template <typename, typename> typename = DefaultViewBase>
 struct DAGStorage;
 
 template <Component, typename, IdContinuity, typename...>

@@ -115,7 +115,7 @@ MADAGStorage<> LoadDAGFromProtobuf(std::string_view path) {
     auto new_node = result.AddNode({static_cast<size_t>(i.node_id())});
     if (i.condensed_leaves().size() > 0) {
       for (auto cl : i.condensed_leaves()) {
-        new_node = SampleId{cl};
+        new_node = SampleId::Make(cl);
         break;
       }
     }
@@ -143,7 +143,7 @@ MADAGStorage<> LoadDAGFromProtobuf(std::string_view path) {
 
   for (auto node : result.GetNodes()) {
     if (node.IsLeaf() and not node.HaveSampleId()) {
-      node = SampleId{node.GetCompactGenome().ToString()};
+      node = SampleId::Make(node.GetCompactGenome().ToString());
     }
   }
 
@@ -184,8 +184,9 @@ MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
   result.BuildConnections();
 
   for (auto node : result.GetNodes()) {
-    if (node.IsLeaf()) {
-      node = SampleId{seq_ids[node.GetId().value]};
+    auto& sid = seq_ids[node.GetId().value];
+    if (node.IsLeaf() and sid.has_value()) {
+      node = SampleId::Make(sid.value());
     }
   }
 
@@ -210,21 +211,22 @@ MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
 
   // uncollapsing has to occur _after_ we read the mutations, since those mutations
   // are stored for edges in an ordered traversal of the condensed newick tree.
-  const auto & leaf_ids = result.GetNodes() | Transform::GetId();
+  const auto& leaf_ids = result.GetNodes() | Transform::GetId();
   for (auto orig_leaf_id : leaf_ids) {
     if (result.Get(orig_leaf_id).IsLeaf()) {
       auto orig_leaf_in_dag = result.Get(orig_leaf_id);
-      std::string node_name = orig_leaf_in_dag.GetSampleId().value();
+      std::string_view node_name = orig_leaf_in_dag.GetSampleId().value();
       // check if this leaf is condensed
       if (node_name.find("_condensed_") != std::string::npos) {
-        // find the corresponding condensed leaf in the data.condensed_nodes() dictionary
+        // find the corresponding condensed leaf in the data.condensed_nodes()
+        // dictionary
         for (const auto& cn : data.condensed_nodes()) {
           std::string condensed_node_name = static_cast<std::string>(cn.node_name());
           if (condensed_node_name == node_name) {
             // expand this condensed leaf node in the result by:
             // - renaming this node to the first string in the list, and
-            // - adding all of the sibling nodes as children of the condensed leaf node's
-            // parent.
+            // - adding all of the sibling nodes as children of the condensed leaf
+            // node's parent.
             auto parent_edge = orig_leaf_in_dag.GetSingleParent();
             auto parent_node = parent_edge.GetParent();
             auto clade_idx = parent_node.GetCladesCount();
@@ -232,11 +234,11 @@ MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
             for (const auto& sib_node : cn.condensed_leaves()) {
               auto sib_node_name = static_cast<std::string>(sib_node);
               if (ctr < 1) {
-                orig_leaf_in_dag = SampleId{sib_node_name};
+                orig_leaf_in_dag = SampleId::Make(sib_node_name);
               } else {
-                auto muts_copy = parent_edge.GetEdgeMutations().Copy();
+                auto muts_copy = parent_edge.GetEdgeMutations().Copy(&parent_edge);
                 auto new_sib_node = result.AppendNode();
-                new_sib_node = SampleId{sib_node_name};
+                new_sib_node = SampleId::Make(sib_node_name);
                 auto new_sib_edge = result.AppendEdge();
                 new_sib_edge.SetEdgeMutations(std::move(muts_copy));
                 result.AddEdge(new_sib_edge, parent_node, new_sib_node, {clade_idx++});
@@ -333,7 +335,7 @@ MADAGStorage<> LoadDAGFromJson(std::string_view path) {
 
   for (auto node : result.GetNodes()) {
     if (node.IsLeaf()) {
-      node = SampleId{node.GetCompactGenome().ToString()};
+      node = SampleId::Make(node.GetCompactGenome().ToString());
     }
   }
 
@@ -523,9 +525,13 @@ void MADAGApplyCompactGenomeData(
   std::unordered_map<std::string, bool> visited_ids;
   NodeMutMap tmp_mut_map;
   for (auto node : dag.GetNodes()) {
-    if (node.GetSampleId().has_value() and
-        mut_map.find(node.GetSampleId().value()) != mut_map.end()) {
-      const auto& [name, muts] = *mut_map.find(node.GetSampleId().value());
+    if (not node.GetSampleId().has_value()) {
+      continue;
+    }
+    std::string sid{node.GetSampleId().value()};
+    auto it = mut_map.find(sid);
+    if (it != mut_map.end()) {
+      const auto& [name, muts] = *it;
       if (!silence_warnings) {
         visited_ids[name] = true;
       }

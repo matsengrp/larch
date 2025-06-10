@@ -14,62 +14,31 @@ bool FeatureConstView<Connections, CRTP, Tag>::IsTree() const {
 }
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Connections, CRTP, Tag>::HaveRoot() const {
-  return GetFeatureStorage(this).root_.value != NoId;
+  return GetFeatureStorage(this).get().root_.value != NoId;
 }
 
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Connections, CRTP, Tag>::GetRoot() const {
   auto& dag = static_cast<const CRTP&>(*this);
   using Node = typename CRTP::NodeView;
-  return Node{dag, GetFeatureStorage(this).root_};
+  return Node{dag, GetFeatureStorage(this).get().root_};
 }
 
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Connections, CRTP, Tag>::GetLeafs() const {
   auto& dag = static_cast<const CRTP&>(*this);
-  return GetFeatureStorage(this).leafs_ | Transform::ToNodes(dag);
+  return GetFeatureStorage(this).get().leafs_ | Transform::ToNodes(dag);
 }
 
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Connections, CRTP, Tag>::GetLeafsCount() const {
-  return GetFeatureStorage(this).leafs_.size();
+  return GetFeatureStorage(this).get().leafs_.size();
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::BuildConnections() const {
-  auto& storage = GetFeatureStorage(this);
-  auto& dag = static_cast<const CRTP&>(*this);
-  storage.root_ = {NoId};
-  storage.leafs_ = {};
   BuildConnectionsRaw();
-  std::atomic<size_t> root_id{NoId};
-  Reduction<std::vector<NodeId>> leafs{32};
-  ParallelForEach(dag.GetNodes(), [&](auto node) {
-    for (auto clade : node.GetClades()) {
-      Assert(not clade.empty() && "Empty clade");
-    }
-    if (node.IsUA()) {
-      const size_t previous = root_id.exchange(node.GetId().value);
-      if (previous != NoId) {
-        std::cout << "Duplicate root: " << previous << " and " << node.GetId().value
-                  << "\n";
-      }
-      Assert(previous == NoId);
-    }
-    if (node.IsLeaf()) {
-      leafs.AddElement([](std::vector<NodeId>& ls, NodeId id) { ls.push_back(id); },
-                       node);
-    }
-  });
-  storage.root_.value = root_id.load();
-  leafs.GatherAndClear(
-      [&leafs](auto buckets, auto& stor) {
-        for (auto&& bucket : buckets) {
-          stor.leafs_.reserve(leafs.size_approx());
-          stor.leafs_.insert(stor.leafs_.end(), bucket.begin(), bucket.end());
-        }
-      },
-      storage);
+  BuildRootAndLeafs();
 }
 
 template <typename CRTP, typename Tag>
@@ -87,8 +56,85 @@ void FeatureMutableView<Connections, CRTP, Tag>::BuildConnectionsRaw() const {
 }
 
 template <typename CRTP, typename Tag>
+void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs() const {
+  auto& storage = GetFeatureStorage(this).get();
+  auto& dag = static_cast<const CRTP&>(*this);
+  storage.root_ = {NoId};
+  storage.leafs_ = {};
+  std::atomic<size_t> root_id{NoId};
+  Reduction<std::vector<NodeId>> leafs{32};
+  ParallelForEach(dag.GetNodes() | Transform::GetId(), [&](NodeId nid) {
+    auto node = dag.Get(nid);
+    // for (auto clade : node.GetClades()) {
+    //   Assert(not clade.empty() && "Empty clade");
+    // }
+    if (node.IsUA()) {
+      const size_t previous = root_id.exchange(node.GetId().value);
+      if (previous != NoId) {
+        std::cout << "Duplicate root: " << previous << " and " << node.GetId().value
+                  << "\n";
+      }
+      Assert(previous == NoId);
+    }
+    if (node.IsLeaf()) {
+      leafs.AddElement([](std::vector<NodeId>& ls, NodeId id) { ls.push_back(id); },
+                       node);
+    }
+  });
+  Assert(root_id.load() != NoId);
+  storage.root_.value = root_id.load();
+  leafs.GatherAndClear(
+      [&leafs](auto buckets, auto& stor) {
+        for (auto&& bucket : buckets) {
+          stor.leafs_.reserve(leafs.size_approx());
+          stor.leafs_.insert(stor.leafs_.end(), bucket.begin(), bucket.end());
+        }
+      },
+      storage);
+}
+
+template <typename CRTP, typename Tag>
+void FeatureMutableView<Connections, CRTP, Tag>::BuildRootAndLeafs(
+    NodeId fragment_root) const {
+  auto& storage = GetFeatureStorage(this).get();
+  auto& dag = static_cast<const CRTP&>(*this);
+  storage.root_ = {NoId};
+  storage.leafs_ = {};
+  std::atomic<size_t> root_id{NoId};
+  Reduction<std::vector<NodeId>> leafs{32};
+  SeqForEach(dag.GetNodes() | Transform::GetId(), [&](NodeId nid) {
+    auto node = dag.Get(nid);
+    // for (auto clade : node.GetClades()) {
+    //   Assert(not clade.empty() && "Empty clade");
+    // }
+    if ((node.IsUA()) or (node.GetId() == fragment_root)) {
+      const size_t previous = root_id.exchange(node.GetId().value);
+      if (previous != NoId) {
+        std::cout << "Duplicate root: " << previous << " and " << node.GetId().value
+                  << "\n";
+      }
+      Assert(previous == NoId);
+    }
+    if (node.IsLeaf()) {
+      leafs.AddElement([](std::vector<NodeId>& ls, NodeId id) { ls.push_back(id); },
+                       node);
+    }
+  });
+  Assert(root_id.load() != NoId);
+  storage.root_.value = root_id.load();
+  leafs.GatherAndClear(
+      [&leafs](auto buckets, auto& stor) {
+        for (auto&& bucket : buckets) {
+          stor.leafs_.reserve(leafs.size_approx());
+          stor.leafs_.insert(stor.leafs_.end(), bucket.begin(), bucket.end());
+        }
+      },
+      storage);
+}
+
+template <typename CRTP, typename Tag>
 void FeatureMutableView<Connections, CRTP, Tag>::AddLeaf(NodeId id) const {
-  auto& storage = GetFeatureStorage(this);
+  auto& storage = GetFeatureStorage(this).get();
   // TODO make leafs ContiguousSet ?
   if (std::find(storage.leafs_.begin(), storage.leafs_.end(), id) ==
       storage.leafs_.end()) {

@@ -5,7 +5,11 @@
 template <typename Container>
 class Reduction {
  public:
-  explicit Reduction(size_t buckets) : buckets_{buckets} {}
+  explicit Reduction(size_t buckets)
+      : gather_mutex_{}, buckets_{[](size_t num_buckets, std::shared_mutex& mtx) {
+          auto lock = WriteLock(mtx);
+          return FixedArray<Bucket>{num_buckets};
+        }(buckets, gather_mutex_)} {}
 
   template <typename F, typename... Args>
   decltype(auto) AddElement(F&& func, Args&&... args) {
@@ -19,8 +23,7 @@ class Reduction {
         }
         std::this_thread::yield();
       }
-    }
-    ();
+    }();
     const size_t size = data.size();
     finally cleanup{[this, &mutex, &data, size] {
       size_approx_.fetch_add(data.size() - size);
@@ -65,7 +68,7 @@ class Reduction {
     Container data_;
   };
 
+  std::shared_mutex gather_mutex_;
   FixedArray<Bucket> buckets_;
   std::atomic<size_t> size_approx_{0};
-  std::shared_mutex gather_mutex_;
 };

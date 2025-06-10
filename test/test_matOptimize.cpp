@@ -38,13 +38,13 @@ struct Test_Move_Found_Callback : public Move_Found_Callback {
   return weight.GetDAG().Get(node_id);
 };
 
-std::vector<std::vector<const SampleId*>> clades_union(
-    const std::vector<std::vector<const SampleId*>>& lhs,
-    const std::vector<std::vector<const SampleId*>>& rhs) {
-  std::vector<std::vector<const SampleId*>> result;
+std::vector<std::vector<UniqueData>> clades_union(
+    const std::vector<std::vector<UniqueData>>& lhs,
+    const std::vector<std::vector<UniqueData>>& rhs) {
+  std::vector<std::vector<UniqueData>> result;
 
   for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-    std::vector<const SampleId*> clade{lhs_clade};
+    std::vector<UniqueData> clade{lhs_clade};
     clade.insert(clade.end(), rhs_clade.begin(), rhs_clade.end());
     ranges::sort(clade);
     ranges::unique(clade);
@@ -55,13 +55,13 @@ std::vector<std::vector<const SampleId*>> clades_union(
   return result;
 }
 
-std::vector<std::vector<const SampleId*>> clades_difference(
-    const std::vector<std::vector<const SampleId*>>& lhs,
-    const std::vector<std::vector<const SampleId*>>& rhs) {
-  std::vector<std::vector<const SampleId*>> result;
+std::vector<std::vector<UniqueData>> clades_difference(
+    const std::vector<std::vector<UniqueData>>& lhs,
+    const std::vector<std::vector<UniqueData>>& rhs) {
+  std::vector<std::vector<UniqueData>> result;
 
   for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-    std::vector<const SampleId*> clade;
+    std::vector<UniqueData> clade;
     std::set_difference(lhs_clade.begin(), lhs_clade.end(), rhs_clade.begin(),
                         rhs_clade.end(), std::inserter(clade, clade.begin()));
     ranges::sort(clade);
@@ -98,7 +98,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
 
       MAT::Node* curr_node = move.src;
       while (not(curr_node->node_id == lca_id.value)) {
-        MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{0 /*FIXME*/});
+        MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{ToMergedNodeId(curr_node)});
         const auto& clades =
             merge_.GetResultNodeLabels().at(node).GetLeafSet()->GetClades();
         if (not merge_.ContainsLeafset(clades_difference(clades, src_clades))) {
@@ -112,7 +112,7 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
 
       curr_node = move.dst;
       while (not(curr_node->node_id == lca_id.value)) {
-        MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{0 /*FIXME*/});
+        MergeDAG::NodeView node = merge_.GetResult().Get(NodeId{ToMergedNodeId(curr_node)});
         const auto& clades =
             merge_.GetResultNodeLabels().at(node).GetLeafSet()->GetClades();
         if (not merge_.ContainsLeafset(clades_union(clades, dst_clades))) {
@@ -136,8 +136,9 @@ struct Larch_Move_Found_Callback : public Move_Found_Callback {
 
   void OnReassignedStates(const MAT::Tree& tree) {
     for (auto leaf_node : tree.get_leaves()) {
-      auto new_cg = sample_.GetNodeFromMAT(leaf_node).GetCompactGenome().Copy();
-      mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
+      auto node = sample_.GetNodeFromMAT(leaf_node);
+      auto new_cg = node.GetCompactGenome().Copy(&node);
+      mat_node_to_cg_map_[leaf_node] = std::move(new_cg);
     }
   }
 
@@ -184,7 +185,7 @@ static void test_matOptimize(std::string_view input_dag_path,
     auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
     MAT::Tree mat;
     sample.View().BuildMAT(mat);
-    std::cout << "Sample nodes count: " << sample.GetNodesCount() << "\n";
+    std::cout << "Sample nodes count: " << sample.View().GetNodesCount() << "\n";
     check_edge_mutations(sample.View());
     int move_coeff_nodes = 1;
     int move_coeff_pscore = 1;

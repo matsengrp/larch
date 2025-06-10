@@ -16,7 +16,8 @@ namespace Extend {
 template <typename... Fs>
 struct Nodes {
   using FeatureTypes = std::tuple<Fs...>;
-  using Storage = std::vector<std::tuple<Fs...>>;
+  template <IdContinuity Cont>
+  using Storage = IdContainer<NodeId, std::tuple<Fs...>, Cont>;
   using ExtraStorage = std::tuple<ExtraFeatureStorage<Fs>...>;
   template <typename Self, typename CRTP>
   struct ConstView : FeatureConstView<Fs, CRTP>... {};
@@ -31,13 +32,14 @@ struct Nodes {
   struct ExtraMutableView : ExtraFeatureMutableView<Fs, CRTP>... {};
   template <typename Feature>
   static const bool contains_element_feature =
-      tuple_contains_v<std::tuple<Fs...>, Feature>;
+      tuple_contains_v<std::tuple<Fs...>, Feature, FeatureEquivalent>;
 };
 
-template <typename... Fs>
+template </*IdContinuity Cont, */ typename... Fs>
 struct Edges {
   using FeatureTypes = std::tuple<Fs...>;
-  using Storage = std::vector<std::tuple<Fs...>>;
+  template <IdContinuity Cont>
+  using Storage = IdContainer<EdgeId, std::tuple<Fs...>, Cont>;
   using ExtraStorage = std::tuple<ExtraFeatureStorage<Fs>...>;
   template <typename Self, typename CRTP>
   struct ConstView : FeatureConstView<Fs, CRTP>... {};
@@ -53,7 +55,7 @@ struct Edges {
 
   template <typename Feature>
   static const bool contains_element_feature =
-      tuple_contains_v<std::tuple<Fs...>, Feature>;
+      tuple_contains_v<std::tuple<Fs...>, Feature, FeatureEquivalent>;
 };
 
 template <typename... Fs>
@@ -88,7 +90,8 @@ struct Empty {
  * Adds new features to an existing DAG. See `namespace Extend` for more info.
  */
 template <typename ShortName, typename Target, typename Arg0, typename Arg1,
-          typename Arg2>
+          typename Arg2, template <typename, typename> typename ViewBase,
+          IdContinuity Cont>
 struct ExtendDAGStorage {
  public:
   constexpr static const Component component = Component::DAG;
@@ -101,6 +104,9 @@ struct ExtendDAGStorage {
 
   using Self =
       std::conditional_t<std::is_same_v<ShortName, void>, ExtendDAGStorage, ShortName>;
+
+  using ViewType = DAGView<Self, ViewBase>;
+  using ConstViewType = DAGView<const Self, ViewBase>;
 
   using TargetView = typename ViewTypeOf<Target>::type;
   using OnNodes = select_argument_t<Extend::Nodes, Arg0, Arg1, Arg2>;
@@ -176,7 +182,9 @@ struct ExtendDAGStorage {
   template <typename CRTP>
   struct ConstDAGViewBase : ExtraStorageType::template Base<FeatureConstView, CRTP>,
                             OnNodes::template ExtraConstView<Self, CRTP>,
-                            OnEdges::template ExtraConstView<Self, CRTP> {};
+                            OnEdges::template ExtraConstView<Self, CRTP>
+
+  {};
   template <typename CRTP>
   struct MutableDAGViewBase : ExtraStorageType::template Base<FeatureMutableView, CRTP>,
                               OnNodes::template ExtraMutableView<Self, CRTP>,
@@ -204,8 +212,16 @@ struct ExtendDAGStorage {
     return Self{Target{}};
   }
 
-  DAGView<Self> View();
-  DAGView<const Self> View() const;
+  template <typename... Args>
+  static Self EmplaceTarget(Args&&... args) {
+    static_assert(Target::role == Role::Storage);
+    return Self{Target{std::forward<Args>(args)...}};
+  }
+
+  template <template <typename, typename> typename Base = ViewBase>
+  DAGView<Self, Base> View();
+  template <template <typename, typename> typename Base = ViewBase>
+  DAGView<const Self, Base> View() const;
 
   NodeId AppendNode();
   EdgeId AppendEdge();
@@ -213,15 +229,29 @@ struct ExtendDAGStorage {
   void AddNode(NodeId id);
   void AddEdge(EdgeId id);
 
+  template <typename VT>
   size_t GetNodesCount() const;
+  template <typename VT>
   size_t GetEdgesCount() const;
 
-  template <Component C>
+  template <Component C, typename VT>
   Id<C> GetNextAvailableId() const {
-    return GetTarget().template GetNextAvailableId<C>();
+    return GetTarget().template GetNextAvailableId<C, VT>();
   }
 
+  template <typename VT>
+  bool ContainsId(NodeId id) const {
+    return GetTarget().template ContainsId<VT>(id);
+  }
+
+  template <typename VT>
+  bool ContainsId(EdgeId id) const {
+    return GetTarget().template ContainsId<VT>(id);
+  }
+
+  template <typename VT>
   auto GetNodes() const;
+  template <typename VT>
   auto GetEdges() const;
 
   void InitializeNodes(size_t size);
@@ -231,62 +261,73 @@ struct ExtendDAGStorage {
   void ClearEdges();
 
   template <typename F>
-  auto& GetFeatureStorage();
+  auto GetFeatureStorage();
 
   template <typename F>
-  const auto& GetFeatureStorage() const;
+  auto GetFeatureStorage() const;
 
   template <typename F>
-  auto& GetFeatureStorage(NodeId id);
+  auto GetFeatureStorage(NodeId id);
 
   template <typename F>
-  const auto& GetFeatureStorage(NodeId id) const;
+  auto GetFeatureStorage(NodeId id) const;
 
   template <typename F>
-  auto& GetFeatureStorage(EdgeId id);
+  auto GetFeatureStorage(EdgeId id);
 
   template <typename F>
-  const auto& GetFeatureStorage(EdgeId id) const;
+  auto GetFeatureStorage(EdgeId id) const;
 
   template <Component C, typename F>
-  auto& GetFeatureExtraStorage();
+  auto GetFeatureExtraStorage();
 
   template <Component C, typename F>
-  const auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
   auto& GetTargetStorage() { return *this; }
   auto& GetTargetStorage() const { return *this; }
 
+  explicit ExtendDAGStorage(Target&& target);
+
  private:
   friend ShortName;
-  explicit ExtendDAGStorage(Target&& target);
 
   auto GetTarget();
   auto GetTarget() const;
 
   Target target_;
-  typename OnNodes::Storage additional_node_features_storage_;
-  typename OnEdges::Storage additional_edge_features_storage_;
+  typename OnNodes::template Storage<Cont> additional_node_features_storage_;
+  typename OnEdges::template Storage<Cont> additional_edge_features_storage_;
   typename OnDAG::Storage additional_dag_features_storage_;
   typename OnNodes::ExtraStorage additional_node_extra_features_storage_;
   typename OnEdges::ExtraStorage additional_edge_extra_features_storage_;
 };
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
-          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>>
-using ExtendStorageType = ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>;
+          typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
+          template <typename, typename> typename ViewBase = DefaultViewBase>
+// TODO pass IdContinuity
+using ExtendStorageType =
+    ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, DefIdCont>;
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
+          template <typename, typename> typename ViewBase = DefaultViewBase,
           typename = std::enable_if_t<Target::role == Role::Storage>>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2> AddExtend(Target&& target) {
-  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::Consume(
-      std::move(target));
+// TODO pass IdContinuity
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, DefIdCont> AddExtend(
+    Target&& target) {
+  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                          DefIdCont>::Consume(std::move(target));
 }
 
 template <typename ShortName, typename Target, typename Arg0 = Extend::Empty<>,
           typename Arg1 = Extend::Empty<>, typename Arg2 = Extend::Empty<>,
+          template <typename, typename> typename ViewBase = DefaultViewBase,
           typename = std::enable_if_t<Target::role == Role::View>>
-ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2> AddExtend(const Target& target) {
-  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2>::FromView(target);
+// TODO pass IdContinuity
+ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase, DefIdCont> AddExtend(
+    const Target& target) {
+  return ExtendDAGStorage<ShortName, Target, Arg0, Arg1, Arg2, ViewBase,
+                          DefIdCont>::FromView(target);
 }

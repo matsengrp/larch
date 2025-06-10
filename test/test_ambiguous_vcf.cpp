@@ -6,12 +6,12 @@
 #include "larch/mat_conversion.hpp"
 #include "larch/usher_glue.hpp"
 
-std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
+std::ostream& operator<<(std::ostream& os, const MAT::Mutation mut) {
   os << mut.get_string();
   return os;
 }
 
-[[maybe_unused]] static std::string madag_info(const MADAGStorage<> &dag_storage) {
+[[maybe_unused]] static std::string madag_info(const MADAGStorage<>& dag_storage) {
   std::stringstream os;
   auto dag = dag_storage.View();
   auto ref_seq = dag.GetReferenceSequence();
@@ -27,7 +27,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   return os.str();
 }
 
-[[maybe_unused]] static std::string mat_info(MAT::Tree &mat) {
+[[maybe_unused]] static std::string mat_info(MAT::Tree& mat) {
   std::stringstream os;
   os << "newick: " << mat.get_newick_string(true, false, false, true) << std::endl;
   os << "=== NODES ===" << std::endl;
@@ -56,13 +56,13 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
 }
 
 [[maybe_unused]] static std::string compact_genome_data_info(
-    const std::unordered_map<std::string, CompactGenomeData> &mut_map) {
+    const std::unordered_map<std::string, CompactGenomeData>& mut_map) {
   std::stringstream os;
   os << "[ ";
-  for (auto &[name, cg_data] : mut_map) {
+  for (auto& [name, cg_data] : mut_map) {
     os << "(" << name << ": ";
-    for (auto &[pos, mut] : cg_data) {
-      os << pos << mut << " ";
+    for (auto& [pos, mut] : cg_data) {
+      os << pos << mut.ToChar() << " ";
     }
     os << ") ";
   }
@@ -71,12 +71,12 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
 }
 
 [[maybe_unused]] static std::string original_state_info(
-    const Original_State_t &og_state) {
+    const Original_State_t& og_state) {
   std::stringstream os;
   os << "[ ";
-  for (const auto &[id, mut_set] : og_state) {
+  for (const auto& [id, mut_set] : og_state) {
     os << "( " << id << ", [ ";
-    for (const auto &mut : mut_set) {
+    for (const auto& mut : mut_set) {
       os << mut.get_string() << " ";
     }
     os << "] ) ";
@@ -85,7 +85,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   return os.str();
 }
 
-[[maybe_unused]] static auto convert_madag_to_mat(const MADAGStorage<> &dag_storage) {
+[[maybe_unused]] static auto convert_madag_to_mat(const MADAGStorage<>& dag_storage) {
   MAT::Tree mat;
   auto dag = dag_storage.View();
   TestAssert(dag.IsTree());
@@ -100,7 +100,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   return mat;
 }
 
-[[maybe_unused]] static void madag_label_nodes(MADAGStorage<> &dag_storage,
+[[maybe_unused]] static void madag_label_nodes(MADAGStorage<>& dag_storage,
                                                bool leaves_only = true) {
   auto dag = dag_storage.View();
   for (auto node : dag.GetNodes()) {
@@ -110,7 +110,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
       auto full_str_id = prefix + std::to_string(node.GetId().value);
       if constexpr (decltype(node)::template contains_feature<Deduplicate<SampleId>>) {
         auto id_iter = dag.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-            SampleId{full_str_id});
+            SampleId::Make(full_str_id));
         node = id_iter.first;
       } else {
         node.SetSampleId({full_str_id});
@@ -119,7 +119,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   }
 }
 
-[[maybe_unused]] static std::string madag_to_fasta(const MADAGStorage<> &dag_storage,
+[[maybe_unused]] static std::string madag_to_fasta(const MADAGStorage<>& dag_storage,
                                                    bool use_ids, bool leaves_only,
                                                    bool include_reference) {
   std::stringstream os;
@@ -140,8 +140,8 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   return os.str();
 }
 
-[[maybe_unused]] static void madag_to_fasta(const MADAGStorage<> &dag_storage,
-                                            const std::string &out_path, bool use_ids,
+[[maybe_unused]] static void madag_to_fasta(const MADAGStorage<>& dag_storage,
+                                            const std::string& out_path, bool use_ids,
                                             bool leaves_only, bool include_reference) {
   std::ofstream file_out;
   file_out.open(out_path);
@@ -150,8 +150,8 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   file_out.close();
 }
 
-[[maybe_unused]] static void fasta_to_vcf(const std::string &fasta_path_in,
-                                          const std::string &vcf_path_out,
+[[maybe_unused]] static void fasta_to_vcf(const std::string& fasta_path_in,
+                                          const std::string& vcf_path_out,
                                           bool include_reference = false) {
   std::string command, ref_command;
   command = "faToVcf --help";
@@ -168,14 +168,14 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
 }
 
 [[maybe_unused]] static void mat_apply_compact_genome_data(
-    MAT::Tree &tree, const std::unordered_map<std::string, CompactGenomeData> &mut_map,
+    MAT::Tree& tree, const std::unordered_map<std::string, CompactGenomeData>& mut_map,
     bool silence_warnings = true) {
-  for (const auto &[name, muts] : mut_map) {
+  for (const auto& [name, muts] : mut_map) {
     auto node = tree.get_node(tree.node_name_to_node_idx(name));
     if (node) {
       node->mutations.clear();
       node->mutations.reserve(muts.size());
-      for (const auto &[pos, base] : muts) {
+      for (const auto& [pos, base] : muts) {
         TestAssert(pos.value != NoId);
         MAT::Mutation mat_mut(
             "ref", static_cast<int>(pos.value), EncodeBaseMAT(base.ToChar()),
@@ -189,8 +189,8 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   }
 }
 
-[[maybe_unused]] static bool madag_compare(const MADAGStorage<> &lhs_storage,
-                                           const MADAGStorage<> &rhs_storage) {
+[[maybe_unused]] static bool madag_compare(const MADAGStorage<>& lhs_storage,
+                                           const MADAGStorage<>& rhs_storage) {
   auto lhs = lhs_storage.View();
   auto rhs = rhs_storage.View();
   if (lhs.GetNodesCount() != rhs.GetNodesCount()) return false;
@@ -206,7 +206,7 @@ std::ostream &operator<<(std::ostream &os, const MAT::Mutation mut) {
   return true;
 }
 
-bool operator==(const MADAGStorage<> &lhs_storage, const MADAGStorage<> &rhs_storage) {
+bool operator==(const MADAGStorage<>& lhs_storage, const MADAGStorage<>& rhs_storage) {
   return madag_compare(lhs_storage, rhs_storage);
 }
 
@@ -269,7 +269,7 @@ void test_vcf_compatible() {
   // make sure that each of the leaves in dag match exactly one key of id_to_cg_map
   for (auto leaf_id : dag.GetLeafs()) {
     if (leaf_id.GetSampleId().has_value()) {
-      TestAssert(id_to_cg_map.find(leaf_id.GetSampleId().value()) !=
+      TestAssert(id_to_cg_map.find(std::string{leaf_id.GetSampleId().value()}) !=
                  id_to_cg_map.end());
     }
   }
@@ -279,9 +279,10 @@ void test_vcf_compatible() {
   dag_storage.View().RecomputeEdgeMutations();
   for (auto leaf : dag.GetLeafs()) {
     for (auto parent_edge : leaf.GetParents()) {
-      auto leaf_cg = leaf.GetCompactGenome().Copy();
-      auto parent_cg = parent_edge.GetParent().GetCompactGenome().Copy();
-      auto edge_mutations_from_dag = parent_edge.GetEdgeMutations().Copy();
+      auto leaf_cg = leaf.GetCompactGenome().Copy(&leaf);
+      auto parent_cg =
+          parent_edge.GetParent().GetCompactGenome().template Copy<void>(nullptr);
+      auto edge_mutations_from_dag = parent_edge.GetEdgeMutations().Copy(&parent_edge);
       ContiguousMap<MutationPosition, MutationBase> current_edge_mutations;
       for (auto posval : parent_edge.GetEdgeMutations()) {
         current_edge_mutations[posval.first] = posval.second.second;

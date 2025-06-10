@@ -81,7 +81,8 @@
       {"--seed INT", "Set seed for random number generation (default: random)"},
       {"--thread INT", "Set number of cpu threads (default: max allowed by system)"},
       {"-T,--max-time", "Exit after fixed runtime(in minutes)\n"},
-      {"-S,--autodetect-stoptime", "Set program to exit after parsimony improvement plateaus\n"}};
+      {"-S,--autodetect-stoptime",
+       "Set program to exit after parsimony improvement plateaus\n"}};
 
   std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
 
@@ -90,13 +91,13 @@
 
 void check_edge_mutations(MADAG madag);
 
-std::vector<std::vector<const SampleId*>> clades_union(
-    const std::vector<std::vector<const SampleId*>>& lhs,
-    const std::vector<std::vector<const SampleId*>>& rhs) {
-  std::vector<std::vector<const SampleId*>> result;
+std::vector<std::vector<UniqueData>> clades_union(
+    const std::vector<std::vector<UniqueData>>& lhs,
+    const std::vector<std::vector<UniqueData>>& rhs) {
+  std::vector<std::vector<UniqueData>> result;
 
   for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-    std::vector<const SampleId*> clade{lhs_clade};
+    std::vector<UniqueData> clade{lhs_clade};
     clade.insert(clade.end(), rhs_clade.begin(), rhs_clade.end());
     ranges::sort(clade);
     ranges::unique(clade);
@@ -107,13 +108,13 @@ std::vector<std::vector<const SampleId*>> clades_union(
   return result;
 }
 
-std::vector<std::vector<const SampleId*>> clades_difference(
-    const std::vector<std::vector<const SampleId*>>& lhs,
-    const std::vector<std::vector<const SampleId*>>& rhs) {
-  std::vector<std::vector<const SampleId*>> result;
+std::vector<std::vector<UniqueData>> clades_difference(
+    const std::vector<std::vector<UniqueData>>& lhs,
+    const std::vector<std::vector<UniqueData>>& rhs) {
+  std::vector<std::vector<UniqueData>> result;
 
   for (auto [lhs_clade, rhs_clade] : ranges::views::zip(lhs, rhs)) {
-    std::vector<const SampleId*> clade;
+    std::vector<UniqueData> clade;
     std::set_difference(lhs_clade.begin(), lhs_clade.end(), rhs_clade.begin(),
                         rhs_clade.end(), std::inserter(clade, clade.begin()));
     ranges::sort(clade);
@@ -129,33 +130,27 @@ using Storage = MergeDAGStorage<>;
 using ReassignedStatesStorage =
     decltype(AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
 
-template <typename SampleDAG>
 struct Treebased_Move_Found_Callback
-    : public BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>, SampleDAG> {
+    : public BatchingCallback<Treebased_Move_Found_Callback> {
   MOVE_ONLY_VIRT_DTOR(Treebased_Move_Found_Callback);
 
-  Treebased_Move_Found_Callback(Merge& merge, SampleDAG sample_dag,
-                                std::pair<int, int> move_score_coeffs)
-      : BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag},
+  Treebased_Move_Found_Callback(Merge& merge, std::pair<int, int> move_score_coeffs)
+      : BatchingCallback<Treebased_Move_Found_Callback>{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
-  Treebased_Move_Found_Callback(Merge& merge, SampleDAG sample_dag)
-      : BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag},
+  Treebased_Move_Found_Callback(Merge& merge)
+      : BatchingCallback<Treebased_Move_Found_Callback>{merge},
         move_score_coeffs_{1, 1} {};
 
-  Treebased_Move_Found_Callback(Merge& merge, SampleDAG sample_dag,
-                                std::pair<int, int> move_score_coeffs,
+  Treebased_Move_Found_Callback(Merge& merge, std::pair<int, int> move_score_coeffs,
                                 bool collapse_empty_fragment_edges)
-      : BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+      : BatchingCallback<Treebased_Move_Found_Callback>{merge,
+                                                        collapse_empty_fragment_edges},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
-  Treebased_Move_Found_Callback(Merge& merge, SampleDAG sample_dag,
-                                bool collapse_empty_fragment_edges)
-      : BatchingCallback<Treebased_Move_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
+  Treebased_Move_Found_Callback(Merge& merge, bool collapse_empty_fragment_edges)
+      : BatchingCallback<Treebased_Move_Found_Callback>{merge,
+                                                        collapse_empty_fragment_edges},
         move_score_coeffs_{1, 1} {};
 
   template <typename SPRView, typename FragmentType>
@@ -166,14 +161,15 @@ struct Treebased_Move_Found_Callback
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
       auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
-        std::vector<const SampleId*> ls;
+        std::vector<UniqueData> ls;
         for (auto leaf_node : leaf_node_ids) {
-          auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
-          ls.push_back(&sid);
+          auto sid = spr.Const().Get(leaf_node).GetSampleId();
+          Assert(sid.has_value());
+          ls.push_back(SampleId::Make(sid.value()));
         }
         ranges::sort(ls);
         ranges::unique(ls);
-        std::vector<std::vector<const SampleId*>> to_ret;
+        std::vector<std::vector<UniqueData>> to_ret;
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
@@ -183,7 +179,7 @@ struct Treebased_Move_Found_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.src)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -193,7 +189,7 @@ struct Treebased_Move_Found_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.dst)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -212,11 +208,12 @@ struct Treebased_Move_Found_Callback
                       hypothetical_node.GetOld().GetMATNode()->node_id ==
                           move.dst->node_id or
                       hypothetical_node.GetOld().GetMATNode()->is_root())) {
+                auto nid = hypothetical_node.GetOld().GetMATNode()->node_id;
                 const auto& current_leaf_sets =
                     this->GetMerge()
                         .GetResultNodeLabels()
                         .at(this->GetMappedStorage()
-                                .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                                .GetNodeFromMAT(this->GetMappedStorage().GetMAT().get_node(nid))
                                 .GetOriginalId())
                         .GetLeafSet()
                         ->GetClades();
@@ -242,18 +239,15 @@ struct Treebased_Move_Found_Callback
   std::pair<int, int> move_score_coeffs_;
 };
 
-template <typename SampleDAG>
 struct Merge_All_Moves_Found_Callback
-    : public BatchingCallback<Merge_All_Moves_Found_Callback<SampleDAG>, SampleDAG> {
+    : public BatchingCallback<Merge_All_Moves_Found_Callback> {
   MOVE_ONLY_VIRT_DTOR(Merge_All_Moves_Found_Callback);
-  Merge_All_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag)
-      : BatchingCallback<Merge_All_Moves_Found_Callback<SampleDAG>, SampleDAG>{
-            merge, sample_dag} {};
+  Merge_All_Moves_Found_Callback(Merge& merge)
+      : BatchingCallback<Merge_All_Moves_Found_Callback>{merge} {};
 
-  Merge_All_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
-                                 bool collapse_empty_fragment_edges)
-      : BatchingCallback<Merge_All_Moves_Found_Callback<SampleDAG>, SampleDAG>{
-            merge, sample_dag, collapse_empty_fragment_edges} {};
+  Merge_All_Moves_Found_Callback(Merge& merge, bool collapse_empty_fragment_edges)
+      : BatchingCallback<Merge_All_Moves_Found_Callback>{
+            merge, collapse_empty_fragment_edges} {};
 
   template <typename SPRView, typename FragmentType>
   std::pair<bool, bool> OnMove(SPRView /*spr*/, const FragmentType& /*fragment*/,
@@ -268,41 +262,35 @@ struct Merge_All_Moves_Found_Callback
   void OnRadius(){};
 };
 
-template <typename SampleDAG>
 struct Merge_All_Profitable_Moves_Found_Callback
-    : public BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
-                              SampleDAG> {
+    : public BatchingCallback<Merge_All_Profitable_Moves_Found_Callback> {
   MOVE_ONLY_VIRT_DTOR(Merge_All_Profitable_Moves_Found_Callback);
 
-  Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
+  Merge_All_Profitable_Moves_Found_Callback(Merge& merge,
                                             std::pair<int, int> move_score_coeffs)
-      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag},
-        sample_dag_{sample_dag},
+      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback>{merge},
         merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
-  Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag)
-      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag},
-        sample_dag_{sample_dag},
+  Merge_All_Profitable_Moves_Found_Callback(Merge& merge)
+      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback>{merge},
         merge_{merge},
         move_score_coeffs_{1, 1} {};
 
-  Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
+  Merge_All_Profitable_Moves_Found_Callback(Merge& merge,
                                             std::pair<int, int> move_score_coeffs,
                                             bool collapse_empty_fragment_edges)
-      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
-        sample_dag_{sample_dag},
+      : BatchingCallback<
+            Merge_All_Profitable_Moves_Found_Callback>{merge,
+                                                       collapse_empty_fragment_edges},
         merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
-  Merge_All_Profitable_Moves_Found_Callback(Merge& merge, SampleDAG sample_dag,
+  Merge_All_Profitable_Moves_Found_Callback(Merge& merge,
                                             bool collapse_empty_fragment_edges)
-      : BatchingCallback<Merge_All_Profitable_Moves_Found_Callback<SampleDAG>,
-                         SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
-        sample_dag_{sample_dag},
+      : BatchingCallback<
+            Merge_All_Profitable_Moves_Found_Callback>{merge,
+                                                       collapse_empty_fragment_edges},
         merge_{merge},
         move_score_coeffs_{1, 1} {};
 
@@ -314,14 +302,15 @@ struct Merge_All_Profitable_Moves_Found_Callback
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
       auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
-        std::vector<const SampleId*> ls;
+        std::vector<UniqueData> ls;
         for (auto leaf_node : leaf_node_ids) {
-          auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
-          ls.push_back(&sid);
+          auto sid = spr.Const().Get(leaf_node).GetSampleId();
+          Assert(sid.has_value());
+          ls.push_back(SampleId::Make(sid.value()));
         }
         ranges::sort(ls);
         ranges::unique(ls);
-        std::vector<std::vector<const SampleId*>> to_ret;
+        std::vector<std::vector<UniqueData>> to_ret;
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
@@ -331,7 +320,7 @@ struct Merge_All_Profitable_Moves_Found_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.src)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -341,7 +330,7 @@ struct Merge_All_Profitable_Moves_Found_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.dst)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -360,11 +349,13 @@ struct Merge_All_Profitable_Moves_Found_Callback
                       hypothetical_node.GetOld().GetMATNode()->node_id ==
                           move.dst->node_id or
                       hypothetical_node.GetOld().GetMATNode()->is_root())) {
+
+                auto nid = hypothetical_node.GetOld().GetMATNode()->node_id;
                 const auto& current_leaf_sets =
                     this->GetMerge()
                         .GetResultNodeLabels()
                         .at(this->GetMappedStorage()
-                                .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                                .GetNodeFromMAT(this->GetMappedStorage().GetMAT().get_node(nid))
                                 .GetOriginalId())
                         .GetLeafSet()
                         ->GetClades();
@@ -387,7 +378,6 @@ struct Merge_All_Profitable_Moves_Found_Callback
 
   void OnRadius(){};
 
-  SampleDAG sample_dag_;
   Merge& merge_;
   ReassignedStatesStorage reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage::EmptyDefault()));
@@ -396,46 +386,35 @@ struct Merge_All_Profitable_Moves_Found_Callback
   std::pair<int, int> move_score_coeffs_;
 };
 
-template <typename SampleDAG>
 struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
-    : public BatchingCallback<
-          Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>, SampleDAG> {
+    : public BatchingCallback<Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback> {
   MOVE_ONLY_VIRT_DTOR(Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback);
 
   Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(
-      Merge& merge, SampleDAG sample_dag, std::pair<int, int> move_score_coeffs)
-      : BatchingCallback<
-            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
-            SampleDAG>{merge, sample_dag},
-        sample_dag_{sample_dag},
+      Merge& merge, std::pair<int, int> move_score_coeffs)
+      : BatchingCallback<Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback>{merge},
         merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
-  Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(Merge& merge,
-                                                       SampleDAG sample_dag)
-      : BatchingCallback<
-            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
-            SampleDAG>{merge, sample_dag},
-        sample_dag_{sample_dag},
+  Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(Merge& merge)
+      : BatchingCallback<Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback>{merge},
         merge_{merge},
         move_score_coeffs_{1, 1} {};
 
   Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(
-      Merge& merge, SampleDAG sample_dag, std::pair<int, int> move_score_coeffs,
+      Merge& merge, std::pair<int, int> move_score_coeffs,
       bool collapse_empty_fragment_edges)
       : BatchingCallback<
-            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
-            SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
-        sample_dag_{sample_dag},
+            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback>{merge,
+                                                                  collapse_empty_fragment_edges},
         merge_{merge},
         move_score_coeffs_{std::move(move_score_coeffs)} {};
 
   Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback(
-      Merge& merge, SampleDAG sample_dag, bool collapse_empty_fragment_edges)
+      Merge& merge, bool collapse_empty_fragment_edges)
       : BatchingCallback<
-            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback<SampleDAG>,
-            SampleDAG>{merge, sample_dag, collapse_empty_fragment_edges},
-        sample_dag_{sample_dag},
+            Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback>{merge,
+                                                                  collapse_empty_fragment_edges},
         merge_{merge},
         move_score_coeffs_{1, 1} {};
 
@@ -446,15 +425,16 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
                                /*nodes_with_major_allele_set_change*/) {
     int node_id_map_count = 0;
     if (move_score_coeffs_.first != 0) {
-      auto make_leaf_set = [&](std::vector<NodeId> leaf_node_ids) {
-        std::vector<const SampleId*> ls;
+      auto make_leaf_set = [&](const std::vector<NodeId>& leaf_node_ids) {
+        std::vector<SampleId> ls;
         for (auto leaf_node : leaf_node_ids) {
-          auto sid = SampleId{spr.Const().Get(leaf_node).GetSampleId().value()};
-          ls.push_back(&sid);
+          auto sid = spr.Const().Get(leaf_node).GetSampleId();
+          Assert(sid.has_value());
+          ls.push_back(SampleId::Make(sid.value()));
         }
         ranges::sort(ls);
         ranges::unique(ls);
-        std::vector<std::vector<const SampleId*>> to_ret;
+        std::vector<std::vector<UniqueData>> to_ret;
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
@@ -464,7 +444,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveSource().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.src)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -474,7 +454,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
               : this->GetMerge()
                     .GetResultNodeLabels()
                     .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(spr.GetMoveTarget().GetOld().GetMATNode())
+                            .GetNodeFromMAT(move.dst)
                             .GetOriginalId())
                     .GetLeafSet()
                     ->GetClades();
@@ -493,11 +473,12 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
                       hypothetical_node.GetOld().GetMATNode()->node_id ==
                           move.dst->node_id or
                       hypothetical_node.GetOld().GetMATNode()->is_root())) {
+                auto nid = hypothetical_node.GetOld().GetMATNode()->node_id;
                 const auto& current_leaf_sets =
                     this->GetMerge()
                         .GetResultNodeLabels()
                         .at(this->GetMappedStorage()
-                                .GetNodeFromMAT(hypothetical_node.GetOld().GetMATNode())
+                                .GetNodeFromMAT(this->GetMappedStorage().GetMAT().get_node(nid))
                                 .GetOriginalId())
                         .GetLeafSet()
                         ->GetClades();
@@ -520,7 +501,6 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
 
   void OnRadius(){};
 
-  SampleDAG sample_dag_;
   Merge& merge_;
   ReassignedStatesStorage reassigned_states_storage_ =
       AddMappedNodes(AddMATConversion(Storage::EmptyDefault()));
@@ -727,6 +707,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string logfile_name = logfile_path + "/logfile.csv";
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
+  //tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   tbb::global_control c(
       tbb::global_control::max_allowed_parallelism,
       ((thread_count > 0) ? std::min(thread_count, std::thread::hardware_concurrency())
@@ -946,38 +927,30 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     }();
 
     std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>> Nodes in sampled (sub)tree: "
-              << sample_tree.GetNodesCount() << "\n";
+              << sample_tree.View().GetNodesCount() << "\n";
+
     MAT::Tree mat;
     sample_tree.View().GetRoot().Validate(true);
     sample_tree.View().BuildMAT(mat);
     check_edge_mutations(sample_tree.View().Const());
 
     if (callback_config == CallbackMethod::AllMoves) {
-      Merge_All_Moves_Found_Callback callback{merge, sample_tree.View(),
-                                              collapse_empty_fragment_edges};
+      Merge_All_Moves_Found_Callback callback{merge, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesFixedTree) {
       Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback callback{
-          merge,
-          sample_tree.View(),
-          {move_coeff_nodes, move_coeff_pscore},
-          collapse_empty_fragment_edges};
+          merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesTreeBased) {
-      Treebased_Move_Found_Callback callback{merge,
-                                             sample_tree.View(),
-                                             {move_coeff_nodes, move_coeff_pscore},
-                                             collapse_empty_fragment_edges};
+      Treebased_Move_Found_Callback callback{
+          merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMoves) {
       Merge_All_Profitable_Moves_Found_Callback callback{
-          merge,
-          sample_tree.View(),
-          {move_coeff_nodes, move_coeff_pscore},
-          collapse_empty_fragment_edges};
+          merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else {
@@ -1000,7 +973,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       if (this_parsimony < current_best_parsimony) {
         last_parsimony_change_window_size = current_parsimony_change_window_size + 1;
         current_parsimony_change_window_size = 0;
-        iter_count = i + 1 + 2*last_parsimony_change_window_size;
+        iter_count = i + 1 + 2 * last_parsimony_change_window_size;
         current_best_parsimony = this_parsimony;
       } else {
         current_parsimony_change_window_size++;
@@ -1032,4 +1005,3 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   return EXIT_SUCCESS;
 }
-

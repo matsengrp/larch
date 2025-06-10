@@ -80,6 +80,7 @@ int main(int argc, char* argv[]) {
 #ifdef USE_USHER
   int ignored{};
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
+  finally cleanup([] { MPI_Finalize(); });
 #endif
   bool no_catch = false;
   bool opt_list_names = false;

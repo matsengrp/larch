@@ -16,13 +16,13 @@ struct ExtraStorage {
   struct Base : T<Features, CRTP>... {};
 
   template <typename Feature>
-  auto& GetFeatureStorage() {
-    return std::get<Feature>(features_storage_);
+  auto GetFeatureStorage() {
+    return std::ref(tuple_get<Feature, FeatureEquivalent>(features_storage_));
   }
 
   template <typename Feature>
-  const auto& GetFeatureStorage() const {
-    return std::get<Feature>(features_storage_);
+  auto GetFeatureStorage() const {
+    return std::cref(tuple_get<Feature, FeatureEquivalent>(features_storage_));
   }
 
   template <typename Storage>
@@ -45,7 +45,7 @@ struct ExtraStorage {
  * the same interface, like ExtendDAGStorage.
  */
 template <typename ShortName, typename NodesContainerT, typename EdgesContainerT,
-          typename ExtraStorageT>
+          typename ExtraStorageT, template <typename, typename> typename ViewBase>
 struct DAGStorage {
   static_assert(ExtraStorageT::role == Role::Storage);
   static_assert(ExtraStorageT::component == Component::DAG);
@@ -53,10 +53,11 @@ struct DAGStorage {
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
 
-  using Self = ShortName;
+  using Self =
+      std::conditional_t<std::is_same_v<ShortName, void>, DAGStorage, ShortName>;
 
-  using ViewType = DAGView<Self>;
-  using ConstViewType = DAGView<const Self>;
+  using ViewType = DAGView<Self, ViewBase>;
+  using ConstViewType = DAGView<const Self, ViewBase>;
 
   using ExtraStorageType = ExtraStorageT;
   using FeatureTypes = typename ExtraStorageT::FeatureTypes;
@@ -104,8 +105,10 @@ struct DAGStorage {
              ExtraStorageT&& features_storage);
   MOVE_ONLY(DAGStorage);
 
-  ViewType View();
-  ConstViewType View() const;
+  template <template <typename, typename> typename Base = ViewBase>
+  DAGView<Self, Base> View();
+  template <template <typename, typename> typename Base = ViewBase>
+  DAGView<const Self, Base> View() const;
 
   NodeId AppendNode();
   EdgeId AppendEdge();
@@ -113,19 +116,37 @@ struct DAGStorage {
   void AddNode(NodeId id);
   void AddEdge(EdgeId id);
 
-  auto GetNodes() const { return nodes_container_.All(); }
-  auto GetEdges() const { return edges_container_.All(); }
+  template <typename VT>
+  auto GetNodes() const {
+    return nodes_container_.template All<VT>();
+  }
+  template <typename VT>
+  auto GetEdges() const {
+    return edges_container_.template All<VT>();
+  }
 
+  template <typename VT>
   size_t GetNodesCount() const;
+  template <typename VT>
   size_t GetEdgesCount() const;
 
-  template <Component C>
+  template <Component C, typename VT>
   Id<C> GetNextAvailableId() const {
     if constexpr (C == Component::Node) {
-      return nodes_container_.GetNextAvailableId();
+      return nodes_container_.template GetNextAvailableId<VT>();
     } else {
-      return edges_container_.GetNextAvailableId();
+      return edges_container_.template GetNextAvailableId<VT>();
     }
+  }
+
+  template <typename VT>
+  bool ContainsId(NodeId id) const {
+    return nodes_container_.template ContainsId<VT>(id);
+  }
+
+  template <typename VT>
+  bool ContainsId(EdgeId id) const {
+    return edges_container_.template ContainsId<VT>(id);
   }
 
   void InitializeNodes(size_t size);
@@ -135,31 +156,34 @@ struct DAGStorage {
   void ClearEdges();
 
   template <typename Feature>
-  auto& GetFeatureStorage(NodeId id);
+  auto GetFeatureStorage(NodeId id);
 
   template <typename Feature>
-  const auto& GetFeatureStorage(NodeId id) const;
+  auto GetFeatureStorage(NodeId id) const;
 
   template <typename Feature>
-  auto& GetFeatureStorage(EdgeId id);
+  auto GetFeatureStorage(EdgeId id);
 
   template <typename Feature>
-  const auto& GetFeatureStorage(EdgeId id) const;
+  auto GetFeatureStorage(EdgeId id) const;
 
   template <Component C, typename Feature>
-  auto& GetFeatureExtraStorage();
+  auto GetFeatureExtraStorage();
 
   template <Component C, typename Feature>
-  const auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
   template <typename Feature>
-  auto& GetFeatureStorage();
+  auto GetFeatureStorage();
 
   template <typename Feature>
-  const auto& GetFeatureStorage() const;
+  auto GetFeatureStorage() const;
 
   auto& GetTargetStorage() { return features_storage_.GetTargetStorage(*this); }
   auto& GetTargetStorage() const { return features_storage_.GetTargetStorage(*this); }
+
+  NodesContainerT& GetNodesContainer() { return nodes_container_; }
+  EdgesContainerT& GetEdgesContainer() { return edges_container_; }
 
  private:
   NodesContainerT nodes_container_;

@@ -32,10 +32,12 @@ class EdgeMutations {
   EdgeMutations(T&& mutations_view,
                 std::enable_if_t<not std::is_same_v<T, EdgeMutations>>* = nullptr);
 
-  [[nodiscard]] inline EdgeMutations Copy() const;
+  template <typename CRTP>
+  [[nodiscard]] inline EdgeMutations Copy(const CRTP*) const;
   inline auto begin() const -> decltype(mutations_.begin());
   inline auto end() const -> decltype(mutations_.end());
   inline size_t size() const;
+  inline bool empty() const;
   inline auto operator[](MutationPosition pos) -> decltype(mutations_[pos]);
   inline auto insert(
       std::pair<MutationPosition, std::pair<MutationBase, MutationBase>> mut);

@@ -4,15 +4,16 @@
 
 template <typename CRTP, typename Tag>
 NodeId FeatureConstView<MappedNodes, CRTP, Tag>::GetOriginalId() const {
-  return GetFeatureStorage(this).original_id_;
+  return GetFeatureStorage(this).get().original_id_;
 }
 
 template <typename CRTP, typename Tag>
 void FeatureMutableView<MappedNodes, CRTP, Tag>::SetOriginalId(NodeId id) const {
-  GetFeatureStorage(this).original_id_ = id;
+  GetFeatureStorage(this).get().original_id_ = id;
   auto& node = static_cast<const CRTP&>(*this);
   node.GetDAG()
       .template GetFeatureExtraStorage<Component::Node, MappedNodes>()
+      .get()
       .reverse_map_.insert({id, node.GetId()});
 }
 
@@ -20,6 +21,7 @@ template <typename CRTP>
 auto ExtraFeatureConstView<MappedNodes, CRTP>::GetMappedNode(NodeId original_id) const {
   auto& dag = static_cast<const CRTP&>(*this);
   NodeId id = dag.template GetFeatureExtraStorage<Component::Node, MappedNodes>()
+                  .get()
                   .reverse_map_.at(original_id);
   return dag.Get(id);
 }
@@ -29,6 +31,7 @@ auto ExtraFeatureMutableView<MappedNodes, CRTP>::GetMutableMappedNode(
     NodeId original_id) const {
   auto& dag = static_cast<const CRTP&>(*this);
   NodeId id = dag.template GetFeatureExtraStorage<Component::Node, MappedNodes>()
+                  .get()
                   .reverse_map_.at(original_id);
   return dag.Get(id);
 }

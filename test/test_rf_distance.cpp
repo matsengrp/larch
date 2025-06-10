@@ -3,9 +3,11 @@
 #include "test_common.hpp"
 #include "test_common_dag.hpp"
 #include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/weight_accumulator.hpp"
 #include "larch/dag_loader.hpp"
 
 enum class RFDistanceType { Min, MinSum, Max, MaxSum };
+using Weight = typename WeightAccumulator<RFDistance>::Weight;
 
 [[maybe_unused]] static auto get_rf_distance(
     const Merge& comp_merge1, const Merge& ref_merge2,
@@ -135,6 +137,48 @@ static void test_rf_distance_hand_computed_example() {
   merge.AddDAGs(std::vector{dag1, dag2});
   Assert(get_rf_distance(merge1, merge2) == get_rf_distance(merge, merge));
 }
+
+static void test_rf_counter() {
+  auto dag1_storage = make_sample_dag();
+  auto dag2_storage = make_nonintersecting_sample_dag();
+  auto dag3_storage = make_sample_dag();
+  auto dag1 = dag1_storage.View();
+  auto dag2 = dag2_storage.View();
+  auto dag3 = dag3_storage.View();
+
+  dag3.Get(NodeId{7}) = CompactGenome{"AAA", "GAA"};
+  dag3.Get(NodeId{8}) = CompactGenome{"AAA", "GAA"};
+  dag3.Get(NodeId{9}) = CompactGenome{"AAA", "GAA"};
+  dag3.Get(NodeId{10}) = CompactGenome{"AAA", "GAA"};
+  dag3.RecomputeEdgeMutations();
+
+  Merge merge1(dag1.GetReferenceSequence());
+  merge1.AddDAGs(std::vector{dag1, dag2, dag3});
+  Merge merge2(dag1.GetReferenceSequence());
+  merge2.AddDAGs(std::vector{dag1, dag2, dag3});
+
+  Merge merge(dag1.GetReferenceSequence());
+  merge.AddDAGs(std::vector{dag1, dag2});
+  ArbitraryInt shift_sum, result;
+
+  SubtreeWeight<WeightAccumulator<RFDistance>, MergeDAG> count{merge1.GetResult()};
+  RFDistance weight_ops{merge2, merge1};
+  Weight scores = count.ComputeWeightBelow(merge1.GetResult().GetRoot(), std::move(weight_ops));
+  shift_sum = weight_ops.GetOps().GetShiftSum();
+
+  Count total_count = 0;
+  std::cout << " " << std::right << std::setw(11) << "RF Distance";
+  std::cout << " | " << std::left << std::setw(11) << "count" << "\n";
+  std::cout << "-------------------------\n";
+  for (auto& [rfd, rfcount] : scores.GetWeights()) {
+    std::cout << " " << std::right << std::setw(11) << rfd + shift_sum;
+    std::cout << " | " << std::left << std::setw(11) << rfcount << "\n";
+    total_count += rfcount;
+  }
+  std::cout << "total count: " << total_count << "\n";
+  Assert(total_count == 3);
+}
+
 
 static void test_rf_distance_different_weight_ops() {
   auto dag0_storage = make_base_sample_dag();
@@ -300,3 +344,6 @@ static void test_rf_distance_different_weight_ops() {
 [[maybe_unused]] static const auto test_added4 =
     add_test({[] { test_rf_distance_different_weight_ops(); },
               "RF distance: using different weight ops (Min, MinSum, Max, MaxSum)"});
+
+[[maybe_unused]] static const auto test_added5 = add_test(
+    {[] { test_rf_counter(); }, "RF distance: counter"});

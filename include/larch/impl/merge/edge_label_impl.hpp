@@ -17,11 +17,12 @@ CladeIdx EdgeLabel::ComputeCladeIdx() const {
   auto parent_clade = child_.GetLeafSet()->ToParentClade(child_.GetSampleId());
   CladeIdx result{0};
   for (const auto& clade : *parent_.GetLeafSet()) {
-    if (clade == parent_clade) {
+    if (ranges::equal(clade, parent_clade, std::equal_to<SampleId>{})) {
       return result;
     }
     ++result.value;
   }
+  Fail("Can't compute clade index");
   return {};
 }
 

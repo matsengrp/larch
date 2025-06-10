@@ -215,7 +215,7 @@ template <typename Edge>
 static std::string EdgeMutationsToString(Edge edge) {
   std::string result;
   size_t count = 0;
-  for (auto [pos, muts] : edge.GetEdgeMutations()) {
+  for (auto [pos, muts] : edge.Const().GetEdgeMutations()) {
     result += muts.first;
     result += std::to_string(pos.value);
     result += muts.second;
@@ -234,11 +234,13 @@ static std::string CompactGenomeToString(Node node) {
   //   result += " [X]";
   // }
   result += "\\n";
-  size_t count = 0;
-  for (auto [pos, base] : node.Const().GetCompactGenome()) {
-    result += std::to_string(pos.value);
-    result += base;
-    result += ++count % 3 == 0 ? "\\n" : " ";
+  if constexpr (decltype(node)::template contains_feature<CompactGenome>) {
+    size_t count = 0;
+    for (auto [pos, base] : node.Const().GetCompactGenome()) {
+      result += std::to_string(pos.value);
+      result += base;
+      result += ++count % 3 == 0 ? "\\n" : " ";
+    }
   }
   return result;
 }
@@ -255,7 +257,8 @@ void MADAGToDOT(DAG dag, iostream& out) {
   for (auto edge : dag.Const().GetEdges()) {
     out << "  \"" << CompactGenomeToString(edge.GetParent()) << "\" -> \""
         << CompactGenomeToString(edge.GetChild()) << "\"";
-    out << "[ headlabel=\"";
+    out << "[ headlabel=\""
+        << "[" << edge.GetId().value << "]  ";
     out << EdgeMutationsToString(edge);
     out << "\" ]\n";
   }

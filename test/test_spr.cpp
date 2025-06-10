@@ -6,7 +6,7 @@
 #include "test_common_dag.hpp"
 #include "larch/benchmark.hpp"
 
-// #include <tbb/global_control.h>
+#include <tbb/global_control.h>
 
 struct Empty_Callback : public Move_Found_Callback {
   bool operator()(Profitable_Moves& move, int best_score_change,
@@ -19,12 +19,9 @@ struct Empty_Callback : public Move_Found_Callback {
   auto GetMATNodeToCGMap() { return std::map<MAT::Node*, CompactGenome>{}; }
 };
 
-template <typename SampleDAG>
-struct Test_Move_Found_Callback
-    : public BatchingCallback<Test_Move_Found_Callback<SampleDAG>, SampleDAG> {
-  explicit Test_Move_Found_Callback(Merge& merge, SampleDAG sample_dag)
-      : BatchingCallback<Test_Move_Found_Callback<SampleDAG>, SampleDAG>{merge,
-                                                                         sample_dag} {};
+struct Test_Move_Found_Callback : public BatchingCallback<Test_Move_Found_Callback> {
+  explicit Test_Move_Found_Callback(Merge& merge)
+      : BatchingCallback<Test_Move_Found_Callback>{merge} {};
 
   template <typename SPRView, typename FragmentType>
   std::pair<bool, bool> OnMove(SPRView spr, const FragmentType& fragment,
@@ -35,10 +32,21 @@ struct Test_Move_Found_Callback
     std::ignore = fragment;
     std::ignore = nodes_with_major_allele_set_change;
     std::ignore = best_score_change;
+    // for (auto hypothetical_node : fragment.GetNodes()) {
+    //   std::cout << "in OnMove, node " << hypothetical_node << " has "
+    //             << hypothetical_node.GetCladesCount() << " children\n"
+    //             << std::flush;
+    // }
+    // for (auto node : spr.GetNodes()) {
+    //   std::cout << "in OnMove, node " << node << " has " << node.GetCladesCount()
+    //             << " children\n"
+    //             << std::flush;
+    // }
     // if (moves_count_.fetch_add(1) > 100) {
     //   print_peak_mem();
     //   moves_count_.store(0);
     // }
+    // return {false, false};
     return {move.score_change <= 0, move.score_change <= 0};
   }
 
@@ -85,7 +93,7 @@ static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
     sample.View().BuildMAT(mat);
     sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View().Const());
-    Test_Move_Found_Callback callback{merge, sample.View()};
+    Test_Move_Found_Callback callback{merge};
     std::cout << "Optimizing\n";
     // Empty_Callback callback;
     optimized_dags.push_back(
@@ -93,6 +101,7 @@ static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
     optimized_dags.back().first.View().RecomputeCompactGenomes();
     merge.AddDAGs(std::vector{optimized_dags.back().first.View()},
                   optimized_dags.back().first.View().GetRoot());
+    mat.delete_nodes();
   }
 }
 
@@ -146,11 +155,9 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
   void OnReassignedStates(const MAT::Tree& tree) {
     for (auto leaf_node : tree.get_leaves()) {
-      auto new_cg =
-          sample_.GetNodeFromMAT(sample_.GetMAT().get_node(leaf_node->node_id))
-              .GetCompactGenome()
-              .Copy();
-      mat_node_to_cg_map_[leaf_node] = new_cg.Copy();
+      auto node = sample_.GetNodeFromMAT(sample_.GetMAT().get_node(leaf_node->node_id));
+      auto new_cg = node.GetCompactGenome().Copy(&node);
+      mat_node_to_cg_map_[leaf_node] = std::move(new_cg);
     }
   }
 

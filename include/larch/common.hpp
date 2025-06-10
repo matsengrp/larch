@@ -9,6 +9,13 @@
 #include <typeinfo>
 #include <random>
 #include <optional>
+#include <variant>
+#include <mutex>
+#include <shared_mutex>
+#include <execution>
+#include <thread>
+#include <atomic>
+#include <iostream>
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -18,6 +25,18 @@
 #pragma GCC diagnostic ignored "-Wstack-usage="
 #include <range/v3/all.hpp>
 #pragma GCC diagnostic pop
+
+#include "larch/debug.hpp"
+
+static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
+
+template <typename T>
+struct remove_cvref {
+  using type = std::remove_cv_t<std::remove_reference_t<T>>;
+};
+
+template <typename T>
+using remove_cvref_t = typename remove_cvref<T>::type;
 
 template <typename T>
 struct type_identity {
@@ -33,11 +52,181 @@ struct finally {
   Fn fn_;
 };
 
+///////////////////////////////////////////////////////
+
+template <typename T>
+struct is_variant : std::false_type {};
+
+template <typename... Args>
+struct is_variant<std::variant<Args...>> : std::true_type {};
+
+template <typename T>
+static constexpr const bool is_variant_v = is_variant<T>::value;
+
+///////////////////////////////////////////////////////
+
+template <typename T>
+using value_t_helper = ranges::iter_value_t<ranges::iterator_t<T>>;
+
+template <typename... Views>
+struct variant_of_views_helper {
+  static_assert(sizeof...(Views) > 0);
+  static_assert((ranges::view_<std::remove_reference_t<Views>> and ...));
+  static_assert((ranges::common_range<std::remove_reference_t<Views>> and ...));
+
+  using value_t = value_t_helper<
+      std::tuple_element_t<0, std::tuple<std::remove_reference_t<Views>...>>>;
+
+  constexpr static bool has_nested = ranges::range<value_t>;
+
+  static_assert(has_nested or
+                (std::is_convertible_v<value_t_helper<std::remove_reference_t<Views>>,
+                                       value_t> and
+                 ...));
+
+  using views_variant_t = std::variant<remove_cvref_t<Views>...>;
+
+  using iter_variant_t = std::variant<ranges::iterator_t<const Views&>...>;
+
+  static constexpr auto index_seq = std::index_sequence_for<Views...>{};
+
+  template <size_t... I>
+  static bool iters_equal(const iter_variant_t& lhs, const iter_variant_t& rhs,
+                          std::index_sequence<I...>) {
+    if (lhs.index() != rhs.index()) {
+      return false;
+    }
+    return ((I == lhs.index() and std::get<I>(lhs) == std::get<I>(rhs)) or ...);
+  }
+};
+
+template <typename...>
+class variant_of_views;
+
+template <typename... Views>
+struct variant_of_views_nested_helper {
+  static_assert(variant_of_views_helper<Views...>::has_nested);
+  using variant_of_views_t =
+      variant_of_views<value_t_helper<std::remove_reference_t<Views>>...>;
+};
+
+template <typename... Views>
+class variant_of_views_iterator {
+  using helper = variant_of_views_helper<Views...>;
+
+ public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = typename helper::value_t;
+  using difference_type = std::ptrdiff_t;
+
+  variant_of_views_iterator() = default;
+  variant_of_views_iterator(const variant_of_views_iterator&) = default;
+  variant_of_views_iterator& operator=(const variant_of_views_iterator&) = default;
+
+  variant_of_views_iterator(const typename helper::iter_variant_t& iter)
+      : iter_{iter} {}
+
+  bool operator==(const variant_of_views_iterator& other) const {
+    return helper::iters_equal(iter_, other.iter_, helper::index_seq);
+  }
+
+  bool operator!=(const variant_of_views_iterator& other) const {
+    return not(*this == other);
+  }
+
+  decltype(auto) operator*() const {
+    if constexpr (helper::has_nested) {
+      return std::visit(
+          [](auto& x) {
+            using nested =
+                typename variant_of_views_nested_helper<Views...>::variant_of_views_t;
+            return nested{*x};
+          },
+          iter_);
+    } else {
+      return std::visit([](auto& x) { return *x; }, iter_);
+    }
+  }
+
+  variant_of_views_iterator& operator++() {
+    std::visit([](auto& x) { ++x; }, iter_);
+    return *this;
+  }
+
+  void operator++(int) { ++*this; }
+
+ private:
+  template <
+      typename Sentinel,
+      typename = std::enable_if_t<
+          (ranges::sentinel_for<Sentinel, ranges::iterator_t<remove_cvref_t<Views>>> or
+           ...)>>
+  friend bool operator==(const variant_of_views_iterator<Views...>& iter,
+                         Sentinel&& sent) {
+    return iter.iter_ == sent;
+  }
+
+  template <
+      typename Sentinel,
+      typename = std::enable_if_t<
+          (ranges::sentinel_for<Sentinel, ranges::iterator_t<remove_cvref_t<Views>>> or
+           ...)>>
+  friend bool operator==(Sentinel&& sent,
+                         const variant_of_views_iterator<Views...>& iter) {
+    return iter.iter_ == sent;
+  }
+
+  typename helper::iter_variant_t iter_;
+};
+
+template <typename... Views>
+class variant_of_views {
+  using helper = variant_of_views_helper<Views...>;
+  using iterator = variant_of_views_iterator<Views...>;
+
+ public:
+  variant_of_views() = default;
+  variant_of_views(const variant_of_views<Views...>&) = default;
+  variant_of_views(variant_of_views<Views...>&&) = default;
+  variant_of_views(variant_of_views<Views...>&) = default;
+  variant_of_views& operator=(const variant_of_views<Views...>&) = default;
+  variant_of_views& operator=(variant_of_views<Views...>&&) = default;
+
+  template <typename T>
+  variant_of_views(T&& view) : view_{std::forward<T>(view)} {}
+
+  iterator begin() const {
+    return std::visit([](auto& x) { return iterator{x.begin()}; }, view_);
+  }
+
+  iterator end() const {
+    return std::visit([](auto& x) { return iterator{x.end()}; }, view_);
+  }
+
+  size_t size() const {
+    return std::visit([](auto& x) { return static_cast<size_t>(x.size()); }, view_);
+  }
+
+  bool empty() const {
+    return std::visit([](auto& x) { return x.empty(); }, view_);
+  }
+
+ private:
+  typename helper::views_variant_t view_;
+};
+
+template <typename... Views>
+constexpr bool ranges::enable_view<variant_of_views<Views...>> = true;
+
+///////////////////////////////////////////////////////
+
+enum class IdContinuity { Dense, Sparse };
+
+enum class Ordering { Ordered, Unordered };
+
 struct NodeId;
 struct EdgeId;
 struct CladeIdx;
-
-static constexpr const size_t NoId = std::numeric_limits<size_t>::max();
 
 template <typename T, typename Id>
 [[nodiscard]] static T& GetOrInsert(std::vector<T>& data, Id id) {
@@ -81,7 +270,18 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #define TOSTRING(x) STRINGIFY(x)
 
 #ifndef NDEBUG
-#include <iostream>
+#ifdef USE_CPPTRACE
+#define Assert(x)                                                       \
+  {                                                                     \
+    if (not(x)) {                                                       \
+      std::cerr << "Assert failed: \"" #x "\" in " __FILE__             \
+                   ":" TOSTRING(__LINE__) "\n";                         \
+      DebugItem::print_current_trace();                                 \
+      throw std::runtime_error("Assert failed: \"" #x "\" in " __FILE__ \
+                               ":" TOSTRING(__LINE__));                 \
+    }                                                                   \
+  }
+#else
 #define Assert(x)                                                       \
   {                                                                     \
     if (not(x)) {                                                       \
@@ -91,6 +291,7 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
                                ":" TOSTRING(__LINE__));                 \
     }                                                                   \
   }
+#endif
 #else
 #define Assert(x) \
   {}
@@ -100,7 +301,15 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #ifndef NDEBUG
   std::cerr << msg << "\n";
 #endif
+#ifdef USE_CPPTRACE
+  DebugItem::print_current_trace();
+#endif
   throw std::runtime_error(msg);
+}
+
+template <typename ReturnType = void>
+[[noreturn]] ReturnType* Unreachable() {
+  Fail("Unreachable");
 }
 
 #define MOVE_ONLY(x)                    \
@@ -137,19 +346,39 @@ constexpr bool is_specialization_v = is_specialization<L, R>::value;
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-template <typename, typename>
+template <typename, typename, template <typename, typename> typename>
 struct tuple_contains {};
 
-template <typename... Types, typename Type>
-struct tuple_contains<std::tuple<Types...>, Type>
-    : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
+template <typename... Types, typename Type, template <typename, typename> typename Comp>
+struct tuple_contains<std::tuple<Types...>, Type, Comp>
+    : std::bool_constant<(Comp<Types, Type>::value || ...)> {};
+template <typename... Types, typename Type, template <typename, typename> typename Comp>
+struct tuple_contains<const std::tuple<Types...>, Type, Comp>
+    : std::bool_constant<(Comp<Types, Type>::value || ...)> {};
 
-template <typename... Types, typename Type>
-struct tuple_contains<const std::tuple<Types...>, Type>
-    : std::bool_constant<(std::is_same_v<Types, Type> || ...)> {};
+template <typename Tuple, typename Type, template <typename, typename> typename Comp>
+inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type, Comp>::value;
 
-template <typename Tuple, typename Type>
-inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
+//////////////////////////////////////////////////////////////////////////////////////
+
+template <typename T, template <typename, typename> typename Comp, typename Tuple,
+          size_t I = 0>
+constexpr auto& tuple_get(Tuple& x) {
+  if constexpr (I < std::tuple_size_v<Tuple>) {
+    using E = std::remove_const_t<std::tuple_element_t<I, Tuple>>;
+    if constexpr (Comp<T, E>::value) {
+      return std::get<I>(x);
+    } else {
+      if constexpr (I + 1 < std::tuple_size_v<Tuple>) {
+        return tuple_get<T, Comp, Tuple, I + 1>(x);
+      } else {
+        static_assert(sizeof(T) == NoId, "Not found");
+      }
+    }
+  } else {
+    static_assert(sizeof(T) == NoId, "Not found");
+  }
+}
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -158,16 +387,16 @@ inline constexpr bool tuple_contains_v = tuple_contains<Tuple, Type>::value;
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wc++20-extensions"
 template <typename T>
-inline const auto tuple_to_string_impl = [
-]<std::size_t... I>(std::index_sequence<I...>) {
-  std::string result = "std::tuple<";
-  result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
-                    std::string{", "}));
-  result.pop_back();
-  result.pop_back();
-  result += ">";
-  return result;
-};
+inline const auto tuple_to_string_impl =
+    []<std::size_t... I>(std::index_sequence<I...>) {
+      std::string result = "std::tuple<";
+      result += (... + (std::string{typeid(std::tuple_element_t<I, T>).name()} +
+                        std::string{", "}));
+      result.pop_back();
+      result.pop_back();
+      result += ">";
+      return result;
+    };
 
 template <typename T>
 inline std::string tuple_to_string() {

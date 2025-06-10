@@ -31,8 +31,8 @@ struct MergeDAGStorage : LongNameOf<MergeDAGStorage<Target>>::type {
   SHORT_NAME(MergeDAGStorage);
 };
 
-using MergeDAG = DAGView<const MergeDAGStorage<>>;
-using MutableMergeDAG = DAGView<MergeDAGStorage<>>;
+using MergeDAG = typename MergeDAGStorage<>::ConstViewType;
+using MutableMergeDAG = typename MergeDAGStorage<>::ViewType;
 
 class Merge {
   using AddedEdge = std::tuple<EdgeLabel, EdgeId, NodeId, NodeId, CladeIdx>;

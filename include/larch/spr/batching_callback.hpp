@@ -5,34 +5,45 @@
 
 #include "larch/spr/spr_view.hpp"
 #include "larch/merge/merge.hpp"
+#include "larch/mat_view.hpp"
 
-template <typename CRTP, typename SampleDAG>
+template <typename CRTP>
 class BatchingCallback : public Move_Found_Callback {
  public:
-  BatchingCallback(Merge& merge, SampleDAG sample_dag);
-  BatchingCallback(Merge& merge, SampleDAG sample_dag,
-                   bool collapse_empty_fragment_edges);
+  BatchingCallback(Merge& merge);
+  BatchingCallback(Merge& merge, bool collapse_empty_fragment_edges);
 
   virtual ~BatchingCallback() {
     auto lock = WriteLock(mat_mtx_);
+#if USE_MAT_VIEW
+    sample_mat_tree_.delete_nodes();
+#else
     if (sample_mat_storage_ != nullptr) {
       sample_mat_storage_->View().GetMutableMAT().delete_nodes();
       sample_mat_storage_ = nullptr;
     }
+#endif
   }
 
-  using Storage = MergeDAGStorage<>;  // TODO MADAG storage?
+#if USE_MAT_VIEW
+  using Storage = MergeDAGStorage<>;
+  using MATStorage = UncondensedMergeDAGStorage;
+  using SPRType = decltype(AddSPRStorage(std::declval<MATStorage>().View()));
+  using ReassignedStatesStorage =
+      decltype(AddMappedNodes(AddMATConversion(MergeDAGStorage<>::EmptyDefault())));
+  using FragmentType = FragmentStorage<decltype(std::declval<SPRType>().View())>;
+#else
+  using Storage = MergeDAGStorage<>;
   using MATStorage = decltype(AddMATConversion(Storage::EmptyDefault()));
-  using SPRType =
-      decltype(AddSPRStorage(AddMATConversion(Storage::EmptyDefault()).View()));
+  using SPRType = decltype(AddSPRStorage(std::declval<MATStorage>().View()));
   using ReassignedStatesStorage =
       decltype(AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
   using FragmentType = FragmentStorage<decltype(std::declval<SPRType>().View())>;
+#endif
 
   bool operator()(Profitable_Moves& move, int best_score_change,
                   std::vector<Node_With_Major_Allele_Set_Change>&
                       nodes_with_major_allele_set_change) override;
-
   void operator()(MAT::Tree& tree);
 
   void OnReassignedStates(MAT::Tree& tree);
@@ -50,17 +61,61 @@ class BatchingCallback : public Move_Found_Callback {
     std::unique_ptr<FragmentType> fragment;
   };
 
+#if USE_MAT_VIEW
+  static MAT::Node* CopyNode(const MAT::Node* in, MAT::Node* parent) {
+    MAT::Node* out = new MAT::Node{in->node_id};
+    out->branch_length = in->branch_length;
+    out->parent = parent;
+    out->mutations = in->mutations;
+    out->have_masked = in->have_masked;
+    out->children.reserve(in->children.size());
+    for (auto* c : in->children) {
+      out->children.push_back(CopyNode(c, out));
+    }
+    return out;
+  }
+
+  static MAT::Tree CopyTree(const MAT::Tree& in) {
+    MAT::Tree out;
+    out.root = CopyNode(in.root, nullptr);
+    out.node_names = in.node_names;
+    out.node_name_to_idx_map = in.node_name_to_idx_map;
+    out.node_idx = in.node_idx;
+    out.num_nodes = in.num_nodes;
+    out.root_ident = in.root_ident;
+    out.max_level = in.max_level;
+    out.condensed_nodes = in.condensed_nodes;
+    out.curr_internal_node = in.curr_internal_node;
+    out.all_nodes.resize(in.all_nodes.size());
+    for (auto node : out.depth_first_expansion()) {
+      out.all_nodes[node->node_id] = node;
+    }
+    return out;
+  }
+
+  void SetSample(MAT::Tree& tree, std::string ref_seq) {
+    sample_mat_tree_.delete_nodes();
+    sample_mat_tree_ = CopyTree(tree);
+    sample_refseq_ = std::move(ref_seq);
+  }
+  MAT::Tree sample_mat_tree_;
+  std::string sample_refseq_;
+
+  void CreateMATViewStorage(MAT::Tree& tree, std::string_view ref_seq);
+#else
   void CreateMATStorage(MAT::Tree& tree, std::string_view ref_seq);
+#endif
 
   Merge& merge_;
-  SampleDAG sample_dag_;
   bool collapse_empty_fragment_edges_;
-  std::atomic<size_t> applied_moves_count_;
+
   std::unique_ptr<ReassignedStatesStorage> reassigned_states_storage_ =
       std::make_unique<ReassignedStatesStorage>(
-          AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
-  std::shared_mutex mat_mtx_;
+          AddMappedNodes(AddMATConversion(MergeDAGStorage<>::EmptyDefault())));
   std::unique_ptr<MATStorage> sample_mat_storage_;
+
+  std::atomic<size_t> applied_moves_count_;
+  std::shared_mutex mat_mtx_;
   std::mutex merge_mtx_;
   Reduction<std::deque<MoveStorage>> moves_batch_{32};
 };

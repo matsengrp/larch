@@ -2,6 +2,8 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+#include "larch/parallel/reduction.hpp"
+
 template <typename Target, Component C>
 struct FragmentElementsContainer {
   static_assert(Target::role == Role::View);
@@ -21,44 +23,50 @@ struct FragmentElementsContainer {
       TargetStorage::template contains_element_feature<C, Feature>;
 
   template <typename CRTP>
-  struct ConstElementViewBase : TargetStorage::ConstElementViewBase<C, CRTP> {};
+  struct ConstElementViewBase : TargetStorage::template ConstElementViewBase<C, CRTP> {
+  };
   template <typename CRTP>
-  struct MutableElementViewBase : TargetStorage::MutableElementViewBase<C, CRTP> {
+  struct MutableElementViewBase
+      : TargetStorage::template MutableElementViewBase<C, CRTP> {
     using TargetStorage::template MutableElementViewBase<C, CRTP>::operator=;
   };
 
   template <typename CRTP>
-  struct ExtraConstElementViewBase : TargetContainer::ExtraConstElementViewBase<CRTP> {
-  };
+  struct ExtraConstElementViewBase
+      : TargetContainer::template ExtraConstElementViewBase<CRTP> {};
   template <typename CRTP>
   struct ExtraMutableElementViewBase
-      : TargetContainer::ExtraMutableElementViewBase<CRTP> {};
+      : TargetContainer::template ExtraMutableElementViewBase<CRTP> {};
 
   FragmentElementsContainer(Target target, std::vector<Id<C>>&& ids);
   MOVE_ONLY(FragmentElementsContainer);
 
+  template <typename VT>
   size_t GetCount() const;
 
   Id<C> GetNextAvailableId() const { return target_.template GetNextAvailableId<C>(); }
 
-  template <typename Feature>
-  auto& GetFeatureStorage(Id<C> id);
-  template <typename Feature>
-  const auto& GetFeatureStorage(Id<C> id) const;
+  template <typename Feature, typename E>
+  auto GetFeatureStorage(Id<C> id, E elem);
+  template <typename Feature, typename E>
+  auto GetFeatureStorage(Id<C> id, E elem) const;
 
   template <typename Feature>
-  auto& GetFeatureExtraStorage();
+  auto GetFeatureExtraStorage();
   template <typename Feature>
-  const auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
-  auto All() const { return ids_ | ranges::views::all; }
+  template <typename VT>
+  auto All() const {
+    return ids_ | ranges::views::all;
+  }
 
  private:
   Target target_;
   const std::vector<Id<C>> ids_;
   std::conditional_t<
       C == Component::Node,
-      IdContainer<NodeId, Neighbors, IdContinuity::Sparse, Ordering::Ordered>,
+      IdContainer<NodeId, DAGNeighbors, IdContinuity::Sparse, Ordering::Ordered>,
       std::tuple<>>
       fragment_element_features_;
 };
@@ -81,18 +89,18 @@ struct FragmentExtraStorage {
   using Base = typename Target::StorageType::ExtraStorageType::template Base<T, CRTP>;
 
   template <typename Feature>
-  auto& GetFeatureStorage() {
+  auto GetFeatureStorage() {
     if constexpr (std::is_same_v<Feature, Connections>) {
-      return connections_;
+      return std::ref(connections_);
     } else {
       return target_.GetStorage().template GetFeatureStorage<Feature>();
     }
   }
 
   template <typename Feature>
-  const auto& GetFeatureStorage() const {
+  auto GetFeatureStorage() const {
     if constexpr (std::is_same_v<Feature, Connections>) {
-      return connections_;
+      return std::cref(connections_);
     } else {
       return target_.GetStorage().template GetFeatureStorage<Feature>();
     }
@@ -134,9 +142,18 @@ struct FragmentStorage : LongNameOf<FragmentStorage<Target>>::type {
                                   std::vector<EdgeId>&& edges, NodeId root_node_id) {
     static_assert(Target::role == Role::View);
 
+    std::set<NodeId> nodes_set{nodes.begin(), nodes.end()};
+    std::vector<EdgeId> edges_set;
+    for (auto edge : edges | Transform::ToEdges(target)) {
+      if (nodes_set.find(edge.GetChildId()) != nodes_set.end() and
+          nodes_set.find(edge.GetParentId()) != nodes_set.end()) {
+        edges_set.push_back(edge.GetId());
+      }
+    }
     FragmentStorage result{
         FragmentElementsContainer<Target, Component::Node>{target, std::move(nodes)},
-        FragmentElementsContainer<Target, Component::Edge>{target, std::move(edges)},
+        FragmentElementsContainer<Target, Component::Edge>{target,
+                                                           std::move(edges_set)},
         FragmentExtraStorage<Target>{target, root_node_id}};
 
     auto view = result.View();
@@ -156,18 +173,18 @@ FragmentStorage<Target> AddFragmentStorage(const Target& target,
 }
 
 template <typename DAG>
-auto GetFullDAG(DAG&& dag) {
-  static_assert(std::remove_reference_t<DAG>::role == Role::View);
-  static_assert(std::remove_reference_t<DAG>::component == Component::DAG);
+auto GetFullDAG(DAG dag) {
+  static_assert(DAG::role == Role::View);
+  static_assert(DAG::component == Component::DAG);
   return dag;
 }
 
 template <typename DAG, template <typename, typename> typename Base>
-auto GetFullDAG(DAGView<FragmentStorage<DAG>, Base>&& dag) {
+auto GetFullDAG(DAGView<FragmentStorage<DAG>, Base> dag) {
   return dag.GetStorage().GetTargetStorage().View();
 }
 
 template <typename DAG, template <typename, typename> typename Base>
-auto GetFullDAG(DAGView<const FragmentStorage<DAG>, Base>&& dag) {
+auto GetFullDAG(DAGView<const FragmentStorage<DAG>, Base> dag) {
   return dag.GetStorage().GetTargetStorage().View();
 }

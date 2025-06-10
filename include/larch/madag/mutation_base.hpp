@@ -12,52 +12,80 @@
 #include "larch/contiguous_map.hpp"
 
 struct MutationBase {
-  static constexpr size_t BitCount = 4;
-  using BitArray = std::array<bool, BitCount>;
+  using type = std::uint32_t;
 
-  MutationBase() = default;
-  inline MutationBase(const BitArray &m_value_in);
-  inline MutationBase(char m_char_in);
+  MutationBase() : value{0} {}  // TODO
 
-  inline bool IsCompatible(const MutationBase &rhs) const;
+  constexpr MutationBase(char x) noexcept : value{x == 'N' ? ~zero : mask(x)} {}
+
+  template <typename... Chars>
+  constexpr MutationBase(Chars... x) noexcept : value{zero | (mask(x) | ...)} {
+    static_assert(sizeof...(Chars) > 1);
+    static_assert((std::is_same_v<Chars, char> and ...));
+  }
+
+  constexpr char ToChar() const noexcept {
+    const int ctz = __builtin_ctz(value);
+    const type bit = one << ctz;
+    if ((value & bit) == value) {
+      return 'A' + static_cast<char>(ctz);
+    } else {
+      return 'N';
+    }
+  }
+
+  inline bool IsCompatible(const MutationBase& rhs) const;
   inline bool IsAmbiguous() const;
 
   inline MutationBase GetComplementaryBase() const;
   inline MutationBase GetFirstBase() const;
-  inline MutationBase GetCommonBases(const MutationBase &rhs) const;
-  inline MutationBase GetFirstCommonBase(const MutationBase &rhs) const;
+  inline MutationBase GetCommonBases(const MutationBase& rhs) const;
+  inline MutationBase GetFirstCommonBase(const MutationBase& rhs) const;
 
-  inline char ToChar() const;
-  static inline std::string ToString(const std::vector<MutationBase> &m_in);
-  friend std::ostream &operator<<(std::ostream &os, const MutationBase &m_in);
-  friend std::ostream &operator<<(std::ostream &os,
-                                  const std::vector<MutationBase> &m_in);
+  static inline std::string ToString(const std::vector<MutationBase>& m_in);
 
-  inline bool operator==(const MutationBase &rhs) const;
-  inline bool operator!=(const MutationBase &rhs) const;
-  inline bool operator<(const MutationBase &rhs) const;
-  inline bool operator==(const BitArray &rhs) const;
-  inline bool operator!=(const BitArray &rhs) const;
-  inline bool operator<(const BitArray &rhs) const;
-  inline bool operator==(const char &rhs) const;
-  inline bool operator!=(const char &rhs) const;
-  inline bool operator<(const char &rhs) const;
-  friend bool operator==(const char &lhs, const MutationBase &rhs);
-  friend bool operator!=(const char &lhs, const MutationBase &rhs);
-  friend bool operator<(const char &lhs, const MutationBase &rhs);
+  inline bool operator==(const MutationBase& rhs) const;
+  inline bool operator!=(const MutationBase& rhs) const;
+  inline bool operator<(const MutationBase& rhs) const;
+  inline bool operator==(const char& rhs) const;
+  inline bool operator!=(const char& rhs) const;
+  inline bool operator<(const char& rhs) const;
+  friend bool operator==(const char& lhs, const MutationBase& rhs);
+  friend bool operator!=(const char& lhs, const MutationBase& rhs);
+  friend bool operator<(const char& lhs, const MutationBase& rhs);
 
-  friend MutationBase::BitArray operator&(const BitArray &lhs, const BitArray &rhs);
+ private:
+  MutationBase(type x) : value{x} {}
 
-  struct DNA {
-    static constexpr size_t DNACount = 4;
-    static const MutationBase A, C, G, T, N;
-    static const char ambiguous_char;
-    static const std::array<MutationBase, DNACount> bases;
-    static const ContiguousMap<MutationBase, char> mut_to_char_map;
-    static const ContiguousMap<MutationBase, MutationBase> complement_map;
-  };
+  constexpr int Count() const noexcept { return __builtin_popcount(value); }
 
-  BitArray value = {false, false, false, false};
+  constexpr bool Test(char x) const noexcept { return (value & mask(x)) != 0; }
+
+  constexpr void Set(char x) noexcept { value |= mask(x); }
+
+  constexpr void Clear(char x) noexcept { value &= ~mask(x); }
+
+  constexpr void SetOnly(char x) noexcept { value = mask(x); }
+
+  constexpr void SetAll() noexcept { value = ~zero; }
+
+  constexpr std::optional<MutationBase> Common(MutationBase rhs) const noexcept {
+    type result = value & rhs.value;
+    if (result == 0) {
+      return std::nullopt;
+    }
+    return MutationBase{result};
+  }
+
+  constexpr char GetFirst() const noexcept {
+    return 'A' + static_cast<char>(__builtin_ctz(value));
+  }
+
+  static constexpr type mask(char x) noexcept { return one << (x - 'A'); }
+
+  type value;
+  static constexpr const type zero = 0;
+  static constexpr const type one = 1;
 };
 
 static_assert(std::is_trivially_copyable_v<MutationBase>);
@@ -65,7 +93,7 @@ static_assert(std::is_trivially_copyable_v<MutationBase>);
 namespace std {
 template <>
 struct hash<MutationBase> {
-  std::size_t operator()(const MutationBase &obj) const {
+  std::size_t operator()(const MutationBase& obj) const {
     return static_cast<std::size_t>(obj.ToChar());
   }
 };

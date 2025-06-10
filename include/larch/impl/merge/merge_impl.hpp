@@ -32,8 +32,10 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   // });
 #endif
 
-  constexpr IdContinuity id_continuity = std::remove_reference_t<decltype(dags.at(
-      0))>::template id_continuity<Component::Node>;
+  constexpr IdContinuity id_continuity = IdContinuity::Sparse;
+  // FIXME constexpr IdContinuity id_continuity =
+  // std::remove_reference_t<decltype(dags.at(
+  //     0))>::template id_continuity<Component::Node>;
   std::vector<IdContainer<NodeId, NodeLabel, id_continuity, Ordering::Ordered>>
       dags_labels;
   dags_labels.resize(dags.size());
@@ -41,8 +43,9 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   ParallelForEach(idxs,
                   [&](size_t i) { MergeCompactGenomes(i, dags, below, dags_labels); });
 
-  ParallelForEach(idxs,
-                  [&](size_t i) { ComputeLeafSets(i, dags, below, dags_labels); });
+  SeqForEach(idxs, [&](size_t i) {
+    ComputeLeafSets(i, dags, below, dags_labels);
+  });  // FIXME Parallel
 
 #ifndef NDEBUG
   ParallelForEach(idxs, [&](size_t i) {
@@ -52,7 +55,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   });
 #endif
 
-  std::atomic<size_t> node_id{ResultDAG().GetNextAvailableNodeId().value};
+  std::atomic<size_t> node_id{ResultDAG().GetNextAvailableNodeId<MergeDAG>().value};
   ParallelForEach(idxs,
                   [&](size_t i) { MergeNodes(i, dags, below, dags_labels, node_id); });
 
@@ -79,11 +82,13 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
       added_edges);
 
   ResultDAG().InitializeNodes(result_nodes_.size());
-  std::atomic<size_t> edge_id{ResultDAG().GetNextAvailableEdgeId().value};
+  std::atomic<size_t> edge_id{
+      ResultDAG().template GetNextAvailableEdgeId<MergeDAG>().value};
   ResultDAG().InitializeEdges(result_edges_.size());
   idxs.resize(added_edges.size());
   std::iota(idxs.begin(), idxs.end(), 0);
-  ParallelForEach(idxs, [&](size_t i) { BuildResult(i, added_edges, edge_id); });
+  SeqForEach(  // FIXME ParallelForEach
+      idxs, [&](size_t i) { BuildResult(i, added_edges, edge_id); });  // FIXME parallel
 
   if (was_empty) {
     ResultDAG().BuildConnections();
@@ -157,7 +162,7 @@ void Merge::ComputeResultEdgeMutations() {
 
           if (result_dag.Get(child_node).IsLeaf()) {
             const CompactGenome& child =
-                sample_id_to_cg_map.at(label.GetChild().GetSampleId()->ToString());
+                sample_id_to_cg_map.at(label.GetChild().GetSampleId().ToString());
 
             result_dag.Get(edge_id).SetEdgeMutations(CompactGenome::ToEdgeMutations(
                 result_dag.GetReferenceSequence(), parent, child));
@@ -193,8 +198,8 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
       Assert(node.Const().HaveSampleId());
       auto id_iter =
           ResultDAG().template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
-              node.Const().GetSampleId());
-      labels.at(node).SetSampleId(id_iter.first);
+              SampleId::Make(node.Const().GetSampleId().value()));
+      labels.at(node).SetSampleId(*id_iter.first);
     } else {
       if (not node.GetCompactGenome().empty()) {
         auto cg_iter = ResultDAG()
@@ -206,8 +211,8 @@ void Merge::MergeCompactGenomes(size_t i, const DAGSRange& dags, NodeId below,
   }
   for (auto leaf_node : dag.Const().GetLeafs()) {
     Assert(leaf_node.HaveSampleId());
-    std::string sid = leaf_node.GetSampleId().value();
-    sample_id_to_cg_map_.insert({sid, leaf_node.GetCompactGenome().Copy()});
+    std::string sid{leaf_node.GetSampleId().value()};
+    sample_id_to_cg_map_.insert({sid, leaf_node.GetCompactGenome().Copy(&leaf_node)});
   }
 }
 
@@ -217,8 +222,8 @@ void Merge::ComputeLeafSets(size_t i, const DAGSRange& dags, NodeId below,
   auto dag = GetFullDAG(dags.at(i));
   NodeLabelsContainer& labels = dags_labels.at(i);
   labels.reserve(dag.GetNodesCount());
-  using ComputedLSType =
-      IdContainer<NodeId, LeafSet, IdContinuity::Dense, Ordering::Ordered>;
+  using ComputedLSType = IdContainer<NodeId, LeafSet, IdContinuity::Sparse,
+                                     Ordering::Ordered>;  // FIXME Dense
   ComputedLSType computed_ls = LeafSet::ComputeLeafSets<ComputedLSType>(dag, labels);
   for (auto node : dag.GetNodes()) {
     if (below.value != NoId and node.IsUA()) {
@@ -305,8 +310,8 @@ void Merge::BuildResult(size_t i, std::vector<Merge::AddedEdge>& added_edges,
   Assert(result_parent_id.value != NoId);
   Assert(result_child_id.value != NoId);
   Assert(result_parent_id != result_child_id);
-  Assert(result_parent_id < ResultDAG().GetNextAvailableNodeId());
-  Assert(result_child_id < ResultDAG().GetNextAvailableNodeId());
+  Assert(result_parent_id < ResultDAG().template GetNextAvailableNodeId<MergeDAG>());
+  Assert(result_child_id < ResultDAG().template GetNextAvailableNodeId<MergeDAG>());
   parent_id = result_parent_id;
   child_id = result_child_id;
   clade = edge.ComputeCladeIdx();
@@ -325,13 +330,12 @@ void Merge::ComputeResultEdgeMutations(Edge edge, const EdgeLabel& label) {
   Assert(label.GetParent().GetCompactGenome());
   const CompactGenome& parent = *label.GetParent().GetCompactGenome();
 
-  if (edge.GetChild().IsLeaf()) {
-    std::string sid = label.GetChild().GetSampleId()->ToString();
+  if (edge.GetChild().GetCladesCount() < 1) {
+    std::string sid = label.GetChild().GetSampleId().ToString();
     const CompactGenome* child = sample_id_to_cg_map_.find(sid);
     if (child == nullptr) {
       return;
     }
-
     edge.SetEdgeMutations(CompactGenome::ToEdgeMutations(
         ResultDAG().GetReferenceSequence(), parent, *child));
   } else {

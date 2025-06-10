@@ -23,7 +23,7 @@ struct ExtraFeatureStorage<Deduplicate<Feature>> {
  private:
   template <typename CRTP, typename F>
   // NOLINTNEXTLINE(readability-redundant-declaration)
-  friend auto& GetFeatureStorage(const FeatureConstView<F, CRTP, Deduplicate<F>>*);
+  friend auto GetFeatureStorage(const FeatureConstView<F, CRTP, Deduplicate<F>>*);
 
   template <typename, typename, typename>
   friend struct FeatureMutableView;
@@ -35,7 +35,7 @@ struct ExtraFeatureStorage<Deduplicate<Feature>> {
 };
 
 template <typename CRTP, typename Feature>
-auto& GetFeatureStorage(
+auto GetFeatureStorage(
     const FeatureConstView<Feature, CRTP, Deduplicate<Feature>>* feature);
 
 template <typename Feature, typename CRTP>

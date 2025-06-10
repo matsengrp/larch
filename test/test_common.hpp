@@ -22,12 +22,37 @@ struct Test {
 
 bool add_test(const Test& test) noexcept;
 
+#ifdef USE_CPPTRACE
+#define TestAssert(x)                                                       \
+  {                                                                         \
+    if (not(x)) {                                                           \
+      DebugItem::print_current_trace();                                     \
+      throw std::runtime_error("TestAssert failed: \"" #x "\" in " __FILE__ \
+                               ":" TOSTRING(__LINE__));                     \
+    }                                                                       \
+  }
+#else
 #define TestAssert(x)                                                       \
   {                                                                         \
     if (not(x)) {                                                           \
       throw std::runtime_error("TestAssert failed: \"" #x "\" in " __FILE__ \
                                ":" TOSTRING(__LINE__));                     \
     }                                                                       \
+  }
+#endif
+
+#define TestThrow(x)                                                       \
+  {                                                                        \
+    bool caught = false;                                                   \
+    try {                                                                  \
+      (x);                                                                 \
+    } catch (...) {                                                        \
+      caught = true;                                                       \
+    }                                                                      \
+    if (not caught) {                                                      \
+      throw std::runtime_error("TestThrow failed: \"" #x "\" in " __FILE__ \
+                               ":" TOSTRING(__LINE__));                    \
+    }                                                                      \
   }
 
 inline void print_peak_mem() {

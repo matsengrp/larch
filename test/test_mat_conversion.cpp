@@ -6,8 +6,8 @@ using Storage = MergeDAGStorage<>;
 
 template <typename DAG>
 [[maybe_unused]] bool check_leaf_sample_ids(DAG dag, MAT::Tree& tree) {
-  std::set<std::string> dag_leaf_sample_ids;
-  std::set<std::string> mat_leaf_node_names;
+  std::set<std::string_view> dag_leaf_sample_ids;
+  std::set<std::string_view> mat_leaf_node_names;
 
   for (auto dag_leaf : dag.GetLeafs()) {
     TestAssert(dag_leaf.HaveSampleId());
@@ -59,14 +59,14 @@ template <typename DAG>
                 test_sample_id_conversion("data/startmat/startmat_no_ancestral.pb.gz",
                                           "data/startmat/refseq.txt.gz", "");
               },
-              "Check SampleIds on startmat",
+              "MATConversion: Check SampleIds on startmat",
               {"slow"}});
 
-[[maybe_unused]] static const auto test_added2 =
-    add_test({[]() {
-                test_sample_id_conversion(
-                    "data/test_ambiguous_vcf/amb_mat.pb",
-                    "data/test_ambiguous_vcf/sample_reference_sequence.fasta",
-                    "data/test_ambiguous_vcf/amb.vcf");
-              },
-              "Check SampleIds on MakeSampleDAG with ambiguous VCF input"});
+[[maybe_unused]] static const auto test_added2 = add_test(
+    {[]() {
+       test_sample_id_conversion(
+           "data/test_ambiguous_vcf/amb_mat.pb",
+           "data/test_ambiguous_vcf/sample_reference_sequence.fasta",
+           "data/test_ambiguous_vcf/amb.vcf");
+     },
+     "MATConversion: Check SampleIds on MakeSampleDAG with ambiguous VCF input"});

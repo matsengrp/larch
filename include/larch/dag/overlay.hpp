@@ -30,7 +30,8 @@ struct FeatureMutableView<OverlayDAG, CRTP, Tag> {};
 
 template <typename Id, typename Feature>
 using OverlayFeatureStorageType =
-    IdContainer<Id, Feature, IdContinuity::Sparse, Ordering::Unordered>;
+    IdContainer<Id, typename OverlayFeatureType<Feature>::store_type,
+                IdContinuity::Sparse, Ordering::Unordered>;
 
 namespace {
 template <typename>
@@ -39,12 +40,15 @@ struct ToOverlayStorage;
 template <typename... Features>
 struct ToOverlayStorage<std::tuple<Features...>> {
   template <typename Id>
-  using type = std::tuple<OverlayFeatureStorageType<Id, Features>...>;
+  using replaced_type = std::tuple<OverlayFeatureStorageType<Id, Features>...>;
+  using added_type =
+      std::vector<std::tuple<typename OverlayFeatureType<Features>::store_type...>>;
 };
 
 }  // namespace
 
-template <typename ShortName, typename Target>
+template <typename ShortName, typename Target,
+          template <typename, typename> typename ViewBase = DefaultViewBase>
 struct OverlayDAGStorage {
   constexpr static const Component component = Component::DAG;
   constexpr static const Role role = Role::Storage;
@@ -56,6 +60,9 @@ struct OverlayDAGStorage {
 
   using Self =
       std::conditional_t<std::is_same_v<ShortName, void>, OverlayDAGStorage, ShortName>;
+
+  using ViewType = DAGView<Self, ViewBase>;
+  using ConstViewType = DAGView<const Self, ViewBase>;
 
   using TargetView = typename ViewTypeOf<Target>::type;
 
@@ -120,8 +127,10 @@ struct OverlayDAGStorage {
     return Self{Target{target}};
   }
 
-  auto View();
-  auto View() const;
+  template <template <typename, typename> typename Base = ViewBase>
+  DAGView<Self, Base> View();
+  template <template <typename, typename> typename Base = ViewBase>
+  DAGView<const Self, Base> View() const;
 
   NodeId AppendNode();
   EdgeId AppendEdge();
@@ -129,49 +138,75 @@ struct OverlayDAGStorage {
   void AddNode(NodeId id);
   void AddEdge(EdgeId id);
 
+  template <typename VT>
   size_t GetNodesCount() const;
+  template <typename VT>
   size_t GetEdgesCount() const;
 
-  template <Component C>
+  template <Component C, typename VT>
   Id<C> GetNextAvailableId() const {
     if constexpr (C == Component::Node) {
-      return {GetTarget().template GetNextAvailableId<C>().value +
+      return {GetTarget().template GetNextAvailableId<C, VT>().value +
               added_node_storage_.size()};
     } else {
-      return {GetTarget().template GetNextAvailableId<C>().value +
+      return {GetTarget().template GetNextAvailableId<C, VT>().value +
               added_edge_storage_.size()};
     }
   }
 
+  template <typename VT>
+  bool ContainsId(NodeId id) const {
+    if (GetTarget().template ContainsId<VT>(id)) {
+      return true;
+    } else {
+      return id.value <
+             GetTarget().template GetNextAvailableId<Component::Node, VT>().value +
+                 added_node_storage_.size();
+    }
+  }
+
+  template <typename VT>
+  bool ContainsId(EdgeId id) const {
+    if (GetTarget().template ContainsId<VT>(id)) {
+      return true;
+    } else {
+      return id.value <
+             GetTarget().template GetNextAvailableId<Component::Edge, VT>().value +
+                 added_edge_storage_.size();
+    }
+  }
+
+  template <typename VT>
   auto GetNodes() const;
+  template <typename VT>
   auto GetEdges() const;
 
   void InitializeNodes(size_t size);
   void InitializeEdges(size_t size);
 
   template <typename F>
-  auto& GetFeatureStorage();
+  auto GetFeatureStorage();
 
   template <typename F>
-  const auto& GetFeatureStorage() const;
+  auto GetFeatureStorage() const;
 
   template <typename F>
-  auto& GetFeatureStorage(NodeId id);
+  auto GetFeatureStorage(NodeId id);
 
   template <typename F>
-  const auto& GetFeatureStorage(NodeId id) const;
+  auto GetFeatureStorage(NodeId id) const;
 
   template <typename F>
-  auto& GetFeatureStorage(EdgeId id);
+  auto GetFeatureStorage(EdgeId id);
 
   template <typename F>
-  const auto& GetFeatureStorage(EdgeId id) const;
+  auto GetFeatureStorage(EdgeId id) const;
 
   template <Component C, typename F>
-  auto& GetFeatureExtraStorage();
+  auto GetFeatureExtraStorage();
 
   template <Component C, typename F>
-  const auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
   auto& GetTargetStorage() { return *this; }
   auto& GetTargetStorage() const { return *this; }
@@ -184,16 +219,10 @@ struct OverlayDAGStorage {
   auto GetTarget() const;
 
   template <typename F, typename OverlayStorageType>
-  static auto GetFeatureStorageImpl(OverlayStorageType& self, NodeId id)
-      -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
-                                OverlayStorageType::TargetView::is_mutable,
-                            F&, const F&>;
+  static auto GetFeatureStorageImpl(OverlayStorageType& self, NodeId id);
 
   template <typename F, typename OverlayStorageType>
-  static auto GetFeatureStorageImpl(OverlayStorageType& self, EdgeId id)
-      -> std::conditional_t<not std::is_const_v<OverlayStorageType> and
-                                OverlayStorageType::TargetView::is_mutable,
-                            F&, const F&>;
+  static auto GetFeatureStorageImpl(OverlayStorageType& self, EdgeId id);
 
   template <typename, typename, typename>
   friend struct FeatureConstView;
@@ -202,12 +231,12 @@ struct OverlayDAGStorage {
   friend struct FeatureMutableView;
 
   Target target_;
-  typename ToOverlayStorage<AllNodeFeatures>::template type<NodeId>
+  typename ToOverlayStorage<AllNodeFeatures>::template replaced_type<NodeId>
       replaced_node_storage_;
-  typename ToOverlayStorage<AllEdgeFeatures>::template type<EdgeId>
+  typename ToOverlayStorage<AllEdgeFeatures>::template replaced_type<EdgeId>
       replaced_edge_storage_;
-  std::vector<AllNodeFeatures> added_node_storage_;
-  std::vector<AllEdgeFeatures> added_edge_storage_;
+  typename ToOverlayStorage<AllNodeFeatures>::added_type added_node_storage_;
+  typename ToOverlayStorage<AllEdgeFeatures>::added_type added_edge_storage_;
 };
 
 template <typename ShortName, typename DAG>

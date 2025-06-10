@@ -251,10 +251,9 @@ SubtreeWeight<WeightOps, DAG>::SampleTreeImpl(const WeightOps& weight_ops,
   result.View().BuildConnections();
 
   for (auto node : result.View().GetNodes()) {
-    const std::optional<std::string>& old_sample_id =
-        dag_.Get(node.GetOriginalId()).GetSampleId();
+    auto old_sample_id = dag_.Get(node.GetOriginalId()).GetSampleId();
     if (node.IsLeaf() and old_sample_id.has_value()) {
-      node = SampleId{std::optional<std::string>{old_sample_id}};
+      node = SampleId::Make(old_sample_id.value());
     }
   }
 
@@ -280,12 +279,17 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTree(NodeType input_node,
   if constexpr (decltype(result_node)::template contains_feature<MappedNodes>) {
     result_node.SetOriginalId(input_node.GetId());
   }
-  result_node = input_node.GetCompactGenome().Copy();
-  result_node = SampleId{input_node.GetSampleId()};
+  result_node = input_node.GetCompactGenome().Copy(&input_node);
+  auto sid = input_node.GetSampleId();
+  if (sid.has_value()) {
+    result_node = SampleId::Make(sid.value());
+  }
 
   CladeIdx clade_idx{0};
   for (auto clade : input_node.GetClades()) {
     Assert(not clade.empty());
+
+    std::ignore = clade;
     auto input_edge = edge_selector(input_node, clade_idx);
     ++clade_idx.value;
 
@@ -293,7 +297,7 @@ void SubtreeWeight<WeightOps, DAG>::ExtractTree(NodeType input_node,
     auto result_edge =
         result.AppendEdge(result_node_id, result_child_id, input_edge.GetClade());
 
-    result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
+    result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy(&input_edge));
 
     ExtractTree(input_edge.GetChild(), result_child_id, weight_ops, edge_selector,
                 result);
@@ -311,8 +315,11 @@ void SubtreeWeight<WeightOps, DAG>::ExtractSubset(
   if constexpr (decltype(result_node)::template contains_feature<MappedNodes>) {
     result_node.SetOriginalId(input_node.GetId());
   }
-  result_node = input_node.GetCompactGenome().Copy();
-  result_node = SampleId{input_node.GetSampleId()};
+  result_node = input_node.GetCompactGenome().Copy(&input_node);
+  auto sid = input_node.GetSampleId();
+  if (sid.has_value()) {
+    result_node = SampleId::Make(sid.value());
+  }
 
   mapped_id.insert({input_node.GetId(), result_node});
 
@@ -320,7 +327,7 @@ void SubtreeWeight<WeightOps, DAG>::ExtractSubset(
   for (auto clade : input_node.GetClades()) {
     Assert(not clade.empty());
 
-    std::ignore = clade_idx;
+    std::ignore = clade;
     auto input_edges = edge_selector(input_node, clade_idx);
 
     for (auto edge_id : input_edges) {
@@ -331,12 +338,12 @@ void SubtreeWeight<WeightOps, DAG>::ExtractSubset(
         NodeId result_child_id = mapped_id[input_node_child.GetId()];
         auto result_edge =
             result.AppendEdge(result_node_id, result_child_id, clade_idx);
-        result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
+        result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy(&input_edge));
       } else {
         NodeId result_child_id = result.AppendNode();
         auto result_edge =
             result.AppendEdge(result_node_id, result_child_id, clade_idx);
-        result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy());
+        result_edge.SetEdgeMutations(input_edge.GetEdgeMutations().Copy(&input_edge));
         ExtractSubset(input_node_child, result_child_id, weight_ops, edge_selector,
                       mapped_id, result);
         mapped_id.insert({input_node_child.GetId(), result_child_id});

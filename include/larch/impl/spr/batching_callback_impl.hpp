@@ -1,20 +1,17 @@
 #include "larch/benchmark.hpp"
 
-template <typename CRTP, typename SampleDAG>
-BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag)
-    : merge_{merge}, sample_dag_{sample_dag}, collapse_empty_fragment_edges_{true} {}
-template <typename CRTP, typename SampleDAG>
-BatchingCallback<CRTP, SampleDAG>::BatchingCallback(Merge& merge, SampleDAG sample_dag,
-                                                    bool collapse_empty_fragment_edges)
-    : merge_{merge},
-      sample_dag_{sample_dag},
-      collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {}
+template <typename CRTP>
+BatchingCallback<CRTP>::BatchingCallback(Merge& merge)
+    : merge_{merge}, collapse_empty_fragment_edges_{true} {}
+template <typename CRTP>
+BatchingCallback<CRTP>::BatchingCallback(Merge& merge,
+                                         bool collapse_empty_fragment_edges)
+    : merge_{merge}, collapse_empty_fragment_edges_{collapse_empty_fragment_edges} {}
 
-template <typename CRTP, typename SampleDAG>
-bool BatchingCallback<CRTP, SampleDAG>::operator()(
-    Profitable_Moves& move, int best_score_change,
-    std::vector<Node_With_Major_Allele_Set_Change>&
-        nodes_with_major_allele_set_change) {
+template <typename CRTP>
+bool BatchingCallback<CRTP>::operator()(Profitable_Moves& move, int best_score_change,
+                                        std::vector<Node_With_Major_Allele_Set_Change>&
+                                            nodes_with_major_allele_set_change) {
   Assert(move.src != nullptr);
   Assert(move.dst != nullptr);
 
@@ -45,16 +42,20 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
       [this, &move, best_score_change,
        &nodes_with_major_allele_set_change](auto& bucket) -> bool {
         std::shared_lock lock{mat_mtx_};
+
         Assert(sample_mat_storage_ != nullptr);
         bucket.push_back(MoveStorage{
             std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
             nullptr});
+
         auto& storage = bucket.back();
+    // MADAGToDOT(storage.spr->View(), std::cout);
     // storage.spr->View().GetRoot().Validate(true);
 #ifndef NDEBUG
         for (auto i : storage.spr->View().Const().GetLeafs()) {
           Assert(i.HaveSampleId());
         }
+        auto old_src_parent = storage.spr->View().GetNodeFromMAT(move.src->parent);
 #endif
         if (storage.spr->View().InitHypotheticalTree(
                 move, nodes_with_major_allele_set_change)) {
@@ -63,12 +64,17 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
               collapse_empty_fragment_edges_
                   ? storage.spr->View().MakeFragment()
                   : storage.spr->View().MakeUncollapsedFragment());
+#ifndef NDEBUG
+          auto new_old_src_parent = storage.spr->View().GetOldSourceParent();
+          Assert(old_src_parent.GetId() == new_old_src_parent.GetId());
+#endif
           auto fragment = storage.fragment->View();
           // GetFullDAG(fragment).GetRoot().Validate(true, false);
           auto& impl = static_cast<CRTP&>(*this);
           std::pair<bool, bool> accepted =
               impl.OnMove(storage.spr->View(), fragment, move, best_score_change,
                           nodes_with_major_allele_set_change);
+
           if (accepted.first) {
 #ifndef NDEBUG
             for (auto node : fragment.GetNodes()) {
@@ -102,15 +108,18 @@ bool BatchingCallback<CRTP, SampleDAG>::operator()(
       });
 }
 
-template <typename CRTP, typename SampleDAG>
-void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
+template <typename CRTP>
+void BatchingCallback<CRTP>::operator()(MAT::Tree& tree) {
   std::cout << "Larch-Usher callback Applying " << applied_moves_count_.load() << "\n"
             << std::flush;
   applied_moves_count_.store(0);
+
   reassigned_states_storage_ = std::make_unique<ReassignedStatesStorage>(
       AddMappedNodes(AddMATConversion(Storage::EmptyDefault())));
+
   auto reassigned_states = reassigned_states_storage_->View();
   reassigned_states.BuildFromMAT(tree, merge_.GetResult().GetReferenceSequence());
+
   check_edge_mutations(reassigned_states.Const());
   reassigned_states.RecomputeCompactGenomes(true);
   {
@@ -128,21 +137,43 @@ void BatchingCallback<CRTP, SampleDAG>::operator()(MAT::Tree& tree) {
     });
     std::unique_lock lock{merge_mtx_};
     if (not all.empty()) {
+#ifndef NDEBUG
+      auto orig_num_leafs = merge_.GetResult().GetLeafsCount();
+#endif
       merge_.AddDAGs(
           all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
+
+      //// FOR DEBUGGING: alternative "serialized" merging of fragments to check them
+      // for (auto& i : all) {
+      //   auto frag = i.fragment->View();
+      //   MADAGToDOT(frag, std::cout);
+      //   MADAGToDOT(i.spr->View(), std::cout);
+      //   std::vector dags = {frag};
+      //   merge_.AddDAGs(dags);
+      //   MADAGToDOT(merge_.GetResult(), std::cout);
+      // Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
+      // }
+
+#ifndef NDEBUG
+      Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
+#endif
     }
     merge_.AddDAGs(std::vector{reassigned_states});
     // merge_.GetResult().GetRoot().Validate(true, true);
   }
   {
     std::unique_lock lock{mat_mtx_};
+#if USE_MAT_VIEW
+    CreateMATViewStorage(tree, merge_.GetResult().GetReferenceSequence());
+#else
     CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
+#endif
   }
   static_cast<CRTP&>(*this).OnRadius();
 }
 
-template <typename CRTP, typename SampleDAG>
-void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
+template <typename CRTP>
+void BatchingCallback<CRTP>::OnReassignedStates(MAT::Tree& tree) {
   applied_moves_count_.store(0);
   Assert(reassigned_states_storage_);
   auto reassigned_states = reassigned_states_storage_->View();
@@ -157,29 +188,82 @@ void BatchingCallback<CRTP, SampleDAG>::OnReassignedStates(MAT::Tree& tree) {
   }
   {
     std::unique_lock lock{mat_mtx_};
+#if USE_MAT_VIEW
+    CreateMATViewStorage(tree, merge_.GetResult().GetReferenceSequence());
+#else
     CreateMATStorage(tree, merge_.GetResult().GetReferenceSequence());
+#endif
   }
 }
 
-template <typename CRTP, typename SampleDAG>
-Merge& BatchingCallback<CRTP, SampleDAG>::GetMerge() {
+template <typename CRTP>
+Merge& BatchingCallback<CRTP>::GetMerge() {
   return merge_;
 }
 
-template <typename CRTP, typename SampleDAG>
-size_t BatchingCallback<CRTP, SampleDAG>::GetAppliedMovesCount() {
+template <typename CRTP>
+size_t BatchingCallback<CRTP>::GetAppliedMovesCount() {
   return applied_moves_count_.load();
 }
 
-template <typename CRTP, typename SampleDAG>
-auto BatchingCallback<CRTP, SampleDAG>::GetMappedStorage() {
+template <typename CRTP>
+auto BatchingCallback<CRTP>::GetMappedStorage() {
   Assert(reassigned_states_storage_);
   return reassigned_states_storage_->View();
 }
 
-template <typename CRTP, typename SampleDAG>
-void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
-                                                         std::string_view ref_seq) {
+#if USE_MAT_VIEW
+template <typename CRTP>
+void BatchingCallback<CRTP>::CreateMATViewStorage(MAT::Tree& tree,
+                                                  std::string_view ref_seq) {
+  SetSample(tree, std::string{ref_seq});
+  UncondensedMATViewStorage mv_storage;
+  mv_storage.View().SetMAT(std::addressof(sample_mat_tree_));
+  // mv_storage.View().BuildRootAndLeafs();
+  // MADAGToDOT(mv_storage.View(), std::cout);
+  // mv_storage.View().GetRoot().Validate(true, false);
+
+  sample_mat_storage_ = std::make_unique<MATStorage>(std::move(mv_storage));
+  UncondensedMergeDAGStorage& storage = *sample_mat_storage_;
+  auto view = storage.View();
+  view.SetReferenceSequence(sample_refseq_);
+  view.BuildRootAndLeafs();
+
+  // alternative sampleId placement(please change if there's a better way!!)
+  for (auto node : view.GetNodes()) {
+    if (node.IsLeaf()) {
+      std::string sample_id = "";
+      if (node.GetMATNode() == nullptr) {
+        auto& node_storage =
+            node.template GetFeatureExtraStorage<MATNodeStorage>().get();
+        sample_id = node_storage.node_id_to_sampleid_map_.at(node.GetId());
+      } else {
+        sample_id = sample_mat_tree_.get_node_name(node.GetMATNode()->node_id);
+      }
+      Assert(not sample_id.empty());
+      auto id_iter = view.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+          SampleId::Make(std::move(sample_id)));
+      node = id_iter.first;
+    }
+  }
+  /*
+    for (auto node : view.GetNodes()) {
+      if (node.GetMATNode() == nullptr) {
+        continue;
+      }
+      std::string sample_id = tree.condensed_nodes.at(node.GetMATNode()->node_id).at(0);
+      Assert(not sample_id.empty());
+      auto id_iter = view.template AsFeature<Deduplicate<SampleId>>().AddDeduplicated(
+          SampleId{std::move(sample_id)});
+      node = id_iter.first;
+    }
+  */
+  view.RecomputeCompactGenomes(true);
+}
+#else
+template <typename CRTP>
+void BatchingCallback<CRTP>::CreateMATStorage(MAT::Tree& tree,
+                                              std::string_view ref_seq) {
   sample_mat_storage_ =
       std::make_unique<MATStorage>(AddMATConversion(Storage::EmptyDefault()));
   auto view = sample_mat_storage_->View();
@@ -188,3 +272,4 @@ void BatchingCallback<CRTP, SampleDAG>::CreateMATStorage(MAT::Tree& tree,
   view.RecomputeCompactGenomes(true);
   view.SampleIdsFromCG();
 }
+#endif

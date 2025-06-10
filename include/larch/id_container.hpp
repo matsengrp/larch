@@ -8,22 +8,26 @@
 #include "larch/common.hpp"
 #include "larch/contiguous_map.hpp"
 
-enum class IdContinuity { Dense, Sparse };
+static inline constexpr IdContinuity DefIdCont = IdContinuity::Sparse;
 
-enum class Ordering { Ordered, Unordered };
-
-template <typename Id, typename T, IdContinuity Cont = IdContinuity::Dense,
+template <typename Id, typename T, IdContinuity Cont = DefIdCont,
           Ordering Ord = Ordering::Ordered>
 class IdContainer {
+ public:
+  static constexpr IdContinuity continuity = Cont;
+  static constexpr Ordering ordering = Ordering::Unordered;
+  // FIXME continuity == IdContinuity::Dense ? Ordering::Unordered : Ord;
+
+ private:
   static constexpr auto storage_type_helper = [] {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       if constexpr (std::is_trivially_copyable_v<T>) {
         return type_identity<std::vector<T>>{};
       } else {
         return type_identity<std::vector<T>>{};
       }
     } else {
-      if constexpr (Ord == Ordering::Ordered) {
+      if constexpr (ordering == Ordering::Ordered) {
         return type_identity<ContiguousMap<Id, T>>{};
       } else {
         return type_identity<std::unordered_map<Id, T>>{};
@@ -32,10 +36,6 @@ class IdContainer {
   }();
 
  public:
-  static constexpr IdContinuity continuity = Cont;
-  static constexpr Ordering ordering =
-      Cont == IdContinuity::Dense ? Ordering::Unordered : Ord;
-
   using storage_type = typename decltype(storage_type_helper)::type;
 
   using value_type = std::pair<Id, T>;
@@ -85,7 +85,7 @@ class IdContainer {
   }
 
   std::pair<iterator, bool> insert(value_type&& value) {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       bool inserted = value.first.value >= data_.size();
       T& val = this->operator[](value.first);
       val = std::forward<T>(value.second);
@@ -101,7 +101,7 @@ class IdContainer {
   }
 
   T& operator[](Id key) {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       if (key.value >= data_.size()) {
         data_.resize(key.value + 1);
       }
@@ -112,22 +112,46 @@ class IdContainer {
   }
 
   const T& at(Id key) const {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       return data_.at(key.value);
     } else {
-      return data_.at(key);
+      return data_[key];
     }
   }
 
   T& at(Id key) {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       return data_.at(key.value);
     } else {
-      return data_.at(key);
+      return data_[key];
     }
   }
 
-  bool Contains(Id key) const { return data_.find(key) != data_.end(); }
+  bool Contains(Id key) const {
+    if constexpr (continuity == IdContinuity::Dense) {
+      return key.value < data_.size();
+    } else {
+      return data_.find(key) != data_.end();
+    }
+  }
+
+  Id GetNextAvailableId() const {
+    if constexpr (continuity == IdContinuity::Dense) {
+      return {data_.size()};
+    } else if constexpr (ordering == Ordering::Ordered) {
+      if (data_.empty()) {
+        return {0};
+      }
+      return {data_.back().first.value + 1};
+    } else {
+      auto keys = data_ | ranges::views::keys;
+      auto result = ranges::max_element(keys);  // TODO linear search
+      if (result == keys.end()) {
+        return {0};
+      }
+      return {result->first.value + 1};
+    }
+  }
 
   void Union(const IdContainer& other) { return data_.Union(other); }
 
@@ -140,17 +164,23 @@ class IdContainer {
   }
 
   void resize(size_t size) {
-    static_assert(Cont == IdContinuity::Dense);
-    data_.resize(size);
+    if constexpr (continuity == IdContinuity::Dense) {
+      data_.resize(size);
+    } else {
+      data_.reserve(size);
+    }
   }
 
   void push_back(T&& value) {
-    static_assert(Cont == IdContinuity::Dense);
-    data_.push_back(std::forward<T>(value));
+    if constexpr (continuity == IdContinuity::Dense) {
+      data_.push_back(std::forward<T>(value));
+    } else {
+      Fail("Can't pushe_back on sparse IDs");
+    }
   }
 
   T* At(Id key) {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       if (key.value >= data_.size()) {
         return nullptr;
       }
@@ -158,14 +188,14 @@ class IdContainer {
     } else {
       auto it = data_.find(key);
       if (it == data_.end()) {
-        return nullptr;
+        return std::addressof(data_[key]);
       }
-      return std::addressof(*it);
+      return std::addressof(it->second);
     }
   }
 
   const T* At(Id key) const {
-    if constexpr (Cont == IdContinuity::Dense) {
+    if constexpr (continuity == IdContinuity::Dense) {
       if (key.value >= data_.size()) {
         return nullptr;
       }
@@ -173,13 +203,77 @@ class IdContainer {
     } else {
       auto it = data_.find(key);
       if (it == data_.end()) {
+        Fail("Out of bounds for sparse IDs");
         return nullptr;
       }
-      return std::addressof(*it);
+      return std::addressof(it->second);
     }
   }
 
  private:
   IdContainer(const IdContainer&) = default;
-  storage_type data_;
+  mutable storage_type data_;
+};
+
+template <typename Lhs, typename Rhs>
+struct ContainerEquivalent : std::false_type {};
+
+template <typename Lhs, typename Rhs, typename Id, IdContinuity Cont, Ordering Ord>
+struct ContainerEquivalent<IdContainer<Id, Lhs, Cont, Ord>,
+                           IdContainer<Id, Rhs, Cont, Ord>>
+    : FeatureEquivalent<Lhs, Rhs> {};
+
+/////////////////////////////////////////////////////////////////////////////
+
+template <typename T, size_t N = 32>
+class ConcurrentSparseIdMap {
+ public:
+  ConcurrentSparseIdMap() = default;
+  MOVE_ONLY(ConcurrentSparseIdMap);
+
+  template <typename... Args>
+  std::pair<T&, bool> emplace(size_t id, Args&&... args) {
+    auto& [values, mutex] = GetBucket(id);
+    std::unique_lock write_lock{mutex};
+    auto result = values.emplace(id, std::forward<Args>(args)...);
+    return std::make_pair(std::ref(result.first->second), result.second);
+  }
+
+  T& operator[](size_t id) {
+    auto& [values, mutex] = GetBucket(id);
+    std::shared_lock lock{mutex};
+    auto it = values.find(id);
+    if (it != values.end()) {
+      return it->second;
+    }
+    lock.unlock();
+    std::unique_lock write_lock{mutex};
+    return values[id];
+  }
+
+  const T& at(size_t id) const {
+    auto& [values, mutex] = GetBucket(id);
+    std::shared_lock lock{mutex};
+    return values.at(id);
+  }
+
+  T& at(size_t id) {
+    auto& [values, mutex] = GetBucket(id);
+    std::shared_lock lock{mutex};
+    return values.at(id);
+  }
+
+ private:
+  struct Bucket {
+    std::unordered_map<size_t, T> values;
+    mutable std::shared_mutex mutex;
+  };
+
+  Bucket& GetBucket(size_t id) noexcept { return buckets_->operator[](id % N); }
+  const Bucket& GetBucket(size_t id) const noexcept {
+    return buckets_->operator[](id % N);
+  }
+
+  std::unique_ptr<std::array<Bucket, N>> buckets_ =
+      std::make_unique<std::array<Bucket, N>>();
 };

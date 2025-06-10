@@ -2,3 +2,8 @@ BasedOnStyle: Google
 ColumnLimit: 88
 SortIncludes: false
 
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+QualifierAlignment: Left
+

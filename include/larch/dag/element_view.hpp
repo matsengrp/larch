@@ -2,6 +2,8 @@
 #error "Don't include this header, use larch/dag/dag.hpp instead"
 #endif
 
+#include "larch/debug.hpp"
+
 /**
  * A view into a single node or edge of a DAG.
  */
@@ -14,6 +16,8 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
   constexpr static const Component component = C;
   constexpr static const Role role = Role::View;
 
+  using DAGType = DAGViewType;
+
   /**
    * This operator= is used for setting specailly handled per-element
    * features, like Deduplicate.
@@ -25,6 +29,16 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
 
   ElementView(DAGViewType dag_view, Id<C> id);
 
+  ElementView(ElementView&& other) = default;
+  ElementView(const ElementView& other) = default;
+  ElementView& operator=(ElementView&& other) = default;
+  ElementView& operator=(const ElementView& other) = default;
+
+  bool operator==(const ElementView& other) const {
+    // LARCH_DEBUG_USE;
+    return dag_view_ == other.dag_view_ and id_ == other.id_;
+  }
+
   auto Const() const;
 
   operator Id<C>() const;
@@ -33,14 +47,15 @@ struct ElementView : DAGViewType::BaseType::template ElementViewBase<C> {
   Id<C> GetId() const;
 
   template <typename Feature>
-  auto& GetFeatureStorage() const;
+  auto GetFeatureStorage() const;
 
   template <typename Feature>
-  auto& GetFeatureExtraStorage() const;
+  auto GetFeatureExtraStorage() const;
 
  private:
   DAGViewType dag_view_;
   Id<C> id_;
+  // LARCH_DEBUG_THIS;
 };
 
 template <typename Id, typename DAGViewType>

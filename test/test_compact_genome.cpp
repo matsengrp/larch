@@ -12,13 +12,13 @@
 
   std::vector<EdgeMutations> loaded_edge_mutatons;
   for (Edge edge : dag.GetEdges()) {
-    loaded_edge_mutatons.emplace_back(edge.GetEdgeMutations().Copy());
+    loaded_edge_mutatons.emplace_back(edge.GetEdgeMutations().Copy(&edge));
   }
 
   dag.RecomputeCompactGenomes(true);
   std::vector<CompactGenome> computed_cgs;
   for (Node node : dag.GetNodes()) {
-    computed_cgs.emplace_back(node.GetCompactGenome().Copy());
+    computed_cgs.emplace_back(node.GetCompactGenome().Copy(&node));
   }
   for (Edge edge : dag.GetEdges()) {
     edge.SetEdgeMutations({});
