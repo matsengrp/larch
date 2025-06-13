@@ -225,7 +225,7 @@ struct ContainerEquivalent<IdContainer<Id, Lhs, Cont, Ord>,
 
 /////////////////////////////////////////////////////////////////////////////
 
-template <typename T, size_t N = 32>
+template <typename T, size_t N = 128>
 class ConcurrentSparseIdMap {
  public:
   ConcurrentSparseIdMap() = default;

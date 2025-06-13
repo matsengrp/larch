@@ -80,7 +80,9 @@ bool FeatureConstView<Neighbors, CRTP, Tag>::IsTreeRoot() const {
 
 template <typename CRTP, typename Tag>
 bool FeatureConstView<Neighbors, CRTP, Tag>::IsLeaf() const {
-  return ranges::all_of(GetStorageClades(), [](auto&& clade) { return clade.empty(); });
+  Assert(ranges::all_of(GetStorageClades(),
+                        [](auto&& clade) { return not clade.empty(); }));
+  return GetStorageClades().empty();
 }
 
 template <typename CRTP, typename Tag>
