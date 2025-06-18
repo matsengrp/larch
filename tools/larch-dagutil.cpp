@@ -55,7 +55,7 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
                        FileFormat output_format, bool trim, bool sample_tree,
                        std::string rf_path, FileFormat rf_format,
                        bool do_print_dag_info, bool do_print_parsimony,
-                       bool do_print_rf_distance) {
+                       bool do_print_rf_distance, bool use_min_weight) {
   std::vector<MADAGStorage<>> trees;
   std::vector<size_t> trees_id;
 
@@ -133,7 +133,6 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
       for (auto& score_count : all_sum_rf_dist_scores) {
         score_count.first += shift_sum;
       }
-
       auto min_sum_rf_dist_scores =
           *std::min_element(all_sum_rf_dist_scores.begin(),
                             all_sum_rf_dist_scores.end(), scorecount_compare);
@@ -147,6 +146,20 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
                 << ", count:" << min_sum_rf_dist_scores.second << "\n";
       std::cout << "sum_rf_dist_max: score:" << max_sum_rf_dist_scores.first
                 << ", count:" << max_sum_rf_dist_scores.second << "\n";
+      if (input_paths.size() > 1) {
+        Merge tree1(merge.GetResult().GetReferenceSequence());
+        tree1.AddDAGs(std::vector{trees.at(0).View()});
+        SubtreeWeight<WeightAccumulator<RFDistance>, MergeDAG> count{merge.GetResult()};
+        RFDistance weight_ops{tree1, merge};
+        auto unshifted_scores = count.ComputeWeightBelow(merge.GetResult().GetRoot(), {weight_ops});
+        shift_sum = weight_ops.GetOps().GetShiftSum();
+        auto scores = unshifted_scores.GetWeights().Copy();
+        for (auto& score_count : scores) {
+          score_count.first += shift_sum;
+        }
+        std::cout << "pairwise_rf_dist: " << scores.size() << "\n"
+                  << scores << "\n";
+      }
     }
   }
 
@@ -165,22 +178,53 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
         Merge comparetree(tree.View().GetReferenceSequence());
         comparetree.AddDAG(tree.View());
         comparetree.ComputeResultEdgeMutations();
-        SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge.GetResult()};
-        SumRFDistance min_rf_weight_ops{comparetree, merge};
-        if (sample_tree) {
-          std::cout << "sampling a tree from the minweight options\n";
-          StoreDAG(min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, {}).View(),
-                   output_path, output_format);
+
+        if (use_min_weight) {
+          SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge.GetResult()};
+          SumRFDistance min_rf_weight_ops{comparetree, merge};
+          if (sample_tree) {
+            std::cout << "sampling a tree from the minweight options\n";
+            StoreDAG(min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, {}).View(),
+                     output_path, output_format);
+          } else {
+            StoreDAG(min_sum_rf_dist.TrimToMinWeight(min_rf_weight_ops).View(),
+                     output_path, output_format);
+          }
         } else {
-          StoreDAG(min_sum_rf_dist.TrimToMinWeight(min_rf_weight_ops).View(),
-                   output_path, output_format);
+          SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist{merge.GetResult()};
+          MaxSumRFDistance max_rf_weight_ops{comparetree, merge};
+          if (sample_tree) {
+            std::cout << "sampling a tree from the minweight options\n";
+            StoreDAG(max_sum_rf_dist.MinWeightSampleTree(max_rf_weight_ops, {}).View(),
+                     output_path, output_format);
+          } else {
+            StoreDAG(max_sum_rf_dist.TrimToMinWeight(max_rf_weight_ops).View(),
+                     output_path, output_format);
+          }
         }
       }
     } else {
       if (sample_tree) {
-        std::cout << "sampling a tree from the merge DAG\n";
-        SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
-        StoreDAG(weight.SampleTree({}).View(), output_path, output_format);
+        if (use_min_weight) {
+          std::cout << "sampling a tree from the minweight options\n";
+          if (rf_path.empty()) {
+            SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
+            StoreDAG(weight.MinWeightSampleTree({}).View(), output_path, output_format);
+          } else {
+            auto tree = LoadDAG(rf_path, rf_format, refseq_path);
+            Merge comparetree(tree.View().GetReferenceSequence());
+            comparetree.AddDAG(tree.View());
+            comparetree.ComputeResultEdgeMutations();
+            SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge.GetResult()};
+            SumRFDistance min_rf_weight_ops{comparetree, merge};
+            StoreDAG(min_sum_rf_dist.MinWeightSampleTree(min_rf_weight_ops, {}).View(),
+                     output_path, output_format);
+          }
+        } else {
+          std::cout << "sampling a tree\n";
+          SubtreeWeight<BinaryParsimonyScore, MergeDAG> weight{merge.GetResult()};
+          StoreDAG(weight.SampleTree({}).View(), output_path, output_format);
+        }
       } else {
         StoreDAG(merge.GetResult(), output_path, output_format);
       }
@@ -203,6 +247,7 @@ int main(int argc, char** argv) try {
   bool do_print_dag_info = false;
   bool do_print_parsimony = false;
   bool do_print_rf_distance = false;
+  bool use_min_weight = true;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -221,6 +266,9 @@ int main(int argc, char** argv) try {
       trim = true;
     } else if (name == "--rf") {
       ParseOption(name, params, rf_path, 1);
+    } else if (name == "--MAX") {
+      ParseOption<false>(name, params, use_min_weight, 0);
+      use_min_weight = false;
     } else if (name == "-s" or name == "--sample") {
       ParseOption<false>(name, params, sample_tree, 0);
       sample_tree = true;
@@ -229,11 +277,11 @@ int main(int argc, char** argv) try {
       do_print_dag_info = true;
       do_print_parsimony = true;
       do_print_rf_distance = true;
-    } else if (name == "--print-pars") {
+    } else if (name == "--print-pars" or name == "--parsimony") {
       ParseOption<false>(name, params, do_print_parsimony, 0);
       do_print_dag_info = true;
       do_print_parsimony = true;
-    } else if (name == "--print-rf") {
+    } else if (name == "--print-rf" or name == "--sum-rf-distance") {
       ParseOption<false>(name, params, do_print_rf_distance, 0);
       do_print_dag_info = true;
       do_print_rf_distance = true;
@@ -300,7 +348,7 @@ int main(int argc, char** argv) try {
 
   MergeTrees(input_paths, input_formats, refseq_path, output_path, output_format, trim,
              sample_tree, rf_path, rf_format, do_print_dag_info, do_print_parsimony,
-             do_print_rf_distance);
+             do_print_rf_distance, use_min_weight);
   return EXIT_SUCCESS;
 } catch (std::exception& e) {
   std::cerr << "Uncaught exception: " << e.what() << std::endl;
