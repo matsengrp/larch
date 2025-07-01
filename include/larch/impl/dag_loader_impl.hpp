@@ -118,7 +118,7 @@ void StoreDAGToProtobuf(DAG dag, std::string_view path) {
     auto* proto_node = data.add_node_names();
     proto_node->set_node_id(static_cast<int64_t>(i++));
     if (node.IsLeaf()) {
-      proto_node->add_condensed_leaves(node.GetSampleId().value());
+      proto_node->add_condensed_leaves(std::string{node.GetSampleId().value()});
     }
   }
 

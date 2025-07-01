@@ -23,7 +23,7 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(PROTOBUF_FROM_SOURCE "Build protobuf from source code" ON)
+option(PROTOBUF_FROM_SOURCE "Build protobuf from source code" OFF)
 option(USE_USHER "Use matOptimize" ON)
 option(USE_MAT_VIEW "Use MATView" ON)
 option(USE_CPPTRACE "Use cpptrace" OFF)
@@ -116,7 +116,7 @@ set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
 
 # # larch-autogen library
 target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR} ${Protobuf_INCLUDE_DIRS})
-target_link_libraries(larch-autogen PUBLIC ${Protobuf_ABSL_LIBS})
+target_link_libraries(larch-autogen PUBLIC ${Protobuf_LIBRARIES})
 set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
@@ -128,7 +128,7 @@ protobuf_generate(
 
 # # nlohmann_json
 FetchContent_Declare(json
-  URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz
+  URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
   BINARY_DIR ${CMAKE_BINARY_DIR}/deps/nlohmann_json
 )
 FetchContent_MakeAvailable(json)
@@ -257,6 +257,9 @@ endif()
 
 # link libraries to executable
 function(larch_link_opts PRODUCT)
+  # Workaround for protobuf
+  target_link_options(${PRODUCT} PUBLIC -Wl,--copy-dt-needed-entries)
+
   target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
 
   if(USE_ASAN)
