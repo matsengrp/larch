@@ -90,7 +90,7 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                         "intermediate",        // intermediate template
                         "intermediate_base",   // intermediate base name
                         "intermediate_newick", // intermediate newick name
-                        callback
+                        callback               // callback
     );
     tree.uncondense_leaves();
     tree.condense_leaves(condense_arg);
