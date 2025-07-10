@@ -611,9 +611,8 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
 
     size_t last_uncondensed_node_id = 1;
     for (size_t ict = 1; ict < num_nodes + 1; ict++) {
-      if (mat->get_node(ict) == nullptr) {
-        last_uncondensed_node_id = ict;
-        break;
+      if (mat->get_node(ict) != nullptr) {
+        last_uncondensed_node_id = ict + 1;
       }
     }
     for (auto& [i, j] : mat->condensed_nodes) {
@@ -653,6 +652,9 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
         max_id = i->node_id;
       }
     }
+    if (max_id < last_uncondensed_node_id) {
+      max_id = last_uncondensed_node_id;
+    }
     node_storage.max_id_ = max_id;
     edge_storage.max_id_ = max_id;
 
@@ -665,6 +667,11 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
       ua_node_id = count;
     }
     Assert(mat->get_node(ua_node_id) == nullptr);
+
+    if (max_id > ua_node_id) {
+      ua_node_id = max_id + 1;
+    }
+
     node_storage.ua_node_id_ = NodeId{ua_node_id};
     edge_storage.ua_node_id_ = NodeId{ua_node_id};
   }
