@@ -1,4 +1,4 @@
 [submodule "deps/usher"]
 	path = deps/usher
 	url = git@github.com:matsengrp/usher.git
-	branch = usher_sync
+	branch = tbb_update

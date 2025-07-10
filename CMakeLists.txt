@@ -23,7 +23,6 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(PROTOBUF_FROM_SOURCE "Build protobuf from source code" OFF)
 option(USE_USHER "Use matOptimize" ON)
 option(USE_MAT_VIEW "Use MATView" ON)
 option(USE_CPPTRACE "Use cpptrace" OFF)
@@ -36,11 +35,7 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
 
-if(USE_USHER)
-    set(TBB_VERSION "2019_U9")
-else()
-    set(TBB_VERSION "v2021.11.0")
-endif()
+set(TBB_VERSION "v2022.1.0")
 
 message(STATUS "cmake system architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "cmake build type: ${CMAKE_BUILD_TYPE}")
@@ -62,50 +57,21 @@ function(lib_install PRODUCT)
 endfunction()
 
 # # oneTBB
-if(USE_USHER)
-  set(TBB_DIR "${PROJECT_BINARY_DIR}/deps/onetbb")
-  FetchContent_Declare(oneTBB
-    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-    GIT_TAG ${TBB_VERSION}
-    GIT_SHALLOW true
-    GIT_PROGRESS true
-    UPDATE_DISCONNECTED true
- )
-  FetchContent_MakeAvailable(oneTBB)
-  include(${onetbb_SOURCE_DIR}/cmake/TBBBuild.cmake)
-  tbb_build(
-    TBB_ROOT ${onetbb_SOURCE_DIR}
-    CONFIG_DIR TBB_DIR
-    MAKE_ARGS tbb_cpf=1 CFLAGS="-w" CXXFLAGS="-Wno-changes-meaning" tbb_build_dir=${TBB_DIR}
-  )
-
-  find_package(TBB REQUIRED COMPONENTS tbbmalloc tbbmalloc_proxy tbb_preview)
-  lib_install(TBB::tbbmalloc)
-  lib_install(TBB::tbbmalloc_proxy)
-  lib_install(TBB::tbb_preview)
-
-  find_package(MPI REQUIRED)
-  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-else()
-  FetchContent_Declare(oneTBB
-    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-    GIT_TAG ${TBB_VERSION}
-    GIT_SHALLOW true
-    GIT_PROGRESS true
-    UPDATE_DISCONNECTED true
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DTBB_TEST=OFF -DTBB_FIND_PACKAGE=OFF
-  )
-  FetchContent_MakeAvailable(oneTBB)
-endif()
+FetchContent_Declare(oneTBB
+  GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
+  GIT_TAG ${TBB_VERSION}
+  GIT_SHALLOW true
+  GIT_PROGRESS true
+  UPDATE_DISCONNECTED true
+  CMAKE_ARGS -DTBB_TEST:BOOL=OFF
+)
+set(TBB_TEST OFF CACHE INTERNAL "" FORCE)
+FetchContent_MakeAvailable(oneTBB)
+find_package(MPI REQUIRED)
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
 # # protobuf
-if(PROTOBUF_FROM_SOURCE)
-  message(STATUS "protobuf from source...")
-  include(protobuf.cmake)
-else()
-  message(STATUS "protobuf from conda environment...")
-  find_package(Protobuf REQUIRED)
-endif()
+find_package(Protobuf REQUIRED)
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -214,7 +180,7 @@ function(larch_compile_opts PRODUCT)
   endif()
 
   if(USE_ASAN)
-    target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
+    target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address -fno-sanitize-recover)
   elseif(USE_TSAN)
     target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=thread)
   endif()
@@ -263,7 +229,7 @@ function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
 
   if(USE_ASAN)
-    target_link_libraries(${PRODUCT} PUBLIC -lasan -lubsan)
+    target_link_libraries(${PRODUCT} PUBLIC -lasan)
   elseif(USE_TSAN)
     target_link_libraries(${PRODUCT} PUBLIC -ltsan)
   endif()
@@ -273,11 +239,7 @@ function(larch_link_opts PRODUCT)
   target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
 
-  if(USE_USHER)
-    target_link_libraries(${PRODUCT} PUBLIC TBB::tbbmalloc TBB::tbbmalloc_proxy TBB::tbb_preview -lstdc++fs)
-  else()
-    target_link_libraries(${PRODUCT} PUBLIC TBB::tbb)
-  endif()
+  target_link_libraries(${PRODUCT} PUBLIC TBB::tbb)
 
   if(USE_HTSLIB)
     target_link_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/htslib/install)
@@ -327,7 +289,7 @@ if(USE_USHER)
   target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer -DUSE_USHER)
 
   if(${USE_ASAN})
-    target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address,undefined -fno-sanitize-recover)
+    target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address -fno-sanitize-recover)
   elseif(${USE_TSAN})
     target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=thread)
   endif()
