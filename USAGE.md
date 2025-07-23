@@ -53,7 +53,10 @@ The tools support several file formats:
 - **txt** - Plain text format for reference sequence file
 
 When format is not specified, the tools will attempt to infer the format from the file extension.
-Note: larch-usher writes output in either DAG protobuf format or else in Binary DAG format.
+Note: larch-usher writes output in either DAG protobuf format or else in Binary DAG format, defaulting to protobuf.
+
+The dagbin format is useful for larger datasets, as there is a 2GB file limit size for protobuf.
+
 
 ### Sample Methods
 
