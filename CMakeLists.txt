@@ -140,7 +140,7 @@ endif()
 find_package(ZLIB REQUIRED)
 
 # # boost
-find_package(Boost REQUIRED COMPONENTS program_options iostreams filesystem date_time)
+find_package(Boost REQUIRED COMPONENTS program_options filesystem date_time)
 
 # Internal libraries and binaries
 
