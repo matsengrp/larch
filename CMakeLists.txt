@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.5)
 project(larch)
 
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
@@ -140,7 +140,7 @@ endif()
 find_package(ZLIB REQUIRED)
 
 # # boost
-find_package(Boost REQUIRED COMPONENTS program_options filesystem date_time)
+find_package(Boost REQUIRED COMPONENTS program_options iostreams filesystem date_time)
 
 # Internal libraries and binaries
 
@@ -152,7 +152,7 @@ add_custom_target(generate_version_h ALL
 )
 
 # # set compiler warnings
-set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
+set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument -Wno-c++20-extensions)
 
 # # set compiler version
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
