@@ -13,6 +13,14 @@ struct std::equal_to<SampleIdStorage> {
                          const SampleIdStorage& rhs) const noexcept;
 };
 
+/**
+ * @brief Internal storage for unique sample identifiers with efficient hash-based lookup.
+ * 
+ * SampleIdStorage implements a flyweight pattern for sample IDs, ensuring that each unique
+ * sample identifier string is stored only once in memory. It provides fast hash-based
+ * comparison and lookup operations. This class is used internally by SampleId and should
+ * not be used directly.
+ */
 class SampleIdStorage {
  public:
   MOVE_ONLY(SampleIdStorage);
@@ -37,6 +45,15 @@ class SampleIdStorage {
 struct SampleId;
 using UniqueData = SampleId;
 
+/**
+ * @brief Lightweight identifier for samples in phylogenetic trees.
+ * 
+ * SampleId provides an efficient way to represent and compare sample identifiers in
+ * phylogenetic data structures. It uses the flyweight pattern through SampleIdStorage
+ * to ensure memory efficiency when dealing with many samples. The class supports fast
+ * equality comparison through pointer comparison and provides hash support for use in
+ * standard containers.
+ */
 struct SampleId {
   SampleId(SampleId&&) noexcept = default;
   SampleId(const SampleId&) noexcept = default;
