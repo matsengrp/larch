@@ -79,7 +79,6 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
     optimize_inner_loop(all_nodes,     // nodes to search
                         tree,          // tree
                         1 << rad_exp,  // radius
-                        callback,
                         true,                  // allow drift
                         true,                  // search all directions
                         5,                     // NOLINT // minutes between save
@@ -90,7 +89,8 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                         1,                     // current iteration
                         "intermediate",        // intermediate template
                         "intermediate_base",   // intermediate base name
-                        "intermediate_newick"  // intermediate newick name
+                        "intermediate_newick", // intermediate newick name
+                        callback               // callback
     );
     tree.uncondense_leaves();
     tree.condense_leaves(condense_arg);

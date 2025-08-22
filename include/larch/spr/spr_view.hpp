@@ -186,6 +186,14 @@ struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
 };
 
 template <typename Target>
+/**
+ * @brief Storage container for SPR (Subtree Prune and Regraft) operations on phylogenetic trees.
+ * 
+ * SPRStorage extends a target DAG storage with additional features needed for SPR operations,
+ * including hypothetical nodes and hypothetical tree structures. It provides the infrastructure
+ * for efficiently exploring tree rearrangements by maintaining both the original tree structure
+ * and potential modifications that would result from SPR moves.
+ */
 struct SPRStorage;
 
 template <typename Target>

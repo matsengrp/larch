@@ -1,5 +1,10 @@
 /**
- * An EdgeLabel stores an edge's parent and child NodeLabel objects
+ * @brief Represents a labeled edge in a phylogenetic tree by storing parent and child node labels.
+ * 
+ * EdgeLabel is a lightweight container that uniquely identifies an edge in a tree structure
+ * by storing its parent and child NodeLabel objects. It provides hashing
+ * capabilities for use in hash-based containers and supports computing the clade index
+ * associated with the edge.
  */
 
 #pragma once
