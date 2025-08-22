@@ -10,6 +10,19 @@
 
 static inline constexpr IdContinuity DefIdCont = IdContinuity::Sparse;
 
+/**
+ * @brief A flexible container for storing values indexed by IDs with configurable storage strategies.
+ * 
+ * IdContainer provides a unified interface for storing and accessing elements indexed by ID types,
+ * with the underlying storage automatically selected based on continuity and ordering requirements.
+ * For dense IDs, it uses vector storage for O(1) access. For sparse IDs, it can use either an
+ * ordered ContiguousMap or an unordered map depending on the Ordering template parameter.
+ * 
+ * @tparam Id The ID type used as keys
+ * @tparam T The value type to store
+ * @tparam Cont The ID continuity strategy (Dense or Sparse)
+ * @tparam Ord The ordering requirement (Ordered or Unordered)
+ */
 template <typename Id, typename T, IdContinuity Cont = DefIdCont,
           Ordering Ord = Ordering::Ordered>
 class IdContainer {
@@ -225,6 +238,17 @@ struct ContainerEquivalent<IdContainer<Id, Lhs, Cont, Ord>,
 
 /////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Thread-safe sparse map for concurrent access to ID-indexed values.
+ * 
+ * ConcurrentSparseIdMap provides a bucket-based concurrent hash map implementation that allows
+ * multiple threads to safely access and modify different elements simultaneously. The map divides
+ * the ID space into N buckets, each protected by its own shared mutex, reducing contention
+ * for concurrent operations on different IDs.
+ * 
+ * @tparam T The value type to store
+ * @tparam N The number of buckets for partitioning the ID space (default: 32)
+ */
 template <typename T, size_t N = 32>
 class ConcurrentSparseIdMap {
  public:

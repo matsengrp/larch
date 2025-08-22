@@ -47,6 +47,14 @@ struct CheckIsCondensed<T, std::enable_if_t<CheckIsCondensedExtendedHelper<T>::v
                                             not CheckIsCondensedHelper<T>::value>>
     : std::bool_constant<T::StorageType::TargetView::BaseType::is_condensed> {};
 
+/**
+ * @brief Empty storage tag for MAT nodes in the view system.
+ * 
+ * MATNodeStorage is an empty marker type used to tag DAG nodes as part of a MAT view.
+ * It doesn't store any data itself since all node information is accessed directly
+ * from the underlying MAT structure. The view system uses this tag to identify and
+ * provide MAT-specific operations on DAG nodes.
+ */
 struct MATNodeStorage {
   MOVE_ONLY(MATNodeStorage);
   MATNodeStorage() = default;
@@ -57,6 +65,14 @@ struct MATNodeStorage {
   }
 };
 
+/**
+ * @brief Empty storage tag for MAT edges in the view system.
+ * 
+ * MATEdgeStorage is an empty marker type used to tag DAG edges as part of a MAT view.
+ * It doesn't store any data itself since all edge information is accessed directly
+ * from the underlying MAT structure. The view system uses this tag to identify and
+ * provide MAT-specific operations on DAG edges.
+ */
 struct MATEdgeStorage {
   MOVE_ONLY(MATEdgeStorage);
   MATEdgeStorage() = default;
@@ -67,6 +83,17 @@ struct MATEdgeStorage {
   }
 };
 
+/**
+ * @brief Range adaptor for iterating over children of a MAT node in a DAG view.
+ * 
+ * MATChildrenRange provides a lazy range interface for accessing the children of a node
+ * in a MAT view. It handles both condensed and uncondensed nodes, automatically expanding
+ * condensed nodes (which represent multiple samples) into their individual children when
+ * iterating in an uncondensed view. This class implements the ranges::view_facade interface
+ * for seamless integration with range-based algorithms.
+ * 
+ * @tparam DAG The DAG view type being iterated over
+ */
 template <typename DAG>
 struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
   using Node = typename DAG::NodeView;
@@ -222,6 +249,15 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
   // LARCH_DEBUG_THIS;
 };
 
+/**
+ * @brief Provides neighbor relationship navigation for nodes in a MAT view.
+ * 
+ * MATNeighbors implements the Neighbors interface for MAT views, providing access to
+ * parent and child relationships of nodes. It handles the translation between MAT node
+ * structures and DAG neighbor concepts, including support for both condensed and
+ * uncondensed views. The class provides methods to query parents, clades (groups of children),
+ * and leaf nodes below a given node in the tree hierarchy.
+ */
 struct MATNeighbors : Neighbors {
   template <typename CRTP>
   inline DAGNeighbors Copy(const CRTP* crtp) const {
@@ -388,6 +424,15 @@ template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATNeighbors, CRTP, Tag>
     : FeatureMutableView<Neighbors, CRTP, Tag> {};
 
+/**
+ * @brief Provides endpoint information for edges in a MAT view.
+ * 
+ * MATEndpoints implements the Endpoints interface for MAT views, providing access to
+ * the parent node, child node, and clade index of edges. It handles the mapping between
+ * MAT edge representations and DAG edge endpoints, including special handling for
+ * condensed nodes that represent multiple samples. The class correctly identifies edge
+ * endpoints even when nodes have been uncondensed from the original MAT structure.
+ */
 struct MATEndpoints : Endpoints {
   template <typename CRTP>
   inline DAGEndpoints Copy(const CRTP* crtp) const {
@@ -777,6 +822,18 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
 template <typename CRTP, typename Tag>
 struct FeatureMutableView<MATEdgeStorage, CRTP, Tag> {};
 
+/**
+ * @brief Base container for managing MAT elements (nodes or edges) in a DAG view.
+ * 
+ * MATElementsContainerBase provides the core infrastructure for storing and accessing
+ * MAT nodes or edges within a DAG view system. It manages the mapping between MAT element
+ * IDs and their corresponding DAG representations, handling both condensed and uncondensed
+ * views. The container supports efficient lookup, iteration, and feature storage for MAT
+ * elements, with special handling for condensed nodes that represent multiple samples and
+ * the universal ancestor (UA) node.
+ * 
+ * @tparam C The component type (Node or Edge)
+ */
 template <Component C, bool>
 struct MATElementsContainerBase {
   using ElementStorageT =

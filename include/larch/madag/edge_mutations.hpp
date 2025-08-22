@@ -7,7 +7,7 @@
 #include "larch/contiguous_map.hpp"
 
 /**
- * A wrapper for size_t, storing a 1-based index on the reference sequence.
+ * @brief A wrapper for size_t, storing a 1-based index on the reference sequence.
  */
 struct MutationPosition {
   size_t value = NoId;
@@ -22,6 +22,14 @@ inline bool operator==(MutationPosition lhs, MutationPosition rhs);
 inline bool operator!=(MutationPosition lhs, MutationPosition rhs);
 inline bool operator<(MutationPosition lhs, MutationPosition rhs);
 
+/**
+ * @brief Container for mutations associated with an edge in a mutation-annotated phylogenetic DAG.
+ * 
+ * EdgeMutations stores a collection of mutations that occur along a specific edge in the tree.
+ * Each mutation is represented as a position on the reference sequence along with the parent
+ * and child bases at that position. The class uses a ContiguousMap for efficient storage and
+ * retrieval of mutations by position.
+ */
 class EdgeMutations {
   ContiguousMap<MutationPosition, std::pair<MutationBase, MutationBase>> mutations_;
 
