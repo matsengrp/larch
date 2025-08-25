@@ -24,7 +24,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   idxs.resize(dags.size());
   std::iota(idxs.begin(), idxs.end(), 0);
 
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   // TODO uncomment once extra edges/nodes are cleared in CollapseEmptyFragmentEdges
   // ParallelForEach(idxs, [&](size_t i) {
   //   auto dag = GetFullDAG(dags.at(i));
@@ -47,7 +47,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     ComputeLeafSets(i, dags, below, dags_labels);
   });  // FIXME Parallel
 
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   ParallelForEach(idxs, [&](size_t i) {
     for (auto node : dags.at(i).GetNodes()) {
       Assert(not dags_labels.at(i).at(node).empty());
@@ -59,7 +59,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   ParallelForEach(idxs,
                   [&](size_t i) { MergeNodes(i, dags, below, dags_labels, node_id); });
 
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   result_nodes_.ReadAll([](auto result_nodes) {
     for (auto& i : result_nodes) {
       Assert(i.second.value != NoId);

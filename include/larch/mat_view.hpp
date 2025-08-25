@@ -133,12 +133,10 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
                                .get());
 
   bool empty() const {
-    // LARCH_DEBUG_USE;
     return clades_count == 0;
   }
 
   size_t size() const {
-    // LARCH_DEBUG_USE;
     return clades_count;
   }
 
@@ -146,12 +144,10 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
   friend ranges::range_access;
 
   EdgeId read() const {
-    // LARCH_DEBUG_USE;
     return EdgeId{c_node_id};
   }
 
   bool equal(ranges::default_sentinel_t) const {
-    // LARCH_DEBUG_USE;
     return is_done();
   }
 
@@ -166,7 +162,6 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
   }
 
   void next() {
-    // LARCH_DEBUG_USE;
     if (is_done()) {
       return;
     }
@@ -246,7 +241,6 @@ struct MATChildrenRange : ranges::view_facade<MATChildrenRange<DAG>> {
   size_t c_node_id = NoId;
   bool done = false;
   size_t clades_count = 0;
-  // LARCH_DEBUG_THIS;
 };
 
 /**
@@ -496,13 +490,13 @@ struct MATEndpoints : Endpoints {
       // if it's an edge above a condensed node
       auto& storage = dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>().get();
       if (mat_node == nullptr) {
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
         auto cn_id_str = storage.node_id_to_sampleid_map_.find(dag_edge.GetChildId());
         Assert(cn_id_str != storage.node_id_to_sampleid_map_.end());
 #endif
         auto condensed_mat_node_str =
             storage.node_id_to_sampleid_map_.at(dag_edge.GetChildId());
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
         auto condensed_mat_node_iter =
             storage.reversed_condensed_nodes_.find(condensed_mat_node_str);
         Assert(condensed_mat_node_iter != storage.reversed_condensed_nodes_.end());
@@ -725,13 +719,11 @@ struct ExtraFeatureMutableView<MATNodeStorage, CRTP> {
 template <typename CRTP, typename Tag>
 struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   MAT::Node* GetMATNode() const {
-    // LARCH_DEBUG_USE;
     auto [dag_node, mat, mat_node, is_ua] = access();
     return mat_node;
   }
 
   bool HaveMATNode() const {
-    // LARCH_DEBUG_USE;
     return GetMATNode() != nullptr;
   }
 
@@ -741,7 +733,6 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   static inline std::vector<MAT::Node*> empty_node{nullptr};
 
   NodeId GetUA() const {
-    // LARCH_DEBUG_USE;
     auto dag_node = static_cast<const CRTP&>(*this);
     auto dag = dag_node.GetDAG();
     return dag.template GetFeatureExtraStorage<Component::Node, MATNodeStorage>()
@@ -750,7 +741,6 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   }
 
   auto access() const {
-    // LARCH_DEBUG_USE;
     auto dag_node = static_cast<const CRTP&>(*this);
     NodeId id = dag_node.GetId();
     auto dag = dag_node.GetDAG();
@@ -765,7 +755,6 @@ struct FeatureConstView<MATNodeStorage, CRTP, Tag> {
   }
 
  private:
-  // LARCH_DEBUG_THIS;
 };
 
 template <typename CRTP, typename Tag>

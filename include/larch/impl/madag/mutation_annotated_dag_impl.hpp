@@ -143,7 +143,7 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
       node = std::move(new_cgs.at(node.GetId()));
     }
   }
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   // TODO extract validation to separate function to not hurt performance
   ContiguousMap<CompactGenome, NodeId> leaf_cgs;
   for (Node node : dag.GetNodes()) {

@@ -283,7 +283,7 @@ void ExtraFeatureMutableView<MATConversion, CRTP>::BuildFromMAT(
     }
   }
   dag.AddUA(EdgeMutations{mutations_view(mat.root)});
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   for (auto leaf : dag.GetLeafs()) {
     Assert(leaf.HaveSampleId());
   }

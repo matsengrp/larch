@@ -417,7 +417,7 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
   auto collapsed = dag.CollapseEmptyFragmentEdges(result_nodes, result_edges);
   NodeId oldest_node = collapsed.first.front();
 
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   for (auto node_id : collapsed.first) {
     auto node = dag.Get(node_id);
     if (not node.IsUA() and not node.IsMoveNew()) {
@@ -729,7 +729,7 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   for (const auto& edgeadded : edge_already_added) {
     current_edges.push_back(edgeadded.first);
   }
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   for (auto node_id : current_nodes) {
     auto node = dag.Get(node_id);
     Assert(node_id.value != NoId);
@@ -838,7 +838,7 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
   Assert(src_parent_node.GetCladesCount() > 0);
   Assert(dst_parent_node.GetCladesCount() > 0);
 
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   const size_t old_num_nodes = dag.GetNodesCount();
   const size_t old_num_edges = dag.GetEdgesCount();
 #endif

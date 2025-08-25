@@ -149,7 +149,7 @@ struct SampleId;
 template <typename CRTP, typename Tag>
 void FeatureConstView<Neighbors, CRTP, Tag>::Validate(
     [[maybe_unused]] bool recursive, [[maybe_unused]] bool allow_dag) const {
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
   if (node.IsUA()) {

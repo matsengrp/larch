@@ -47,7 +47,7 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   static_assert(DAG::template contains_element_feature<Component::Node, MATConversion>);
   auto& tree = dag.GetMutableMAT();
 
-#ifdef NDEBUG
+#ifdef KEEP_ASSERTS
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "before_optimize.pb");
   check_MAT_MADAG_Eq(tree, dag);
 #endif

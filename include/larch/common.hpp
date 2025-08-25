@@ -269,7 +269,7 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
 #ifdef USE_CPPTRACE
 #define Assert(x)                                                       \
   {                                                                     \
@@ -298,7 +298,7 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #endif
 
 [[noreturn]] inline void Fail(const char* msg) {
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   std::cerr << msg << "\n";
 #endif
 #ifdef USE_CPPTRACE
