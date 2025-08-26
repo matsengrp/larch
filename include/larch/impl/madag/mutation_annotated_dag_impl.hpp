@@ -144,23 +144,27 @@ void FeatureMutableView<ReferenceSequence, CRTP, Tag>::RecomputeCompactGenomes(
     }
   }
 #ifdef KEEP_ASSERTS
+
+  using cg_ref = std::reference_wrapper<const CompactGenome>;
+
+  auto hash = [](cg_ref x) { return x.get().Hash(); };
+  auto eq = [](cg_ref lhs, cg_ref rhs) { return lhs.get() == rhs.get(); };
+
   // TODO extract validation to separate function to not hurt performance
-  ContiguousMap<CompactGenome, NodeId> leaf_cgs;
+  std::unordered_map<cg_ref, NodeId, decltype(hash), decltype(eq)> leaf_cgs{100, hash,
+                                                                            eq};
   for (Node node : dag.GetNodes()) {
     if (node.IsLeaf()) {
       bool success =
-          leaf_cgs
-              .insert({node.GetCompactGenome().Copy(static_cast<const CRTP*>(this)),
-                       node.GetId()})
-              .second;
+          leaf_cgs.insert({std::cref(node.GetCompactGenome()), node.GetId()}).second;
       if (not success) {
-        // std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
-        //           << node.GetId().value << " also seen at "
-        //           << leaf_cgs.at(node.GetCompactGenome().Copy()).value
-        //           << "\nCompact Genome is\n"
-        //           << node.GetCompactGenome().ToString() << "\n"
-        //           << std::flush;
-        // TODO Fail("Error in ComputeCompactGenomes: had a non-unique leaf node");
+        std::cout << "Error in ComputeCompactGenomes: had a non-unique leaf node at "
+                  << node.GetId().value << " also seen at "
+                  << leaf_cgs.at(std::cref(node.GetCompactGenome())).value
+                  << "\nCompact Genome is\n"
+                  << node.GetCompactGenome().ToString() << "\n"
+                  << std::flush;
+        Fail("Error in ComputeCompactGenomes: had a non-unique leaf node");
       }
     }
   }
