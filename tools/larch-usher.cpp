@@ -930,7 +930,11 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
           return AddMATConversion(weight_bin.MinWeightSampleTree({}, subtree_node));
         }
       } else if (sample_method == SampleMethod::UniformParsimony) {
-        return use_ua_free_parsimony ? AddMATConversion(weight_ua.MinWeightUniformSampleTree({}, subtree_node)) : AddMATConversion(weight_bin.MinWeightUniformSampleTree({}, subtree_node));
+        if (use_ua_free_parsimony) {
+          return AddMATConversion(weight_ua.MinWeightUniformSampleTree({}, subtree_node));
+        } else {
+          return AddMATConversion(weight_bin.MinWeightUniformSampleTree({}, subtree_node));
+        }
       } else if (sample_method == SampleMethod::MinSumRFDistance) {
         SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist{merge.GetResult(),
                                                                main_rng.GenerateSeed()};
