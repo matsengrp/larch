@@ -153,6 +153,7 @@ larch-usher options:
 - `--output-format` [Default: format inferred by file extension] Specify the format of the output file. Options are: (`dagbin`, `pb`, `dag-pb`)
 - `-S` Enable smart stopping: larch-usher will terminate when parsimony improvement ceases to occur.
 - `-T` specify a hard time limit after which larch-usher will terminate.
+- `--ignore-root-edge-mutations` larch-usher will ignore the contribution that edges directly descending from the UA node contribute to parsimony score.
 
 ### larch-dagutil
 
