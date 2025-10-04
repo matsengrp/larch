@@ -55,7 +55,7 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
                        FileFormat output_format, bool trim, bool sample_tree,
                        std::string rf_path, FileFormat rf_format,
                        bool do_print_dag_info, bool do_print_parsimony,
-                       bool do_print_rf_distance) {
+                       bool do_print_rf_distance, std::string vcf_path) {
   std::vector<MADAGStorage<>> trees;
   std::vector<size_t> trees_id;
 
@@ -73,6 +73,9 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
     trees.at(tree_id).View().RecomputeCompactGenomes();
   });
   std::cout << " done.\n";
+  for (size_t i = 0; i < input_paths.size(); i++) {
+    LoadVCFData(trees.at(i), vcf_path);
+  }
 
   Benchmark merge_time;
   Merge merge(trees.front().View().GetReferenceSequence());
@@ -80,6 +83,7 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
   merge_time.start();
   merge.AddDAGs(tree_refs);
   merge_time.stop();
+  merge.ComputeResultEdgeMutations();
   std::cout << "\nDAGs merged in " << merge_time.durationMs() << " ms\n";
 
   std::cout << "DAG leave(without trimming): " << merge.GetResult().GetLeafsCount()
@@ -197,6 +201,7 @@ int main(int argc, char** argv) try {
   FileFormat output_format = FileFormat::Infer;
   std::string refseq_path;
   std::string rf_path;
+  std::string vcf_path;
   FileFormat rf_format = FileFormat::Infer;
   bool trim = false;
   bool sample_tree = false;
@@ -224,12 +229,14 @@ int main(int argc, char** argv) try {
     } else if (name == "-s" or name == "--sample") {
       ParseOption<false>(name, params, sample_tree, 0);
       sample_tree = true;
+    } else if (name == "-v" or name == "--VCF-input-file") {
+      ParseOption(name, params, vcf_path, 1);
     } else if (name == "--dag-info") {
       ParseOption<false>(name, params, do_print_dag_info, 0);
       do_print_dag_info = true;
       do_print_parsimony = true;
       do_print_rf_distance = true;
-    } else if (name == "--print-pars") {
+    } else if (name == "--parsimony") {
       ParseOption<false>(name, params, do_print_parsimony, 0);
       do_print_dag_info = true;
       do_print_parsimony = true;
@@ -300,7 +307,7 @@ int main(int argc, char** argv) try {
 
   MergeTrees(input_paths, input_formats, refseq_path, output_path, output_format, trim,
              sample_tree, rf_path, rf_format, do_print_dag_info, do_print_parsimony,
-             do_print_rf_distance);
+             do_print_rf_distance, vcf_path);
   return EXIT_SUCCESS;
 } catch (std::exception& e) {
   std::cerr << "Uncaught exception: " << e.what() << std::endl;
