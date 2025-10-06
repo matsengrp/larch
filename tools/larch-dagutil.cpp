@@ -208,6 +208,7 @@ int main(int argc, char** argv) try {
   bool do_print_dag_info = false;
   bool do_print_parsimony = false;
   bool do_print_rf_distance = false;
+  bool no_vcf = false;
 
   for (auto [name, params] : args) {
     if (name == "-h" or name == "--help") {
@@ -231,6 +232,8 @@ int main(int argc, char** argv) try {
       sample_tree = true;
     } else if (name == "-v" or name == "--VCF-input-file") {
       ParseOption(name, params, vcf_path, 1);
+    } else if (name == "--force-no-vcf") {
+      no_vcf = true;
     } else if (name == "--dag-info") {
       ParseOption<false>(name, params, do_print_dag_info, 0);
       do_print_dag_info = true;
@@ -277,6 +280,10 @@ int main(int argc, char** argv) try {
   }
   if (input_paths.size() != input_formats.size()) {
     std::cerr << "Specify input format for each input file.\n";
+    Fail();
+  }
+  if (vcf_path.empty() and (not no_vcf)) {
+    std::cerr << "Specify an input VCF file or use flag '--force-no-vcf'.\n";
     Fail();
   }
 
