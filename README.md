@@ -162,6 +162,9 @@ From the `larch/build/bin` directory:
 ```
 This executable takes a list of protobuf files and merges the resulting DAGs together into one.
 
+#### Note about merging ambiguous data using larch-dagutil
+There is some non-determinism in parsimony score that can happen when merging multiple DAGs on the same ambiguous leafset without providing a VCF. The `larch-dagutil` implementation can merge multiple DAGs whose leafsets contain matching sampleIds into a single DAG, but the protobuf format only stores edge mutations, which are fully disambiguated. So the ambiguities are recovered by passing a VCF file to the program. When a VCF is not supplied, the overall parsimony score of the merged DAG is not well-defined. This is because the nodes are added in parallel, and so the disambiguation assigned to any given leaf node is determined by the order in which the parallel algorithm accesses the leaves from each DAG. So the disambiguation for each leaf is based on a random choice of the trees from which the DAG is constructed, and is not necessarily consistent with the disambiguation for its sister leaves.
+
 dag-util options:
 - `-i,--input` Filepath to the input Tree/DAG (accepted file formats are: MADAG protobuf, MAT protobuf, JSON, Dagbin).
 - `-o,--output` [Default: does not print output] Filepath to the output Tree/DAG (accepted file formats are: MADAG protobuf, Dagbin).

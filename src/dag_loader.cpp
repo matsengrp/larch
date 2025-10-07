@@ -111,10 +111,19 @@ MADAGStorage<> LoadDAGFromProtobuf(std::string_view path) {
   auto result = result_storage.View();
   result.SetReferenceSequence(data.reference_seq());
 
+#ifdef KEEP_ASSERTS
+  std::unordered_set<std::string> sids;
+#endif  // KEEP_ASSERTS
+
   for (const auto& i : data.node_names()) {
     auto new_node = result.AddNode({static_cast<size_t>(i.node_id())});
     if (i.condensed_leaves().size() > 0) {
       for (auto cl : i.condensed_leaves()) {
+#ifdef KEEP_ASSERTS
+        if (not sids.insert(cl).second) {
+          std::cout << "Sample ID: wrong ! " << cl << "\n";
+        }
+#endif  // KEEP_ASSERTS
         new_node = SampleId::Make(cl);
         break;
       }

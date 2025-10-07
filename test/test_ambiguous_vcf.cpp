@@ -5,6 +5,8 @@
 #include "larch/spr/spr_view.hpp"
 #include "larch/mat_conversion.hpp"
 #include "larch/usher_glue.hpp"
+#include "larch/subtree/subtree_weight.hpp"
+#include "larch/subtree/parsimony_score_binary.hpp"
 
 std::ostream& operator<<(std::ostream& os, const MAT::Mutation mut) {
   os << mut.get_string();
@@ -327,6 +329,33 @@ void test_vcf_reading() {
   TestAssert(0 == result);
 }
 
+[[maybe_unused]] void test_vcf_with_parsimony() {
+  auto amb_dag_storage = make_ambiguous_sample_dag();
+  MADAG amb_dag = amb_dag_storage.View();
+  auto unamb_dag_storage = make_unambiguous_sample_dag();
+  MADAG unamb_dag = unamb_dag_storage.View();
+  // get the number of leaf-ward mutations that do not reult in an ambiguity(these mutations do contribute to parsimony).
+  size_t amb_dag_unamb_leaf_mutations = 0;
+  for (auto n: amb_dag.GetLeafs()) {
+    for (auto mutation: n.GetFirstParent().GetEdgeMutations()) {
+      if (not mutation.second.second.IsAmbiguous()) {
+        ++amb_dag_unamb_leaf_mutations;
+      }
+    }
+  }
+  // get the number of leaf-ward mutations in the disambiguated DAG
+  size_t unamb_dag_leaf_mutations = 0;
+  for (auto n: unamb_dag.GetLeafs()) {
+    unamb_dag_leaf_mutations += n.GetFirstParent().GetEdgeMutations().size();
+  }
+  auto parsimony_adjust = unamb_dag_leaf_mutations - amb_dag_unamb_leaf_mutations;
+  SubtreeWeight<BinaryParsimonyScore, MADAG> parsimony_1(unamb_dag);
+  SubtreeWeight<BinaryParsimonyScore, MADAG> parsimony_2(amb_dag);
+  auto unamb_parsimony_score = parsimony_1.ComputeWeightBelow(unamb_dag.GetRoot(), {});
+  auto amb_parsimony_score = parsimony_2.ComputeWeightBelow(amb_dag.GetRoot(), {});
+  TestAssert(unamb_parsimony_score == amb_parsimony_score + parsimony_adjust);
+}
+
 [[maybe_unused]] static const auto test_added0 =
     add_test({[]() { test_ambiguous_vcf(); }, "Loading VCFs with Ambiguities Test"});
 
@@ -340,3 +369,7 @@ void test_vcf_reading() {
 [[maybe_unused]] static const auto test_added3 =
     add_test({[]() { test_vcf_with_larch_usher(); },
               "Loading VCFs with Ambiguities and running with MatOptimize"});
+
+[[maybe_unused]] static const auto test_added4 =
+    add_test({[]() { test_vcf_with_parsimony(); },
+              "Loading VCFs with Ambiguities and calculating parsimony"});

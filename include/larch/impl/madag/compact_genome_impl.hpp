@@ -31,7 +31,7 @@ static void ComputeMutations(const EdgeMutations& edge_mutations,
 
 CompactGenome::CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mutations)
     : mutations_{std::move(mutations)}, hash_{ComputeHash(mutations_)} {
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   for (auto [pos, mut] : mutations_) {
     AssertMut(pos, mut);
   }
@@ -41,7 +41,7 @@ CompactGenome::CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mut
 CompactGenome::CompactGenome(ContiguousMap<MutationPosition, MutationBase>&& mutations,
                              size_t hash)
     : mutations_{std::move(mutations)}, hash_{hash} {
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
   for (auto [pos, mut] : mutations_) {
     AssertMut(pos, mut);
   }

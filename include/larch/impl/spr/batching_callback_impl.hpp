@@ -51,7 +51,7 @@ bool BatchingCallback<CRTP>::operator()(Profitable_Moves& move, int best_score_c
         auto& storage = bucket.back();
     // MADAGToDOT(storage.spr->View(), std::cout);
     // storage.spr->View().GetRoot().Validate(true);
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
         for (auto i : storage.spr->View().Const().GetLeafs()) {
           Assert(i.HaveSampleId());
         }
@@ -64,7 +64,7 @@ bool BatchingCallback<CRTP>::operator()(Profitable_Moves& move, int best_score_c
               collapse_empty_fragment_edges_
                   ? storage.spr->View().MakeFragment()
                   : storage.spr->View().MakeUncollapsedFragment());
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
           auto new_old_src_parent = storage.spr->View().GetOldSourceParent();
           Assert(old_src_parent.GetId() == new_old_src_parent.GetId());
 #endif
@@ -76,7 +76,7 @@ bool BatchingCallback<CRTP>::operator()(Profitable_Moves& move, int best_score_c
                           nodes_with_major_allele_set_change);
 
           if (accepted.first) {
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
             for (auto node : fragment.GetNodes()) {
               if (not(node.IsUA() or node.IsMoveNew())) {
                 Assert(node.GetId().value != NoId);
@@ -137,7 +137,7 @@ void BatchingCallback<CRTP>::operator()(MAT::Tree& tree) {
     });
     std::unique_lock lock{merge_mtx_};
     if (not all.empty()) {
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
       auto orig_num_leafs = merge_.GetResult().GetLeafsCount();
 #endif
       merge_.AddDAGs(
@@ -154,7 +154,7 @@ void BatchingCallback<CRTP>::operator()(MAT::Tree& tree) {
       // Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
       // }
 
-#ifndef NDEBUG
+#ifdef KEEP_ASSERTS
       Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
 #endif
     }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/unordered/unordered_set.hpp>
+
 class SampleIdStorage;
 
 template <>
@@ -14,12 +16,13 @@ struct std::equal_to<SampleIdStorage> {
 };
 
 /**
- * @brief Internal storage for unique sample identifiers with efficient hash-based lookup.
- * 
- * SampleIdStorage implements a flyweight pattern for sample IDs, ensuring that each unique
- * sample identifier string is stored only once in memory. It provides fast hash-based
- * comparison and lookup operations. This class is used internally by SampleId and should
- * not be used directly.
+ * @brief Internal storage for unique sample identifiers with efficient hash-based
+ * lookup.
+ *
+ * SampleIdStorage implements a flyweight pattern for sample IDs, ensuring that each
+ * unique sample identifier string is stored only once in memory. It provides fast
+ * hash-based comparison and lookup operations. This class is used internally by
+ * SampleId and should not be used directly.
  */
 class SampleIdStorage {
  public:
@@ -28,15 +31,43 @@ class SampleIdStorage {
   inline size_t Hash() const { return hash_; }
   inline const std::string& Value() const { return value_; }
 
-  static const SampleIdStorage& Get(std::string&& x) {
-    return *values_.emplace(SampleIdStorage{std::move(x)}).first;
+  static const SampleIdStorage& Get(std::string_view x) {
+    std::shared_lock read_lock{mtx_};
+    auto result = values_.find(x);
+    if (result != values_.end()) {
+      return *result;
+    }
+    read_lock.unlock();
+    std::unique_lock write_lock{mtx_};
+    return *values_.emplace(SampleIdStorage{std::string{x}}).first;
   }
 
  private:
-  SampleIdStorage(std::string&& value)
+  SampleIdStorage(std::string value)
       : hash_{std::hash<std::string>{}(value)}, value_{std::move(value)} {}
 
-  static inline std::unordered_set<SampleIdStorage> values_;
+  struct key_hash {
+    using is_transparent = void;
+    size_t operator()(const SampleIdStorage& x) const { return x.Hash(); };
+    size_t operator()(std::string_view x) const {
+      return std::hash<std::string_view>{}(x);
+    };
+  };
+
+  struct key_equal {
+    using is_transparent = void;
+    bool operator()(const SampleIdStorage& lhs, const SampleIdStorage& rhs) const {
+      return lhs.Value() == rhs.Value();
+    }
+
+    bool operator()(std::string_view lhs, const SampleIdStorage& rhs) const {
+      return lhs == rhs.Value();
+    }
+  };
+
+  static inline boost::unordered_set<SampleIdStorage, key_hash, key_equal> values_{
+      1000, key_hash{}, key_equal{}};
+  static inline std::shared_mutex mtx_;
 
   const size_t hash_;
   const std::string value_;
@@ -47,7 +78,7 @@ using UniqueData = SampleId;
 
 /**
  * @brief Lightweight identifier for samples in phylogenetic trees.
- * 
+ *
  * SampleId provides an efficient way to represent and compare sample identifiers in
  * phylogenetic data structures. It uses the flyweight pattern through SampleIdStorage
  * to ensure memory efficiency when dealing with many samples. The class supports fast
@@ -62,7 +93,7 @@ struct SampleId {
 
   SampleId() : target_{nullptr} {}
 
-  static SampleId Make(std::string_view id) { return std::string{id}; }
+  static SampleId Make(std::string_view id) { return id; }
 
   template <typename CRTP>
   SampleId Copy(const CRTP*) const {
@@ -109,7 +140,7 @@ struct SampleId {
   friend bool operator<=(const SampleId& lhs, const SampleId& rhs) noexcept;
   friend bool operator>=(const SampleId& lhs, const SampleId& rhs) noexcept;
 
-  SampleId(std::string&& x) : target_{&SampleIdStorage::Get(std::move(x))} {}
+  SampleId(std::string_view x) : target_{&SampleIdStorage::Get(x)} {}
   SampleId(const SampleIdStorage* x) : target_{x} {}
 
   const SampleIdStorage* target_;

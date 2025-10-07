@@ -23,6 +23,7 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(KEEP_ASSERTS "Keep asserts" ON)
 option(USE_USHER "Use matOptimize" ON)
 option(USE_MAT_VIEW "Use MATView" ON)
 option(USE_CPPTRACE "Use cpptrace" OFF)
@@ -164,7 +165,10 @@ function(larch_compile_opts PRODUCT)
   target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -pipe)
 
   if(CMAKE_BUILD_TYPE EQUAL "DEBUG")
+    target_compile_options(${PRODUCT} PUBLIC -DKEEP_ASSERTS)
     target_compile_options(${PRODUCT} PUBLIC -fno-omit-frame-pointer -fno-stack-protector)
+  elseif(KEEP_ASSERTS)
+    target_compile_options(${PRODUCT} PUBLIC -DKEEP_ASSERTS)
   endif()
 
   if(USE_USHER)
