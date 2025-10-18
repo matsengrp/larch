@@ -218,6 +218,7 @@ MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
   apply_mutations(apply_mutations, result.GetRoot().GetFirstChild(),
                   data.node_mutations(), muts_idx);
 
+  std::unordered_map<NodeId, size_t> clade_counts;
   // uncollapsing has to occur _after_ we read the mutations, since those mutations
   // are stored for edges in an ordered traversal of the condensed newick tree.
   const auto& leaf_ids = result.GetNodes() | Transform::GetId();
@@ -239,6 +240,9 @@ MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
             auto parent_edge = orig_leaf_in_dag.GetSingleParent();
             auto parent_node = parent_edge.GetParent();
             auto clade_idx = parent_node.GetCladesCount();
+            if (clade_counts.find(parent_node.GetId()) != clade_counts.end()) {
+              clade_idx = clade_counts[parent_node.GetId()];
+            }
             size_t ctr = 0;
             for (const auto& sib_node : cn.condensed_leaves()) {
               auto sib_node_name = static_cast<std::string>(sib_node);
@@ -252,6 +256,7 @@ MADAGStorage<> LoadTreeFromProtobuf(std::string_view path,
                 new_sib_edge.SetEdgeMutations(std::move(muts_copy));
                 result.AddEdge(new_sib_edge, parent_node, new_sib_node, {clade_idx++});
                 result.AddLeaf(new_sib_node);
+                clade_counts[parent_node.GetId()] = clade_idx;
               }
               ctr++;
             }
