@@ -19,6 +19,7 @@ Requirements
 
 * GCC 7.5
 * cmake 3.16
+* Boost 1.85
 
 For Ubuntu 18.04 LTS the following commands installs the requirements:
 
