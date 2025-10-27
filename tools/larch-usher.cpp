@@ -173,26 +173,24 @@ struct Treebased_Move_Found_Callback
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
-      auto src_leaf_set =
-          spr.GetMoveSource().GetOld().IsCondensedInMAT()
-              ? make_leaf_set(spr.GetMoveSources())
-              : this->GetMerge()
-                    .GetResultNodeLabels()
-                    .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(move.src)
-                            .GetOriginalId())
-                    .GetLeafSet()
-                    ->GetClades();
-      auto dst_leaf_set =
-          spr.GetMoveTarget().GetOld().IsCondensedInMAT()
-              ? make_leaf_set(spr.GetMoveTargets())
-              : this->GetMerge()
-                    .GetResultNodeLabels()
-                    .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(move.dst)
-                            .GetOriginalId())
-                    .GetLeafSet()
-                    ->GetClades();
+      auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveSources())
+                              : this->GetMerge()
+                                    .GetResultNodeLabels()
+                                    .at(this->GetMappedStorage()
+                                            .GetNodeFromMAT(move.src)
+                                            .GetOriginalId())
+                                    .GetLeafSet()
+                                    ->GetClades();
+      auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveTargets())
+                              : this->GetMerge()
+                                    .GetResultNodeLabels()
+                                    .at(this->GetMappedStorage()
+                                            .GetNodeFromMAT(move.dst)
+                                            .GetOriginalId())
+                                    .GetLeafSet()
+                                    ->GetClades();
       for (auto hypothetical_node : fragment.GetNodes()) {
         if (hypothetical_node.IsMoveNew()) {
           if (not(this->GetMerge().ContainsLeafset(
@@ -213,7 +211,8 @@ struct Treebased_Move_Found_Callback
                     this->GetMerge()
                         .GetResultNodeLabels()
                         .at(this->GetMappedStorage()
-                                .GetNodeFromMAT(this->GetMappedStorage().GetMAT().get_node(nid))
+                                .GetNodeFromMAT(
+                                    this->GetMappedStorage().GetMAT().get_node(nid))
                                 .GetOriginalId())
                         .GetLeafSet()
                         ->GetClades();
@@ -234,7 +233,7 @@ struct Treebased_Move_Found_Callback
     return {false, move.score_change <= 0};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 
   std::pair<int, int> move_score_coeffs_;
 };
@@ -259,7 +258,7 @@ struct Merge_All_Moves_Found_Callback
     return {true, true};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 };
 
 struct Merge_All_Profitable_Moves_Found_Callback
@@ -314,26 +313,24 @@ struct Merge_All_Profitable_Moves_Found_Callback
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
-      auto src_leaf_set =
-          spr.GetMoveSource().GetOld().IsCondensedInMAT()
-              ? make_leaf_set(spr.GetMoveSources())
-              : this->GetMerge()
-                    .GetResultNodeLabels()
-                    .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(move.src)
-                            .GetOriginalId())
-                    .GetLeafSet()
-                    ->GetClades();
-      auto dst_leaf_set =
-          spr.GetMoveTarget().GetOld().IsCondensedInMAT()
-              ? make_leaf_set(spr.GetMoveTargets())
-              : this->GetMerge()
-                    .GetResultNodeLabels()
-                    .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(move.dst)
-                            .GetOriginalId())
-                    .GetLeafSet()
-                    ->GetClades();
+      auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveSources())
+                              : this->GetMerge()
+                                    .GetResultNodeLabels()
+                                    .at(this->GetMappedStorage()
+                                            .GetNodeFromMAT(move.src)
+                                            .GetOriginalId())
+                                    .GetLeafSet()
+                                    ->GetClades();
+      auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveTargets())
+                              : this->GetMerge()
+                                    .GetResultNodeLabels()
+                                    .at(this->GetMappedStorage()
+                                            .GetNodeFromMAT(move.dst)
+                                            .GetOriginalId())
+                                    .GetLeafSet()
+                                    ->GetClades();
       for (auto hypothetical_node : fragment.GetNodes()) {
         if (hypothetical_node.IsMoveNew()) {
           if (not(this->GetMerge().ContainsLeafset(
@@ -349,13 +346,13 @@ struct Merge_All_Profitable_Moves_Found_Callback
                       hypothetical_node.GetOld().GetMATNode()->node_id ==
                           move.dst->node_id or
                       hypothetical_node.GetOld().GetMATNode()->is_root())) {
-
                 auto nid = hypothetical_node.GetOld().GetMATNode()->node_id;
                 const auto& current_leaf_sets =
                     this->GetMerge()
                         .GetResultNodeLabels()
                         .at(this->GetMappedStorage()
-                                .GetNodeFromMAT(this->GetMappedStorage().GetMAT().get_node(nid))
+                                .GetNodeFromMAT(
+                                    this->GetMappedStorage().GetMAT().get_node(nid))
                                 .GetOriginalId())
                         .GetLeafSet()
                         ->GetClades();
@@ -376,7 +373,7 @@ struct Merge_All_Profitable_Moves_Found_Callback
     return {move.score_change <= 0, move.score_change <= 0};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 
   Merge& merge_;
   ReassignedStatesStorage reassigned_states_storage_ =
@@ -438,26 +435,24 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
         to_ret.push_back(std::move(ls));
         return to_ret;
       };
-      auto src_leaf_set =
-          spr.GetMoveSource().GetOld().IsCondensedInMAT()
-              ? make_leaf_set(spr.GetMoveSources())
-              : this->GetMerge()
-                    .GetResultNodeLabels()
-                    .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(move.src)
-                            .GetOriginalId())
-                    .GetLeafSet()
-                    ->GetClades();
-      auto dst_leaf_set =
-          spr.GetMoveTarget().GetOld().IsCondensedInMAT()
-              ? make_leaf_set(spr.GetMoveTargets())
-              : this->GetMerge()
-                    .GetResultNodeLabels()
-                    .at(this->GetMappedStorage()
-                            .GetNodeFromMAT(move.dst)
-                            .GetOriginalId())
-                    .GetLeafSet()
-                    ->GetClades();
+      auto src_leaf_set = spr.GetMoveSource().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveSources())
+                              : this->GetMerge()
+                                    .GetResultNodeLabels()
+                                    .at(this->GetMappedStorage()
+                                            .GetNodeFromMAT(move.src)
+                                            .GetOriginalId())
+                                    .GetLeafSet()
+                                    ->GetClades();
+      auto dst_leaf_set = spr.GetMoveTarget().GetOld().IsCondensedInMAT()
+                              ? make_leaf_set(spr.GetMoveTargets())
+                              : this->GetMerge()
+                                    .GetResultNodeLabels()
+                                    .at(this->GetMappedStorage()
+                                            .GetNodeFromMAT(move.dst)
+                                            .GetOriginalId())
+                                    .GetLeafSet()
+                                    ->GetClades();
       for (auto hypothetical_node : fragment.GetNodes()) {
         if (hypothetical_node.IsMoveNew()) {
           if (not(this->GetMerge().ContainsLeafset(
@@ -478,7 +473,8 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
                     this->GetMerge()
                         .GetResultNodeLabels()
                         .at(this->GetMappedStorage()
-                                .GetNodeFromMAT(this->GetMappedStorage().GetMAT().get_node(nid))
+                                .GetNodeFromMAT(
+                                    this->GetMappedStorage().GetMAT().get_node(nid))
                                 .GetOriginalId())
                         .GetLeafSet()
                         ->GetClades();
@@ -499,7 +495,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     return {move.score_change <= 0, false};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 
   Merge& merge_;
   ReassignedStatesStorage reassigned_states_storage_ =
@@ -554,8 +550,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   bool plateau_stopping_condition = false;
   size_t current_parsimony_change_window_size = 0;
   size_t last_parsimony_change_window_size = 1;
-  size_t current_best_parsimony = -1;
-  size_t time_limit = -1;
+  size_t current_best_parsimony = NoId;
+  size_t time_limit = NoId;
   std::optional<uint32_t> user_seed = std::nullopt;
 
   Benchmark total_timer;
@@ -707,7 +703,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string logfile_name = logfile_path + "/logfile.csv";
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
-  //tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   tbb::global_control c(
       tbb::global_control::max_allowed_parallelism,
       ((thread_count > 0) ? std::min(thread_count, std::thread::hardware_concurrency())
@@ -743,9 +739,9 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   merge.ComputeResultEdgeMutations();
 
   Benchmark log_timer;
-  auto logger = [&input_dag, &merge, &logfile, &log_timer, &intermediate_dag_path,
+  auto logger = [&merge, &logfile, &log_timer, &intermediate_dag_path,
                  &write_intermediate_dag, &write_intermediate_every_x_iters,
-                 &output_format, &main_rng](size_t iteration) {
+                 &output_format](size_t iteration) {
     std::cout << "############ Logging for iteration " << iteration << " #######\n";
     merge.ComputeResultEdgeMutations();
 

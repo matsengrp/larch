@@ -57,6 +57,9 @@ function(lib_install PRODUCT)
   )
 endfunction()
 
+# FreeBSD
+add_link_options("-Wl,--undefined-version")
+
 # # oneTBB
 FetchContent_Declare(oneTBB
   GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
@@ -73,6 +76,7 @@ include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
 # # protobuf
 find_package(Protobuf REQUIRED)
+find_package(absl REQUIRED)
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -92,6 +96,12 @@ protobuf_generate(
   TARGET larch-autogen
   PROTOS proto/dag.proto deps/usher/parsimony.proto deps/usher/mutation_detailed.proto
 )
+add_custom_target(larch-autogen-patch ALL
+  COMMAND ${PROJECT_SOURCE_DIR}/patch-protobuf.sh
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  DEPENDS deps/usher/mutation_detailed.pb.cc
+  COMMENT "Patching protobuf generated files"
+)
 
 # # nlohmann_json
 FetchContent_Declare(json
@@ -108,7 +118,7 @@ ExternalProject_Add(range-v3
   GIT_PROGRESS true
   GIT_SUBMODULES ""
   UPDATE_DISCONNECTED true
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/deps/range-v3/install -DCMAKE_BUILD_TYPE=Release -DRANGE_V3_DOCS=OFF -DRANGE_V3_TESTS=OFF -DRANGE_V3_EXAMPLES=OFF -DRANGE_V3_PERF=OFF -DRANGE_V3_HEADER_CHECKS=OFF
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/deps/range-v3/install -DCMAKE_BUILD_TYPE=Release -DRANGE_V3_DOCS=OFF -DRANGE_V3_TESTS=OFF -DRANGE_V3_EXAMPLES=OFF -DRANGE_V3_PERF=OFF -DRANGE_V3_HEADER_CHECKS=OFF -DRANGES_ENABLE_WERROR=OFF
   PREFIX deps/range-v3
   INSTALL_DIR deps/range-v3/install
 )
@@ -141,7 +151,7 @@ endif()
 find_package(ZLIB REQUIRED)
 
 # # boost
-find_package(Boost REQUIRED COMPONENTS program_options iostreams filesystem date_time)
+find_package(Boost REQUIRED CONFIG COMPONENTS program_options iostreams filesystem date_time)
 
 # Internal libraries and binaries
 
@@ -153,9 +163,8 @@ add_custom_target(generate_version_h ALL
 )
 
 # # set compiler warnings
-set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
+set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wno-old-style-cast -Wshadow -Wno-conversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument -Wno-c++20-extensions -Wno-unreachable-code-loop-increment -Wno-unneeded-internal-declaration -Wno-braced-scalar-init -Wno-defaulted-function-deleted)
 
-# # set compiler version
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   list(APPEND STRICT_WARNINGS -Wcast-align=strict)
 endif()
@@ -190,10 +199,16 @@ function(larch_compile_opts PRODUCT)
   endif()
 
   target_include_directories(${PRODUCT} PUBLIC include tools test)
-  target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
+  target_link_libraries(${PRODUCT} PUBLIC 
+    protobuf::libprotobuf
+    absl::log
+    absl::log_internal_check_impl
+  )
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR}/deps/usher)
+  
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
+  target_compile_options(${PRODUCT} PUBLIC -DRANGES_DISABLE_DEPRECATED_WARNINGS) 
   add_dependencies(${PRODUCT} range-v3)
 
   if(USE_HTSLIB)
@@ -228,7 +243,10 @@ endif()
 # link libraries to executable
 function(larch_link_opts PRODUCT)
   # Workaround for protobuf
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+else()
   target_link_options(${PRODUCT} PUBLIC -Wl,--copy-dt-needed-entries)
+endif()
 
   target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
 

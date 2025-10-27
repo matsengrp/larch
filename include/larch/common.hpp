@@ -4,6 +4,7 @@
 #include <limits>
 #include <vector>
 #include <set>
+#include <map>
 #include <unordered_set>
 #include <tuple>
 #include <typeinfo>
@@ -301,7 +302,8 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #endif
 #else
 #define Assert(x) \
-  {}
+  {               \
+  }
 #endif
 
 [[noreturn]] inline void Fail(const char* msg) {
@@ -445,8 +447,10 @@ inline std::ostream& operator<<(std::ostream& os, const std::unordered_set<T>& s
   return os;
 }
 
-template <typename K, typename V>
-inline std::ostream& operator<<(std::ostream& os, const std::map<K, V>& map) {
+template <typename K, typename V, typename Compare = std::less<K>,
+          typename Allocator = std::allocator<std::pair<const K, V>>>
+inline std::ostream& operator<<(std::ostream& os,
+                                const std::map<K, V, Compare, Allocator>& map) {
   os << "{ ";
   for (const auto& [key, value] : map) {
     os << key << ": " << value << ", ";
@@ -455,8 +459,11 @@ inline std::ostream& operator<<(std::ostream& os, const std::map<K, V>& map) {
   return os;
 }
 
-template <typename K, typename V>
-inline std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& map) {
+template <typename K, typename V, typename Hash = std::hash<K>,
+          typename KeyEqual = std::equal_to<K>,
+          typename Allocator = std::allocator<std::pair<const K, V>>>
+inline std::ostream& operator<<(
+    std::ostream& os, const std::unordered_map<K, V, Hash, KeyEqual, Allocator>& map) {
   os << "{ ";
   for (const auto& [key, value] : map) {
     os << key << ": " << value << ", ";
