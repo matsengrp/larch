@@ -57,8 +57,10 @@ function(lib_install PRODUCT)
   )
 endfunction()
 
-# FreeBSD
-add_link_options("-Wl,--undefined-version")
+# FreeBSD linker options (not supported on macOS)
+if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+  add_link_options("-Wl,--undefined-version")
+endif()
 
 # # oneTBB
 FetchContent_Declare(oneTBB
@@ -88,6 +90,7 @@ set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
 # # larch-autogen library
 target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR} ${Protobuf_INCLUDE_DIRS})
 target_link_libraries(larch-autogen PUBLIC ${Protobuf_LIBRARIES})
+target_compile_options(larch-autogen PUBLIC -std=c++17 -w)
 set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
@@ -242,8 +245,8 @@ endif()
 
 # link libraries to executable
 function(larch_link_opts PRODUCT)
-  # Workaround for protobuf
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  # Workaround for protobuf (skip on macOS and Clang)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 else()
   target_link_options(${PRODUCT} PUBLIC -Wl,--copy-dt-needed-entries)
 endif()
