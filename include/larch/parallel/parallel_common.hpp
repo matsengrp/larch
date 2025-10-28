@@ -2,7 +2,9 @@
 
 #include "larch/common.hpp"
 
-#include <tbb/parallel_for_each.h>
+#include <execution>
+
+// #include <tbb/parallel_for_each.h>
 
 template <typename M>
 auto ReadLock(M& mutex) {
@@ -21,8 +23,10 @@ std::unique_lock<M> WriteLock(M& mutex) {
 template <typename Range, typename F>
 void ParallelForEach(Range&& range, F&& func) {
   std::vector vec = ranges::to_vector(range);
-  tbb::parallel_for_each(std::begin(vec), std::end(vec),
-                std::forward<F>(func));
+  std::for_each(std::execution::par, 
+    std::begin(vec), std::end(vec), std::forward<F>(func));
+  // tbb::parallel_for_each(std::begin(vec), std::end(vec),
+  //               std::forward<F>(func));
 }
 
 template <typename Range, typename F>
