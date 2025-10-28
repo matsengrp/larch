@@ -415,6 +415,10 @@ struct Move_Found_Callback {
           node_with_major_allele_set_change) {
     return move.score_change <= best_score_change;
   }
+  static Move_Found_Callback& default_instance() {
+      static Move_Found_Callback instance;
+      return instance;
+  }
 };
 
 struct Mutation_Pos_Only_Comparator {
@@ -453,17 +457,18 @@ inline void reassign_states(MAT::Tree& t, Original_State_t& origin_states) {
 
 inline size_t optimize_inner_loop(
     std::vector<MAT::Node*>& nodes_to_search, MAT::Tree& t, int radius,
-    Move_Found_Callback& callback, bool allow_drift = false, bool search_all_dir = true,
+    bool allow_drift = false, bool search_all_dir = true,
     int minutes_between_save = 0, bool no_write_intermediate = true,
     std::chrono::steady_clock::time_point search_end_time =
         std::chrono::steady_clock::time_point::max(),
     std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now(),
     bool log_moves = false, int iteration = 1, std::string intermediate_template = "",
     std::string intermediate_pb_base_name = "", std::string intermediate_nwk_out = "",
-    std::optional<uint32_t> user_seed = std::nullopt) {
+    // std::optional<uint32_t> user_seed = std::nullopt,
+    Move_Found_Callback& callback = Move_Found_Callback::default_instance()) {
   Assert(not nodes_to_search.empty());
   std::random_device random_device;
-  auto rand = user_seed.value_or(random_device());
+  auto rand = random_device();//user_seed.value_or(random_device());
   std::mt19937 gen(rand);
   std::uniform_int_distribution<size_t> dist(0, nodes_to_search.size() - 1);
   std::mutex random_mtx;

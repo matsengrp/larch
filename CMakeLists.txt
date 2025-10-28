@@ -78,7 +78,7 @@ include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
 # # protobuf
 find_package(Protobuf REQUIRED)
-find_package(absl REQUIRED)
+find_package(absl OPTIONAL)
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -202,11 +202,13 @@ function(larch_compile_opts PRODUCT)
   endif()
 
   target_include_directories(${PRODUCT} PUBLIC include tools test)
-  target_link_libraries(${PRODUCT} PUBLIC 
-    protobuf::libprotobuf
-    absl::log
-    absl::log_internal_check_impl
-  )
+  target_link_libraries(${PRODUCT} PUBLIC protobuf::libprotobuf)
+  if(absl_FOUND)
+    target_link_libraries(${PRODUCT} PUBLIC 
+      absl::log
+      absl::log_internal_check_impl
+    )
+  endif()
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR}/deps/usher)
   
