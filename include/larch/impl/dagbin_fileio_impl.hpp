@@ -173,7 +173,7 @@ template <typename iostream>
 std::string DagbinFileIO::ReadString(iostream& infile) {
   auto str_len = ReadData<size_t>(infile);
   std::string str(str_len, '\0');
-  infile.read(&str[0], str_len);
+  infile.read(&str[0], static_cast<std::streamsize>(str_len));
   return str;
 }
 
@@ -245,7 +245,8 @@ void DagbinFileIO::WriteLinkedList(iostream& outfile,
 template <typename iostream>
 bool DagbinFileIO::CheckMagicNumber(iostream& infile, bool do_assert) {
   std::vector<unsigned char> magic_number(MAGIC_NUMBER.size());
-  infile.read(reinterpret_cast<char*>(magic_number.data()), MAGIC_NUMBER.size());
+  infile.read(reinterpret_cast<char*>(magic_number.data()),
+              static_cast<std::streamsize>(MAGIC_NUMBER.size()));
   if (do_assert)
     Assert(magic_number == MAGIC_NUMBER) return (magic_number == MAGIC_NUMBER);
 }
@@ -253,7 +254,7 @@ bool DagbinFileIO::CheckMagicNumber(iostream& infile, bool do_assert) {
 template <typename iostream>
 void DagbinFileIO::WriteMagicNumber(iostream& outfile) {
   outfile.write(reinterpret_cast<const char*>(MAGIC_NUMBER.data()),
-                MAGIC_NUMBER.size());
+                static_cast<std::streamsize>(MAGIC_NUMBER.size()));
 }
 
 template <typename iostream, typename DAG>

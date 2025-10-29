@@ -24,7 +24,8 @@ auto FeatureConstView<Neighbors, CRTP, Tag>::GetClades() const {
 template <typename CRTP, typename Tag>
 auto FeatureConstView<Neighbors, CRTP, Tag>::GetClade(CladeIdx clade) const {
   auto dag = static_cast<const CRTP&>(*this).GetDAG();
-  return GetStorageClades().at(clade.value) | Transform::ToEdges(dag);
+  return GetStorageClades().at(static_cast<std::ptrdiff_t>(clade.value)) |
+         Transform::ToEdges(dag);
 }
 
 template <typename CRTP, typename Tag>

@@ -290,9 +290,8 @@ template <typename ShortName, typename Target,
 template <typename F, typename OverlayStorageType>
 auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
     OverlayStorageType& self, NodeId id) {
-  constexpr bool is_mutable =
-      (not std::is_const_v<
-          OverlayStorageType>)and OverlayStorageType::TargetView::is_mutable;
+  constexpr bool is_mutable = (not std::is_const_v<OverlayStorageType>) and
+                              OverlayStorageType::TargetView::is_mutable;
   using Result =
       std::conditional_t<is_mutable, typename OverlayFeatureType<F>::mutable_view_type,
                          typename OverlayFeatureType<F>::const_view_type>;
@@ -325,9 +324,8 @@ template <typename ShortName, typename Target,
 template <typename F, typename OverlayStorageType>
 auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
     OverlayStorageType& self, EdgeId id) {
-  constexpr bool is_mutable =
-      (not std::is_const_v<
-          OverlayStorageType>)and OverlayStorageType::TargetView::is_mutable;
+  constexpr bool is_mutable = (not std::is_const_v<OverlayStorageType>) and
+                              OverlayStorageType::TargetView::is_mutable;
 
   using Result =
       std::conditional_t<is_mutable, typename OverlayFeatureType<F>::mutable_view_type,
@@ -343,7 +341,8 @@ auto OverlayDAGStorage<ShortName, Target, ViewBase>::GetFeatureStorageImpl(
       if constexpr (is_mutable) {
         Fail("Can't modify non-overlaid edge");
       } else {
-        return Result{std::cref(self.GetTarget().template GetFeatureStorage<F>(id))};
+        const auto& result = self.GetTarget().template GetFeatureStorage<F>(id);
+        return Result{result};
       }
     } else {
       return Result{std::ref(it->second)};

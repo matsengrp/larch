@@ -51,9 +51,9 @@ inline int32_t EncodeBasePB(char base) {
 inline std::string FilenameFromPath(const std::string path) {
   int beg_i = int(path.size()) - 1;
   for (; beg_i >= 0; beg_i--) {
-    if (path[beg_i] == '/') {
+    if (path[static_cast<size_t>(beg_i)] == '/') {
       beg_i += 1;
-      return path.substr(beg_i, path.size());
+      return path.substr(static_cast<size_t>(beg_i), path.size());
     }
   }
   return path.substr(0, path.size());
@@ -63,7 +63,7 @@ FileFormat InferFileFormat(std::string_view path) {
   auto filename = FilenameFromPath(std::string{path});
   auto tokens = SplitString(filename, '.');
   for (int i = int(tokens.size()) - 1; i >= 0; i--) {
-    auto& extension = tokens[i];
+    auto& extension = tokens[static_cast<size_t>(i)];
     auto it =
         std::find_if(file_extension_names.begin(), file_extension_names.end(),
                      [&extension](const std::pair<std::string, FileFormat> element) {
