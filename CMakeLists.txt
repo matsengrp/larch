@@ -78,7 +78,7 @@ include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
 # # protobuf
 find_package(Protobuf REQUIRED)
-find_package(absl OPTIONAL)
+find_package(absl)
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -249,17 +249,21 @@ endif()
 function(larch_link_opts PRODUCT)
   # Workaround for protobuf (skip on macOS and Clang)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+  if(USE_ASAN)
+    target_link_libraries(${PRODUCT} PUBLIC -fsanitize=address)
+  elseif(USE_TSAN)
+    target_link_libraries(${PRODUCT} PUBLIC -fsanitize=thread)
+  endif()
 else()
   target_link_options(${PRODUCT} PUBLIC -Wl,--copy-dt-needed-entries)
-endif()
-
-  target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
-
   if(USE_ASAN)
     target_link_libraries(${PRODUCT} PUBLIC -lasan)
   elseif(USE_TSAN)
     target_link_libraries(${PRODUCT} PUBLIC -ltsan)
   endif()
+endif()
+
+  target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
 
   target_link_libraries(${PRODUCT} PUBLIC -lz)
   target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
