@@ -57,6 +57,11 @@ function(lib_install PRODUCT)
   )
 endfunction()
 
+# FreeBSD linker options (not supported on macOS)
+if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+  add_link_options("-Wl,--undefined-version")
+endif()
+
 # # oneTBB
 FetchContent_Declare(oneTBB
   GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
@@ -73,6 +78,7 @@ include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
 # # protobuf
 find_package(Protobuf REQUIRED)
+find_package(absl)
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -84,6 +90,7 @@ set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
 # # larch-autogen library
 target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR} ${Protobuf_INCLUDE_DIRS})
 target_link_libraries(larch-autogen PUBLIC ${Protobuf_LIBRARIES})
+target_compile_options(larch-autogen PUBLIC -std=c++17 -w)
 set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
@@ -91,6 +98,23 @@ protobuf_generate(
   LANGUAGE cpp
   TARGET larch-autogen
   PROTOS proto/dag.proto deps/usher/parsimony.proto deps/usher/mutation_detailed.proto
+)
+
+# Patch protobuf generated files before compilation
+# The patch fixes a naming conflict where a variable 'target' shadows the class type 'target'
+add_custom_command(
+  OUTPUT ${CMAKE_BINARY_DIR}/deps/usher/mutation_detailed.pb.cc.patched
+  COMMAND ${PROJECT_SOURCE_DIR}/patch-protobuf.sh
+  COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/deps/usher/mutation_detailed.pb.cc.patched
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  DEPENDS ${CMAKE_BINARY_DIR}/deps/usher/mutation_detailed.pb.cc
+  COMMENT "Patching protobuf generated files"
+)
+
+# Make the object file depend on the patch stamp to ensure patch runs before compilation
+set_source_files_properties(
+  ${CMAKE_BINARY_DIR}/deps/usher/mutation_detailed.pb.cc
+  PROPERTIES OBJECT_DEPENDS ${CMAKE_BINARY_DIR}/deps/usher/mutation_detailed.pb.cc.patched
 )
 
 # # nlohmann_json
@@ -108,7 +132,7 @@ ExternalProject_Add(range-v3
   GIT_PROGRESS true
   GIT_SUBMODULES ""
   UPDATE_DISCONNECTED true
-  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/deps/range-v3/install -DCMAKE_BUILD_TYPE=Release -DRANGE_V3_DOCS=OFF -DRANGE_V3_TESTS=OFF -DRANGE_V3_EXAMPLES=OFF -DRANGE_V3_PERF=OFF -DRANGE_V3_HEADER_CHECKS=OFF
+  CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/deps/range-v3/install -DCMAKE_BUILD_TYPE=Release -DRANGE_V3_DOCS=OFF -DRANGE_V3_TESTS=OFF -DRANGE_V3_EXAMPLES=OFF -DRANGE_V3_PERF=OFF -DRANGE_V3_HEADER_CHECKS=OFF -DRANGES_ENABLE_WERROR=OFF
   PREFIX deps/range-v3
   INSTALL_DIR deps/range-v3/install
 )
@@ -141,7 +165,7 @@ endif()
 find_package(ZLIB REQUIRED)
 
 # # boost
-find_package(Boost REQUIRED COMPONENTS program_options iostreams filesystem date_time)
+find_package(Boost REQUIRED CONFIG COMPONENTS program_options iostreams filesystem date_time)
 
 # Internal libraries and binaries
 
@@ -153,9 +177,8 @@ add_custom_target(generate_version_h ALL
 )
 
 # # set compiler warnings
-set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wold-style-cast -Wshadow -Wconversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument)
+set(STRICT_WARNINGS -Werror -fno-common -Wno-unknown-warning-option -Wno-pragmas -Wall -Wextra -pedantic -Wno-old-style-cast -Wshadow -Wno-conversion -Wcast-align -Wcast-qual -Wlogical-op -Wlogical-not-parentheses -Wredundant-decls -Wunreachable-code -Wparentheses -Wno-dangling-reference -Wno-ignored-optimization-argument -Wno-c++20-extensions -Wno-unreachable-code-loop-increment -Wno-unneeded-internal-declaration -Wno-braced-scalar-init -Wno-defaulted-function-deleted)
 
-# # set compiler version
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   list(APPEND STRICT_WARNINGS -Wcast-align=strict)
 endif()
@@ -190,10 +213,18 @@ function(larch_compile_opts PRODUCT)
   endif()
 
   target_include_directories(${PRODUCT} PUBLIC include tools test)
-  target_include_directories(${PRODUCT} PUBLIC ${Protobuf_INCLUDE_DIR})
+  target_link_libraries(${PRODUCT} PUBLIC protobuf::libprotobuf)
+  if(absl_FOUND)
+    target_link_libraries(${PRODUCT} PUBLIC 
+      absl::log
+      absl::log_internal_check_impl
+    )
+  endif()
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR}/deps/usher)
+  
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
+  target_compile_options(${PRODUCT} PUBLIC -DRANGES_DISABLE_DEPRECATED_WARNINGS) 
   add_dependencies(${PRODUCT} range-v3)
 
   if(USE_HTSLIB)
@@ -227,16 +258,23 @@ endif()
 
 # link libraries to executable
 function(larch_link_opts PRODUCT)
-  # Workaround for protobuf
+  # Workaround for protobuf (skip on macOS and Clang)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+  if(USE_ASAN)
+    target_link_libraries(${PRODUCT} PUBLIC -fsanitize=address)
+  elseif(USE_TSAN)
+    target_link_libraries(${PRODUCT} PUBLIC -fsanitize=thread)
+  endif()
+else()
   target_link_options(${PRODUCT} PUBLIC -Wl,--copy-dt-needed-entries)
-
-  target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
-
   if(USE_ASAN)
     target_link_libraries(${PRODUCT} PUBLIC -lasan)
   elseif(USE_TSAN)
     target_link_libraries(${PRODUCT} PUBLIC -ltsan)
   endif()
+endif()
+
+  target_link_libraries(${PRODUCT} PUBLIC larch-autogen)
 
   target_link_libraries(${PRODUCT} PUBLIC -lz)
   target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)

@@ -26,8 +26,6 @@ struct std::equal_to<SampleIdStorage> {
  */
 class SampleIdStorage {
  public:
-  MOVE_ONLY(SampleIdStorage);
-
   inline size_t Hash() const { return hash_; }
   inline const std::string& Value() const { return value_; }
 

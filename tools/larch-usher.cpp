@@ -236,7 +236,7 @@ struct Treebased_Move_Found_Callback
     return {false, move.score_change <= 0};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 
   std::pair<int, int> move_score_coeffs_;
 };
@@ -261,7 +261,7 @@ struct Merge_All_Moves_Found_Callback
     return {true, true};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 };
 
 struct Merge_All_Profitable_Moves_Found_Callback
@@ -376,7 +376,7 @@ struct Merge_All_Profitable_Moves_Found_Callback
     return {move.score_change <= 0, move.score_change <= 0};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 
   Merge& merge_;
   ReassignedStatesStorage reassigned_states_storage_ =
@@ -498,7 +498,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     return {move.score_change <= 0, false};
   }
 
-  void OnRadius(){};
+  void OnRadius() {};
 
   Merge& merge_;
   ReassignedStatesStorage reassigned_states_storage_ =
@@ -554,8 +554,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   bool plateau_stopping_condition = false;
   size_t current_parsimony_change_window_size = 0;
   size_t last_parsimony_change_window_size = 1;
-  size_t current_best_parsimony = -1;
-  size_t time_limit = -1;
+  size_t current_best_parsimony = NoId;
+  size_t time_limit = NoId;
   std::optional<uint32_t> user_seed = std::nullopt;
 
   Benchmark total_timer;
@@ -746,7 +746,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   merge.ComputeResultEdgeMutations();
 
   Benchmark log_timer;
-  auto logger = [&input_dag, &merge, &logfile, &log_timer, &intermediate_dag_path,
+  auto logger = [&merge, &logfile, &log_timer, &intermediate_dag_path,
                  &write_intermediate_dag, &write_intermediate_every_x_iters,
                  &output_format, &main_rng, &use_ua_free_parsimony](size_t iteration) {
     std::cout << "############ Logging for iteration " << iteration << " #######\n";

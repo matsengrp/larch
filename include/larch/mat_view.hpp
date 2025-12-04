@@ -773,9 +773,9 @@ struct FeatureConstView<MATEdgeStorage, CRTP, Tag> {
     auto& dag_edge = static_cast<const CRTP&>(*this);
     EdgeId id = dag_edge.GetId();
     auto dag = dag_edge.GetDAG();
-    auto& mat = *dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>()
-                     .get()
-                     .mat_tree_;
+    auto& edge_storage =
+        dag.template GetFeatureExtraStorage<Component::Edge, MATEdgeStorage>().get();
+    auto& mat = *edge_storage.mat_tree_;
     Assert((id.value == dag_edge.template GetFeatureExtraStorage<MATEdgeStorage>()
                             .get()
                             .ua_node_id_.value) or
