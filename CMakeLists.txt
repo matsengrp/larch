@@ -351,6 +351,7 @@ larch_executable(larch-test
   test/test_spr_after_move.cpp
   test/test_spr.cpp
   test/test_subtree_weight.cpp
+  test/test_ua_free_parsimony.cpp
   test/test_weight_accum.cpp
   test/test_weight_counter.cpp
   test/test_write_parsimony_protobuf.cpp
