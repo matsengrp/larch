@@ -99,11 +99,22 @@ protobuf_generate(
   TARGET larch-autogen
   PROTOS proto/dag.proto deps/usher/parsimony.proto deps/usher/mutation_detailed.proto
 )
-add_custom_target(larch-autogen-patch ALL
+
+# Patch protobuf generated files before compilation
+# The patch fixes a naming conflict where a variable 'target' shadows the class type 'target'
+add_custom_command(
+  OUTPUT ${CMAKE_BINARY_DIR}/deps/usher/mutation_detailed.pb.cc.patched
   COMMAND ${PROJECT_SOURCE_DIR}/patch-protobuf.sh
+  COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/deps/usher/mutation_detailed.pb.cc.patched
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-  DEPENDS deps/usher/mutation_detailed.pb.cc
+  DEPENDS ${CMAKE_BINARY_DIR}/deps/usher/mutation_detailed.pb.cc
   COMMENT "Patching protobuf generated files"
+)
+
+# Make the object file depend on the patch stamp to ensure patch runs before compilation
+set_source_files_properties(
+  ${CMAKE_BINARY_DIR}/deps/usher/mutation_detailed.pb.cc
+  PROPERTIES OBJECT_DEPENDS ${CMAKE_BINARY_DIR}/deps/usher/mutation_detailed.pb.cc.patched
 )
 
 # # nlohmann_json
