@@ -377,6 +377,7 @@ larch_executable(larch-test
   test/test_fileio_protobuf.cpp
   test/test_larch_usher.cpp
   test/test_lca.cpp
+  test/test_linearham.cpp
   test/test_map.cpp
   test/test_mat_conversion.cpp
   test/test_mat_view.cpp

@@ -48,7 +48,14 @@ inline FileFormat InferFileFormat(std::string_view path);
 
 [[nodiscard]] MADAGStorage<> LoadDAGFromJson(std::string_view path);
 
+[[nodiscard]] MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
+                                                     std::string_view newick_path,
+                                                     std::string_view reference_path);
+
 [[nodiscard]] std::string LoadReferenceSequence(std::string_view path);
+
+[[nodiscard]] std::unordered_map<std::string, std::string> LoadFasta(
+    std::string_view path);
 
 using CompactGenomeData = ContiguousMap<MutationPosition, MutationBase>;
 

@@ -373,6 +373,122 @@ std::string LoadReferenceSequence(std::string_view path) {
   return result;
 }
 
+std::unordered_map<std::string, std::string> LoadFasta(std::string_view path) {
+  std::unordered_map<std::string, std::string> result;
+  std::string content;
+
+  if (IsGzipped(path)) {
+    std::ifstream file{std::string{path}};
+    boost::iostreams::filtering_ostream str;
+    str.push(boost::iostreams::gzip_decompressor());
+    str.push(boost::iostreams::back_inserter(content));
+    boost::iostreams::copy(file, str);
+  } else {
+    std::ifstream file{std::string{path}};
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    content = ss.str();
+  }
+
+  std::istringstream stream(content);
+  std::string line;
+  std::string current_id;
+  std::string current_seq;
+
+  while (std::getline(stream, line)) {
+    if (line.empty()) {
+      continue;
+    }
+    if (line[0] == '>') {
+      if (!current_id.empty()) {
+        result[current_id] = current_seq;
+      }
+      // Extract ID: everything after '>' until whitespace or end
+      size_t id_end = line.find_first_of(" \t", 1);
+      if (id_end == std::string::npos) {
+        current_id = line.substr(1);
+      } else {
+        current_id = line.substr(1, id_end - 1);
+      }
+      current_seq.clear();
+    } else {
+      current_seq += line;
+    }
+  }
+  // Don't forget the last sequence
+  if (!current_id.empty()) {
+    result[current_id] = current_seq;
+  }
+
+  return result;
+}
+
+MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
+                                       std::string_view newick_path,
+                                       std::string_view reference_path) {
+  // Load reference sequence
+  std::string reference_sequence = LoadReferenceSequence(reference_path);
+
+  // Load FASTA sequences
+  auto fasta_sequences = LoadFasta(fasta_path);
+
+  // Read Newick file
+  std::ifstream newick_file{std::string{newick_path}};
+  if (!newick_file) {
+    std::cerr << "Failed to open Newick file: '" << newick_path << "'." << std::endl;
+    Assert(newick_file);
+  }
+  std::string newick_content;
+  std::getline(newick_file, newick_content);
+
+  // Create empty MADAG
+  MADAGStorage<> result_storage = MADAGStorage<>::EmptyDefault();
+  auto result = result_storage.View();
+  result.SetReferenceSequence(reference_sequence);
+
+  // Parse Newick: collect node labels and build edges
+  std::unordered_map<size_t, size_t> num_children;
+  std::map<size_t, std::optional<std::string>> node_labels;
+
+  ParseNewick(
+      newick_content,
+      [&node_labels](size_t node_id, std::string_view label, std::optional<double>) {
+        if (!label.empty()) {
+          node_labels[node_id] = std::string{label};
+        } else {
+          node_labels[node_id] = std::nullopt;
+        }
+      },
+      [&result, &num_children](size_t parent, size_t child) {
+        result.AddEdge({child}, {parent}, {child}, {num_children[parent]++});
+      });
+
+  result.InitializeNodes(result.GetEdgesCount() + 1);
+  result.BuildConnections();
+
+  // Set SampleIds on leaf nodes by matching labels to FASTA headers
+  for (auto node : result.GetNodes()) {
+    auto it = node_labels.find(node.GetId().value);
+    if (it != node_labels.end() && it->second.has_value()) {
+      const std::string& label = it->second.value();
+      // Check if this label exists in FASTA (it's a leaf with sequence data)
+      if (node.IsLeaf() && fasta_sequences.find(label) != fasta_sequences.end()) {
+        node = SampleId::Make(label);
+      } else if (node.IsLeaf()) {
+        // Leaf without FASTA entry - still set the label as SampleId
+        node = SampleId::Make(label);
+      }
+    }
+  }
+
+  // Add UA node
+  result.AddUA({});
+
+  result.BuildConnections();
+  result.GetRoot().Validate(true, false);
+  return result_storage;
+}
+
 namespace {
 
 template <typename Mutation>
