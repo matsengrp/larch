@@ -43,6 +43,8 @@ static void test_linearham_load_and_merge() {
         TestAssert(node.HaveSampleId());
       }
     }
+    // Compute compact genomes (required for merge)
+    view.RecomputeCompactGenomes(true);
   }
 
   std::cout << "Loaded " << trees.size() << " trees." << std::endl;

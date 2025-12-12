@@ -430,7 +430,7 @@ MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
   std::string reference_sequence = LoadReferenceSequence(reference_path);
 
   // Load FASTA sequences
-  auto fasta_sequences = LoadFasta(fasta_path);
+  // auto fasta_sequences = LoadFasta(fasta_path);
 
   // Read Newick file
   std::ifstream newick_file{std::string{newick_path}};
@@ -438,52 +438,36 @@ MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
     std::cerr << "Failed to open Newick file: '" << newick_path << "'." << std::endl;
     Assert(newick_file);
   }
-  std::string newick_content;
-  std::getline(newick_file, newick_content);
+  std::string newick;
+  std::getline(newick_file, newick);
 
   // Create empty MADAG
   MADAGStorage<> result_storage = MADAGStorage<>::EmptyDefault();
   auto result = result_storage.View();
   result.SetReferenceSequence(reference_sequence);
 
-  // Parse Newick: collect node labels and build edges
   std::unordered_map<size_t, size_t> num_children;
-  std::map<size_t, std::optional<std::string>> node_labels;
-
+  std::map<size_t, std::optional<std::string>> seq_ids;
+  size_t edge_counter = 0;
   ParseNewick(
-      newick_content,
-      [&node_labels](size_t node_id, std::string_view label, std::optional<double>) {
-        if (!label.empty()) {
-          node_labels[node_id] = std::string{label};
-        } else {
-          node_labels[node_id] = std::nullopt;
-        }
+      newick,
+      [&seq_ids](size_t node_id, std::string_view label, std::optional<double>) {
+        seq_ids[node_id] = label;
       },
-      [&result, &num_children](size_t parent, size_t child) {
-        result.AddEdge({child}, {parent}, {child}, {num_children[parent]++});
+      [&result, &num_children, &edge_counter](size_t parent, size_t child) {
+        result.AddEdge({edge_counter++}, {parent}, {child}, {num_children[parent]++});
       });
-
-  result.InitializeNodes(result.GetEdgesCount() + 1);
+  result.InitializeNodes(edge_counter);
   result.BuildConnections();
 
-  // Set SampleIds on leaf nodes by matching labels to FASTA headers
   for (auto node : result.GetNodes()) {
-    auto it = node_labels.find(node.GetId().value);
-    if (it != node_labels.end() && it->second.has_value()) {
-      const std::string& label = it->second.value();
-      // Check if this label exists in FASTA (it's a leaf with sequence data)
-      if (node.IsLeaf() && fasta_sequences.find(label) != fasta_sequences.end()) {
-        node = SampleId::Make(label);
-      } else if (node.IsLeaf()) {
-        // Leaf without FASTA entry - still set the label as SampleId
-        node = SampleId::Make(label);
-      }
+    auto& sid = seq_ids[node.GetId().value];
+    if (node.IsLeaf() and sid.has_value()) {
+      node = SampleId::Make(sid.value());
     }
   }
 
-  // Add UA node
   result.AddUA({});
-
   result.BuildConnections();
   result.GetRoot().Validate(true, false);
   return result_storage;
