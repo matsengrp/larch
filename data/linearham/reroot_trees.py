@@ -42,8 +42,9 @@ def main():
 
         tree_string = treefile.read_text().strip()
         rerooted = reroot_iqtree(tree_string)
-        treefile.write_text(rerooted + "\n")
-        print(f"Re-rooted {treefile}")
+        output_file = Path(f"{name}-rerooted.treefile")
+        output_file.write_text(rerooted + "\n")
+        print(f"Re-rooted {treefile} -> {output_file}")
 
 
 if __name__ == "__main__":

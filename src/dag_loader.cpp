@@ -457,7 +457,7 @@ MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
       [&result, &num_children, &edge_counter](size_t parent, size_t child) {
         result.AddEdge({edge_counter++}, {parent}, {child}, {num_children[parent]++});
       });
-  result.InitializeNodes(edge_counter);
+  result.InitializeNodes(result.GetEdgesCount() + 1);
   result.BuildConnections();
 
   for (auto node : result.GetNodes()) {

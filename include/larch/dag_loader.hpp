@@ -89,6 +89,9 @@ void MADAGToDOT(DAG dag, iostream& out);
 template <typename DAG, typename iostream>
 void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, iostream& out);
 
+template <typename iostream>
+void NewickToDOT(const std::string& newick, iostream& out);
+
 std::string ToEdgeMutationsString(const MAT::Node* node);
 
 template <typename iostream>

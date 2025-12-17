@@ -12,10 +12,11 @@ static void test_linearham_load_and_merge() {
   const std::string fasta_path = data_dir + "igh.fa";
   const std::string ref_path = data_dir + "reference_sequence.txt";
 
-  // Collect all .treefile paths
+  // Collect all -rerooted.treefile paths
   std::vector<std::string> tree_paths;
   for (const auto& entry : std::filesystem::directory_iterator{data_dir}) {
-    if (entry.path().extension() == ".treefile") {
+    auto filename = entry.path().filename().string();
+    if (filename.ends_with("-rerooted.treefile")) {
       tree_paths.push_back(entry.path().string());
     }
   }
