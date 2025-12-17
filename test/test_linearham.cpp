@@ -15,10 +15,14 @@ static void test_linearham_load_and_merge() {
   // Collect all -rerooted.treefile paths
   std::vector<std::string> tree_paths;
   for (const auto& entry : std::filesystem::directory_iterator{data_dir}) {
-    auto filename = entry.path().filename().string();
-    if (filename.ends_with("-rerooted.treefile")) {
-      tree_paths.push_back(entry.path().string());
+    if (entry.path().extension() != ".treefile") {
+      continue;
     }
+    auto filename = entry.path().filename().string();
+    if (filename.find("-rerooted") == std::string::npos) {
+      continue;
+    }
+    tree_paths.push_back(entry.path().string());
   }
   std::sort(tree_paths.begin(), tree_paths.end());
 
