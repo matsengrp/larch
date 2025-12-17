@@ -441,6 +441,8 @@ MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
   std::string newick;
   std::getline(newick_file, newick);
 
+  // NewickToDOT(newick, std::cerr);
+
   // Create empty MADAG
   MADAGStorage<> result_storage = MADAGStorage<>::EmptyDefault();
   auto result = result_storage.View();
