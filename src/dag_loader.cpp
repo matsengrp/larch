@@ -430,7 +430,7 @@ MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
   std::string reference_sequence = LoadReferenceSequence(reference_path);
 
   // Load FASTA sequences
-  // auto fasta_sequences = LoadFasta(fasta_path);
+  auto fasta_sequences = LoadFasta(fasta_path);
 
   // Read Newick file
   std::ifstream newick_file{std::string{newick_path}};
@@ -440,8 +440,6 @@ MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
   }
   std::string newick;
   std::getline(newick_file, newick);
-
-  // NewickToDOT(newick, std::cerr);
 
   // Create empty MADAG
   MADAGStorage<> result_storage = MADAGStorage<>::EmptyDefault();
@@ -471,7 +469,45 @@ MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
 
   result.AddUA({});
   result.BuildConnections();
+
+  // Helper to get sequence for a node from FASTA or fallback to reference
+  auto get_sequence = [&](auto node) -> const std::string& {
+    if (node.IsUA()) {
+      return reference_sequence;
+    }
+    auto id_it = seq_ids.find(node.GetId().value);
+    if (id_it != seq_ids.end() && id_it->second.has_value()) {
+      auto fasta_it = fasta_sequences.find(id_it->second.value());
+      if (fasta_it != fasta_sequences.end()) {
+        return fasta_it->second;
+      }
+    }
+    return reference_sequence;
+  };
+
+  // Compute edge mutations from FASTA sequences
+  for (auto edge : result.GetEdges()) {
+    if (not edge.IsLeaf()) {
+      continue;
+    }
+    const std::string& parent_seq = get_sequence(edge.GetParent());
+    const std::string& child_seq = get_sequence(edge.GetChild());
+
+    EdgeMutations muts;
+    Assert(parent_seq.size() == child_seq.size());
+    for (size_t i = 0; i < parent_seq.size(); i++) {
+      if (parent_seq[i] != child_seq[i]) {
+        muts[{i + 1}] = {parent_seq[i], child_seq[i]};  // 1-indexed positions
+      }
+    }
+    edge.SetEdgeMutations(std::move(muts));
+  }
+
+  // Compute CompactGenomes from edge mutations
+  result.RecomputeCompactGenomes(true);
+
   result.GetRoot().Validate(true, false);
+
   return result_storage;
 }
 
