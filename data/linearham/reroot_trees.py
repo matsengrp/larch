@@ -50,11 +50,12 @@ def reroot_iqtree(tree_string, naive_name):
         branch_length = "0.0"
 
     # Remove naive from children and reconstruct
-    # Keep naive as a leaf sibling to the rest of the tree
+    # Make naive the label of the root node (internal node below UA)
     remaining_children = children[:naive_idx] + children[naive_idx + 1:]
     rest_of_tree = ','.join(remaining_children)
 
-    return f"(({rest_of_tree}):{branch_length},{naive_name}:0.0);"
+    # The naive sequence becomes the root node label, not a leaf
+    return f"({rest_of_tree}){naive_name}:{branch_length};"
 
 
 def get_sequence_names(fasta_path):
