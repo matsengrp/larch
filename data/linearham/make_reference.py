@@ -43,10 +43,10 @@ def majority_rule_consensus(sequences):
 
 
 def main():
-    igh_fa = Path("igh.fa")
+    naive_fa = Path("naive-seqs.fa")
     output_file = Path("reference_sequence.txt")
 
-    sequences = read_sequences(igh_fa)
+    sequences = read_sequences(naive_fa)
     consensus = majority_rule_consensus(sequences)
     output_file.write_text(consensus + "\n")
 

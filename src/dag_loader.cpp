@@ -426,11 +426,22 @@ std::unordered_map<std::string, std::string> LoadFasta(std::string_view path) {
 MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
                                        std::string_view newick_path,
                                        std::string_view reference_path) {
+  return LoadTreeFromFastaNewick(std::vector<std::string_view>{fasta_path}, newick_path,
+                                 reference_path);
+}
+
+MADAGStorage<> LoadTreeFromFastaNewick(const std::vector<std::string_view>& fasta_paths,
+                                       std::string_view newick_path,
+                                       std::string_view reference_path) {
   // Load reference sequence
   std::string reference_sequence = LoadReferenceSequence(reference_path);
 
-  // Load FASTA sequences
-  auto fasta_sequences = LoadFasta(fasta_path);
+  // Load FASTA sequences from all provided files
+  std::unordered_map<std::string, std::string> fasta_sequences;
+  for (const auto& fasta_path : fasta_paths) {
+    auto seqs = LoadFasta(fasta_path);
+    fasta_sequences.insert(seqs.begin(), seqs.end());
+  }
 
   // Read Newick file
   std::ifstream newick_file{std::string{newick_path}};
@@ -487,9 +498,6 @@ MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
 
   // Compute edge mutations from FASTA sequences
   for (auto edge : result.GetEdges()) {
-    if (not edge.IsLeaf()) {
-      continue;
-    }
     const std::string& parent_seq = get_sequence(edge.GetParent());
     const std::string& child_seq = get_sequence(edge.GetChild());
 

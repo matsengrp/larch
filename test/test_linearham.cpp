@@ -9,7 +9,8 @@
 
 static void test_linearham_load_and_merge() {
   const std::string data_dir = "data/linearham/";
-  const std::string fasta_path = data_dir + "igh.fa";
+  const std::vector<std::string_view> fasta_paths = {
+      "data/linearham/igh.fa", "data/linearham/naive-seqs.fa"};
   const std::string ref_path = data_dir + "reference_sequence.txt";
 
   // Collect all -rerooted.treefile paths
@@ -37,7 +38,7 @@ static void test_linearham_load_and_merge() {
   std::vector<MADAGStorage<>> trees;
   trees.reserve(tree_paths.size());
   for (const auto& tree_path : tree_paths) {
-    trees.push_back(LoadTreeFromFastaNewick(fasta_path, tree_path, ref_path));
+    trees.push_back(LoadTreeFromFastaNewick(fasta_paths, tree_path, ref_path));
     auto view = trees.back().View();
     // Verify tree was loaded correctly
     TestAssert(view.GetNodesCount() > 0);
@@ -65,6 +66,8 @@ static void test_linearham_load_and_merge() {
   Merge merge(ref_seq);
   merge.AddDAGs(tree_views);
   merge.GetResult().GetRoot().Validate(true, true);
+
+  MADAGToDOT(merge.GetResult(), std::cout);
 
   // Basic sanity checks on merged result
   TestAssert(merge.GetResult().GetNodesCount() > 0);

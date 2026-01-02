@@ -52,6 +52,10 @@ inline FileFormat InferFileFormat(std::string_view path);
                                                      std::string_view newick_path,
                                                      std::string_view reference_path);
 
+[[nodiscard]] MADAGStorage<> LoadTreeFromFastaNewick(
+    const std::vector<std::string_view>& fasta_paths, std::string_view newick_path,
+    std::string_view reference_path);
+
 [[nodiscard]] std::string LoadReferenceSequence(std::string_view path);
 
 [[nodiscard]] std::unordered_map<std::string, std::string> LoadFasta(
