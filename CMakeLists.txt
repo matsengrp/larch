@@ -30,6 +30,7 @@ option(USE_CPPTRACE "Use cpptrace" OFF)
 option(USE_ASAN "Use asan" OFF)
 option(USE_TSAN "Use tsan" OFF)
 option(USE_HTSLIB "Use htslib" OFF)
+option(USE_NETAM "Use netam/thrifty libtorch integration" OFF)
 
 # set default cmake build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -45,6 +46,12 @@ message(STATUS "using usher: ${USE_USHER}")
 # External static libraries: protobuf/larch-autogen, range-v3, nlohmann_json, htslib, oneTBB, boost, zlib
 include(FetchContent)
 include(ExternalProject)
+
+# Find Torch early to avoid protobuf conflicts with other dependencies
+if(USE_NETAM)
+  message(STATUS "USE_NETAM enabled - using C++23")
+  find_package(Torch REQUIRED)
+endif()
 
 function(lib_install PRODUCT)
   get_target_property(LIB_PATH ${PRODUCT} IMPORTED_LOCATION_RELEASE)
@@ -161,6 +168,44 @@ if(USE_HTSLIB)
   )
 endif()
 
+# # netam dependencies (fmt, yaml-cpp, matplotplusplus - Torch found earlier)
+if(USE_NETAM)
+  FetchContent_Declare(fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG "11.0.2"
+    GIT_SHALLOW true
+    GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+  )
+  FetchContent_MakeAvailable(fmt)
+
+  FetchContent_Declare(yaml-cpp
+    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+    GIT_TAG "0.8.0"
+    GIT_SHALLOW true
+    GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+  )
+  set(YAML_CPP_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+  set(YAML_CPP_BUILD_TOOLS OFF CACHE INTERNAL "" FORCE)
+  set(YAML_BUILD_SHARED_LIBS OFF CACHE INTERNAL "" FORCE)
+  FetchContent_MakeAvailable(yaml-cpp)
+
+  FetchContent_Declare(matplotplusplus
+    GIT_REPOSITORY https://github.com/alandefreitas/matplotplusplus.git
+    GIT_TAG "v1.2.1"
+    GIT_SHALLOW true
+    GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+  )
+  set(MATPLOTPP_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
+  set(MATPLOTPP_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+  FetchContent_MakeAvailable(matplotplusplus)
+  if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    target_compile_definitions(matplot PUBLIC __linux)
+  endif()
+endif()
+
 # # zlib
 find_package(ZLIB REQUIRED)
 
@@ -185,7 +230,11 @@ endif()
 
 # set larch compiler options
 function(larch_compile_opts PRODUCT)
-  target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -pipe)
+  if(USE_NETAM)
+    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++23 -pipe)
+  else()
+    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -pipe)
+  endif()
 
   if(CMAKE_BUILD_TYPE EQUAL "DEBUG")
     target_compile_options(${PRODUCT} PUBLIC -DKEEP_ASSERTS)
@@ -322,6 +371,27 @@ endif()
 
 larch_link_opts(larch)
 
+# # netam library
+if(USE_NETAM)
+  add_library(netam
+    src/netam/crepe.cpp
+    src/netam/indep_rscnn_model.cpp
+    src/netam/kmer_sequence_encoder.cpp
+    src/netam/likelihood.cpp
+    src/netam/pcp_dataframe.cpp
+  )
+  target_include_directories(netam PUBLIC include)
+  target_include_directories(netam PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
+  add_dependencies(netam range-v3)
+  target_compile_options(netam PUBLIC -std=c++23 -Wno-unknown-warning-option)
+  target_compile_options(netam PRIVATE -Wall -Wextra -pedantic)
+  target_link_libraries(netam PUBLIC fmt::fmt)
+  target_link_libraries(netam PUBLIC ${TORCH_LIBRARIES})
+  target_link_libraries(netam PUBLIC yaml-cpp::yaml-cpp)
+  target_link_libraries(netam PUBLIC ZLIB::ZLIB)
+  target_link_libraries(netam PUBLIC Matplot++::matplot)
+endif()
+
 # # usher library
 if(USE_USHER)
   add_library(usher
@@ -394,6 +464,9 @@ larch_executable(larch-test
   test/test_weight_accum.cpp
   test/test_weight_counter.cpp
   test/test_write_parsimony_protobuf.cpp
+  test/test_netam_likelihood.cpp
+  test/test_netam_kmer_encoder.cpp
+  test/test_netam_model.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 
@@ -403,6 +476,11 @@ if(USE_USHER)
   set_target_properties(larch-test
     PROPERTIES CXX_CLANG_TIDY ""
   )
+endif()
+
+if(USE_NETAM)
+  target_compile_definitions(larch-test PRIVATE USE_NETAM)
+  target_link_libraries(larch-test PUBLIC netam)
 endif()
 
 # # larch-dagutil
