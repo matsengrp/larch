@@ -417,6 +417,12 @@ larch_executable(larch-dag2dot
 )
 larch_install(larch-dag2dot)
 
+# # bcr-larch
+larch_executable(bcr-larch
+  tools/bcr-larch.cpp
+)
+larch_install(bcr-larch)
+
 # # larch-usher
 if(USE_USHER)
   larch_executable(larch-usher
