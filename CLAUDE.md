@@ -16,6 +16,7 @@ Multiple build directories for different compile-time option combinations. Namin
 - `deb-` or `rel-` for Debug or RelWithDebInfo
 - `mock-` if USE_USHER=no
 - `asan-` or `tsan-` if USE_ASAN=yes or USE_TSAN=yes
+- `serial-` if DISABLE_PARALLELISM=yes
 - `asserts-` if KEEP_ASSERTS=on
 - `trace-` if USE_CPPTRACE=on
 
@@ -137,7 +138,11 @@ Build with USE_MAT_VIEW=off to use only MAT conversion everywhere.
 
 Both TBB and Taskflow are used. Migration from TBB to Taskflow is ongoing - changes in this direction are welcome. Custom parallel helpers and data structures live in `include/larch/parallel/`.
 
-**Disabling parallelism** (for debugging): Currently requires manual changes - use `tbb::global_control::max_allowed_parallelism` for TBB, and forward `ParallelForEach()` to `SeqForEach()`. A build flag for this would be a welcome addition.
+**Disabling parallelism** (for debugging): Use the `DISABLE_PARALLELISM=yes` cmake option. This:
+1. Makes `ParallelForEach()` delegate to `SeqForEach()`
+2. Sets `tbb::global_control::max_allowed_parallelism` to 1 at the start of all executables
+
+This disables parallelism throughout Larch's code and in TBB-based components like VCF import pipelines. Note that matOptimize has its own internal TBB usage that respects the global_control setting.
 
 ## Debugging
 

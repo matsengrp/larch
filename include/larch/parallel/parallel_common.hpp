@@ -4,8 +4,10 @@
 
 #include <execution>
 
+#ifndef DISABLE_PARALLELISM
 #include <tbb/parallel_for_each.h>
 #include <tbb/blocked_range.h>
+#endif
 
 template <typename M>
 auto ReadLock(M& mutex) {
@@ -22,7 +24,15 @@ std::unique_lock<M> WriteLock(M& mutex) {
 }
 
 template <typename Range, typename F>
+void SeqForEach(Range&& range, F&& func) {
+  ranges::for_each(std::forward<Range>(range), std::forward<F>(func));
+}
+
+template <typename Range, typename F>
 void ParallelForEach(Range&& range, F&& func) {
+#ifdef DISABLE_PARALLELISM
+  SeqForEach(std::forward<Range>(range), std::forward<F>(func));
+#else
   std::vector vec = ranges::to_vector(range);
   // std::for_each(std::execution::par,
   //   std::begin(vec), std::end(vec), std::forward<F>(func));
@@ -32,9 +42,5 @@ void ParallelForEach(Range&& range, F&& func) {
       func(vec.at(i));
     }
   });
-}
-
-template <typename Range, typename F>
-void SeqForEach(Range&& range, F&& func) {
-  ranges::for_each(std::forward<Range>(range), std::forward<F>(func));
+#endif
 }

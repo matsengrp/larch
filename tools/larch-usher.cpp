@@ -710,11 +710,14 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   std::string logfile_name = logfile_path + "/logfile.csv";
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
-  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+#ifdef DISABLE_PARALLELISM
+  tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+#else
   tbb::global_control c(
       tbb::global_control::max_allowed_parallelism,
       ((thread_count > 0) ? std::min(thread_count, std::thread::hardware_concurrency())
                           : std::thread::hardware_concurrency()));
+#endif
   std::cout << "Thread count: "
             << c.active_value(tbb::global_control::max_allowed_parallelism) << "\n";
 

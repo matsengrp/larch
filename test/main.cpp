@@ -11,6 +11,10 @@
 #include <mpi.h>
 #endif
 
+#ifdef DISABLE_PARALLELISM
+#include <tbb/global_control.h>
+#endif
+
 #include "test_common.hpp"
 #include "../tools/tools_common.hpp"
 #include "larch/benchmark.hpp"
@@ -81,6 +85,9 @@ int main(int argc, char* argv[]) {
   int ignored{};
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
   finally cleanup([] { MPI_Finalize(); });
+#endif
+#ifdef DISABLE_PARALLELISM
+  tbb::global_control gc(tbb::global_control::max_allowed_parallelism, 1);
 #endif
   bool no_catch = false;
   bool opt_list_names = false;

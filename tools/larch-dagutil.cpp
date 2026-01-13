@@ -3,6 +3,10 @@
 #include <vector>
 #include <algorithm>
 
+#ifdef DISABLE_PARALLELISM
+#include <tbb/global_control.h>
+#endif
+
 #include "larch/subtree/subtree_weight.hpp"
 #include "larch/subtree/weight_accumulator.hpp"
 #include "larch/subtree/parsimony_score_binary.hpp"
@@ -193,6 +197,9 @@ static void MergeTrees(const std::vector<std::string_view>& input_paths,
 }
 
 int main(int argc, char** argv) try {
+#ifdef DISABLE_PARALLELISM
+  tbb::global_control gc(tbb::global_control::max_allowed_parallelism, 1);
+#endif
   Arguments args = GetArguments(argc, argv);
 
   std::vector<std::string_view> input_paths;

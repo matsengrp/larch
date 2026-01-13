@@ -3,6 +3,10 @@
 #include <iostream>
 #include <vector>
 
+#ifdef DISABLE_PARALLELISM
+#include <tbb/global_control.h>
+#endif
+
 #include "larch/merge/merge.hpp"
 #include "larch/dag_loader.hpp"
 #include "tools_common.hpp"
@@ -58,6 +62,9 @@ Usage:
 }
 
 int main(int argc, char** argv) try {
+#ifdef DISABLE_PARALLELISM
+  tbb::global_control gc(tbb::global_control::max_allowed_parallelism, 1);
+#endif
   Arguments args = GetArguments(argc, argv);
 
   std::vector<std::string> fasta_paths;

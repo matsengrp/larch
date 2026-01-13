@@ -31,6 +31,7 @@ option(USE_ASAN "Use asan" OFF)
 option(USE_TSAN "Use tsan" OFF)
 option(USE_HTSLIB "Use htslib" OFF)
 option(USE_NETAM "Use netam/thrifty libtorch integration" OFF)
+option(DISABLE_PARALLELISM "Disable all parallelism for debugging" OFF)
 
 # set default cmake build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -253,6 +254,10 @@ function(larch_compile_opts PRODUCT)
 
   if(USE_CPPTRACE)
     target_compile_options(${PRODUCT} PUBLIC -DUSE_CPPTRACE)
+  endif()
+
+  if(DISABLE_PARALLELISM)
+    target_compile_options(${PRODUCT} PUBLIC -DDISABLE_PARALLELISM)
   endif()
 
   if(USE_ASAN)
