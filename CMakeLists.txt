@@ -81,6 +81,19 @@ FetchContent_Declare(oneTBB
 )
 set(TBB_TEST OFF CACHE INTERNAL "" FORCE)
 FetchContent_MakeAvailable(oneTBB)
+
+# # Taskflow (header-only)
+FetchContent_Declare(taskflow
+  GIT_REPOSITORY https://github.com/taskflow/taskflow.git
+  GIT_TAG v3.7.0
+  GIT_SHALLOW true
+  GIT_PROGRESS true
+  UPDATE_DISCONNECTED true
+)
+set(TF_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+set(TF_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
+FetchContent_MakeAvailable(taskflow)
+
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
@@ -278,8 +291,10 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR}/deps/usher)
   
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
-  target_compile_options(${PRODUCT} PUBLIC -DRANGES_DISABLE_DEPRECATED_WARNINGS) 
+  target_compile_options(${PRODUCT} PUBLIC -DRANGES_DISABLE_DEPRECATED_WARNINGS)
   add_dependencies(${PRODUCT} range-v3)
+
+  target_include_directories(${PRODUCT} PUBLIC ${taskflow_SOURCE_DIR})
 
   if(USE_HTSLIB)
     target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/htslib/install/include)

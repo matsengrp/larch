@@ -254,14 +254,16 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
 
     NodeId orig_id = [this, &node_id, &label]() {
       NodeId new_id;
-      auto ins_pair = result_nodes_.insert({label, new_id});
-      if (ins_pair.second) {
-        new_id.value = node_id.fetch_add(1);
-        ins_pair.first = new_id;
-        result_node_labels_.insert_or_assign(new_id, label);
-      } else {
-        new_id.value = ins_pair.first.value;
-      }
+      result_nodes_.insert({label, new_id},
+                           [&new_id, &node_id, &label, this](auto&& ins_pair) {
+                             if (ins_pair.second) {
+                               new_id.value = node_id.fetch_add(1);
+                               ins_pair.first = new_id;
+                               result_node_labels_.insert_or_assign(new_id, label);
+                             } else {
+                               new_id.value = ins_pair.first.value;
+                             }
+                           });
       return new_id;
     }();
 

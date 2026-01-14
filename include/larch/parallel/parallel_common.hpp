@@ -3,10 +3,10 @@
 #include "larch/common.hpp"
 
 #include <execution>
+#include <latch>
 
 #ifndef DISABLE_PARALLELISM
-#include <tbb/parallel_for_each.h>
-#include <tbb/blocked_range.h>
+#include <taskflow/taskflow.hpp>
 #endif
 
 template <typename M>
@@ -28,19 +28,30 @@ void SeqForEach(Range&& range, F&& func) {
   ranges::for_each(std::forward<Range>(range), std::forward<F>(func));
 }
 
+#ifndef DISABLE_PARALLELISM
+inline tf::Executor& GetTaskflowExecutor() {
+  static tf::Executor executor;
+  return executor;
+}
+#endif
+
 template <typename Range, typename F>
 void ParallelForEach(Range&& range, F&& func) {
 #ifdef DISABLE_PARALLELISM
   SeqForEach(std::forward<Range>(range), std::forward<F>(func));
 #else
   std::vector vec = ranges::to_vector(range);
-  // std::for_each(std::execution::par,
-  //   std::begin(vec), std::end(vec), std::forward<F>(func));
-  using block = tbb::blocked_range<size_t>;
-  tbb::parallel_for(block{0, vec.size()}, [&vec, func](const block& x) {
-    for (size_t i = x.begin(); i != x.end(); ++i) {
-      func(vec.at(i));
-    }
-  });
+  if (vec.empty()) {
+    return;
+  }
+  std::latch done{static_cast<std::ptrdiff_t>(vec.size())};
+  auto& executor = GetTaskflowExecutor();
+  for (auto& item : vec) {
+    executor.silent_async([&func, &item, &done]() {
+      func(item);
+      done.count_down();
+    });
+  }
+  done.wait();
 #endif
 }
