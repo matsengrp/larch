@@ -474,6 +474,7 @@ larch_executable(larch-test
   test/test_matOptimize.cpp
   test/test_merge.cpp
   test/test_overlay.cpp
+  test/test_parallel.cpp
   test/test_rf_distance.cpp
   test/test_sample_tree.cpp
   test/test_sample_best_tree.cpp

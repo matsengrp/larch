@@ -7,6 +7,7 @@
 
 #ifndef DISABLE_PARALLELISM
 #include <taskflow/taskflow.hpp>
+#include <taskflow/algorithm/for_each.hpp>
 #endif
 
 template <typename M>
@@ -44,14 +45,14 @@ void ParallelForEach(Range&& range, F&& func) {
   if (vec.empty()) {
     return;
   }
-  std::latch done{static_cast<std::ptrdiff_t>(vec.size())};
+  tf::Taskflow taskflow;
+  taskflow.for_each(vec.begin(), vec.end(), [&func](auto& item) { func(item); });
   auto& executor = GetTaskflowExecutor();
-  for (auto& item : vec) {
-    executor.silent_async([&func, &item, &done]() {
-      func(item);
-      done.count_down();
-    });
+  if (executor.this_worker_id() >= 0) {
+    executor.corun(taskflow);
+  } else {
+    executor.run(std::move(taskflow)).wait();
+    executor.wait_for_all();
   }
-  done.wait();
 #endif
 }
