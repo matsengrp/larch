@@ -1,3 +1,11 @@
 #race_top:tbb
 #race_top:std::__atomic_base
 #race:__gnu_cxx::__normal_iterator
+
+# FreeBSD libthr mutex internals - false positives with try_lock spinning
+race:libthr.so
+race:pthread_cond_destroy
+race:pthread_mutex_destroy
+
+# Taskflow topology cleanup races
+race:tf::Executor::_tear_down_topology

@@ -45,14 +45,22 @@ void ParallelForEach(Range&& range, F&& func) {
   if (vec.empty()) {
     return;
   }
-  tf::Taskflow taskflow;
-  taskflow.for_each(vec.begin(), vec.end(), [&func](auto& item) { func(item); });
   auto& executor = GetTaskflowExecutor();
   if (executor.this_worker_id() >= 0) {
+    tf::Taskflow taskflow;
+    taskflow.for_each(vec.begin(), vec.end(), [&func](auto& item) { func(item); });
     executor.corun(taskflow);
   } else {
-    executor.run(std::move(taskflow)).wait();
-    executor.wait_for_all();
+    std::atomic<size_t> counter{vec.size()};
+    for (auto& item : vec) {
+      executor.silent_dependent_async([&func, &item, &counter]() {
+        func(item);
+        counter.fetch_sub(1, std::memory_order_release);
+      });
+    }
+    while (counter.load(std::memory_order_acquire) > 0) {
+      std::this_thread::yield();
+    }
   }
 #endif
 }

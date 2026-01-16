@@ -158,8 +158,18 @@ First determine if the bug is:
 - **Reproduce on small data first**: Debugging on huge trees/DAGs is difficult. Use `test/sample_dag.hpp` which provides a small 10-node tree.
 - **Visualization**: Functions `*ToDOT()` in `include/larch/dag_loader.hpp` output Graphviz DOT format. Most useful with small datasets.
 - **Stack traces**: Build with USE_CPPTRACE=on for readable backtraces on uncaught exceptions (cheaper than gdb).
-- **Thread sanitizer caveats**: TSan with TBB/Taskflow produces many false positives. Requires creative debugging.
+- **Thread sanitizer caveats**: TSan with TBB/Taskflow produces many false positives. Use suppressions file and recommended options below.
 - **Long-running failures**: When bugs only appear on large datasets after many optimization cycles, adding asserts earlier in the pipeline helps locate the source.
+
+### TSan Configuration
+
+Run TSan builds with these environment options:
+
+```bash
+TSAN_OPTIONS="halt_on_error=1 history_size=7 force_seq_cst_atomics=1 second_deadlock_stack=1 suppressions=../tsan.suppressions"
+```
+
+The `tsan.suppressions` file in the repo root contains suppressions for known false positives (FreeBSD libthr internals, Taskflow topology cleanup).
 
 ### Common Pitfalls
 
