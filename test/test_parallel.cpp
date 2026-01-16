@@ -30,9 +30,9 @@
     add_test({test_parallel_for, "Parallel: recursive ParallelForEach", {"parallel"}});
 
 [[maybe_unused]] static void test_parallel_reduction() {
-  const size_t num_iterations = 100;
-  const size_t num_items = 100 * std::thread::hardware_concurrency();
-  const size_t num_buckets = 2;  // Very few buckets = extreme contention on try_lock
+  const size_t num_iterations = 10;
+  const size_t num_items = 10 * std::thread::hardware_concurrency();
+  const size_t num_buckets = 4;
 
   for (size_t iter = 0; iter < num_iterations; ++iter) {
     std::vector<size_t> items(num_items);

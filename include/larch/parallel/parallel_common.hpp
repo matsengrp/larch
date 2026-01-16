@@ -51,16 +51,14 @@ void ParallelForEach(Range&& range, F&& func) {
     taskflow.for_each(vec.begin(), vec.end(), [&func](auto& item) { func(item); });
     executor.corun(taskflow);
   } else {
-    std::atomic<size_t> counter{vec.size()};
+    std::latch done{static_cast<std::ptrdiff_t>(vec.size())};
     for (auto& item : vec) {
-      executor.silent_dependent_async([&func, &item, &counter]() {
+      executor.silent_async([&func, &item, &done]() {
         func(item);
-        counter.fetch_sub(1, std::memory_order_release);
+        done.count_down();
       });
     }
-    while (counter.load(std::memory_order_acquire) > 0) {
-      std::this_thread::yield();
-    }
+    done.wait();
   }
 #endif
 }
