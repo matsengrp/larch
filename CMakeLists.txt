@@ -429,6 +429,7 @@ if(USE_USHER)
   target_include_directories(usher PUBLIC include)
   target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
   target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
+  target_include_directories(usher PUBLIC ${taskflow_SOURCE_DIR})
 
   add_dependencies(usher range-v3)
 
