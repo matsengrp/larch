@@ -192,7 +192,30 @@ The `tsan.suppressions` file in the repo root contains suppressions for known fa
 
 ## Dependencies
 
-`deps/usher` is a git submodule. Only `deps/usher/src/matOptimize` is used. A mock implementation exists in `include/larch/optimize.hpp` - enable with USE_USHER=no to simplify runtime and rule out matOptimize issues.
+### usher Submodule
+
+`deps/usher` is a git submodule pointing to `git@github.com:matsengrp/usher.git` (tracking `master` branch). Only `deps/usher/src/matOptimize` is used. A mock implementation exists in `include/larch/optimize.hpp` - enable with USE_USHER=no to simplify runtime and rule out matOptimize issues.
+
+**Why not use usher's CMakeLists.txt?** The usher project is not designed to be used as a library. Larch manually compiles a subset of matOptimize sources directly (see `MATOPTIMIZE_SRC` glob in CMakeLists.txt). This avoids pulling in usher's main executable, unused utilities, and conflicting build options.
+
+**Files compiled from matOptimize:**
+- `apply_move/*.cpp` - SPR move application
+- `Profitable_Moves_Enumerators/*.cpp` - move enumeration
+- `Fitch_Sankoff.cpp` - parsimony scoring
+- `mutation_annotated_tree*.cpp` - MAT data structure
+- `optimize_inner_loop.cpp`, `optimize_tree.cpp` - optimization loop
+- `Mutation_Collection.cpp`, `condense.cpp`, `reassign_states.cpp` - tree manipulation
+- `detailed_mutations_load.cpp`, `detailed_mutations_store.cpp` - serialization
+- `priority_conflict_resolver.cpp`, `check_samples.cpp` - utilities
+
+**Global variables:** matOptimize declares several `extern` globals in `tree_rearrangement_internal.hpp` that are normally defined in `main.cpp`. Since larch doesn't compile `main.cpp`, these definitions are provided in `src/usher_globals.cpp`:
+- `interrupted` - atomic flag for interruption handling
+- `process_count`, `this_rank` - MPI-related (set to 1/0 for single-process)
+- `num_threads` - thread count (initialized from TBB default concurrency)
+- `movalbe_src_log` - debug logging file handle
+- `use_bound`, `changing_radius` - optimization control flags
+
+**Updating the submodule:** When updating to a new usher commit, check if `tree_rearrangement_internal.hpp` has new `extern` declarations that need definitions added to `usher_globals.cpp`.
 
 ## Maintaining This File
 
