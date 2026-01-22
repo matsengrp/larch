@@ -5,8 +5,15 @@
 #include "larch/contiguous_map.hpp"
 #include "larch/usher_glue.hpp"
 
+#ifdef USE_NETAM
+#include <netam/crepe.hpp>
+#include <netam/likelihood.hpp>
+#include <netam/kmer_sequence_encoder.hpp>
+#endif
+
 /**
- * @brief FitchSet represents a set of possible nucleotides at a site (for Fitch algorithm).
+ * @brief FitchSet represents a set of possible nucleotides at a site (for Fitch
+ * algorithm).
  *
  * Internally uses a 4-bit one-hot encoding where:
  * - bit 0 (1) = A
@@ -148,19 +155,24 @@ class MatOptimizeScoringBackend {
 };
 
 /**
- * @brief ML/Sankoff-based scoring backend (stub implementation).
+ * @brief ML-based scoring backend using neural network likelihood.
  *
- * This backend is a placeholder for future neural network-based likelihood
- * scoring. Currently returns Score{0} for all operations.
+ * This backend uses netam::crepe (which wraps indep_rscnn_model and
+ * kmer_sequence_encoder) to compute log-likelihoods for edges in the
+ * affected subtree of an SPR move.
  *
- * The backend stores only move topology (src, dst, lca as NodeId) since
- * scoring is deferred to the ML model.
+ * Key design decisions:
+ * - Edge-level likelihood only (sum log-likelihoods for affected edges)
+ * - Keep using parsimony (Fitch) for internal node base selection
+ * - Score is negated log-likelihood (lower is better, consistent with parsimony)
+ * - Simple implementation without batching
  */
 template <typename DAG>
 class MLScoringBackend {
  public:
   /**
    * @brief Simple nucleotide set for ML backend - just holds a reference base.
+   * Base selection still uses parsimony logic.
    */
   struct NucleotideSet {
     char base;
@@ -170,8 +182,15 @@ class MLScoringBackend {
 
   MLScoringBackend() = default;
 
+#ifdef USE_NETAM
   /**
-   * @brief Initialize from NodeId-based move.
+   * @brief Construct with netam model for ML scoring.
+   */
+  explicit MLScoringBackend(netam::crepe& model) : model_(&model) {}
+#endif
+
+  /**
+   * @brief Initialize from NodeId-based move and compute ML score.
    */
   template <typename DAGView>
   bool Initialize(const DAGView& dag, NodeId src, NodeId dst, NodeId lca);
@@ -180,14 +199,27 @@ class MLScoringBackend {
   NodeId GetMoveSource() const { return src_; }
   NodeId GetMoveTarget() const { return dst_; }
   NodeId GetMoveLCA() const { return lca_; }
-  Score GetScoreChange() const { return Score{0}; }  // Stub: always 0
 
-  // Per-node scoring queries - empty for stub
-  ContiguousSet<MutationPosition> GetSitesWithScoringChanges(NodeId) const { return {}; }
+  /**
+   * @brief Get parsimony score change (always 0 for ML backend).
+   * Use GetMLScoreChange() for the actual ML score.
+   */
+  Score GetScoreChange() const { return Score{0}; }
+
+  /**
+   * @brief Get ML score change (negated log-likelihood difference).
+   * Lower is better, consistent with parsimony scoring.
+   */
+  double GetMLScoreChange() const { return ml_score_change_; }
+
+  // Per-node scoring queries - empty for ML backend (uses parsimony for base selection)
+  ContiguousSet<MutationPosition> GetSitesWithScoringChanges(NodeId) const {
+    return {};
+  }
   bool HasScoringChanges(NodeId) const { return false; }
 
   /**
-   * @brief Get scoring data for a node (stub - returns empty/default).
+   * @brief Get scoring data for a node (returns empty - ML doesn't use Fitch sets).
    */
   template <typename DAGView>
   std::pair<MAT::Mutations_Collection,
@@ -197,24 +229,44 @@ class MLScoringBackend {
   }
 
   /**
-   * @brief Get nucleotide set at site (stub - returns reference base).
+   * @brief Get nucleotide set at site (returns base from compact genome).
    */
   template <typename DAGView>
-  NucleotideSet GetNucleotideSetAtSite(const DAGView& dag, NodeId node, MutationPosition site,
-                                       bool, bool, bool) const;
+  NucleotideSet GetNucleotideSetAtSite(const DAGView& dag, NodeId node,
+                                       MutationPosition site, bool, bool, bool) const;
 
   /**
-   * @brief Select base (stub - keeps old base).
+   * @brief Select base (keeps old base - parsimony handles base selection).
    */
   static MutationBase SelectBase(const NucleotideSet&, MutationBase old_base,
                                  MutationBase) {
     return old_base;
   }
 
+#ifdef USE_NETAM
+  /**
+   * @brief Expand CompactGenome to full sequence string.
+   */
+  template <typename DAGView>
+  static std::string ExpandSequence(const DAGView& dag, NodeId node);
+
+  /**
+   * @brief Compute log-likelihood for a single edge (parent -> child).
+   */
+  template <typename DAGView>
+  double ComputeEdgeLogLikelihood(const DAGView& dag, NodeId parent,
+                                  NodeId child) const;
+#endif
+
  private:
   NodeId src_;
   NodeId dst_;
   NodeId lca_;
+  double ml_score_change_ = 0.0;
+
+#ifdef USE_NETAM
+  netam::crepe* model_ = nullptr;
+#endif
 };
 
 // Implementation included at the end
