@@ -40,3 +40,16 @@ static void test_larch_usher(const std::string& args) {
     add_test({[] { test_larch_usher("--callback-option best-moves-treebased"); },
               "Larch-Usher: --callback-option best-moves-treebased",
               {"slow"}});
+
+static void test_larch_usher_merged_dag() {
+  std::string output_dag_path = test_output_folder + "/opt_dag.pb";
+  std::string command = "./bin/larch-usher -i data/larch_merged_dag.pb -o " +
+                        output_dag_path +
+                        " -c 1 -s 0 --max-subtree-clade-size 2000 --trim --quiet";
+  std::cout << ">COMMAND_EXECUTE: \"" << command << "\"" << std::endl;
+  int result = std::system(command.c_str());
+  TestAssert(0 == result);
+}
+
+[[maybe_unused]] static const auto test_added7 = add_test(
+    {test_larch_usher_merged_dag, "Larch-Usher: merged dag with trim", {"slow"}});
