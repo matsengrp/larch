@@ -23,7 +23,19 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(KEEP_ASSERTS "Keep asserts" ON)
+# set default cmake build type
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+endif()
+
+# KEEP_ASSERTS default: OFF for Release, ON for all other build types
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  set(KEEP_ASSERTS_DEFAULT OFF)
+else()
+  set(KEEP_ASSERTS_DEFAULT ON)
+endif()
+
+option(KEEP_ASSERTS "Keep asserts" ${KEEP_ASSERTS_DEFAULT})
 option(USE_USHER "Use matOptimize" ON)
 option(USE_MAT_VIEW "Use MATView" ON)
 option(USE_CPPTRACE "Use cpptrace" OFF)
@@ -32,11 +44,6 @@ option(USE_TSAN "Use tsan" OFF)
 option(USE_HTSLIB "Use htslib" OFF)
 option(USE_NETAM "Use netam/thrifty libtorch integration" OFF)
 option(DISABLE_PARALLELISM "Disable all parallelism for debugging" OFF)
-
-# set default cmake build type
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
-endif()
 
 set(TBB_VERSION "v2022.1.0")
 

@@ -7,6 +7,7 @@ Tools for inference and manipulation of history DAGs (phylogenetic trees).
 - Use clang-format (config at `.clang-format`)
 - Types and global/member functions: `CamelCase`
 - Member data: `trailing_underscore_`
+- Use brace initialization `{}` (not parentheses) for constructors and initializers
 
 ## Building
 
@@ -15,7 +16,9 @@ Multiple build directories for different compile-time option combinations. Namin
 - Start with `build-`
 - `deb-` or `rel-` for Debug or RelWithDebInfo
 - `mock-` if USE_USHER=no
+- `matconv-` if USE_MAT_VIEW=off
 - `asan-` or `tsan-` if USE_ASAN=yes or USE_TSAN=yes
+- `netam-` if USE_NETAM=yes
 - `serial-` if DISABLE_PARALLELISM=yes
 - `asserts-` if KEEP_ASSERTS=on
 - `trace-` if USE_CPPTRACE=on
@@ -129,10 +132,10 @@ Growing a DAG is iterative:
 
 Two ways to cross to/from matOptimize:
 
-- **MAT Conversion** (`include/larch/mat_conversion.hpp`): Deep copy, bidirectional. Creates `MAT::Tree` from MADAG and vice versa.
-- **MAT View** (`include/larch/mat_view.hpp`): Lightweight view into `MAT::Tree` that provides a DAG interface, enabling composition with Larch's layered architecture.
+- **MAT Conversion** (`include/larch/mat_conversion.hpp`): Deep copy, bidirectional. Creates `MAT::Tree` from MADAG and vice versa. Works both ways (MADAG→MAT::Tree and MAT::Tree→MADAG).
+- **MAT View** (`include/larch/mat_view.hpp`): Lightweight view into `MAT::Tree` that provides a DAG interface, enabling composition with Larch's layered architecture. One-way only (provides DAG interface over MAT::Tree, no conversion back).
 
-Build with USE_MAT_VIEW=off to use only MAT conversion everywhere.
+Build with `USE_MAT_VIEW=off` to use only MAT conversion everywhere. This is useful for debugging issues that may be related to the view layer, at the cost of additional memory copies.
 
 ## Parallelism
 
