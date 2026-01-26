@@ -55,10 +55,20 @@ message(STATUS "using usher: ${USE_USHER}")
 include(FetchContent)
 include(ExternalProject)
 
-# Find Torch early to avoid protobuf conflicts with other dependencies
+# Find Protobuf early, before any dependencies that might bundle their own protobuf
+# Temporarily clear CMAKE_PREFIX_PATH to prevent finding libtorch's vendored protobuf
+set(SAVED_CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
+set(CMAKE_PREFIX_PATH "")
+find_package(Protobuf REQUIRED)
+find_package(absl)
+set(CMAKE_PREFIX_PATH ${SAVED_CMAKE_PREFIX_PATH})
+
+# Force system protobuf include dir to come FIRST in include path, before any
+# paths that libtorch might add (libtorch bundles its own vendored protobuf)
+include_directories(BEFORE SYSTEM ${Protobuf_INCLUDE_DIRS})
+
 if(USE_NETAM)
   message(STATUS "USE_NETAM enabled - using C++23")
-  find_package(Torch REQUIRED)
 endif()
 
 function(lib_install PRODUCT)
@@ -101,12 +111,23 @@ set(TF_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
 set(TF_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
 FetchContent_MakeAvailable(taskflow)
 
+find_program(MPI_C_COMPILER mpicc)
+if(MPI_C_COMPILER)
+    execute_process(
+        COMMAND ${MPI_C_COMPILER} --showme:incdirs
+        OUTPUT_VARIABLE MPI_INCDIRS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    # Get the first path (space-separated list)
+    string(REPLACE " " ";" MPI_INCDIRS_LIST "${MPI_INCDIRS}")
+    list(GET MPI_INCDIRS_LIST 0 MPI_PRIMARY_INCDIR)
+    
+    set(MPI_C_HEADER_DIR "${MPI_PRIMARY_INCDIR}" CACHE PATH "")
+    set(MPI_CXX_HEADER_DIR "${MPI_PRIMARY_INCDIR}" CACHE PATH "")
+endif()
+
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-
-# # protobuf
-find_package(Protobuf REQUIRED)
-find_package(absl)
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -189,7 +210,7 @@ if(USE_HTSLIB)
   )
 endif()
 
-# # netam dependencies (fmt, yaml-cpp, matplotplusplus - Torch found earlier)
+# # netam dependencies (fmt, yaml-cpp, matplotplusplus - Torch found later)
 if(USE_NETAM)
   FetchContent_Declare(fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
@@ -232,6 +253,43 @@ find_package(ZLIB REQUIRED)
 
 # # boost
 find_package(Boost REQUIRED CONFIG COMPONENTS program_options iostreams filesystem date_time)
+
+# Find Torch LAST to prevent its vendored protobuf from polluting other dependencies
+if(USE_NETAM)
+  find_package(Torch REQUIRED)
+
+  # Libtorch bundles its own protobuf headers at ${TORCH_INSTALL_PREFIX}/include/google/protobuf/
+  # which conflicts with the system protobuf. We need to filter out the base include path
+  # and only keep the torch-specific paths, or use more specific include paths.
+  #
+  # Multiple targets (torch, torch_cpu, c10) set INTERFACE_INCLUDE_DIRECTORIES to:
+  #   ${TORCH_INSTALL_PREFIX}/include
+  # which exposes google/protobuf/. We replace with paths that don't.
+  list(GET TORCH_INCLUDE_DIRS 0 TORCH_BASE_INCLUDE)
+  get_filename_component(TORCH_INSTALL_PREFIX "${TORCH_BASE_INCLUDE}" PATH)
+
+  # Build a new include list without the base include dir (which contains google/protobuf)
+  set(TORCH_FILTERED_INCLUDE_DIRS
+    ${TORCH_INSTALL_PREFIX}/include/ATen
+    ${TORCH_INSTALL_PREFIX}/include/c10
+    ${TORCH_INSTALL_PREFIX}/include/caffe2
+    ${TORCH_INSTALL_PREFIX}/include/torch
+    ${TORCH_INSTALL_PREFIX}/include/torch/csrc/api/include
+  )
+
+  # Override include directories on all torch-related targets
+  # (see Caffe2Targets.cmake for the full list of targets)
+  foreach(_torch_target torch torch_cpu c10)
+    if(TARGET ${_torch_target})
+      set_target_properties(${_torch_target} PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${TORCH_FILTERED_INCLUDE_DIRS}"
+      )
+    endif()
+  endforeach()
+
+  # Also update TORCH_INCLUDE_DIRS for any code that uses it directly
+  set(TORCH_INCLUDE_DIRS ${TORCH_FILTERED_INCLUDE_DIRS})
+endif()
 
 # Internal libraries and binaries
 
