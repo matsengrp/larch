@@ -151,14 +151,12 @@ const GrowableHashMap<std::string, CompactGenome>& Merge::SampleIdToCGMap() cons
 
 void Merge::ComputeResultEdgeMutations() {
   result_edges_.ReadAll(
-      [](auto result_edges, auto& result_nodes, auto& sample_id_to_cg_map,
+      [](auto result_edges, auto& /*result_nodes*/, auto& sample_id_to_cg_map,
          auto result_dag) {
         SeqForEach(result_edges, [&](auto& i) {
           auto& [label, edge_id] = i;
           Assert(label.GetParent().GetCompactGenome());
           const CompactGenome& parent = *label.GetParent().GetCompactGenome();
-
-          auto child_node = result_nodes.at(label.GetChild());
 
           // Check NodeLabel's SampleId, not DAG structure, because a node might be
           // structurally a leaf in the result DAG but was an internal node in the source

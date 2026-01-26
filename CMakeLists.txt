@@ -139,7 +139,7 @@ set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
 # # larch-autogen library
 target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR} ${Protobuf_INCLUDE_DIRS})
 target_link_libraries(larch-autogen PUBLIC ${Protobuf_LIBRARIES})
-target_compile_options(larch-autogen PUBLIC -std=c++17 -w)
+target_compile_options(larch-autogen PRIVATE -std=c++17 -w)
 set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
@@ -243,6 +243,8 @@ if(USE_NETAM)
   set(MATPLOTPP_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
   set(MATPLOTPP_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
   FetchContent_MakeAvailable(matplotplusplus)
+  # Fix warning-as-error in matplotplusplus with newer GCC
+  target_compile_options(matplot PRIVATE -Wno-ignored-attributes)
   if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     target_compile_definitions(matplot PUBLIC __linux)
   endif()
@@ -258,37 +260,18 @@ find_package(Boost REQUIRED CONFIG COMPONENTS program_options iostreams filesyst
 if(USE_NETAM)
   find_package(Torch REQUIRED)
 
-  # Libtorch bundles its own protobuf headers at ${TORCH_INSTALL_PREFIX}/include/google/protobuf/
-  # which conflicts with the system protobuf. We need to filter out the base include path
-  # and only keep the torch-specific paths, or use more specific include paths.
-  #
-  # Multiple targets (torch, torch_cpu, c10) set INTERFACE_INCLUDE_DIRECTORIES to:
-  #   ${TORCH_INSTALL_PREFIX}/include
-  # which exposes google/protobuf/. We replace with paths that don't.
-  list(GET TORCH_INCLUDE_DIRS 0 TORCH_BASE_INCLUDE)
-  get_filename_component(TORCH_INSTALL_PREFIX "${TORCH_BASE_INCLUDE}" PATH)
-
-  # Build a new include list without the base include dir (which contains google/protobuf)
-  set(TORCH_FILTERED_INCLUDE_DIRS
-    ${TORCH_INSTALL_PREFIX}/include/ATen
-    ${TORCH_INSTALL_PREFIX}/include/c10
-    ${TORCH_INSTALL_PREFIX}/include/caffe2
-    ${TORCH_INSTALL_PREFIX}/include/torch
-    ${TORCH_INSTALL_PREFIX}/include/torch/csrc/api/include
-  )
-
-  # Override include directories on all torch-related targets
-  # (see Caffe2Targets.cmake for the full list of targets)
+  # Libtorch bundles its own protobuf headers at ${libtorch}/include/google/protobuf/
+  # We prepend the system protobuf include to all torch targets so it's found first
   foreach(_torch_target torch torch_cpu c10)
     if(TARGET ${_torch_target})
-      set_target_properties(${_torch_target} PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${TORCH_FILTERED_INCLUDE_DIRS}"
-      )
+      get_target_property(_torch_includes ${_torch_target} INTERFACE_INCLUDE_DIRECTORIES)
+      if(_torch_includes)
+        set_target_properties(${_torch_target} PROPERTIES
+          INTERFACE_INCLUDE_DIRECTORIES "${Protobuf_INCLUDE_DIRS};${_torch_includes}"
+        )
+      endif()
     endif()
   endforeach()
-
-  # Also update TORCH_INCLUDE_DIRS for any code that uses it directly
-  set(TORCH_INCLUDE_DIRS ${TORCH_FILTERED_INCLUDE_DIRS})
 endif()
 
 # Internal libraries and binaries
@@ -359,7 +342,7 @@ function(larch_compile_opts PRODUCT)
   target_compile_options(${PRODUCT} PUBLIC -DRANGES_DISABLE_DEPRECATED_WARNINGS)
   add_dependencies(${PRODUCT} range-v3)
 
-  target_include_directories(${PRODUCT} PUBLIC ${taskflow_SOURCE_DIR})
+  target_include_directories(${PRODUCT} SYSTEM PUBLIC ${taskflow_SOURCE_DIR})
 
   if(USE_HTSLIB)
     target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/htslib/install/include)
@@ -483,7 +466,11 @@ if(USE_USHER)
     ${MATOPTIMIZE_SRC}
     src/usher_globals.cpp
   )
-  target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer -DUSE_USHER)
+  if(USE_NETAM)
+    target_compile_options(usher PRIVATE -march=native -std=c++23 -w -fno-omit-frame-pointer -DUSE_USHER)
+  else()
+    target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer -DUSE_USHER)
+  endif()
 
   if(${USE_ASAN})
     target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address -fno-sanitize-recover)
@@ -494,7 +481,7 @@ if(USE_USHER)
   target_include_directories(usher PUBLIC include)
   target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
   target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
-  target_include_directories(usher PUBLIC ${taskflow_SOURCE_DIR})
+  target_include_directories(usher SYSTEM PUBLIC ${taskflow_SOURCE_DIR})
 
   add_dependencies(usher range-v3)
 
