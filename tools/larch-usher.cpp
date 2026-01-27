@@ -751,7 +751,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   Benchmark log_timer;
   auto logger = [&merge, &logfile, &log_timer, &intermediate_dag_path,
                  &write_intermediate_dag, &write_intermediate_every_x_iters,
-                 &output_format, &main_rng, &use_ua_free_parsimony](size_t iteration) {
+                 &output_format, &use_ua_free_parsimony](size_t iteration) {
     std::cout << "############ Logging for iteration " << iteration << " #######\n";
     merge.ComputeResultEdgeMutations();
 

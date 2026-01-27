@@ -56,12 +56,20 @@ include(FetchContent)
 include(ExternalProject)
 
 # Find Protobuf early, before any dependencies that might bundle their own protobuf
-# Temporarily clear CMAKE_PREFIX_PATH to prevent finding libtorch's vendored protobuf
-set(SAVED_CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
-set(CMAKE_PREFIX_PATH "")
-find_package(Protobuf REQUIRED)
-find_package(absl)
-set(CMAKE_PREFIX_PATH ${SAVED_CMAKE_PREFIX_PATH})
+# On Linux: clear CMAKE_PREFIX_PATH to prevent finding libtorch's vendored protobuf
+# On FreeBSD: use CONFIG mode explicitly to create all protobuf targets (including upb)
+#   so that when Torch's Caffe2 calls find_package(Protobuf CONFIG), protobuf-targets.cmake
+#   sees all targets already defined and returns early instead of erroring
+if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+  find_package(Protobuf CONFIG REQUIRED)
+  find_package(absl CONFIG REQUIRED)
+else()
+  set(SAVED_CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
+  set(CMAKE_PREFIX_PATH "")
+  find_package(Protobuf REQUIRED)
+  find_package(absl)
+  set(CMAKE_PREFIX_PATH ${SAVED_CMAKE_PREFIX_PATH})
+endif()
 
 if(USE_NETAM)
   message(STATUS "USE_NETAM enabled - using C++23")
@@ -133,8 +141,8 @@ add_library(larch-autogen OBJECT
 set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
 
 # # larch-autogen library
-target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR} ${Protobuf_INCLUDE_DIRS})
-target_link_libraries(larch-autogen PUBLIC ${Protobuf_LIBRARIES})
+target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR})
+target_link_libraries(larch-autogen PUBLIC protobuf::libprotobuf)
 target_compile_options(larch-autogen PRIVATE -std=c++17 -w)
 set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
@@ -401,7 +409,7 @@ endif()
 
   target_link_libraries(${PRODUCT} PUBLIC -lz)
   target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
-  target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
+  # Note: protobuf::libprotobuf is already linked via larch_compile_opts
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
 
   target_link_libraries(${PRODUCT} PUBLIC TBB::tbb)
@@ -486,7 +494,8 @@ if(USE_USHER)
   endif()
 
   target_include_directories(usher PUBLIC include)
-  target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
+  # Protobuf includes come from protobuf::libprotobuf target (linked transitively via larch-autogen)
+  target_link_libraries(usher PUBLIC protobuf::libprotobuf)
   target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
   target_include_directories(usher SYSTEM PUBLIC ${taskflow_SOURCE_DIR})
 

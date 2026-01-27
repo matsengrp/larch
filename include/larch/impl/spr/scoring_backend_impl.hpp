@@ -253,8 +253,8 @@ double MLScoringBackend<DAG>::ComputeEdgeLogLikelihood(const DAGView& dag,
 
 template <typename DAG>
 template <typename DAGView>
-bool MLScoringBackend<DAG>::Initialize(const DAGView& dag, NodeId src, NodeId dst,
-                                       NodeId lca) {
+bool MLScoringBackend<DAG>::Initialize([[maybe_unused]] const DAGView& dag, NodeId src,
+                                       NodeId dst, NodeId lca) {
   src_ = src;
   dst_ = dst;
   lca_ = lca;
