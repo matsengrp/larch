@@ -180,7 +180,7 @@ void test_encode_sequence_empty() {
   TestAssert(wt_modifier.size(1) == 4);
 
   // All wt_modifier should be zeros (no bases to mask)
-  TestAssert(torch::all(wt_modifier == 0).item<bool>());
+  TestAssert(torch::all(wt_modifier == torch::tensor(0)).item<bool>());
 }
 
 void test_encode_sequence_single_base() {

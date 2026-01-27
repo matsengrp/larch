@@ -66,6 +66,8 @@ class BatchingCallback : public Move_Found_Callback {
  private:
   struct MoveStorage {
     MOVE_ONLY(MoveStorage);
+    MoveStorage(std::unique_ptr<SPRType> spr_in, std::unique_ptr<FragmentType> fragment_in)
+        : spr{std::move(spr_in)}, fragment{std::move(fragment_in)} {}
     std::unique_ptr<SPRType> spr;
     std::unique_ptr<FragmentType> fragment;
   };

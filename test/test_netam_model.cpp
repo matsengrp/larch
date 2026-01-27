@@ -147,8 +147,8 @@ void test_model_mask_zeros_output() {
   TestAssert(std::abs(rates[0][6].item<float>() - 1.0f) < 1e-5f);
 
   // csp_logits should be zero where masked
-  TestAssert(torch::all(csp_logits[0][5] == 0).item<bool>());
-  TestAssert(torch::all(csp_logits[0][6] == 0).item<bool>());
+  TestAssert(torch::all(csp_logits[0][5] == torch::tensor(0)).item<bool>());
+  TestAssert(torch::all(csp_logits[0][6] == torch::tensor(0)).item<bool>());
 }
 
 void test_model_wt_modifier_applied() {
