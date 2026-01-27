@@ -63,10 +63,6 @@ find_package(Protobuf REQUIRED)
 find_package(absl)
 set(CMAKE_PREFIX_PATH ${SAVED_CMAKE_PREFIX_PATH})
 
-# Force system protobuf include dir to come FIRST in include path, before any
-# paths that libtorch might add (libtorch bundles its own vendored protobuf)
-include_directories(BEFORE SYSTEM ${Protobuf_INCLUDE_DIRS})
-
 if(USE_NETAM)
   message(STATUS "USE_NETAM enabled - using C++23")
 endif()
@@ -261,14 +257,22 @@ if(USE_NETAM)
   find_package(Torch REQUIRED)
 
   # Libtorch bundles its own protobuf headers at ${libtorch}/include/google/protobuf/
-  # We prepend the system protobuf include to all torch targets so it's found first
+  # We need system protobuf to be found first. Convert torch's system includes to
+  # -idirafter so they're searched AFTER standard system includes (where protobuf lives)
   foreach(_torch_target torch torch_cpu c10)
     if(TARGET ${_torch_target})
       get_target_property(_torch_includes ${_torch_target} INTERFACE_INCLUDE_DIRECTORIES)
       if(_torch_includes)
-        set_target_properties(${_torch_target} PROPERTIES
-          INTERFACE_INCLUDE_DIRECTORIES "${Protobuf_INCLUDE_DIRS};${_torch_includes}"
-        )
+        # Clear the original includes and re-add as -idirafter compile options
+        set_target_properties(${_torch_target} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+        foreach(_inc ${_torch_includes})
+          # Skip generator expressions for now, handle plain paths
+          if(NOT _inc MATCHES "^\\$<")
+            set_property(TARGET ${_torch_target} APPEND PROPERTY
+              INTERFACE_COMPILE_OPTIONS "SHELL:-idirafter ${_inc}"
+            )
+          endif()
+        endforeach()
       endif()
     endif()
   endforeach()
@@ -328,6 +332,8 @@ function(larch_compile_opts PRODUCT)
   endif()
 
   target_include_directories(${PRODUCT} PUBLIC include tools test)
+  # Note: protobuf include ordering is handled by using -idirafter for libtorch includes
+  # (see torch target modification after find_package(Torch))
   target_link_libraries(${PRODUCT} PUBLIC protobuf::libprotobuf)
   if(absl_FOUND)
     target_link_libraries(${PRODUCT} PUBLIC 
@@ -455,6 +461,7 @@ if(USE_NETAM)
   target_compile_options(netam PRIVATE -Wall -Wextra -pedantic)
   target_link_libraries(netam PUBLIC fmt::fmt)
   target_link_libraries(netam PUBLIC ${TORCH_LIBRARIES})
+  # Note: protobuf ordering handled by -idirafter on torch targets (see find_package(Torch) section)
   target_link_libraries(netam PUBLIC yaml-cpp::yaml-cpp)
   target_link_libraries(netam PUBLIC ZLIB::ZLIB)
   target_link_libraries(netam PUBLIC Matplot++::matplot)
@@ -556,6 +563,7 @@ endif()
 if(USE_NETAM)
   target_compile_definitions(larch-test PRIVATE USE_NETAM)
   target_link_libraries(larch-test PUBLIC netam)
+  # Note: protobuf ordering handled by -idirafter on torch targets (see find_package(Torch) section)
 endif()
 
 # # larch-dagutil

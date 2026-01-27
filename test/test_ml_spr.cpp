@@ -194,19 +194,18 @@ void test_more_mutations_lower_likelihood() {
 
   dag.SetReferenceSequence(kLinearhamRefSeq);
   dag.InitializeNodes(7);
-
-  // Simple tree:
-  //        0 (UA)
-  //        |
-  //        6 (root, ref sequence)
-  //       / \
-  //      4   5
-  //     / \   \
-  //    1   2   3
-  //
-  // Leaves: 1, 2, 3 (with mutations from ref)
-  // Internal: 4, 5, 6
-
+  /*
+      Simple tree:
+             0 (UA)
+             |
+             6 (root, ref sequence)
+            / \
+           4   5
+          / \   \
+         1   2   3
+      Leaves: 1, 2, 3 (with mutations from ref)
+      Internal: 4, 5, 6
+  */
   size_t edge_id = 0;
   dag.AddEdge({edge_id++}, {0}, {6}, {0});  // UA -> root
   dag.AddEdge({edge_id++}, {6}, {4}, {0});  // root -> 4
