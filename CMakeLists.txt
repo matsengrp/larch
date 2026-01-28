@@ -44,6 +44,7 @@ option(USE_TSAN "Use tsan" OFF)
 option(USE_HTSLIB "Use htslib" OFF)
 option(USE_NETAM "Use netam/thrifty libtorch integration" OFF)
 option(DISABLE_PARALLELISM "Disable all parallelism for debugging" OFF)
+option(USE_SYSTEM_TBB "Use system-installed TBB instead of fetching from source" OFF)
 
 set(TBB_VERSION "v2022.1.0")
 
@@ -92,16 +93,21 @@ if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 endif()
 
 # # oneTBB
-FetchContent_Declare(oneTBB
-  GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-  GIT_TAG ${TBB_VERSION}
-  GIT_SHALLOW true
-  GIT_PROGRESS true
-  UPDATE_DISCONNECTED true
-  CMAKE_ARGS -DTBB_TEST:BOOL=OFF
-)
-set(TBB_TEST OFF CACHE INTERNAL "" FORCE)
-FetchContent_MakeAvailable(oneTBB)
+if(USE_SYSTEM_TBB)
+  find_package(TBB REQUIRED)
+  message(STATUS "Using system TBB")
+else()
+  FetchContent_Declare(oneTBB
+    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
+    GIT_TAG ${TBB_VERSION}
+    GIT_SHALLOW true
+    GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+    CMAKE_ARGS -DTBB_TEST:BOOL=OFF
+  )
+  set(TBB_TEST OFF CACHE INTERNAL "" FORCE)
+  FetchContent_MakeAvailable(oneTBB)
+endif()
 
 # # Taskflow (header-only)
 FetchContent_Declare(taskflow

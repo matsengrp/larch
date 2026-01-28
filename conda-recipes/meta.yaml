@@ -50,12 +50,14 @@ requirements:
     - boost-cpp =1.76
     - ucx >=1.16.0
     - zlib >=1.2.11
+    - tbb-devel
 
   run:
     - openmpi >=4.1.0,<5.0
     - boost-cpp =1.76
     - ucx >=1.16.0
     - zlib >=1.2.11
+    - tbb
 
 test:
   commands:
