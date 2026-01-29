@@ -72,26 +72,8 @@ std::pair<MAT::Mutations_Collection,
 FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetParts() const {
   auto& node = static_cast<const CRTP&>(*this);
   auto dag = node.GetDAG();
-  if (node.GetOld().IsLeaf() or node.IsMoveTarget()) {
-    // if it's a leaf node, then the fitch sets don't change.
-    // if it's the target node, then fitch sets can't have changed,
-    // but the fitch sets recorded in tree_'s changed fitch set map
-    // relative to this node are meant for this node's new parent!
-    return {node.GetMATNode()->mutations, std::nullopt};
-  } else if (node.IsMoveNew()) {
-    // Then fitch set changes are relative to the target node
-    auto result = dag.GetChangedFitchSetMap().find(dag.GetMoveTarget().GetMATNode());
-    return {dag.GetMoveTarget().GetMATNode()->mutations,
-            result == dag.GetChangedFitchSetMap().end()
-                ? std::nullopt
-                : std::make_optional(result->second.Copy())};
-  } else {
-    auto result = dag.GetChangedFitchSetMap().find(node.GetMATNode());
-    return {node.GetMATNode()->mutations,
-            result == dag.GetChangedFitchSetMap().end()
-                ? std::nullopt
-                : std::make_optional(result->second.Copy())};
-  }
+  return dag.GetBackend().GetFitchSetParts(dag, node.GetId(), node.GetOld().IsLeaf(),
+                                           node.IsMoveTarget(), node.IsMoveNew());
 }
 
 template <typename CRTP, typename Tag>
@@ -99,76 +81,9 @@ FitchSet FeatureConstView<HypotheticalNode, CRTP, Tag>::GetFitchSetAtSite(
     MutationPosition site) const {
   auto node = static_cast<const CRTP&>(*this).Const();
   auto dag = node.GetDAG();
-  Assert(site.value <= dag.GetReferenceSequence().size());
-  auto [old_fitch_sets, changes] =
-      GetFitchSetParts();  // TODO: modify to also return boundary alleles
-
-  auto build_new_fitch_set = [](nuc_one_hot old_major_alleles,
-                                nuc_one_hot old_boundary_alleles, nuc_one_hot rem_set,
-                                nuc_one_hot add_set) -> FitchSet {
-    Assert(old_major_alleles <= 16);
-    Assert(old_boundary_alleles <= 16);
-    Assert(rem_set <= 16);
-    Assert(add_set <= 16);
-    if ((old_major_alleles & add_set) != 0) {
-      auto result = old_major_alleles & add_set;
-      Assert(0 < result);
-      Assert(result <= 16);
-      return result;
-    } else {
-      auto result = (old_major_alleles & ~rem_set) | (old_boundary_alleles & add_set);
-      Assert(result <= 16);
-      if (result > 0) {
-        return result;
-      } else {
-        result = old_major_alleles | (old_boundary_alleles & ~rem_set);
-        return result;
-      }
-    }
-  };
-
-  if (old_fitch_sets.find(static_cast<int>(site.value)) ==
-      old_fitch_sets.mutations.end()) {
-    // if no fitch set is recorded on the corresponding MAT node, we can use
-    // a singleton set containing the base at this site in the parent compact genome
-    // In the special case that the node is the new move, its Fitch sets (and Fitch set
-    // changes) should be calculated relative to the old parent of GetMoveTarget, and so
-    // we will retrieve the base of that parent for the Fitch set in this case.
-
-    nuc_one_hot boundary_allele =
-        0;  // from the 3 conditions for empty fitch set (see Cheng's comment)
-    auto old_parent_base =
-        node.IsMoveNew()
-            ? base_to_singleton(dag.GetMoveTarget()
-                                    .GetOld()
-                                    .GetSingleParent()
-                                    .GetParent()
-                                    .GetCompactGenome()
-                                    .GetBase(site, dag.GetReferenceSequence()))
-            : base_to_singleton(node.GetOld()
-                                    .GetSingleParent()
-                                    .GetParent()
-                                    .GetCompactGenome()
-                                    .GetBase(site, dag.GetReferenceSequence()));
-    // NOLINTBEGIN(bugprone-unchecked-optional-access)
-    if (changes.has_value() and changes.value().Contains(site)) {
-      return build_new_fitch_set(old_parent_base, boundary_allele,
-                                 changes.value().at(site).get_decremented(),
-                                 changes.value().at(site).get_incremented());
-    } else {
-      return FitchSet(old_parent_base);
-    }
-  } else if (changes.has_value() and changes.value().Contains(site)) {
-    return FitchSet(build_new_fitch_set(
-        old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele(),
-        old_fitch_sets.find(static_cast<int>(site.value))->get_boundary1_one_hot(),
-        changes.value().at(site).get_decremented(),
-        changes.value().at(site).get_incremented()));
-    // NOLINTEND(bugprone-unchecked-optional-access)
-  } else {
-    return FitchSet(
-        old_fitch_sets.find(static_cast<int>(site.value))->get_all_major_allele());
-  }
+  return dag.GetBackend().GetFitchSetAtSite(dag, node.GetId(), site,
+                                            node.GetOld().IsLeaf(), node.IsMoveTarget(),
+                                            node.IsMoveNew());
 }
 
 template <typename CRTP, typename Tag>
@@ -300,33 +215,38 @@ void FeatureMutableView<HypotheticalNode, CRTP, Tag>::PreorderComputeCompactGeno
   }
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveLCA() const {
+// HypotheticalTree FeatureConstView implementations
+
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetMoveLCA() const {
   auto& self = GetFeatureStorage(this).get();
   Assert(self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetNodeFromMAT(self.data_->move_.LCA);
+  return dag.Get(self.data_->backend_.GetMoveLCA());
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSource() const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetMoveSource()
+    const {
   auto& self = GetFeatureStorage(this).get();
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetNodeFromMAT(self.data_->move_.src);
+  return dag.Get(self.data_->backend_.GetMoveSource());
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTarget() const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetMoveTarget()
+    const {
   auto& self = GetFeatureStorage(this).get();
   auto& dag = static_cast<const CRTP&>(*this);
-  return dag.GetNodeFromMAT(self.data_->move_.dst);
+  return dag.Get(self.data_->backend_.GetMoveTarget());
 }
 
 // TODO_DR: Used by larch_usher.cpp
 /* CONDENSING CODE: can remove this function (replace all calls to it with calls to
  * `GetMoveSource' */
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSources() const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetMoveSources()
+    const {
   auto& self = GetFeatureStorage(this).get();
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.GetUncondensedNodeFromMAT(self.data_->move_.src);
@@ -335,29 +255,31 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveSources() const 
 // TODO_DR: Used by larch_usher.cpp
 /* CONDENSING CODE: can remove this function (replace all calls to it with calls to
  * `GetMoveTarget' */
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveTargets() const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetMoveTargets()
+    const {
   auto& self = GetFeatureStorage(this).get();
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.GetUncondensedNodeFromMAT(self.data_->move_.dst);
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetMoveNew() const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetMoveNew() const {
   auto& self = GetFeatureStorage(this).get();
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.Get(self.data_->new_node_);
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-bool FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::HasUnifurcationAfterMove()
-    const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+bool FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP,
+                      Tag>::HasUnifurcationAfterMove() const {
   auto& self = GetFeatureStorage(this).get();
   return self.data_->has_unifurcation_after_move_;
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldSourceParent() const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetOldSourceParent()
+    const {
   auto& dag = static_cast<const CRTP&>(*this);
   return dag.GetOriginal()
       .Get(dag.GetMoveSource().GetId())
@@ -370,8 +292,9 @@ static inline bool IsChanged(Node node) {
   return node.GetCompactGenome() != node.GetOld().GetCompactGenome();
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetOldestChangedNode()
+    const {
   auto& dag = static_cast<const CRTP&>(*this);
 
   NodeId oldest = [dag]() {
@@ -397,8 +320,8 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetOldestChangedNode() 
   return dag.Get(oldest);
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::MakeFragment() const {
   auto& dag = static_cast<const CRTP&>(*this);
 
   std::vector<NodeId> result_nodes;
@@ -457,9 +380,9 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeFragment() const {
                             std::move(collapsed.second), oldest_node);
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeUncollapsedFragment()
-    const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+auto FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP,
+                      Tag>::MakeUncollapsedFragment() const {
   auto& dag = static_cast<const CRTP&>(*this);
   std::vector<NodeId> result_nodes;
   std::vector<EdgeId> result_edges;
@@ -489,9 +412,9 @@ auto FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::MakeUncollapsedFragment
                             oldest_node);
 }
 
-template <typename DAG, typename CRTP, typename Tag>
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
 std::pair<std::vector<NodeId>, std::vector<EdgeId>>
-FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
+FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::CollapseEmptyFragmentEdges(
     const std::vector<NodeId>& fragment_nodes,
     const std::vector<EdgeId>& fragment_edges) const {
   auto& dag = static_cast<const CRTP&>(*this);
@@ -777,17 +700,54 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::CollapseEmptyFragmentEdges(
   return {current_nodes, current_edges};
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-const ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>&
-FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetChangedFitchSetMap() const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+const Backend& FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetBackend()
+    const {
   auto& self = GetFeatureStorage(this).get();
   Assert(self.data_);
-  return self.data_->changed_fitch_set_map_;
+  return self.data_->backend_;
 }
 
-template <typename DAG, typename CRTP, typename Tag>
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+Score FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetScoreChange()
+    const {
+  auto& self = GetFeatureStorage(this).get();
+  Assert(self.data_);
+  return self.data_->backend_.GetScoreChange();
+}
+
+// Static empty map for non-matOptimize backends
+namespace detail {
+inline const ContiguousMap<MATNodePtr,
+                           ContiguousMap<MutationPosition, Mutation_Count_Change>>&
+GetEmptyFitchSetMap() {
+  static ContiguousMap<MATNodePtr,
+                       ContiguousMap<MutationPosition, Mutation_Count_Change>>
+      empty_map;
+  return empty_map;
+}
+}  // namespace detail
+
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+const ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>&
+FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetChangedFitchSetMap()
+    const {
+  auto& self = GetFeatureStorage(this).get();
+  Assert(self.data_);
+  if constexpr (std::is_same_v<Backend, MatOptimizeScoringBackend<DAG>>) {
+    // For matOptimize backend, return the internal map
+    // Note: we need to convert from NodeId-keyed to MATNodePtr-keyed
+    // For now, we keep both in the backend
+    return detail::GetEmptyFitchSetMap();  // TODO: expose mat_keyed_fitch_set_map_ from
+                                           // backend
+  } else {
+    return detail::GetEmptyFitchSetMap();
+  }
+}
+
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
 const ContiguousSet<NodeId>&
-FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetLCAAncestors() const {
+FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::GetLCAAncestors() const {
   auto& self = GetFeatureStorage(this).get();
   Assert(self.data_);
   return self.data_->lca_ancestors_;
@@ -795,8 +755,9 @@ FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag>::GetLCAAncestors() const {
 
 namespace {
 
-template <typename DAG>
-std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& dst) {
+template <typename DAGType>
+std::pair<NodeId, bool> ApplyMoveImpl(DAGType dag, NodeId lca, NodeId& src,
+                                      NodeId& dst) {
   for (auto node : dag.GetNodes()) {
     if (not node.IsUA()) {
       if (not node.IsMATRoot()) {
@@ -1119,17 +1080,19 @@ std::pair<NodeId, bool> ApplyMoveImpl(DAG dag, NodeId lca, NodeId& src, NodeId& 
 
 }  // namespace
 
-template <typename DAG, typename CRTP, typename Tag>
-std::pair<NodeId, bool> FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::ApplyMove(
-    NodeId lca, NodeId src, NodeId dst) const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+std::pair<NodeId, bool> FeatureMutableView<HypotheticalTree<DAG, Backend>, CRTP,
+                                           Tag>::ApplyMove(NodeId lca, NodeId src,
+                                                           NodeId dst) const {
   auto& dag = static_cast<const CRTP&>(*this);
   return ApplyMoveImpl(dag, lca, src, dst);
 }
 
-template <typename DAG, typename CRTP, typename Tag>
-bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
-    const Profitable_Moves& move, const std::vector<Node_With_Major_Allele_Set_Change>&
-                                      nodes_with_major_allele_set_change) const {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+bool FeatureMutableView<HypotheticalTree<DAG, Backend>, CRTP, Tag>::
+    InitHypotheticalTree(const Profitable_Moves& move,
+                         const std::vector<Node_With_Major_Allele_Set_Change>&
+                             nodes_with_major_allele_set_change) const {
   auto& self = GetFeatureStorage(this).get();
   Assert(not self.data_);
   auto& dag = static_cast<const CRTP&>(*this);
@@ -1142,9 +1105,9 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
     return false;
   }
 
-  self.data_ = std::make_unique<typename HypotheticalTree<DAG>::Data>(
-      typename HypotheticalTree<DAG>::Data{move, new_node, has_unifurcation_after_move,
-                                           nodes_with_major_allele_set_change});
+  self.data_ = std::make_unique<typename HypotheticalTree<DAG, Backend>::Data>(
+      dag, move, new_node, has_unifurcation_after_move,
+      nodes_with_major_allele_set_change);
 
   if (dag.GetMoveLCA().IsUA()) {
     return true;
@@ -1175,7 +1138,8 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   mark_changed(dag.GetNodeFromMAT(move.src));
   mark_changed(dag.GetNodeFromMAT(move.dst->parent));
   mark_changed(dag.GetNodeFromMAT(move.src->parent));
-  // for the case of a unifurcation after move, we need to check both pre-move grandparents 
+  // for the case of a unifurcation after move, we need to check both pre-move
+  // grandparents
   if (move.dst->parent != nullptr) {
     if (move.dst->parent->parent != nullptr) {
       mark_changed(dag.GetNodeFromMAT(move.dst->parent->parent));
@@ -1191,30 +1155,98 @@ bool FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag>::InitHypotheticalTree(
   return true;
 }
 
-template <typename DAG>
-HypotheticalTree<DAG>::Data::Data(Profitable_Moves move, NodeId new_node,
-                                  bool has_unifurcation_after_move,
-                                  const std::vector<Node_With_Major_Allele_Set_Change>&
-                                      nodes_with_major_allele_set_change)
-    : move_{std::move(move)},
-      new_node_{new_node},
-      has_unifurcation_after_move_{has_unifurcation_after_move} {
-  constexpr int end_sentinel = 2147483647;
-  for (const auto& node_with_allele_set_change : nodes_with_major_allele_set_change) {
-    if (not node_with_allele_set_change.node->is_leaf()) {
-      Assert(node_with_allele_set_change.node != nullptr);
-      ContiguousMap<MutationPosition, Mutation_Count_Change> node_map;
-      for (const auto& mutation_count_change :
-           node_with_allele_set_change.major_allele_set_change) {
-        if (mutation_count_change.get_position() >= end_sentinel) {
-          continue;
-        }
-        MutationPosition pos = {
-            static_cast<size_t>(mutation_count_change.get_position())};
-        node_map.insert({pos, mutation_count_change});
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+bool FeatureMutableView<HypotheticalTree<DAG, Backend>, CRTP,
+                        Tag>::InitHypotheticalTree(NodeId src, NodeId dst,
+                                                   NodeId lca) const {
+  auto& self = GetFeatureStorage(this).get();
+  Assert(not self.data_);
+  auto& dag = static_cast<const CRTP&>(*this);
+
+  auto [new_node, has_unifurcation_after_move] = dag.ApplyMove(lca, src, dst);
+
+  if (new_node.value == NoId) {
+    return false;
+  }
+
+  self.data_ = std::make_unique<typename HypotheticalTree<DAG, Backend>::Data>(
+      dag, src, dst, lca, new_node, has_unifurcation_after_move);
+
+  if (dag.GetMoveLCA().IsUA()) {
+    return true;
+  }
+  NodeId lca_id = dag.GetMoveLCA();
+  do {
+    self.data_->lca_ancestors_.insert(lca_id);
+    lca_id = dag.Get(lca_id).GetSingleParent().GetParent();
+  } while (not dag.Get(lca_id).IsUA());
+
+  auto mark_changed = [&dag](NodeId current_node) {
+    while (not(current_node == dag.GetMoveLCA().GetId() or
+               dag.Get(current_node).HasChangedTopology())) {
+      if (not dag.Get(current_node).IsAppended()) {
+        dag.Get(current_node).template SetOverlay<HypotheticalNode>();
       }
-      changed_fitch_set_map_.insert(
-          {node_with_allele_set_change.node, std::move(node_map)});
+      dag.Get(current_node).SetHasChangedTopology();
+      if (dag.Get(current_node).IsUA()) {
+        break;
+      }
+      current_node = dag.Get(current_node).GetSingleParent().GetParent();
     }
+  };
+
+  mark_changed(dag.GetOldSourceParent());
+  mark_changed(dag.GetMoveTarget().GetOld().GetSingleParent().GetParent());
+  mark_changed(dst);
+  mark_changed(src);
+  mark_changed(dag.Get(dst).GetOld().GetSingleParent().GetParent());
+  mark_changed(dag.Get(src).GetOld().GetSingleParent().GetParent());
+  // for the case of a unifurcation after move, check pre-move grandparents
+  auto dst_parent = dag.Get(dst).GetOld().GetSingleParent().GetParent();
+  if (not dst_parent.IsUA()) {
+    mark_changed(dst_parent.GetSingleParent().GetParent());
+  }
+  auto src_parent = dag.Get(src).GetOld().GetSingleParent().GetParent();
+  if (not src_parent.IsUA()) {
+    mark_changed(src_parent.GetSingleParent().GetParent());
+  }
+  mark_changed(dag.GetMoveNew());
+
+  return true;
+}
+
+// HypotheticalTree::Data constructors
+
+template <typename DAG, typename Backend>
+template <typename DAGView>
+HypotheticalTree<DAG, Backend>::Data::Data(
+    const DAGView& dag, const Profitable_Moves& move, NodeId new_node,
+    bool has_unifurcation_after_move,
+    const std::vector<Node_With_Major_Allele_Set_Change>&
+        nodes_with_major_allele_set_change)
+    : new_node_{new_node},
+      has_unifurcation_after_move_{has_unifurcation_after_move},
+      move_{move} {
+  backend_.Initialize(dag, move, nodes_with_major_allele_set_change);
+}
+
+template <typename DAG, typename Backend>
+template <typename DAGView>
+HypotheticalTree<DAG, Backend>::Data::Data(const DAGView& dag, NodeId src, NodeId dst,
+                                           NodeId lca, NodeId new_node,
+                                           bool has_unifurcation_after_move)
+    : new_node_{new_node},
+      has_unifurcation_after_move_{has_unifurcation_after_move},
+      move_{} {
+  if constexpr (std::is_same_v<Backend, MLScoringBackend<DAG>>) {
+    backend_.Initialize(dag, src, dst, lca);
+  } else {
+    // For matOptimize backend, we need to convert NodeIds to MAT pointers
+    move_.src = dag.Get(src).GetMATNode();
+    move_.dst = dag.Get(dst).GetMATNode();
+    move_.LCA = dag.Get(lca).GetMATNode();
+    move_.score_change = 0;
+    std::vector<Node_With_Major_Allele_Set_Change> empty_changes;
+    backend_.Initialize(dag, move_, empty_changes);
   }
 }

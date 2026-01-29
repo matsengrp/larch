@@ -23,18 +23,28 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(KEEP_ASSERTS "Keep asserts" ON)
+# set default cmake build type
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+endif()
+
+# KEEP_ASSERTS default: OFF for Release, ON for all other build types
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  set(KEEP_ASSERTS_DEFAULT OFF)
+else()
+  set(KEEP_ASSERTS_DEFAULT ON)
+endif()
+
+option(KEEP_ASSERTS "Keep asserts" ${KEEP_ASSERTS_DEFAULT})
 option(USE_USHER "Use matOptimize" ON)
 option(USE_MAT_VIEW "Use MATView" ON)
 option(USE_CPPTRACE "Use cpptrace" OFF)
 option(USE_ASAN "Use asan" OFF)
 option(USE_TSAN "Use tsan" OFF)
 option(USE_HTSLIB "Use htslib" OFF)
-
-# set default cmake build type
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
-endif()
+option(USE_NETAM "Use netam/thrifty libtorch integration" OFF)
+option(DISABLE_PARALLELISM "Disable all parallelism for debugging" OFF)
+option(USE_SYSTEM_TBB "Use system-installed TBB instead of fetching from source" OFF)
 
 set(TBB_VERSION "v2022.1.0")
 
@@ -45,6 +55,26 @@ message(STATUS "using usher: ${USE_USHER}")
 # External static libraries: protobuf/larch-autogen, range-v3, nlohmann_json, htslib, oneTBB, boost, zlib
 include(FetchContent)
 include(ExternalProject)
+
+# Find Protobuf early, before any dependencies that might bundle their own protobuf
+# On Linux: clear CMAKE_PREFIX_PATH to prevent finding libtorch's vendored protobuf
+# On FreeBSD: use CONFIG mode explicitly to create all protobuf targets (including upb)
+#   so that when Torch's Caffe2 calls find_package(Protobuf CONFIG), protobuf-targets.cmake
+#   sees all targets already defined and returns early instead of erroring
+if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+  find_package(Protobuf CONFIG REQUIRED)
+  find_package(absl CONFIG REQUIRED)
+else()
+  set(SAVED_CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
+  set(CMAKE_PREFIX_PATH "")
+  find_package(Protobuf REQUIRED)
+  find_package(absl)
+  set(CMAKE_PREFIX_PATH ${SAVED_CMAKE_PREFIX_PATH})
+endif()
+
+if(USE_NETAM)
+  message(STATUS "USE_NETAM enabled - using C++23")
+endif()
 
 function(lib_install PRODUCT)
   get_target_property(LIB_PATH ${PRODUCT} IMPORTED_LOCATION_RELEASE)
@@ -63,22 +93,51 @@ if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 endif()
 
 # # oneTBB
-FetchContent_Declare(oneTBB
-  GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
-  GIT_TAG ${TBB_VERSION}
+if(USE_SYSTEM_TBB)
+  find_package(TBB REQUIRED)
+  message(STATUS "Using system TBB")
+else()
+  FetchContent_Declare(oneTBB
+    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB
+    GIT_TAG ${TBB_VERSION}
+    GIT_SHALLOW true
+    GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+    CMAKE_ARGS -DTBB_TEST:BOOL=OFF
+  )
+  set(TBB_TEST OFF CACHE INTERNAL "" FORCE)
+  FetchContent_MakeAvailable(oneTBB)
+endif()
+
+# # Taskflow (header-only)
+FetchContent_Declare(taskflow
+  GIT_REPOSITORY https://github.com/taskflow/taskflow.git
+  GIT_TAG v3.7.0
   GIT_SHALLOW true
   GIT_PROGRESS true
   UPDATE_DISCONNECTED true
-  CMAKE_ARGS -DTBB_TEST:BOOL=OFF
 )
-set(TBB_TEST OFF CACHE INTERNAL "" FORCE)
-FetchContent_MakeAvailable(oneTBB)
+set(TF_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+set(TF_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
+FetchContent_MakeAvailable(taskflow)
+
+find_program(MPI_C_COMPILER mpicc)
+if(MPI_C_COMPILER)
+    execute_process(
+        COMMAND ${MPI_C_COMPILER} --showme:incdirs
+        OUTPUT_VARIABLE MPI_INCDIRS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    # Get the first path (space-separated list)
+    string(REPLACE " " ";" MPI_INCDIRS_LIST "${MPI_INCDIRS}")
+    list(GET MPI_INCDIRS_LIST 0 MPI_PRIMARY_INCDIR)
+    
+    set(MPI_C_HEADER_DIR "${MPI_PRIMARY_INCDIR}" CACHE PATH "")
+    set(MPI_CXX_HEADER_DIR "${MPI_PRIMARY_INCDIR}" CACHE PATH "")
+endif()
+
 find_package(MPI REQUIRED)
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-
-# # protobuf
-find_package(Protobuf REQUIRED)
-find_package(absl)
 
 add_library(larch-autogen OBJECT
   ${DAG_PROTO_SRCS} ${DAG_PROTO_HDRS}
@@ -88,9 +147,9 @@ add_library(larch-autogen OBJECT
 set(PROTO_OUT_DIR ${PROJECT_BINARY_DIR})
 
 # # larch-autogen library
-target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR} ${Protobuf_INCLUDE_DIRS})
-target_link_libraries(larch-autogen PUBLIC ${Protobuf_LIBRARIES})
-target_compile_options(larch-autogen PUBLIC -std=c++17 -w)
+target_include_directories(larch-autogen PUBLIC ${PROTO_OUT_DIR})
+target_link_libraries(larch-autogen PUBLIC protobuf::libprotobuf)
+target_compile_options(larch-autogen PRIVATE -std=c++17 -w)
 set_target_properties(larch-autogen
   PROPERTIES CXX_CLANG_TIDY ""
 )
@@ -161,11 +220,77 @@ if(USE_HTSLIB)
   )
 endif()
 
+# # netam dependencies (fmt, yaml-cpp, matplotplusplus - Torch found later)
+if(USE_NETAM)
+  FetchContent_Declare(fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG "11.0.2"
+    GIT_SHALLOW true
+    GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+  )
+  FetchContent_MakeAvailable(fmt)
+
+  FetchContent_Declare(yaml-cpp
+    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+    GIT_TAG "0.8.0"
+    GIT_SHALLOW true
+    GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+  )
+  set(YAML_CPP_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+  set(YAML_CPP_BUILD_TOOLS OFF CACHE INTERNAL "" FORCE)
+  set(YAML_BUILD_SHARED_LIBS OFF CACHE INTERNAL "" FORCE)
+  FetchContent_MakeAvailable(yaml-cpp)
+
+  FetchContent_Declare(matplotplusplus
+    GIT_REPOSITORY https://github.com/alandefreitas/matplotplusplus.git
+    GIT_TAG "v1.2.1"
+    GIT_SHALLOW true
+    GIT_PROGRESS true
+    UPDATE_DISCONNECTED true
+  )
+  set(MATPLOTPP_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
+  set(MATPLOTPP_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+  FetchContent_MakeAvailable(matplotplusplus)
+  # Fix warning-as-error in matplotplusplus with newer GCC
+  target_compile_options(matplot PRIVATE -Wno-ignored-attributes)
+  if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+    target_compile_definitions(matplot PUBLIC __linux)
+  endif()
+endif()
+
 # # zlib
 find_package(ZLIB REQUIRED)
 
 # # boost
 find_package(Boost REQUIRED CONFIG COMPONENTS program_options iostreams filesystem date_time)
+
+# Find Torch LAST to prevent its vendored protobuf from polluting other dependencies
+if(USE_NETAM)
+  find_package(Torch REQUIRED)
+
+  # Libtorch bundles its own protobuf headers at ${libtorch}/include/google/protobuf/
+  # We need system protobuf to be found first. Convert torch's system includes to
+  # -idirafter so they're searched AFTER standard system includes (where protobuf lives)
+  foreach(_torch_target torch torch_cpu c10)
+    if(TARGET ${_torch_target})
+      get_target_property(_torch_includes ${_torch_target} INTERFACE_INCLUDE_DIRECTORIES)
+      if(_torch_includes)
+        # Clear the original includes and re-add as -idirafter compile options
+        set_target_properties(${_torch_target} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+        foreach(_inc ${_torch_includes})
+          # Skip generator expressions for now, handle plain paths
+          if(NOT _inc MATCHES "^\\$<")
+            set_property(TARGET ${_torch_target} APPEND PROPERTY
+              INTERFACE_COMPILE_OPTIONS "SHELL:-idirafter ${_inc}"
+            )
+          endif()
+        endforeach()
+      endif()
+    endif()
+  endforeach()
+endif()
 
 # Internal libraries and binaries
 
@@ -185,7 +310,11 @@ endif()
 
 # set larch compiler options
 function(larch_compile_opts PRODUCT)
-  target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++17 -pipe)
+  if(USE_NETAM)
+    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++23 -pipe)
+  else()
+    target_compile_options(${PRODUCT} PUBLIC -march=native -std=c++20 -pipe)
+  endif()
 
   if(CMAKE_BUILD_TYPE EQUAL "DEBUG")
     target_compile_options(${PRODUCT} PUBLIC -DKEEP_ASSERTS)
@@ -206,6 +335,10 @@ function(larch_compile_opts PRODUCT)
     target_compile_options(${PRODUCT} PUBLIC -DUSE_CPPTRACE)
   endif()
 
+  if(DISABLE_PARALLELISM)
+    target_compile_options(${PRODUCT} PUBLIC -DDISABLE_PARALLELISM)
+  endif()
+
   if(USE_ASAN)
     target_compile_options(${PRODUCT} PUBLIC -O0 -g3 -fsanitize=address -fno-sanitize-recover)
   elseif(USE_TSAN)
@@ -213,6 +346,8 @@ function(larch_compile_opts PRODUCT)
   endif()
 
   target_include_directories(${PRODUCT} PUBLIC include tools test)
+  # Note: protobuf include ordering is handled by using -idirafter for libtorch includes
+  # (see torch target modification after find_package(Torch))
   target_link_libraries(${PRODUCT} PUBLIC protobuf::libprotobuf)
   if(absl_FOUND)
     target_link_libraries(${PRODUCT} PUBLIC 
@@ -224,8 +359,10 @@ function(larch_compile_opts PRODUCT)
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR}/deps/usher)
   
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
-  target_compile_options(${PRODUCT} PUBLIC -DRANGES_DISABLE_DEPRECATED_WARNINGS) 
+  target_compile_options(${PRODUCT} PUBLIC -DRANGES_DISABLE_DEPRECATED_WARNINGS)
   add_dependencies(${PRODUCT} range-v3)
+
+  target_include_directories(${PRODUCT} SYSTEM PUBLIC ${taskflow_SOURCE_DIR})
 
   if(USE_HTSLIB)
     target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/htslib/install/include)
@@ -278,7 +415,7 @@ endif()
 
   target_link_libraries(${PRODUCT} PUBLIC -lz)
   target_link_libraries(${PRODUCT} PUBLIC nlohmann_json::nlohmann_json)
-  target_link_libraries(${PRODUCT} PUBLIC ${Protobuf_LIBRARIES})
+  # Note: protobuf::libprotobuf is already linked via larch_compile_opts
   target_link_libraries(${PRODUCT} PUBLIC ${Boost_LIBRARIES})
 
   target_link_libraries(${PRODUCT} PUBLIC TBB::tbb)
@@ -322,13 +459,39 @@ endif()
 
 larch_link_opts(larch)
 
+# # netam library
+if(USE_NETAM)
+  add_library(netam
+    src/netam/crepe.cpp
+    src/netam/indep_rscnn_model.cpp
+    src/netam/kmer_sequence_encoder.cpp
+    src/netam/likelihood.cpp
+    src/netam/pcp_dataframe.cpp
+  )
+  target_include_directories(netam PUBLIC include)
+  target_include_directories(netam PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
+  add_dependencies(netam range-v3)
+  target_compile_options(netam PUBLIC -std=c++23 -Wno-unknown-warning-option)
+  target_compile_options(netam PRIVATE -Wall -Wextra -pedantic)
+  target_link_libraries(netam PUBLIC fmt::fmt)
+  target_link_libraries(netam PUBLIC ${TORCH_LIBRARIES})
+  # Note: protobuf ordering handled by -idirafter on torch targets (see find_package(Torch) section)
+  target_link_libraries(netam PUBLIC yaml-cpp::yaml-cpp)
+  target_link_libraries(netam PUBLIC ZLIB::ZLIB)
+  target_link_libraries(netam PUBLIC Matplot++::matplot)
+endif()
+
 # # usher library
 if(USE_USHER)
   add_library(usher
     ${MATOPTIMIZE_SRC}
     src/usher_globals.cpp
   )
-  target_compile_options(usher PRIVATE -march=native -std=c++17 -w -fno-omit-frame-pointer -DUSE_USHER)
+  if(USE_NETAM)
+    target_compile_options(usher PRIVATE -march=native -std=c++23 -w -fno-omit-frame-pointer -DUSE_USHER)
+  else()
+    target_compile_options(usher PRIVATE -march=native -std=c++20 -w -fno-omit-frame-pointer -DUSE_USHER)
+  endif()
 
   if(${USE_ASAN})
     target_compile_options(usher PUBLIC -O0 -g3 -fsanitize=address -fno-sanitize-recover)
@@ -337,8 +500,10 @@ if(USE_USHER)
   endif()
 
   target_include_directories(usher PUBLIC include)
-  target_include_directories(usher PUBLIC ${Protobuf_INCLUDE_DIR})
+  # Protobuf includes come from protobuf::libprotobuf target (linked transitively via larch-autogen)
+  target_link_libraries(usher PUBLIC protobuf::libprotobuf)
   target_include_directories(usher PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
+  target_include_directories(usher SYSTEM PUBLIC ${taskflow_SOURCE_DIR})
 
   add_dependencies(usher range-v3)
 
@@ -377,12 +542,14 @@ larch_executable(larch-test
   test/test_fileio_protobuf.cpp
   test/test_larch_usher.cpp
   test/test_lca.cpp
+  test/test_linearham.cpp
   test/test_map.cpp
   test/test_mat_conversion.cpp
   test/test_mat_view.cpp
   test/test_matOptimize.cpp
   test/test_merge.cpp
   test/test_overlay.cpp
+  test/test_parallel.cpp
   test/test_rf_distance.cpp
   test/test_sample_tree.cpp
   test/test_sample_best_tree.cpp
@@ -393,6 +560,10 @@ larch_executable(larch-test
   test/test_weight_accum.cpp
   test/test_weight_counter.cpp
   test/test_write_parsimony_protobuf.cpp
+  test/test_netam_likelihood.cpp
+  test/test_netam_kmer_encoder.cpp
+  test/test_netam_model.cpp
+  test/test_ml_spr.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 
@@ -402,6 +573,12 @@ if(USE_USHER)
   set_target_properties(larch-test
     PROPERTIES CXX_CLANG_TIDY ""
   )
+endif()
+
+if(USE_NETAM)
+  target_compile_definitions(larch-test PRIVATE USE_NETAM)
+  target_link_libraries(larch-test PUBLIC netam)
+  # Note: protobuf ordering handled by -idirafter on torch targets (see find_package(Torch) section)
 endif()
 
 # # larch-dagutil
@@ -415,6 +592,12 @@ larch_executable(larch-dag2dot
   tools/larch-dag2dot.cpp
 )
 larch_install(larch-dag2dot)
+
+# # bcr-larch
+larch_executable(bcr-larch
+  tools/bcr-larch.cpp
+)
+larch_install(bcr-larch)
 
 # # larch-usher
 if(USE_USHER)

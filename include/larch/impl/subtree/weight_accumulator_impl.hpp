@@ -25,7 +25,7 @@ WeightAccumulator<WeightOps>::WithinCladeAccumOptimum(
   std::vector<size_t> optimal_indices;
   std::iota(optimal_indices.begin(), optimal_indices.end(), 0);
   return {std::accumulate(inweights.begin(), inweights.end(), Weight{weight_ops_},
-                          [](auto& lhs, auto& rhs) { return lhs + rhs; }),
+                          [](auto&& lhs, const auto& rhs) { return lhs + rhs; }),
           optimal_indices};
 }
 
@@ -38,7 +38,7 @@ WeightAccumulator<WeightOps>::BetweenClades(
   }
   return std::accumulate(std::next(inweights.begin()), inweights.end(),
                          *inweights.begin(),
-                         [](auto& lhs, auto& rhs) { return lhs * rhs; });
+                         [](auto&& lhs, const auto& rhs) { return lhs * rhs; });
 }
 
 template <typename WeightOps>

@@ -28,6 +28,17 @@ class GrowableHashMap {
     return {result.first->second, result.second};
   }
 
+  template <typename Fn>
+  void insert(value_type&& value, Fn&& fn) {
+    size_t hash = std::hash<K>{}(value.first);
+    auto& [mutex, data] = buckets_.at(hash % buckets_.size());
+
+    auto wlock = WriteLock(mutex);
+    auto result = data.insert(std::forward<value_type>(value));
+    std::invoke(std::forward<Fn>(fn),
+                std::pair<V&, bool>{result.first->second, result.second});
+  }
+
   template <typename T>
   std::pair<V&, bool> insert_or_assign(K&& k, T&& v) {
     size_t hash = std::hash<K>{}(k);

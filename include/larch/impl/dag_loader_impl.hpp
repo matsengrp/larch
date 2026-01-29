@@ -245,6 +245,42 @@ static std::string CompactGenomeToString(Node node) {
   return result;
 }
 
+template <typename iostream>
+void NewickToDOT(const std::string& newick, iostream& out) {
+  std::map<size_t, std::string> node_labels;
+  std::vector<std::pair<size_t, size_t>> edges;
+
+  ParseNewick(
+      newick,
+      [&node_labels](size_t node_id, std::string_view label,
+                     std::optional<double> branch_length) {
+        std::string node_label;
+        if (!label.empty()) {
+          node_label = std::string{label};
+        } else {
+          node_label = "node_" + std::to_string(node_id);
+        }
+        if (branch_length.has_value()) {
+          node_label += ":" + std::to_string(branch_length.value());
+        }
+        node_labels[node_id] = node_label;
+      },
+      [&edges](size_t parent, size_t child) { edges.emplace_back(parent, child); });
+
+  out << "digraph G {\n";
+  out << "  forcelabels=true\n";
+  out << "  nodesep=1.0\n";
+  out << "  ranksep=2.0\n";
+  out << "  ratio=1.0\n";
+  out << "  node [color=azure4,fontcolor=black,penwidth=4]\n";
+  out << "  edge [color=azure3,fontcolor=black,penwidth=4]\n";
+  for (const auto& [parent_id, child_id] : edges) {
+    out << "  \"" << node_labels[parent_id] << "\" -> \"" << node_labels[child_id]
+        << "\"\n";
+  }
+  out << "}\n";
+}
+
 template <typename DAG, typename iostream>
 void MADAGToDOT(DAG dag, iostream& out) {
   out << "digraph G {\n";

@@ -1,55 +1,7 @@
 #pragma once
 
-#include "larch/usher_glue.hpp"
+#include "larch/spr/scoring_backend.hpp"
 #include "larch/contiguous_set.hpp"
-
-struct FitchSet {
-  FitchSet(char base) : value_{base} { Assert(value_ > 0); }
-  FitchSet(int base) : value_{static_cast<char>(base)} { Assert(value_ > 0); }
-  bool find(char base) const {
-    switch (base) {
-      case 'A':
-        return (value_ & 1) != 0;
-      case 'C':
-        return (value_ & 2) != 0;
-      case 'G':
-        return (value_ & 4) != 0;
-      case 'T':
-        return (value_ & 8) != 0;  // NOLINT
-    }
-    Fail("Unreachable");
-  }
-  char at([[maybe_unused]] size_t pos) const {
-    Assert(pos == 0);
-    if ((value_ & 1) != 0) {
-      return 'A';
-    } else if ((value_ & 2) != 0) {
-      return 'C';
-    } else if ((value_ & 4) != 0) {
-      return 'G';
-    } else if ((value_ & 8) != 0) {  // NOLINT
-      return 'T';
-    }
-    Fail("Unreachable");
-  }
-
- private:
-  char value_ = 0;
-};
-
-inline nuc_one_hot base_to_singleton(MutationBase base) {
-  switch (base.ToChar()) {
-    case 'A':
-      return 1;
-    case 'C':
-      return 2;
-    case 'G':
-      return 4;
-    case 'T':
-      return 8;  // NOLINT
-  }
-  Fail("unrecognized base");
-}
 
 struct HypotheticalNode {
   template <typename CRTP>
@@ -83,6 +35,7 @@ struct FeatureConstView<HypotheticalNode, CRTP, Tag> {
   // return a set of site indices at which there are fitch set changes
   [[nodiscard]] ContiguousSet<MutationPosition> GetSitesWithChangedFitchSets() const;
 
+  // Get Fitch set parts for this node (delegates to backend)
   [[nodiscard]] std::pair<
       MAT::Mutations_Collection,
       std::optional<ContiguousMap<MutationPosition, Mutation_Count_Change>>>
@@ -114,24 +67,44 @@ struct FeatureMutableView<HypotheticalNode, CRTP, Tag> {
   void PreorderTraverseCollectFragmentEdges(std::vector<EdgeId>& fragment_edges) const;
 };
 
-template <typename DAG>
+/**
+ * @brief HypotheticalTree represents a tree after an SPR move has been applied.
+ *
+ * @tparam DAG The underlying DAG type
+ * @tparam Backend The scoring backend type (default: MatOptimizeScoringBackend)
+ *
+ * The Backend template parameter allows different scoring algorithms to be used:
+ * - MatOptimizeScoringBackend: Uses Fitch algorithm for parsimony scoring
+ * - MLScoringBackend: Uses ML-based likelihood scoring (stub for now)
+ */
+template <typename DAG, typename Backend = MatOptimizeScoringBackend<DAG>>
 struct HypotheticalTree {
   struct Data {
-    Data(Profitable_Moves move, NodeId new_node, bool has_unifurcation_after_move,
+    // Constructor for matOptimize backend
+    template <typename DAGView>
+    Data(const DAGView& dag, const Profitable_Moves& move, NodeId new_node,
+         bool has_unifurcation_after_move,
          const std::vector<Node_With_Major_Allele_Set_Change>&
              nodes_with_major_allele_set_change);
-    Profitable_Moves move_;
+
+    // Constructor for ML backend (NodeId-based)
+    template <typename DAGView>
+    Data(const DAGView& dag, NodeId src, NodeId dst, NodeId lca, NodeId new_node,
+         bool has_unifurcation_after_move);
+
+    Backend backend_;
     NodeId new_node_;
     bool has_unifurcation_after_move_;
-    ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>
-        changed_fitch_set_map_;
     ContiguousSet<NodeId> lca_ancestors_;
+
+    // Original move pointers kept for compatibility (matOptimize path only)
+    Profitable_Moves move_;
   };
-  std::unique_ptr<Data> data_;  // TODO fixme
+  std::unique_ptr<Data> data_;
 };
 
-template <typename DAG, typename CRTP, typename Tag>
-struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+struct FeatureConstView<HypotheticalTree<DAG, Backend>, CRTP, Tag> {
   // Get the LCA of source and target nodes
   auto GetMoveLCA() const;
   // These return the HypotheticalTreeNodes corresponding to source and target
@@ -167,76 +140,112 @@ struct FeatureConstView<HypotheticalTree<DAG>, CRTP, Tag> {
   CollapseEmptyFragmentEdges(const std::vector<NodeId>& fragment_nodes,
                              const std::vector<EdgeId>& fragment_edges) const;
 
+  // Access to the scoring backend
+  const Backend& GetBackend() const;
+
+  // Get score change for this move
+  Score GetScoreChange() const;
+
+  const ContiguousSet<NodeId>& GetLCAAncestors() const;
+
+  // Legacy: access to changed fitch set map (matOptimize path)
+  // Returns empty map for non-matOptimize backends
   const ContiguousMap<MATNodePtr,
                       ContiguousMap<MutationPosition, Mutation_Count_Change>>&
   GetChangedFitchSetMap() const;
-
-  const ContiguousSet<NodeId>& GetLCAAncestors() const;
 };
 
-template <typename DAG, typename CRTP, typename Tag>
-struct FeatureMutableView<HypotheticalTree<DAG>, CRTP, Tag> {
+template <typename DAG, typename Backend, typename CRTP, typename Tag>
+struct FeatureMutableView<HypotheticalTree<DAG, Backend>, CRTP, Tag> {
   std::pair<NodeId, bool> ApplyMove(NodeId lca, NodeId src, NodeId dst) const;
-  // TODO_DR: Remove this!
-  // std::pair<NodeId, bool> ApplyMove(NodeId lca, std::vector<NodeId> src,
-  //                                   std::vector<NodeId> dst) const;
+
+  // Initialize for matOptimize backend
   bool InitHypotheticalTree(const Profitable_Moves& move,
                             const std::vector<Node_With_Major_Allele_Set_Change>&
                                 nodes_with_major_allele_set_change) const;
+
+  // Initialize for ML backend (NodeId-based)
+  bool InitHypotheticalTree(NodeId src, NodeId dst, NodeId lca) const;
 };
 
-template <typename Target>
+// Forward declaration for LongNameOfSPRStorage
+template <typename Target, typename Backend>
+struct SPRStorage;
+
+template <typename Target, typename Backend>
+struct LongNameOfSPRStorage {
+  using type_helper =
+      ExtendStorageType<void, Target, Extend::Nodes<HypotheticalNode>,
+                        Extend::DAG<HypotheticalTree<Target, Backend>>>;
+  using type = OverlayStorageType<SPRStorage<Target, Backend>, type_helper>;
+};
+
+// Specialization of LongNameOf for SPRStorage
+template <typename Target, typename Backend>
+struct LongNameOf<SPRStorage<Target, Backend>> {
+  using type = typename LongNameOfSPRStorage<Target, Backend>::type;
+};
+
 /**
  * @brief Storage container for SPR (Subtree Prune and Regraft) operations on phylogenetic trees.
- * 
+ *
  * SPRStorage extends a target DAG storage with additional features needed for SPR operations,
  * including hypothetical nodes and hypothetical tree structures. It provides the infrastructure
  * for efficiently exploring tree rearrangements by maintaining both the original tree structure
  * and potential modifications that would result from SPR moves.
+ *
+ * @tparam Target The underlying DAG storage type
+ * @tparam Backend The scoring backend type (default: MatOptimizeScoringBackend)
  */
-struct SPRStorage;
-
-template <typename Target>
-struct LongNameOf<SPRStorage<Target>> {
-  using type_helper = ExtendStorageType<void, Target, Extend::Nodes<HypotheticalNode>,
-                                        Extend::DAG<HypotheticalTree<Target>>>;
-  using type = OverlayStorageType<SPRStorage<Target>, type_helper>;
-};
-
-template <typename Target>
-struct SPRStorage : LongNameOf<SPRStorage<Target>>::type {
+template <typename Target, typename Backend = MatOptimizeScoringBackend<Target>>
+struct SPRStorage : LongNameOfSPRStorage<Target, Backend>::type {
   MOVE_ONLY(SPRStorage);
 
-  using LongNameType = typename LongNameOf<SPRStorage>::type;
+  using LongNameType = typename LongNameOfSPRStorage<Target, Backend>::type;
   using LongNameType::LongNameType;
+  using BackendType = Backend;
 
   static SPRStorage EmptyDefault() {
     static_assert(Target::role == Role::Storage);
-    using helper = typename LongNameOf<SPRStorage<Target>>::type_helper;
+    using helper = typename LongNameOfSPRStorage<Target, Backend>::type_helper;
     return SPRStorage{helper::EmptyDefault()};
   }
 
   static SPRStorage Consume(Target&& target) {
     static_assert(Target::role == Role::Storage);
-    using helper = typename LongNameOf<SPRStorage<Target>>::type_helper;
+    using helper = typename LongNameOfSPRStorage<Target, Backend>::type_helper;
     return SPRStorage{helper::Consume(std::move(target))};
   }
 
   static SPRStorage FromView(const Target& target) {
     static_assert(Target::role == Role::View);
-    using helper = typename LongNameOf<SPRStorage<Target>>::type_helper;
+    using helper = typename LongNameOfSPRStorage<Target, Backend>::type_helper;
     return SPRStorage{helper::FromView(target)};
   }
 };
 
+// Helper function for matOptimize backend (default)
 template <typename Target, typename = std::enable_if_t<Target::role == Role::Storage>>
-SPRStorage<Target> AddSPRStorage(Target&& dag) {
-  return SPRStorage<Target>::Consume(std::move(dag));
+SPRStorage<Target, MatOptimizeScoringBackend<Target>> AddSPRStorage(Target&& dag) {
+  return SPRStorage<Target, MatOptimizeScoringBackend<Target>>::Consume(std::move(dag));
 }
 
 template <typename Target, typename = std::enable_if_t<Target::role == Role::View>>
-SPRStorage<Target> AddSPRStorage(const Target& dag) {
-  return SPRStorage<Target>::FromView(dag);
+SPRStorage<Target, MatOptimizeScoringBackend<Target>> AddSPRStorage(const Target& dag) {
+  return SPRStorage<Target, MatOptimizeScoringBackend<Target>>::FromView(dag);
+}
+
+// Helper function with explicit backend
+template <typename Backend, typename Target,
+          typename = std::enable_if_t<Target::role == Role::Storage>>
+SPRStorage<Target, Backend> AddSPRStorageWithBackend(Target&& dag) {
+  return SPRStorage<Target, Backend>::Consume(std::move(dag));
+}
+
+template <typename Backend, typename Target,
+          typename = std::enable_if_t<Target::role == Role::View>>
+SPRStorage<Target, Backend> AddSPRStorageWithBackend(const Target& dag) {
+  return SPRStorage<Target, Backend>::FromView(dag);
 }
 
 #include "larch/impl/spr/spr_view_impl.hpp"

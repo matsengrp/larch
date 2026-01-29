@@ -1,6 +1,10 @@
 #include <cstdlib>
 #include <iostream>
 
+#ifdef DISABLE_PARALLELISM
+#include <tbb/global_control.h>
+#endif
+
 #include "tools_common.hpp"
 #include "larch/dag_loader.hpp"
 
@@ -24,6 +28,9 @@
 }
 
 int main(int argc, char** argv) try {
+#ifdef DISABLE_PARALLELISM
+  tbb::global_control gc(tbb::global_control::max_allowed_parallelism, 1);
+#endif
   Arguments args = GetArguments(argc, argv);
 
   std::string input_path;

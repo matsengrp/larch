@@ -71,7 +71,6 @@ struct Test_Move_Found_Callback : public BatchingCallback<Test_Move_Found_Callba
 }
 
 static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
-  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   MADAG input_dag = input_dag_storage.View();
   Merge merge{input_dag.GetReferenceSequence()};
   merge.AddDAGs(std::vector{input_dag});
@@ -173,7 +172,6 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 
 [[maybe_unused]] static void test_optimizing_with_hypothetical_tree(
     const MADAGStorage<>& tree_shaped_dag) {
-  // tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
   // this test takes a tree and uses matOptimize to apply a single move.
 
   Merge dag_altered_in_callback{tree_shaped_dag.View().GetReferenceSequence()};
@@ -306,3 +304,8 @@ struct Single_Move_Callback_With_Hypothetical_Tree : public Move_Found_Callback 
 //                 );
 //               },
 //               "SPR: seedtree single move"});
+
+// Test using sample DAG with one extra node (12 nodes) from test_common_dag.hpp
+[[maybe_unused]] static const auto test_sample_dag_with_unique_node =
+    add_test({[] { test_spr(make_sample_dag_with_one_unique_node(), 5); },
+              "SPR: sample_dag_with_one_unique_node (12 nodes)"});

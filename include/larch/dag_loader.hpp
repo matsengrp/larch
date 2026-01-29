@@ -48,7 +48,18 @@ inline FileFormat InferFileFormat(std::string_view path);
 
 [[nodiscard]] MADAGStorage<> LoadDAGFromJson(std::string_view path);
 
+[[nodiscard]] MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
+                                                     std::string_view newick_path,
+                                                     std::string_view reference_path);
+
+[[nodiscard]] MADAGStorage<> LoadTreeFromFastaNewick(
+    const std::vector<std::string_view>& fasta_paths, std::string_view newick_path,
+    std::string_view reference_path);
+
 [[nodiscard]] std::string LoadReferenceSequence(std::string_view path);
+
+[[nodiscard]] std::unordered_map<std::string, std::string> LoadFasta(
+    std::string_view path);
 
 using CompactGenomeData = ContiguousMap<MutationPosition, MutationBase>;
 
@@ -81,6 +92,9 @@ void MADAGToDOT(DAG dag, iostream& out);
 
 template <typename DAG, typename iostream>
 void FragmentToDOT(DAG dag, const std::vector<EdgeId>& edges, iostream& out);
+
+template <typename iostream>
+void NewickToDOT(const std::string& newick, iostream& out);
 
 std::string ToEdgeMutationsString(const MAT::Node* node);
 

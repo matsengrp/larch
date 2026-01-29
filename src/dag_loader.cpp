@@ -373,6 +373,152 @@ std::string LoadReferenceSequence(std::string_view path) {
   return result;
 }
 
+std::unordered_map<std::string, std::string> LoadFasta(std::string_view path) {
+  std::unordered_map<std::string, std::string> result;
+  std::string content;
+
+  if (IsGzipped(path)) {
+    std::ifstream file{std::string{path}};
+    boost::iostreams::filtering_ostream str;
+    str.push(boost::iostreams::gzip_decompressor());
+    str.push(boost::iostreams::back_inserter(content));
+    boost::iostreams::copy(file, str);
+  } else {
+    std::ifstream file{std::string{path}};
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    content = ss.str();
+  }
+
+  std::istringstream stream(content);
+  std::string line;
+  std::string current_id;
+  std::string current_seq;
+
+  while (std::getline(stream, line)) {
+    if (line.empty()) {
+      continue;
+    }
+    if (line[0] == '>') {
+      if (!current_id.empty()) {
+        result[current_id] = current_seq;
+      }
+      // Extract ID: everything after '>' until whitespace or end
+      size_t id_end = line.find_first_of(" \t", 1);
+      if (id_end == std::string::npos) {
+        current_id = line.substr(1);
+      } else {
+        current_id = line.substr(1, id_end - 1);
+      }
+      current_seq.clear();
+    } else {
+      current_seq += line;
+    }
+  }
+  // Don't forget the last sequence
+  if (!current_id.empty()) {
+    result[current_id] = current_seq;
+  }
+
+  return result;
+}
+
+MADAGStorage<> LoadTreeFromFastaNewick(std::string_view fasta_path,
+                                       std::string_view newick_path,
+                                       std::string_view reference_path) {
+  return LoadTreeFromFastaNewick(std::vector<std::string_view>{fasta_path}, newick_path,
+                                 reference_path);
+}
+
+MADAGStorage<> LoadTreeFromFastaNewick(const std::vector<std::string_view>& fasta_paths,
+                                       std::string_view newick_path,
+                                       std::string_view reference_path) {
+  // Load reference sequence
+  std::string reference_sequence = LoadReferenceSequence(reference_path);
+
+  // Load FASTA sequences from all provided files
+  std::unordered_map<std::string, std::string> fasta_sequences;
+  for (const auto& fasta_path : fasta_paths) {
+    auto seqs = LoadFasta(fasta_path);
+    fasta_sequences.insert(seqs.begin(), seqs.end());
+  }
+
+  // Read Newick file
+  std::ifstream newick_file{std::string{newick_path}};
+  if (!newick_file) {
+    std::cerr << "Failed to open Newick file: '" << newick_path << "'." << std::endl;
+    Assert(newick_file);
+  }
+  std::string newick;
+  std::getline(newick_file, newick);
+
+  // Create empty MADAG
+  MADAGStorage<> result_storage = MADAGStorage<>::EmptyDefault();
+  auto result = result_storage.View();
+  result.SetReferenceSequence(reference_sequence);
+
+  std::unordered_map<size_t, size_t> num_children;
+  std::map<size_t, std::optional<std::string>> seq_ids;
+  size_t edge_counter = 0;
+  ParseNewick(
+      newick,
+      [&seq_ids](size_t node_id, std::string_view label, std::optional<double>) {
+        seq_ids[node_id] = label;
+      },
+      [&result, &num_children, &edge_counter](size_t parent, size_t child) {
+        result.AddEdge({edge_counter++}, {parent}, {child}, {num_children[parent]++});
+      });
+  result.InitializeNodes(result.GetEdgesCount() + 1);
+  result.BuildConnections();
+
+  for (auto node : result.GetNodes()) {
+    auto& sid = seq_ids[node.GetId().value];
+    if (node.IsLeaf() and sid.has_value()) {
+      node = SampleId::Make(sid.value());
+    }
+  }
+
+  result.AddUA({});
+  result.BuildConnections();
+
+  // Helper to get sequence for a node from FASTA or fallback to reference
+  auto get_sequence = [&](auto node) -> const std::string& {
+    if (node.IsUA()) {
+      return reference_sequence;
+    }
+    auto id_it = seq_ids.find(node.GetId().value);
+    if (id_it != seq_ids.end() && id_it->second.has_value()) {
+      auto fasta_it = fasta_sequences.find(id_it->second.value());
+      if (fasta_it != fasta_sequences.end()) {
+        return fasta_it->second;
+      }
+    }
+    return reference_sequence;
+  };
+
+  // Compute edge mutations from FASTA sequences
+  for (auto edge : result.GetEdges()) {
+    const std::string& parent_seq = get_sequence(edge.GetParent());
+    const std::string& child_seq = get_sequence(edge.GetChild());
+
+    EdgeMutations muts;
+    Assert(parent_seq.size() == child_seq.size());
+    for (size_t i = 0; i < parent_seq.size(); i++) {
+      if (parent_seq[i] != child_seq[i]) {
+        muts[{i + 1}] = {parent_seq[i], child_seq[i]};  // 1-indexed positions
+      }
+    }
+    edge.SetEdgeMutations(std::move(muts));
+  }
+
+  // Compute CompactGenomes from edge mutations
+  result.RecomputeCompactGenomes(true);
+
+  result.GetRoot().Validate(true, false);
+
+  return result_storage;
+}
+
 namespace {
 
 template <typename Mutation>

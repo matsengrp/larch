@@ -79,7 +79,7 @@ inline std::pair<std::string, int> run_larch_usher(
 
   std::stringstream ss;
   // ss << "/usr/bin/time ";
-  ss << "./larch-usher ";
+  ss << "./bin/larch-usher ";
   ss << "-i " << input_dag_path << " ";
   ss << "-o " << output_dag_path << " ";
   ss << "-l " << log_path << " ";

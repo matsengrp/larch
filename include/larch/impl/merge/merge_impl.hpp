@@ -151,16 +151,16 @@ const GrowableHashMap<std::string, CompactGenome>& Merge::SampleIdToCGMap() cons
 
 void Merge::ComputeResultEdgeMutations() {
   result_edges_.ReadAll(
-      [](auto result_edges, auto& result_nodes, auto& sample_id_to_cg_map,
+      [](auto result_edges, auto& /*result_nodes*/, auto& sample_id_to_cg_map,
          auto result_dag) {
         SeqForEach(result_edges, [&](auto& i) {
           auto& [label, edge_id] = i;
           Assert(label.GetParent().GetCompactGenome());
           const CompactGenome& parent = *label.GetParent().GetCompactGenome();
 
-          auto child_node = result_nodes.at(label.GetChild());
-
-          if (result_dag.Get(child_node).IsLeaf()) {
+          // Check NodeLabel's SampleId, not DAG structure, because a node might be
+          // structurally a leaf in the result DAG but was an internal node in the source
+          if (not label.GetChild().GetSampleId().empty()) {
             const CompactGenome& child =
                 sample_id_to_cg_map.at(label.GetChild().GetSampleId().ToString());
 
@@ -254,14 +254,16 @@ void Merge::MergeNodes(size_t i, const DAGSRange& dags, NodeId below,
 
     NodeId orig_id = [this, &node_id, &label]() {
       NodeId new_id;
-      auto ins_pair = result_nodes_.insert({label, new_id});
-      if (ins_pair.second) {
-        new_id.value = node_id.fetch_add(1);
-        ins_pair.first = new_id;
-        result_node_labels_.insert_or_assign(new_id, label);
-      } else {
-        new_id.value = ins_pair.first.value;
-      }
+      result_nodes_.insert({label, new_id},
+                           [&new_id, &node_id, &label, this](auto&& ins_pair) {
+                             if (ins_pair.second) {
+                               new_id.value = node_id.fetch_add(1);
+                               ins_pair.first = new_id;
+                               result_node_labels_.insert_or_assign(new_id, label);
+                             } else {
+                               new_id.value = ins_pair.first.value;
+                             }
+                           });
       return new_id;
     }();
 
