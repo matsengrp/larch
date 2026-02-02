@@ -30,18 +30,21 @@ std::pair<torch::Tensor, torch::Tensor> kmer_sequence_encoder::encode_sequence(
   std::string padded_sequence = std::string(overhang_length_, 'N') + upper_seq +
                                 std::string(overhang_length_, 'N');
 
+  // Index for N-containing kmers (last index, 4^k)
+  auto n_index = signed_cast(
+      narrowing_cast<std::uint32_t>(all_kmers_.size() - 1));
+
   // Encode kmers
   std::vector<std::int32_t> kmer_indices;
   for (std::size_t i = 0; i < site_count_; ++i) {
     if (i + kmer_length_ <= padded_sequence.length()) {
       std::string kmer = padded_sequence.substr(i, kmer_length_);
       auto it = kmer_to_index_.find(kmer);
-      kmer_indices.push_back(
-          it != kmer_to_index_.end()
-              ? signed_cast(narrowing_cast<std::uint32_t>(it->second))
-              : 0);
+      kmer_indices.push_back(it != kmer_to_index_.end()
+                                 ? signed_cast(narrowing_cast<std::uint32_t>(it->second))
+                                 : n_index);
     } else {
-      kmer_indices.push_back(0);
+      kmer_indices.push_back(n_index);
     }
   }
 
@@ -76,9 +79,9 @@ torch::Tensor kmer_sequence_encoder::encode_bases(const std::string& sequence) {
 std::vector<std::string> kmer_sequence_encoder::generate_kmers(
     std::size_t length) {
   std::vector<std::string> kmers;
-  kmers.push_back("N");  // Placeholder for kmers with N
 
-  // Generate all possible kmers of given length
+  // Generate all possible kmers of given length (4^k kmers)
+  // Uses lexicographic order: AAAAA=0, AAAAC=1, AAAAG=2, AAAAT=3, AAACA=4, ...
   std::function<void(std::string, std::size_t)> generate =
       [&](std::string current, std::size_t pos) {
         if (pos == length) {
@@ -91,6 +94,9 @@ std::vector<std::string> kmer_sequence_encoder::generate_kmers(
       };
 
   generate("", 0);
+
+  // Add placeholder for N-containing kmers at the end (index 4^k)
+  kmers.push_back("N");
   return kmers;
 }
 

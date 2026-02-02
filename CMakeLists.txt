@@ -464,6 +464,7 @@ if(USE_NETAM)
   add_library(netam
     src/netam/crepe.cpp
     src/netam/indep_rscnn_model.cpp
+    src/netam/rs_fivemer_model.cpp
     src/netam/kmer_sequence_encoder.cpp
     src/netam/likelihood.cpp
     src/netam/pcp_dataframe.cpp
@@ -564,6 +565,7 @@ larch_executable(larch-test
   test/test_netam_kmer_encoder.cpp
   test/test_netam_model.cpp
   test/test_ml_spr.cpp
+  test/test_s5f_likelihood.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 
