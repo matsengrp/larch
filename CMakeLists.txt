@@ -564,6 +564,7 @@ larch_executable(larch-test
   test/test_netam_kmer_encoder.cpp
   test/test_netam_model.cpp
   test/test_ml_spr.cpp
+  test/test_sankoff.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 
