@@ -566,6 +566,7 @@ larch_executable(larch-test
   test/test_netam_model.cpp
   test/test_ml_spr.cpp
   test/test_s5f_likelihood.cpp
+  test/test_sankoff.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 
