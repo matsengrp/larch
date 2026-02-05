@@ -75,7 +75,8 @@
        "Keep empty fragment edges, rather than collapsing them"},
       {"--input-format ENUM",
        "Specify input file format (default: inferred) \n"
-       "[dagbin, dag-pb, tree-pb, dag-json]"},
+       "[dagbin, dag-pb, tree-pb, dag-json, newick]\n"
+       "(newick format requires -v and -r options)"},
       {"--output-format ENUM",
        "Specify output file format (default: inferred) \n"
        "[dagbin, dag-pb]"},
@@ -729,13 +730,30 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   Benchmark load_timer;
   std::cout << "Loading input DAG..." << std::flush;
-  MADAGStorage<> input_dag_storage = LoadDAG(input_dag_path, input_format, refseq_path);
+  MADAGStorage<> input_dag_storage = [&]() {
+    if (input_format == FileFormat::Newick) {
+      if (vcf_path.empty()) {
+        std::cerr << "ERROR: Newick input format requires a VCF file (-v option).\n";
+        Fail();
+      }
+      if (refseq_path.empty()) {
+        std::cerr
+            << "ERROR: Newick input format requires a reference sequence (-r option).\n";
+        Fail();
+      }
+      return LoadTreeFromVCFNewick(vcf_path, input_dag_path, refseq_path);
+    }
+    return LoadDAG(input_dag_path, input_format, refseq_path);
+  }();
   auto input_dag = input_dag_storage.View();
   load_timer.stop();
   std::cout << "...loaded: " << load_timer.durationFormatMs() << std::endl;
 
   input_dag.RecomputeCompactGenomes(true);
-  LoadVCFData(input_dag_storage, vcf_path);
+  // Don't reload VCF data if we already used it for Newick loading
+  if (input_format != FileFormat::Newick) {
+    LoadVCFData(input_dag_storage, vcf_path);
+  }
   // if the DAG is from a DAG protobuf file, then it needs to be equipped with
   // SampleIds
   if (vcf_path.empty()) {

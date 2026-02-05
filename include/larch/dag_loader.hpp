@@ -16,6 +16,7 @@ enum class FileFormat {
   ProtobufDAG,
   ProtobufTree,
   JsonDAG,
+  Newick,
   DebugAll
 };
 
@@ -25,6 +26,7 @@ const std::vector<std::pair<std::string, FileFormat>> file_extension_names = {
     {"pb_dag", FileFormat::ProtobufDAG},   {"tree-pb", FileFormat::ProtobufTree},
     {"pb_tree", FileFormat::ProtobufTree}, {"json", FileFormat::JsonDAG},
     {"dag-json", FileFormat::JsonDAG},     {"json_dag", FileFormat::JsonDAG},
+    {"newick", FileFormat::Newick},        {"nwk", FileFormat::Newick},
     {"debug-all", FileFormat::DebugAll}};
 
 inline FileFormat InferFileFormat(std::string_view path);
@@ -55,6 +57,10 @@ inline FileFormat InferFileFormat(std::string_view path);
 [[nodiscard]] MADAGStorage<> LoadTreeFromFastaNewick(
     const std::vector<std::string_view>& fasta_paths, std::string_view newick_path,
     std::string_view reference_path);
+
+[[nodiscard]] MADAGStorage<> LoadTreeFromVCFNewick(std::string_view vcf_path,
+                                                    std::string_view newick_path,
+                                                    std::string_view reference_path);
 
 [[nodiscard]] std::string LoadReferenceSequence(std::string_view path);
 

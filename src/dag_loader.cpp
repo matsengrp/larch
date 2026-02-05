@@ -519,6 +519,68 @@ MADAGStorage<> LoadTreeFromFastaNewick(const std::vector<std::string_view>& fast
   return result_storage;
 }
 
+MADAGStorage<> LoadTreeFromVCFNewick(std::string_view vcf_path,
+                                      std::string_view newick_path,
+                                      std::string_view reference_path) {
+  // Load reference sequence
+  std::string reference_sequence = LoadReferenceSequence(reference_path);
+
+  // Read Newick file
+  std::ifstream newick_file{std::string{newick_path}};
+  if (!newick_file) {
+    std::cerr << "Failed to open Newick file: '" << newick_path << "'." << std::endl;
+    Assert(newick_file);
+  }
+  std::string newick;
+  std::getline(newick_file, newick);
+
+  // Create empty MADAG
+  MADAGStorage<> result_storage = MADAGStorage<>::EmptyDefault();
+  auto result = result_storage.View();
+  result.SetReferenceSequence(reference_sequence);
+
+  std::unordered_map<size_t, size_t> num_children;
+  std::map<size_t, std::optional<std::string>> seq_ids;
+  size_t edge_counter = 0;
+  ParseNewick(
+      newick,
+      [&seq_ids](size_t node_id, std::string_view label, std::optional<double>) {
+        seq_ids[node_id] = label;
+      },
+      [&result, &num_children, &edge_counter](size_t parent, size_t child) {
+        result.AddEdge({edge_counter++}, {parent}, {child}, {num_children[parent]++});
+      });
+  result.InitializeNodes(result.GetEdgesCount() + 1);
+  result.BuildConnections();
+
+  // Set SampleIds on leaf nodes
+  for (auto node : result.GetNodes()) {
+    auto& sid = seq_ids[node.GetId().value];
+    if (node.IsLeaf() and sid.has_value()) {
+      node = SampleId::Make(sid.value());
+    }
+  }
+
+  result.AddUA({});
+  result.BuildConnections();
+
+  // Load VCF data and apply to leaf nodes
+  auto cg_data = LoadCompactGenomeDataFromVCF(std::string{vcf_path}, reference_sequence);
+
+  // Apply VCF data to set leaf CompactGenomes
+  // First, set all nodes to empty CompactGenome (same as reference)
+  for (auto node : result.GetNodes()) {
+    node = CompactGenome{};
+  }
+
+  // Then apply VCF data to leaves
+  MADAGApplyCompactGenomeData(result_storage, cg_data, false);
+
+  result.GetRoot().Validate(true, false);
+
+  return result_storage;
+}
+
 namespace {
 
 template <typename Mutation>
