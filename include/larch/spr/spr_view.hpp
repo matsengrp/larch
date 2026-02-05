@@ -174,9 +174,8 @@ struct SPRStorage;
 
 template <typename Target, typename Backend>
 struct LongNameOfSPRStorage {
-  using type_helper =
-      ExtendStorageType<void, Target, Extend::Nodes<HypotheticalNode>,
-                        Extend::DAG<HypotheticalTree<Target, Backend>>>;
+  using type_helper = ExtendStorageType<void, Target, Extend::Nodes<HypotheticalNode>,
+                                        Extend::DAG<HypotheticalTree<Target, Backend>>>;
   using type = OverlayStorageType<SPRStorage<Target, Backend>, type_helper>;
 };
 
@@ -187,12 +186,14 @@ struct LongNameOf<SPRStorage<Target, Backend>> {
 };
 
 /**
- * @brief Storage container for SPR (Subtree Prune and Regraft) operations on phylogenetic trees.
+ * @brief Storage container for SPR (Subtree Prune and Regraft) operations on
+ * phylogenetic trees.
  *
- * SPRStorage extends a target DAG storage with additional features needed for SPR operations,
- * including hypothetical nodes and hypothetical tree structures. It provides the infrastructure
- * for efficiently exploring tree rearrangements by maintaining both the original tree structure
- * and potential modifications that would result from SPR moves.
+ * SPRStorage extends a target DAG storage with additional features needed for SPR
+ * operations, including hypothetical nodes and hypothetical tree structures. It
+ * provides the infrastructure for efficiently exploring tree rearrangements by
+ * maintaining both the original tree structure and potential modifications that would
+ * result from SPR moves.
  *
  * @tparam Target The underlying DAG storage type
  * @tparam Backend The scoring backend type (default: MatOptimizeScoringBackend)

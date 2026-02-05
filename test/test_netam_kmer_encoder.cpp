@@ -221,8 +221,7 @@ void test_encode_sequence_kmer_indices_valid() {
   // All indices should be within valid range [0, kmer_count)
   for (int64_t i = 0; i < encoded.size(0); ++i) {
     TestAssert(encoded_accessor[i] >= 0);
-    TestAssert(static_cast<std::size_t>(encoded_accessor[i]) <
-               encoder.kmer_count());
+    TestAssert(static_cast<std::size_t>(encoded_accessor[i]) < encoder.kmer_count());
   }
 }
 
@@ -258,27 +257,35 @@ void test_encode_sequence_long_sequence_truncated() {
 
 [[maybe_unused]] static bool reg_test_kmer_encoder =
     add_test({test_encode_bases_standard,
-              "Netam KmerEncoder: encode_bases standard", {"netam"}}) &&
+              "Netam KmerEncoder: encode_bases standard",
+              {"netam"}}) &&
     add_test({test_encode_bases_lowercase,
-              "Netam KmerEncoder: encode_bases lowercase", {"netam"}}) &&
+              "Netam KmerEncoder: encode_bases lowercase",
+              {"netam"}}) &&
     add_test({test_encode_bases_unknown,
-              "Netam KmerEncoder: encode_bases unknown", {"netam"}}) &&
+              "Netam KmerEncoder: encode_bases unknown",
+              {"netam"}}) &&
     add_test({test_encode_bases_mixed_with_unknown,
               "Netam KmerEncoder: encode_bases mixed with unknown",
               {"netam"}}) &&
-    add_test({test_encode_bases_empty, "Netam KmerEncoder: encode_bases empty",
+    add_test({test_encode_bases_empty,
+              "Netam KmerEncoder: encode_bases empty",
               {"netam"}}) &&
     add_test({test_constructor_kmer_length_3,
-              "Netam KmerEncoder: constructor kmer_length 3", {"netam"}}) &&
+              "Netam KmerEncoder: constructor kmer_length 3",
+              {"netam"}}) &&
     add_test({test_constructor_kmer_length_5,
-              "Netam KmerEncoder: constructor kmer_length 5", {"netam"}}) &&
+              "Netam KmerEncoder: constructor kmer_length 5",
+              {"netam"}}) &&
     add_test({test_encode_sequence_output_shape,
-              "Netam KmerEncoder: encode_sequence output shape", {"netam"}}) &&
+              "Netam KmerEncoder: encode_sequence output shape",
+              {"netam"}}) &&
     add_test({test_encode_sequence_short_sequence,
               "Netam KmerEncoder: encode_sequence short sequence",
               {"netam"}}) &&
     add_test({test_encode_sequence_lowercase,
-              "Netam KmerEncoder: encode_sequence lowercase", {"netam"}}) &&
+              "Netam KmerEncoder: encode_sequence lowercase",
+              {"netam"}}) &&
     add_test({test_encode_sequence_wt_modifier_values,
               "Netam KmerEncoder: encode_sequence wt_modifier values",
               {"netam"}}) &&
@@ -286,11 +293,14 @@ void test_encode_sequence_long_sequence_truncated() {
               "Netam KmerEncoder: encode_sequence with N in middle",
               {"netam"}}) &&
     add_test({test_encode_sequence_empty,
-              "Netam KmerEncoder: encode_sequence empty", {"netam"}}) &&
+              "Netam KmerEncoder: encode_sequence empty",
+              {"netam"}}) &&
     add_test({test_encode_sequence_single_base,
-              "Netam KmerEncoder: encode_sequence single base", {"netam"}}) &&
+              "Netam KmerEncoder: encode_sequence single base",
+              {"netam"}}) &&
     add_test({test_encode_sequence_all_same_base,
-              "Netam KmerEncoder: encode_sequence all same base", {"netam"}}) &&
+              "Netam KmerEncoder: encode_sequence all same base",
+              {"netam"}}) &&
     add_test({test_encode_sequence_kmer_indices_valid,
               "Netam KmerEncoder: encode_sequence kmer indices valid",
               {"netam"}}) &&

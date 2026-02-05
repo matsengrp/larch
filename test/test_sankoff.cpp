@@ -184,8 +184,8 @@ static void test_leaf_base_assignment() {
   }
 }
 
-[[maybe_unused]] static const auto test_leaf_base_assignment_registered = add_test(
-    {test_leaf_base_assignment, "Sankoff: Leaf base assignment", {"sankoff"}});
+[[maybe_unused]] static const auto test_leaf_base_assignment_registered =
+    add_test({test_leaf_base_assignment, "Sankoff: Leaf base assignment", {"sankoff"}});
 
 // Test with custom cost matrix (transition/transversion weighting)
 static void test_transition_transversion_costs() {
@@ -201,7 +201,7 @@ static void test_transition_transversion_costs() {
         ts_tv_matrix[i][j] = 0.0;
       } else if ((i == 0 && j == 2) || (i == 2 && j == 0) ||  // A<->G
                  (i == 1 && j == 3) || (i == 3 && j == 1)) {  // C<->T
-        ts_tv_matrix[i][j] = 1.0;  // Transition
+        ts_tv_matrix[i][j] = 1.0;                             // Transition
       } else {
         ts_tv_matrix[i][j] = 2.0;  // Transversion
       }
@@ -222,7 +222,8 @@ static void test_transition_transversion_costs() {
 
 [[maybe_unused]] static const auto test_transition_transversion_costs_registered =
     add_test({test_transition_transversion_costs,
-              "Sankoff: Transition/transversion costs", {"sankoff"}});
+              "Sankoff: Transition/transversion costs",
+              {"sankoff"}});
 
 // Test with site-specific cost matrices
 static void test_site_specific_costs() {
@@ -272,8 +273,8 @@ static void test_site_specific_costs() {
   TestAssert(dp_table.cost_matrices[site2_idx][0][1] == 5.0);
 }
 
-[[maybe_unused]] static const auto test_site_specific_costs_registered = add_test(
-    {test_site_specific_costs, "Sankoff: Site-specific costs", {"sankoff"}});
+[[maybe_unused]] static const auto test_site_specific_costs_registered =
+    add_test({test_site_specific_costs, "Sankoff: Site-specific costs", {"sankoff"}});
 
 // Test scoring with ambiguous bases at leaves
 static void test_ambiguous_leaf_bases() {
@@ -301,8 +302,8 @@ static void test_ambiguous_leaf_bases() {
   }
 }
 
-[[maybe_unused]] static const auto test_ambiguous_leaf_bases_registered = add_test(
-    {test_ambiguous_leaf_bases, "Sankoff: Ambiguous leaf bases", {"sankoff"}});
+[[maybe_unused]] static const auto test_ambiguous_leaf_bases_registered =
+    add_test({test_ambiguous_leaf_bases, "Sankoff: Ambiguous leaf bases", {"sankoff"}});
 
 // Test that reconstruction must be called after scoring
 static void test_reconstruction_order() {
@@ -324,8 +325,8 @@ static void test_reconstruction_order() {
   auto genome = scorer.GetReconstructedGenome(root);  // Should not throw
 }
 
-[[maybe_unused]] static const auto test_reconstruction_order_registered = add_test(
-    {test_reconstruction_order, "Sankoff: Reconstruction order", {"sankoff"}});
+[[maybe_unused]] static const auto test_reconstruction_order_registered =
+    add_test({test_reconstruction_order, "Sankoff: Reconstruction order", {"sankoff"}});
 
 // Test with topology-only DAG (no mutations)
 static void test_no_mutations() {
@@ -371,4 +372,5 @@ static void test_score_at_most_mutation_count() {
 
 [[maybe_unused]] static const auto test_score_at_most_mutation_count_registered =
     add_test({test_score_at_most_mutation_count,
-              "Sankoff: Score at most mutation count", {"sankoff"}});
+              "Sankoff: Score at most mutation count",
+              {"sankoff"}});

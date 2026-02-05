@@ -255,8 +255,8 @@ double SankoffScorer<DAG>::ComputeScoreBelow(typename DAG::NodeView node) {
 }
 
 template <typename DAG>
-void SankoffScorer<DAG>::TracebackFromNode(
-    typename DAG::NodeView node, const std::vector<uint8_t>& assigned_bases) {
+void SankoffScorer<DAG>::TracebackFromNode(typename DAG::NodeView node,
+                                           const std::vector<uint8_t>& assigned_bases) {
   size_t node_idx = node.GetId().value;
   size_t num_sites = dp_table_.variable_sites.size();
 
@@ -317,8 +317,7 @@ void SankoffScorer<DAG>::ReconstructAncestralSequences(typename DAG::NodeView ro
 }
 
 template <typename DAG>
-char SankoffScorer<DAG>::GetReconstructedBase(NodeId node_id,
-                                              size_t site_index) const {
+char SankoffScorer<DAG>::GetReconstructedBase(NodeId node_id, size_t site_index) const {
   if (!ancestors_reconstructed_) {
     throw std::runtime_error(
         "Must call ReconstructAncestralSequences() before GetReconstructedBase()");

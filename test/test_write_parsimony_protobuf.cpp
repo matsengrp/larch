@@ -46,7 +46,7 @@ bool compare_treedags(DAG1 dag1, DAG2 dag2) {
   }
 
   if (not(dag1_ems.empty() or dag2_ems.empty())) {
-    for (auto &em : dag1_ems) {
+    for (auto& em : dag1_ems) {
       if (std::count(dag2_ems.begin(), dag2_ems.end(), em) !=
           std::count(dag1_ems.begin(), dag1_ems.end(), em)) {
         return false;

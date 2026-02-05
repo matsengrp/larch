@@ -23,9 +23,9 @@ class rs_fivemer_model : public torch::nn::Module {
  public:
   rs_fivemer_model(const rs_fivemer_params& params);
 
-  std::pair<torch::Tensor, torch::Tensor> forward(
-      torch::Tensor encoded_parents, torch::Tensor masks,
-      torch::Tensor wt_base_modifier);
+  std::pair<torch::Tensor, torch::Tensor> forward(torch::Tensor encoded_parents,
+                                                  torch::Tensor masks,
+                                                  torch::Tensor wt_base_modifier);
 
   void adjust_rate_bias_by(double log_adjustment_factor);
 

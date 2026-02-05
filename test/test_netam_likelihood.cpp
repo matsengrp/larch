@@ -99,23 +99,20 @@ void test_multiple_mutations() {
       {0.1f, 0.1f, 0.1f, 0.7f},
   };
   std::vector<int64_t> parent_vec = {0, 1, 2, 3};  // A C G T
-  std::vector<int64_t> child_vec = {1, 1, 0,
-                                    3};  // C C A T (mutations at 0 and 2)
+  std::vector<int64_t> child_vec = {1, 1, 0, 3};   // C C A T (mutations at 0 and 2)
 
   auto rates = torch::tensor(rates_vec).unsqueeze(0);  // [1, 4]
   auto csp = torch::zeros({1, 4, 4});
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j < 4; ++j) {
-      csp[0][i][j] =
-          csp_vec[static_cast<std::size_t>(i)][static_cast<std::size_t>(j)];
+      csp[0][i][j] = csp_vec[static_cast<std::size_t>(i)][static_cast<std::size_t>(j)];
     }
   }
   auto parent = torch::tensor(parent_vec, torch::kInt64);
   auto child = torch::tensor(child_vec, torch::kInt64);
 
   auto result = poisson_context_log_likelihood(rates, csp, parent, child);
-  double expected =
-      manual_log_likelihood(rates_vec, csp_vec, parent_vec, child_vec);
+  double expected = manual_log_likelihood(rates_vec, csp_vec, parent_vec, child_vec);
 
   TestAssert(std::abs(result.item<double>() - expected) < 1e-5);
 }
@@ -135,16 +132,14 @@ void test_all_positions_mutated() {
   auto csp = torch::zeros({1, 3, 4});
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 4; ++j) {
-      csp[0][i][j] =
-          csp_vec[static_cast<std::size_t>(i)][static_cast<std::size_t>(j)];
+      csp[0][i][j] = csp_vec[static_cast<std::size_t>(i)][static_cast<std::size_t>(j)];
     }
   }
   auto parent = torch::tensor(parent_vec, torch::kInt64);
   auto child = torch::tensor(child_vec, torch::kInt64);
 
   auto result = poisson_context_log_likelihood(rates, csp, parent, child);
-  double expected =
-      manual_log_likelihood(rates_vec, csp_vec, parent_vec, child_vec);
+  double expected = manual_log_likelihood(rates_vec, csp_vec, parent_vec, child_vec);
 
   TestAssert(std::abs(result.item<double>() - expected) < 1e-5);
 }
@@ -185,8 +180,7 @@ void test_high_csp_gives_higher_likelihood() {
   // Higher CSP for the mutation should give higher (less negative) likelihood
   auto rates = torch::ones({1, 3});
   auto parent = torch::tensor({0, 1, 2}, torch::kInt64);
-  auto child =
-      torch::tensor({1, 1, 2}, torch::kInt64);  // Mutation at pos 0: A->C
+  auto child = torch::tensor({1, 1, 2}, torch::kInt64);  // Mutation at pos 0: A->C
 
   // Low CSP for A->C
   auto csp_low = torch::full({1, 3, 4}, 0.25f);
@@ -196,10 +190,8 @@ void test_high_csp_gives_higher_likelihood() {
   auto csp_high = torch::full({1, 3, 4}, 0.25f);
   csp_high[0][0][1] = 0.9f;  // High probability for A->C
 
-  auto result_low =
-      poisson_context_log_likelihood(rates, csp_low, parent, child);
-  auto result_high =
-      poisson_context_log_likelihood(rates, csp_high, parent, child);
+  auto result_low = poisson_context_log_likelihood(rates, csp_low, parent, child);
+  auto result_high = poisson_context_log_likelihood(rates, csp_high, parent, child);
 
   // Higher CSP should give higher log-likelihood
   TestAssert(result_high.item<double>() > result_low.item<double>());
@@ -220,10 +212,8 @@ void test_high_rate_at_mutation_gives_higher_likelihood() {
   auto rates_high = torch::ones({1, 3});
   rates_high[0][0] = 10.0f;
 
-  auto result_low =
-      poisson_context_log_likelihood(rates_low, csp, parent, child);
-  auto result_high =
-      poisson_context_log_likelihood(rates_high, csp, parent, child);
+  auto result_low = poisson_context_log_likelihood(rates_low, csp, parent, child);
+  auto result_high = poisson_context_log_likelihood(rates_high, csp, parent, child);
 
   // Higher rate at mutation should give higher log-likelihood
   TestAssert(result_high.item<double>() > result_low.item<double>());
@@ -281,8 +271,7 @@ void test_formula_components() {
   auto csp = torch::full({1, 4, 4}, 0.25f);
 
   auto parent = torch::tensor({0, 1, 2, 3}, torch::kInt64);
-  auto child =
-      torch::tensor({1, 0, 2, 3}, torch::kInt64);  // 2 mutations at pos 0,1
+  auto child = torch::tensor({1, 0, 2, 3}, torch::kInt64);  // 2 mutations at pos 0,1
 
   auto result = poisson_context_log_likelihood(rates, csp, parent, child);
 
@@ -300,17 +289,19 @@ void test_formula_components() {
 
 [[maybe_unused]] static bool reg_test_likelihood =
     add_test({test_no_mutations_returns_zero,
-              "Netam Likelihood: No mutations returns zero", {"netam"}}) &&
-    add_test({test_single_mutation, "Netam Likelihood: Single mutation",
+              "Netam Likelihood: No mutations returns zero",
               {"netam"}}) &&
-    add_test({test_multiple_mutations, "Netam Likelihood: Multiple mutations",
-              {"netam"}}) &&
+    add_test({test_single_mutation, "Netam Likelihood: Single mutation", {"netam"}}) &&
+    add_test(
+        {test_multiple_mutations, "Netam Likelihood: Multiple mutations", {"netam"}}) &&
     add_test({test_all_positions_mutated,
-              "Netam Likelihood: All positions mutated", {"netam"}}) &&
-    add_test({test_single_position_sequence,
-              "Netam Likelihood: Single position sequence", {"netam"}}) &&
-    add_test({test_output_is_scalar, "Netam Likelihood: Output is scalar",
+              "Netam Likelihood: All positions mutated",
               {"netam"}}) &&
+    add_test({test_single_position_sequence,
+              "Netam Likelihood: Single position sequence",
+              {"netam"}}) &&
+    add_test(
+        {test_output_is_scalar, "Netam Likelihood: Output is scalar", {"netam"}}) &&
     add_test({test_high_csp_gives_higher_likelihood,
               "Netam Likelihood: High CSP gives higher likelihood",
               {"netam"}}) &&
@@ -318,10 +309,10 @@ void test_formula_components() {
               "Netam Likelihood: High rate at mutation gives higher likelihood",
               {"netam"}}) &&
     add_test({test_symmetry_of_mutation_count,
-              "Netam Likelihood: Symmetry of mutation count", {"netam"}}) &&
-    add_test({test_longer_sequence, "Netam Likelihood: Longer sequence",
+              "Netam Likelihood: Symmetry of mutation count",
               {"netam"}}) &&
-    add_test({test_formula_components, "Netam Likelihood: Formula components",
-              {"netam"}});
+    add_test({test_longer_sequence, "Netam Likelihood: Longer sequence", {"netam"}}) &&
+    add_test(
+        {test_formula_components, "Netam Likelihood: Formula components", {"netam"}});
 
 #endif  // USE_NETAM

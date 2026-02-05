@@ -130,7 +130,7 @@ static void test_rf_distance_hand_computed_example() {
   Merge merge2(dag1.GetReferenceSequence());
   merge2.AddDAGs(std::vector{dag1, dag2});
   [[maybe_unused]] auto true_dist = dag1.GetEdgesCount() + dag2.GetEdgesCount() -
-                   dag1.GetLeafs().size() - dag2.GetLeafs().size() - 2;
+                                    dag1.GetLeafs().size() - dag2.GetLeafs().size() - 2;
   Assert(get_rf_distance(merge1, merge2) == true_dist);
 
   Merge merge(dag1.GetReferenceSequence());
@@ -163,7 +163,8 @@ static void test_rf_counter() {
 
   SubtreeWeight<WeightAccumulator<RFDistance>, MergeDAG> count{merge1.GetResult()};
   RFDistance weight_ops{merge2, merge1};
-  Weight scores = count.ComputeWeightBelow(merge1.GetResult().GetRoot(), std::move(weight_ops));
+  Weight scores =
+      count.ComputeWeightBelow(merge1.GetResult().GetRoot(), std::move(weight_ops));
   shift_sum = weight_ops.GetOps().GetShiftSum();
 
   Count total_count = 0;
@@ -178,7 +179,6 @@ static void test_rf_counter() {
   std::cout << "total count: " << total_count << "\n";
   Assert(total_count == 3);
 }
-
 
 static void test_rf_distance_different_weight_ops() {
   auto dag0_storage = make_base_sample_dag();
@@ -213,8 +213,10 @@ static void test_rf_distance_different_weight_ops() {
   true_dist_map[{2, 3}] = true_dist_map[{3, 2}] = 7;
 
   // Use hand-computed distances to find rf-distance types on merged MADAGs.
-  [[maybe_unused]] auto compute_true_dist = [&](std::vector<int> compute_ids, std::vector<int> ref_ids,
-                               RFDistanceType rf_dist_type, bool do_print = false) {
+  [[maybe_unused]] auto compute_true_dist = [&](std::vector<int> compute_ids,
+                                                std::vector<int> ref_ids,
+                                                RFDistanceType rf_dist_type,
+                                                bool do_print = false) {
     ArbitraryInt total = 0;
     std::vector<ArbitraryInt> vec;
 
@@ -345,5 +347,5 @@ static void test_rf_distance_different_weight_ops() {
     add_test({[] { test_rf_distance_different_weight_ops(); },
               "RF distance: using different weight ops (Min, MinSum, Max, MaxSum)"});
 
-[[maybe_unused]] static const auto test_added5 = add_test(
-    {[] { test_rf_counter(); }, "RF distance: counter"});
+[[maybe_unused]] static const auto test_added5 =
+    add_test({[] { test_rf_counter(); }, "RF distance: counter"});

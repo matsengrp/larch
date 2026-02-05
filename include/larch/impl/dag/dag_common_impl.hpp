@@ -63,16 +63,14 @@ auto GetId() {
 template <typename DAG>
 auto ToNodes(DAG dag) {
   static_assert(DAG::role == Role::View);
-  return ranges::views::transform([dag](auto&& i) {
-    return typename DAG::NodeView{dag, i};
-  });
+  return ranges::views::transform(
+      [dag](auto&& i) { return typename DAG::NodeView{dag, i}; });
 }
 template <typename DAG>
 auto ToEdges(DAG dag) {
   static_assert(DAG::role == Role::View);
-  return ranges::views::transform([dag](auto&& i) {
-    return typename DAG::EdgeView{dag, i};
-  });
+  return ranges::views::transform(
+      [dag](auto&& i) { return typename DAG::EdgeView{dag, i}; });
 }
 auto ToConst() {
   return ranges::views::transform([](auto&& i) { return i.Const(); });

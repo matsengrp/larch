@@ -6,7 +6,8 @@ UAFreeParsimonyScore::Weight UAFreeParsimonyScore::ComputeLeaf(DAG, NodeId) {
 }
 
 template <typename DAG>
-UAFreeParsimonyScore::Weight UAFreeParsimonyScore::ComputeEdge(DAG dag, EdgeId edge_id) {
+UAFreeParsimonyScore::Weight UAFreeParsimonyScore::ComputeEdge(DAG dag,
+                                                               EdgeId edge_id) {
   if (dag.Get(edge_id).GetParent().IsUA()) {
     return 0;
   }
@@ -39,7 +40,7 @@ UAFreeParsimonyScore::Weight UAFreeParsimonyScore::BetweenClades(
 }
 
 UAFreeParsimonyScore::Weight UAFreeParsimonyScore::AboveNode(
-    UAFreeParsimonyScore::Weight edgeweight, UAFreeParsimonyScore::Weight childnodeweight) {
+    UAFreeParsimonyScore::Weight edgeweight,
+    UAFreeParsimonyScore::Weight childnodeweight) {
   return edgeweight + childnodeweight;
 }
-

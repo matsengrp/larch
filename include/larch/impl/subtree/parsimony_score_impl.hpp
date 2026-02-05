@@ -9,7 +9,7 @@ template <typename DAG>
 ParsimonyScore::Weight ParsimonyScore::ComputeEdge(DAG dag, EdgeId edge_id) {
   if (dag.Get(edge_id).GetChild().IsLeaf()) {
     size_t mut_count = 0;
-    for (auto mut: dag.Get(edge_id).GetEdgeMutations()) {
+    for (auto mut : dag.Get(edge_id).GetEdgeMutations()) {
       if (not mut.second.second.IsAmbiguous() or mut.second.first.IsAmbiguous()) {
         mut_count += 1;
       }

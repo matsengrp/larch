@@ -7,32 +7,24 @@ namespace netam {
  * class rs_fivemer_params
  */
 
-rs_fivemer_params::rs_fivemer_params(std::size_t kmer_count,
-                                     const YAML::Node& yaml)
-    : kmer_count_{kmer_count},
-      kmer_length_{yaml["kmer_length"].as<std::size_t>()} {
+rs_fivemer_params::rs_fivemer_params(std::size_t kmer_count, const YAML::Node& yaml)
+    : kmer_count_{kmer_count}, kmer_length_{yaml["kmer_length"].as<std::size_t>()} {
   Assert(kmer_length_ == 5);
 }
 
-std::size_t rs_fivemer_params::kmer_count() const noexcept {
-  return kmer_count_;
-}
+std::size_t rs_fivemer_params::kmer_count() const noexcept { return kmer_count_; }
 
-std::size_t rs_fivemer_params::kmer_length() const noexcept {
-  return kmer_length_;
-}
+std::size_t rs_fivemer_params::kmer_length() const noexcept { return kmer_length_; }
 
 /*
  * class rs_fivemer_model
  */
 
 rs_fivemer_model::rs_fivemer_model(const rs_fivemer_params& params)
-    : r_kmer_embedding_{register_module(
-          "r_kmer_embedding",
-          torch::nn::Embedding{params.kmer_count(), 1})},
+    : r_kmer_embedding_{register_module("r_kmer_embedding",
+                                        torch::nn::Embedding{params.kmer_count(), 1})},
       s_kmer_embedding_{register_module(
-          "s_kmer_embedding",
-          torch::nn::Embedding{params.kmer_count(), 4})} {}
+          "s_kmer_embedding", torch::nn::Embedding{params.kmer_count(), 4})} {}
 
 std::pair<torch::Tensor, torch::Tensor> rs_fivemer_model::forward(
     torch::Tensor encoded_parents, torch::Tensor masks,

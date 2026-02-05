@@ -16,8 +16,7 @@ class pcp_dataframe {
     return std::ranges::owning_view(lines(path_)) |
            std::views::transform([](std::string_view line) {
              return line | std::views::split(',') |
-                    std::views::transform(
-                        [](auto&& x) { return std::string_view(x); });
+                    std::views::transform([](auto&& x) { return std::string_view(x); });
            });
   }
 

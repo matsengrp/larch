@@ -43,8 +43,7 @@ const S5FGroundTruth kS5FGroundTruth[] = {
 };
 
 // Create a sequence with a single mutation
-std::string mutate_sequence(const std::string& seq, std::size_t pos,
-                            char new_base) {
+std::string mutate_sequence(const std::string& seq, std::size_t pos, char new_base) {
   std::string result{seq};
   result[pos] = new_base;
   return result;
@@ -114,8 +113,7 @@ void test_s5f_model_loading() {
   std::cout << "  Output rates shape: [" << rates.size(0) << ", " << rates.size(1)
             << "]" << std::endl;
   std::cout << "  CSP logits shape: [" << csp_logits.size(0) << ", "
-            << csp_logits.size(1) << ", " << csp_logits.size(2) << "]"
-            << std::endl;
+            << csp_logits.size(1) << ", " << csp_logits.size(2) << "]" << std::endl;
 }
 
 // Test identical sequences have zero log-likelihood
@@ -138,8 +136,7 @@ void test_s5f_single_mutations() {
 
   const double tolerance = 1e-5;  // Allow small floating point differences
 
-  std::cout << "Testing single mutations against Python ground truth:"
-            << std::endl;
+  std::cout << "Testing single mutations against Python ground truth:" << std::endl;
 
   for (const auto& truth : kS5FGroundTruth) {
     // Verify the original base is what we expect
@@ -153,8 +150,7 @@ void test_s5f_single_mutations() {
     double diff = std::abs(ll - truth.log_likelihood);
 
     std::cout << "  " << truth.name << ": C++=" << ll
-              << " Python=" << truth.log_likelihood << " diff=" << diff
-              << std::endl;
+              << " Python=" << truth.log_likelihood << " diff=" << diff << std::endl;
 
     if (diff > tolerance) {
       std::cerr << "MISMATCH: " << truth.name << " - C++ result " << ll
@@ -174,8 +170,8 @@ void test_s5f_multiple_mutations() {
   // Multiple mutations at positions 10, 50, 100
   // Positions: 10=T, 50=C, 100=T
   std::string multi_mut = mutate_sequence(kReferenceSeq, 10, 'G');  // T->G
-  multi_mut = mutate_sequence(multi_mut, 50, 'A');                   // C->A
-  multi_mut = mutate_sequence(multi_mut, 100, 'C');                  // T->C
+  multi_mut = mutate_sequence(multi_mut, 50, 'A');                  // C->A
+  multi_mut = mutate_sequence(multi_mut, 100, 'C');                 // T->C
 
   double ll = compute_log_likelihood(model, kReferenceSeq, multi_mut);
 

@@ -16,9 +16,9 @@ class model_wrapper {
 
   model_wrapper(model_variant model);
 
-  std::pair<torch::Tensor, torch::Tensor> forward(
-      torch::Tensor encoded_parents, torch::Tensor masks,
-      torch::Tensor wt_base_modifier);
+  std::pair<torch::Tensor, torch::Tensor> forward(torch::Tensor encoded_parents,
+                                                  torch::Tensor masks,
+                                                  torch::Tensor wt_base_modifier);
 
   void eval();
 

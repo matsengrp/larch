@@ -11,10 +11,9 @@ using namespace netam;
 namespace {
 
 // Helper to create a minimal YAML config for testing
-YAML::Node make_config(std::size_t kmer_length = 3,
-                       std::size_t embedding_dim = 7,
-                       std::size_t filter_count = 16,
-                       std::size_t kernel_size = 9, double dropout_prob = 0.2) {
+YAML::Node make_config(std::size_t kmer_length = 3, std::size_t embedding_dim = 7,
+                       std::size_t filter_count = 16, std::size_t kernel_size = 9,
+                       double dropout_prob = 0.2) {
   YAML::Node yaml;
   yaml["kmer_length"] = kmer_length;
   yaml["embedding_dim"] = embedding_dim;
@@ -174,8 +173,7 @@ void test_model_wt_modifier_applied() {
   TestAssert(torch::allclose(rates1, rates2));
 
   // csp_logits at position 0, base 0 should be much lower
-  TestAssert(csp_logits2[0][0][0].item<float>() <
-             csp_logits1[0][0][0].item<float>());
+  TestAssert(csp_logits2[0][0][0].item<float>() < csp_logits1[0][0][0].item<float>());
   TestAssert(csp_logits2[0][0][0].item<float>() < -1e8f);
 }
 
@@ -310,31 +308,31 @@ void test_model_larger_batch() {
 }  // namespace
 
 [[maybe_unused]] static bool reg_test_model =
-    add_test({test_params_construction, "Netam Model: params construction",
-              {"netam"}}) &&
+    add_test(
+        {test_params_construction, "Netam Model: params construction", {"netam"}}) &&
     add_test({test_params_different_values,
-              "Netam Model: params different values", {"netam"}}) &&
-    add_test({test_model_output_shapes, "Netam Model: output shapes",
+              "Netam Model: params different values",
               {"netam"}}) &&
-    add_test({test_model_batch_size_1, "Netam Model: batch size 1",
-              {"netam"}}) &&
-    add_test({test_model_rates_positive, "Netam Model: rates positive",
-              {"netam"}}) &&
-    add_test({test_model_mask_zeros_output, "Netam Model: mask zeros output",
-              {"netam"}}) &&
+    add_test({test_model_output_shapes, "Netam Model: output shapes", {"netam"}}) &&
+    add_test({test_model_batch_size_1, "Netam Model: batch size 1", {"netam"}}) &&
+    add_test({test_model_rates_positive, "Netam Model: rates positive", {"netam"}}) &&
+    add_test(
+        {test_model_mask_zeros_output, "Netam Model: mask zeros output", {"netam"}}) &&
     add_test({test_model_wt_modifier_applied,
-              "Netam Model: wt_modifier applied", {"netam"}}) &&
-    add_test({test_model_adjust_rate_bias, "Netam Model: adjust rate bias",
+              "Netam Model: wt_modifier applied",
               {"netam"}}) &&
+    add_test(
+        {test_model_adjust_rate_bias, "Netam Model: adjust rate bias", {"netam"}}) &&
     add_test({test_model_deterministic_in_eval_mode,
-              "Netam Model: deterministic in eval mode", {"netam"}}) &&
-    add_test({test_model_different_kernel_sizes,
-              "Netam Model: different kernel sizes", {"netam"}}) &&
-    add_test({test_model_short_sequence, "Netam Model: short sequence",
+              "Netam Model: deterministic in eval mode",
               {"netam"}}) &&
+    add_test({test_model_different_kernel_sizes,
+              "Netam Model: different kernel sizes",
+              {"netam"}}) &&
+    add_test({test_model_short_sequence, "Netam Model: short sequence", {"netam"}}) &&
     add_test({test_model_csp_logits_sum_behavior,
-              "Netam Model: csp_logits sum behavior", {"netam"}}) &&
-    add_test({test_model_larger_batch, "Netam Model: larger batch",
-              {"netam"}});
+              "Netam Model: csp_logits sum behavior",
+              {"netam"}}) &&
+    add_test({test_model_larger_batch, "Netam Model: larger batch", {"netam"}});
 
 #endif  // USE_NETAM

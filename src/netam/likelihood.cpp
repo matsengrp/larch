@@ -3,11 +3,11 @@
 namespace netam {
 
 torch::Tensor poisson_context_log_likelihood(
-    const torch::Tensor& rates,  // [1, L] or [L]
-    const torch::Tensor& csp,    // [1, L, 4] or [L, 4]
-    const torch::Tensor& parent, // [L']
-    const torch::Tensor& child,  // [L']
-    const torch::Tensor& mask    // [1, L] or [L] or empty
+    const torch::Tensor& rates,   // [1, L] or [L]
+    const torch::Tensor& csp,     // [1, L, 4] or [L, 4]
+    const torch::Tensor& parent,  // [L']
+    const torch::Tensor& child,   // [L']
+    const torch::Tensor& mask     // [1, L] or [L] or empty
 ) {
   auto rates_flat = rates.dim() == 2 ? rates.squeeze(0) : rates;  // [L]
   auto csp_flat = csp.dim() == 3 ? csp.squeeze(0) : csp;          // [L, 4]
@@ -45,8 +45,8 @@ torch::Tensor poisson_context_log_likelihood(
 
   double t_hat = static_cast<double>(n_mutations) / sum_rates;
 
-  return lambda_j.log().sum() +
-         std::log(t_hat) * static_cast<double>(n_mutations) - n_mutations;
+  return lambda_j.log().sum() + std::log(t_hat) * static_cast<double>(n_mutations) -
+         n_mutations;
 }
 
 }  // namespace netam

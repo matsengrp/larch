@@ -87,8 +87,8 @@
       }
       // Simulate IsLeaf check (nodes > num_nodes/2 are leafs)
       if (node_id > num_nodes / 2) {
-        leafs.AddElement(
-            [](std::vector<size_t>& ls, size_t id) { ls.push_back(id); }, node_id);
+        leafs.AddElement([](std::vector<size_t>& ls, size_t id) { ls.push_back(id); },
+                         node_id);
       }
     });
 
@@ -105,8 +105,10 @@
   }
 }
 
-[[maybe_unused]] static const auto test_added2 = add_test(
-    {test_parallel_build_connections_pattern, "Parallel: build connections pattern", {"parallel"}});
+[[maybe_unused]] static const auto test_added2 =
+    add_test({test_parallel_build_connections_pattern,
+              "Parallel: build connections pattern",
+              {"parallel"}});
 
 // Test using actual BuildConnections
 [[maybe_unused]] static void test_parallel_actual_build_connections() {
@@ -118,5 +120,7 @@
   }
 }
 
-[[maybe_unused]] static const auto test_added3 = add_test(
-    {test_parallel_actual_build_connections, "Parallel: actual BuildConnections", {"parallel"}});
+[[maybe_unused]] static const auto test_added3 =
+    add_test({test_parallel_actual_build_connections,
+              "Parallel: actual BuildConnections",
+              {"parallel"}});

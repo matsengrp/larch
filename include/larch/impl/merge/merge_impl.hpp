@@ -159,7 +159,8 @@ void Merge::ComputeResultEdgeMutations() {
           const CompactGenome& parent = *label.GetParent().GetCompactGenome();
 
           // Check NodeLabel's SampleId, not DAG structure, because a node might be
-          // structurally a leaf in the result DAG but was an internal node in the source
+          // structurally a leaf in the result DAG but was an internal node in the
+          // source
           if (not label.GetChild().GetSampleId().empty()) {
             const CompactGenome& child =
                 sample_id_to_cg_map.at(label.GetChild().GetSampleId().ToString());

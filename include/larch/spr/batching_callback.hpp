@@ -8,12 +8,14 @@
 #include "larch/mat_view.hpp"
 
 /**
- * @brief Base class that adds batching functionality to Move_Found_Callback for optimized parallel processing.
- * 
- * BatchingCallback is designed to be inherited from using CRTP, derived classes must implement OnMove().
- * It enhances any Move_Found_Callback with batching capabilities, which is an optimization technique that
- * collects multiple SPR moves and merges them in parallel once a threshold is reached.
- * 
+ * @brief Base class that adds batching functionality to Move_Found_Callback for
+ * optimized parallel processing.
+ *
+ * BatchingCallback is designed to be inherited from using CRTP, derived classes must
+ * implement OnMove(). It enhances any Move_Found_Callback with batching capabilities,
+ * which is an optimization technique that collects multiple SPR moves and merges them
+ * in parallel once a threshold is reached.
+ *
  * @tparam CRTP The derived class type for compile-time polymorphism
  */
 template <typename CRTP>
@@ -66,7 +68,8 @@ class BatchingCallback : public Move_Found_Callback {
  private:
   struct MoveStorage {
     MOVE_ONLY(MoveStorage);
-    MoveStorage(std::unique_ptr<SPRType> spr_in, std::unique_ptr<FragmentType> fragment_in)
+    MoveStorage(std::unique_ptr<SPRType> spr_in,
+                std::unique_ptr<FragmentType> fragment_in)
         : spr{std::move(spr_in)}, fragment{std::move(fragment_in)} {}
     std::unique_ptr<SPRType> spr;
     std::unique_ptr<FragmentType> fragment;
