@@ -104,8 +104,7 @@ static void test_basic_uniform_scoring() {
   // should be at most the ParsimonyScore (which sums existing edge annotations).
   MADAG const_dag = dag;
   SubtreeWeight<ParsimonyScore, MADAG> weight{const_dag};
-  ParsimonyScore::Weight parsimony =
-      weight.ComputeWeightBelow(const_dag.GetRoot(), {});
+  ParsimonyScore::Weight parsimony = weight.ComputeWeightBelow(const_dag.GetRoot(), {});
   TestAssert(score <= static_cast<double>(parsimony));
 
   // Verify cached score matches
@@ -531,8 +530,7 @@ static void test_sankoff_uniform_matches_fitch() {
   // so ParsimonyScore counts all mutations on edges (likely suboptimal).
   MADAG const_dag = dag;
   SubtreeWeight<ParsimonyScore, MADAG> weight{const_dag};
-  ParsimonyScore::Weight parsimony =
-      weight.ComputeWeightBelow(const_dag.GetRoot(), {});
+  ParsimonyScore::Weight parsimony = weight.ComputeWeightBelow(const_dag.GetRoot(), {});
   TestAssert(sankoff_score <= static_cast<double>(parsimony));
 }
 
@@ -540,3 +538,307 @@ static void test_sankoff_uniform_matches_fitch() {
     add_test({test_sankoff_uniform_matches_fitch,
               "Sankoff: Uniform costs match Fitch optimal",
               {"sankoff"}});
+
+// Additional test cases
+
+// 1. Larger tree: Use make_unambiguous_sample_dag() (11 nodes, 3 variable sites)
+//    with per-site cost matrices.
+static void test_sankoff_larger_tree() {
+  auto dag_storage = make_unambiguous_sample_dag();
+  auto dag = dag_storage.View();
+
+  // 3 variable sites at positions 1, 2, 3 (reference "GAA")
+  // Apply different cost matrices per site
+  SiteCostMatrix ti_tv;
+  ti_tv[0] = {0.0, 2.0, 1.0, 2.0};
+  ti_tv[1] = {2.0, 0.0, 2.0, 1.0};
+  ti_tv[2] = {1.0, 2.0, 0.0, 2.0};
+  ti_tv[3] = {2.0, 1.0, 2.0, 0.0};
+
+  SiteCostMatrix ag_cheap;
+  ag_cheap[0] = {0.0, 3.0, 0.5, 3.0};
+  ag_cheap[1] = {3.0, 0.0, 3.0, 3.0};
+  ag_cheap[2] = {0.5, 3.0, 0.0, 3.0};
+  ag_cheap[3] = {3.0, 3.0, 3.0, 0.0};
+
+  SiteCostMatrix asymmetric;
+  asymmetric[0] = {0.0, 1.0, 1.0, 1.0};
+  asymmetric[1] = {2.0, 0.0, 1.0, 1.0};
+  asymmetric[2] = {1.0, 1.0, 0.0, 1.0};
+  asymmetric[3] = {1.0, 1.0, 1.0, 0.0};
+
+  std::unordered_map<size_t, SiteCostMatrix> site_matrices;
+  site_matrices[1] = ti_tv;
+  site_matrices[2] = ag_cheap;
+  site_matrices[3] = asymmetric;
+
+  SankoffScorer<decltype(dag)> scorer(dag, site_matrices);
+
+  auto root = dag.GetRoot();
+  double score = scorer.ComputeScoreBelow(root);
+
+  // Score should be positive (there are mutations)
+  TestAssert(score > 0.0);
+
+  // Per-site scores should sum to total
+  const auto& dp_table = scorer.GetDPTable();
+  size_t root_idx = root.GetId().value;
+  double sum_of_sites = 0.0;
+  for (size_t site_idx = 0; site_idx < scorer.GetNumVariableSites(); ++site_idx) {
+    const SiteCosts& costs = dp_table.dp_costs[root_idx][site_idx];
+    double min_cost = *std::min_element(costs.begin(), costs.end());
+    TestAssert(min_cost >= 0.0);
+    sum_of_sites += min_cost;
+  }
+  TestAssert(std::abs(sum_of_sites - score) < 1e-9);
+
+  // Verify leaf bases preserved after reconstruction
+  scorer.ReconstructAncestralSequences(root);
+
+  const std::string& ref_seq = dag.GetReferenceSequence();
+  for (auto node : dag.GetNodes()) {
+    if (node.IsLeaf()) {
+      const auto& cg = node.GetCompactGenome();
+      for (size_t site_idx = 0; site_idx < scorer.GetNumVariableSites(); ++site_idx) {
+        MutationPosition pos = dp_table.variable_sites[site_idx];
+        char recon = scorer.GetReconstructedBase(node.GetId(), site_idx);
+
+        auto maybe_base = cg[pos];
+        char expected =
+            maybe_base.has_value() ? maybe_base->ToChar() : ref_seq.at(pos.value - 1);
+        TestAssert(recon == expected);
+      }
+    }
+  }
+}
+
+[[maybe_unused]] static const auto test_sankoff_larger_tree_registered = add_test(
+    {test_sankoff_larger_tree, "Sankoff: Larger tree (11 nodes)", {"sankoff"}});
+
+// 2a. Edge case: single site
+// Tree: UA(0) -> root(1) -> {L1(2), L2(3)}
+// Reference: "A", L1="C", L2="T"
+// With uniform costs: n1 picks C or T (cost 1), root adds 1 more => total 1
+static void test_sankoff_single_site() {
+  MADAGStorage<> storage = MADAGStorage<>::EmptyDefault();
+  auto dag = storage.View();
+
+  dag.SetReferenceSequence("A");
+  dag.InitializeNodes(4);
+
+  size_t edge_id = 0;
+  dag.AddEdge({edge_id++}, {0}, {1}, {0});  // UA(0) -> root(1)
+  dag.AddEdge({edge_id++}, {1}, {2}, {0});  // root(1) -> L1(2)
+  dag.AddEdge({edge_id++}, {1}, {3}, {1});  // root(1) -> L2(3)
+
+  dag.BuildConnections();
+
+  NodeSeqMap seq_map;
+  seq_map[{0}] = {"A"};  // UA
+  seq_map[{1}] = {"A"};  // root
+  seq_map[{2}] = {"C"};  // L1
+  seq_map[{3}] = {"T"};  // L2
+
+  dag.SetCompactGenomesFromNodeSequenceMap(seq_map);
+  dag.RecomputeEdgeMutations();
+
+  SankoffScorer<decltype(dag)> scorer(dag);
+
+  auto root = dag.GetRoot();
+  double score = scorer.ComputeScoreBelow(root);
+
+  // 1 variable site. L1=C, L2=T. With uniform costs:
+  // root=C: cost(C->C)=0 + cost(C->T)=1 = 1
+  // root=T: cost(T->C)=1 + cost(T->T)=0 = 1
+  // min = 1. UA adds 0 (picks same base as root).
+  TestAssert(std::abs(score - 1.0) < 1e-9);
+  TestAssert(scorer.GetNumVariableSites() == 1);
+}
+
+[[maybe_unused]] static const auto test_sankoff_single_site_registered =
+    add_test({test_sankoff_single_site, "Sankoff: Single site", {"sankoff"}});
+
+// 2b. Edge case: single leaf
+// Tree: UA(0) -> leaf(1)
+// Reference: "A", leaf="C"
+// Optimal: set UA to C, cost = 0
+static void test_sankoff_single_leaf() {
+  MADAGStorage<> storage = MADAGStorage<>::EmptyDefault();
+  auto dag = storage.View();
+
+  dag.SetReferenceSequence("A");
+  dag.InitializeNodes(2);
+
+  size_t edge_id = 0;
+  dag.AddEdge({edge_id++}, {0}, {1}, {0});  // UA(0) -> leaf(1)
+
+  dag.BuildConnections();
+
+  NodeSeqMap seq_map;
+  seq_map[{0}] = {"A"};  // UA
+  seq_map[{1}] = {"C"};  // leaf
+
+  dag.SetCompactGenomesFromNodeSequenceMap(seq_map);
+  dag.RecomputeEdgeMutations();
+
+  SankoffScorer<decltype(dag)> scorer(dag);
+
+  auto root = dag.GetRoot();
+  double score = scorer.ComputeScoreBelow(root);
+
+  // With a single leaf, optimal reconstruction sets UA to the leaf's base.
+  // cost_UA[C] = cost(C->C) + leaf_cost[C] = 0 + 0 = 0
+  TestAssert(std::abs(score - 0.0) < 1e-9);
+  TestAssert(scorer.GetNumVariableSites() == 1);
+
+  // Verify reconstruction assigns leaf's observed base
+  scorer.ReconstructAncestralSequences(root);
+  char leaf_recon = scorer.GetReconstructedBase(NodeId{1}, 0);
+  TestAssert(leaf_recon == 'C');
+}
+
+[[maybe_unused]] static const auto test_sankoff_single_leaf_registered =
+    add_test({test_sankoff_single_leaf, "Sankoff: Single leaf", {"sankoff"}});
+
+// 2c. Edge case: all-same sequences (no variation)
+// Tree: UA(0) -> root(1) -> {L1(2), L2(3)}
+// Reference: "AA", L1="AA", L2="AA"
+// All leaves match reference => 0 variable sites, score 0
+static void test_sankoff_all_same_sequences() {
+  MADAGStorage<> storage = MADAGStorage<>::EmptyDefault();
+  auto dag = storage.View();
+
+  dag.SetReferenceSequence("AA");
+  dag.InitializeNodes(4);
+
+  size_t edge_id = 0;
+  dag.AddEdge({edge_id++}, {0}, {1}, {0});  // UA(0) -> root(1)
+  dag.AddEdge({edge_id++}, {1}, {2}, {0});  // root(1) -> L1(2)
+  dag.AddEdge({edge_id++}, {1}, {3}, {1});  // root(1) -> L2(3)
+
+  dag.BuildConnections();
+
+  NodeSeqMap seq_map;
+  seq_map[{0}] = {"AA"};
+  seq_map[{1}] = {"AA"};
+  seq_map[{2}] = {"AA"};
+  seq_map[{3}] = {"AA"};
+
+  dag.SetCompactGenomesFromNodeSequenceMap(seq_map);
+  dag.RecomputeEdgeMutations();
+
+  SankoffScorer<decltype(dag)> scorer(dag);
+
+  auto root = dag.GetRoot();
+  double score = scorer.ComputeScoreBelow(root);
+
+  TestAssert(scorer.GetNumVariableSites() == 0);
+  TestAssert(std::abs(score - 0.0) < 1e-9);
+}
+
+[[maybe_unused]] static const auto test_sankoff_all_same_sequences_registered =
+    add_test(
+        {test_sankoff_all_same_sequences, "Sankoff: All-same sequences", {"sankoff"}});
+
+// 3. DAG (not tree): sample a tree from a DAG with multiple parents, then score.
+//
+// Build a small DAG where root has two alternative children (n1a, n1b) in the
+// same clade, each leading to the same leaves via different internal state.
+// Sample a tree, then verify Sankoff produces a valid score.
+static void test_sankoff_dag_sampled_tree() {
+  MADAGStorage<> storage = MADAGStorage<>::EmptyDefault();
+  auto dag = storage.View();
+
+  // 8 nodes: UA(0), root(1), n1a(2), n1b(3), L1(4), L2(5), L3(6), L4(7)
+  //
+  // UA(0) -> root(1), clade 0
+  // root(1) -> n1a(2), clade 0  (option A)
+  // root(1) -> n1b(3), clade 0  (option B, same clade!)
+  // root(1) -> L3(6),  clade 1
+  // root(1) -> L4(7),  clade 1  (option B for right, same clade!)
+  // n1a(2) -> L1(4), clade 0
+  // n1a(2) -> L2(5), clade 1
+  // n1b(3) -> L1(4), clade 0
+  // n1b(3) -> L2(5), clade 1
+  dag.SetReferenceSequence("AAA");
+  dag.InitializeNodes(8);
+
+  size_t edge_id = 0;
+  dag.AddEdge({edge_id++}, {0}, {1}, {0});  // UA -> root
+  dag.AddEdge({edge_id++}, {1}, {2}, {0});  // root -> n1a (clade 0, option A)
+  dag.AddEdge({edge_id++}, {1}, {3}, {0});  // root -> n1b (clade 0, option B)
+  dag.AddEdge({edge_id++}, {1}, {6}, {1});  // root -> L3  (clade 1, option A)
+  dag.AddEdge({edge_id++}, {1}, {7}, {1});  // root -> L4  (clade 1, option B)
+  dag.AddEdge({edge_id++}, {2}, {4}, {0});  // n1a -> L1
+  dag.AddEdge({edge_id++}, {2}, {5}, {1});  // n1a -> L2
+  dag.AddEdge({edge_id++}, {3}, {4}, {0});  // n1b -> L1
+  dag.AddEdge({edge_id++}, {3}, {5}, {1});  // n1b -> L2
+
+  dag.BuildConnections();
+
+  NodeSeqMap seq_map;
+  seq_map[{0}] = {"AAA"};  // UA
+  seq_map[{1}] = {"AAA"};  // root
+  seq_map[{2}] = {"CAA"};  // n1a (differs at pos 1)
+  seq_map[{3}] = {"ACA"};  // n1b (differs at pos 2)
+  seq_map[{4}] = {"CTA"};  // L1
+  seq_map[{5}] = {"CAC"};  // L2
+  seq_map[{6}] = {"AGT"};  // L3
+  seq_map[{7}] = {"AGA"};  // L4 (differs from L3)
+
+  dag.SetCompactGenomesFromNodeSequenceMap(seq_map);
+  dag.RecomputeEdgeMutations();
+
+  // Verify this is a DAG (not a tree): root has multiple edges in same clade
+  TestAssert(!dag.IsTree());
+
+  // Sample a tree from the DAG
+  MADAG const_dag = dag;
+  SubtreeWeight<ParsimonyScore, MADAG> weight{const_dag};
+  auto sampled_storage = weight.SampleTree({});
+  auto sampled_tree = sampled_storage.View();
+
+  // Verify sampled result is a tree
+  TestAssert(sampled_tree.IsTree());
+
+  // Run Sankoff on the sampled tree
+  SankoffScorer<decltype(sampled_tree)> scorer(sampled_tree);
+  auto root = sampled_tree.GetRoot();
+  double score = scorer.ComputeScoreBelow(root);
+
+  // Score should be non-negative
+  TestAssert(score >= 0.0);
+
+  // Per-site scores should sum to total
+  const auto& dp_table = scorer.GetDPTable();
+  size_t root_idx = root.GetId().value;
+  double sum_of_sites = 0.0;
+  for (size_t site_idx = 0; site_idx < scorer.GetNumVariableSites(); ++site_idx) {
+    const SiteCosts& costs = dp_table.dp_costs[root_idx][site_idx];
+    double min_cost = *std::min_element(costs.begin(), costs.end());
+    sum_of_sites += min_cost;
+  }
+  TestAssert(std::abs(sum_of_sites - score) < 1e-9);
+
+  // Verify reconstruction completes without error and leaf bases are preserved
+  scorer.ReconstructAncestralSequences(root);
+
+  const std::string& ref_seq = sampled_tree.GetReferenceSequence();
+  for (auto node : sampled_tree.GetNodes()) {
+    if (node.IsLeaf()) {
+      const auto& cg = node.GetCompactGenome();
+      for (size_t site_idx = 0; site_idx < scorer.GetNumVariableSites(); ++site_idx) {
+        MutationPosition pos = dp_table.variable_sites[site_idx];
+        char recon = scorer.GetReconstructedBase(node.GetId(), site_idx);
+
+        auto maybe_base = cg[pos];
+        char expected =
+            maybe_base.has_value() ? maybe_base->ToChar() : ref_seq.at(pos.value - 1);
+        TestAssert(recon == expected);
+      }
+    }
+  }
+}
+
+[[maybe_unused]] static const auto test_sankoff_dag_sampled_tree_registered =
+    add_test({test_sankoff_dag_sampled_tree, "Sankoff: DAG sampled tree", {"sankoff"}});
