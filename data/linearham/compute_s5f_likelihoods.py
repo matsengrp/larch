@@ -210,8 +210,8 @@ def compute_log_likelihood(model, kmer_length, site_count,
 
 def main():
     # Load S5F model
-    pth_path = "/home/ogi/matsen/larch-s5f-likelihood/data/linearham/s5f.pth"
-    yml_path = "/home/ogi/matsen/larch-s5f-likelihood/data/linearham/s5f.yml"
+    pth_path = "s5f.pth"
+    yml_path = "s5f.yml"
     model, kmer_length, site_count = load_model(pth_path, yml_path)
 
     # Print sequence info for debugging

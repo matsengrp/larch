@@ -226,19 +226,21 @@ void test_encode_sequence_kmer_indices_valid() {
 }
 
 void test_encode_sequence_padding_creates_zero_index() {
-  // K-mers containing N should map to index 0
+  // K-mers containing N should map to the last index (kmer_count - 1)
   auto yaml = make_config(3, 5);
   kmer_sequence_encoder encoder{yaml};
 
   auto [encoded, wt_modifier] = encoder.encode_sequence("ACG");
 
   auto encoded_accessor = encoded.accessor<int32_t, 1>();
+  auto n_index =
+      static_cast<int32_t>(encoder.kmer_count() - 1);
 
-  // Position 0: k-mer is "NAC" (contains N from padding) -> should be 0
-  TestAssert(encoded_accessor[0] == 0);
+  // Position 0: k-mer is "NAC" (contains N from padding) -> last index
+  TestAssert(encoded_accessor[0] == n_index);
 
-  // Position 2: k-mer is "CGN" (contains N from padding) -> should be 0
-  TestAssert(encoded_accessor[2] == 0);
+  // Position 2: k-mer is "CGN" (contains N from padding) -> last index
+  TestAssert(encoded_accessor[2] == n_index);
 }
 
 void test_encode_sequence_long_sequence_truncated() {
