@@ -1,4 +1,6 @@
 #include "larch/subtree/sankoff.hpp"
+#include "larch/subtree/parsimony_score.hpp"
+#include "larch/subtree/subtree_weight.hpp"
 
 #include "sample_dag.hpp"
 #include "test_common.hpp"
@@ -98,12 +100,13 @@ static void test_basic_uniform_scoring() {
   auto root = dag.GetRoot();
   double score = scorer.ComputeScoreBelow(root);
 
-  // With uniform costs, the score should equal the parsimony score
-  // (number of mutations on the optimal tree)
-  // The sample DAG is actually a tree (single path from root to each leaf)
-  // We can verify the score is non-negative and reasonable
-  TestAssert(score >= 0.0);
-  TestAssert(score < 1000.0);  // Sanity check
+  // Sankoff with uniform costs finds the optimal reconstruction, so its score
+  // should be at most the ParsimonyScore (which sums existing edge annotations).
+  MADAG const_dag = dag;
+  SubtreeWeight<ParsimonyScore, MADAG> weight{const_dag};
+  ParsimonyScore::Weight parsimony =
+      weight.ComputeWeightBelow(const_dag.GetRoot(), {});
+  TestAssert(score <= static_cast<double>(parsimony));
 
   // Verify cached score matches
   TestAssert(scorer.GetTotalScore() == score);
