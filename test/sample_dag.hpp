@@ -190,7 +190,6 @@
   return input_storage;
 }
 
-
 [[maybe_unused]] static auto make_sample_dag_topology() {
   MADAGStorage<> dag_storage = MADAGStorage<>::EmptyDefault();
   auto dag = dag_storage.View();
@@ -331,19 +330,19 @@
   dag.InitializeNodes(15);
   size_t edge_id = 0;
   dag.AddEdge({edge_id++}, {10}, {0}, {0});
-  dag.AddEdge({edge_id++}, {7},  {1},  {0});
-  dag.AddEdge({edge_id++}, {7},  {2},  {1});
-  dag.AddEdge({edge_id++}, {7},  {11}, {2});
-  dag.AddEdge({edge_id++}, {8},  {3},  {0});
-  dag.AddEdge({edge_id++}, {8},  {4},  {1});
-  dag.AddEdge({edge_id++}, {8},  {7},  {2});
-  dag.AddEdge({edge_id++}, {8},  {13}, {3});
-  dag.AddEdge({edge_id++}, {8},  {14}, {4});
-  dag.AddEdge({edge_id++}, {9},  {5},  {0});
-  dag.AddEdge({edge_id++}, {9},  {6},  {1});
-  dag.AddEdge({edge_id++}, {9},  {12}, {2});
-  dag.AddEdge({edge_id++}, {0},  {8},  {0});
-  dag.AddEdge({edge_id++}, {0},  {9},  {1});
+  dag.AddEdge({edge_id++}, {7}, {1}, {0});
+  dag.AddEdge({edge_id++}, {7}, {2}, {1});
+  dag.AddEdge({edge_id++}, {7}, {11}, {2});
+  dag.AddEdge({edge_id++}, {8}, {3}, {0});
+  dag.AddEdge({edge_id++}, {8}, {4}, {1});
+  dag.AddEdge({edge_id++}, {8}, {7}, {2});
+  dag.AddEdge({edge_id++}, {8}, {13}, {3});
+  dag.AddEdge({edge_id++}, {8}, {14}, {4});
+  dag.AddEdge({edge_id++}, {9}, {5}, {0});
+  dag.AddEdge({edge_id++}, {9}, {6}, {1});
+  dag.AddEdge({edge_id++}, {9}, {12}, {2});
+  dag.AddEdge({edge_id++}, {0}, {8}, {0});
+  dag.AddEdge({edge_id++}, {0}, {9}, {1});
   dag.BuildConnections();
   return dag_storage;
 }
@@ -364,4 +363,3 @@
   amb_dag.RecomputeEdgeMutations();
   return amb_dag_storage;
 }
-

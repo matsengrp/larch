@@ -12,8 +12,7 @@ class generator {
  public:
   struct promise_type {
     generator<T> get_return_object() {
-      return generator{
-          std::coroutine_handle<promise_type>::from_promise(*this)};
+      return generator{std::coroutine_handle<promise_type>::from_promise(*this)};
     }
 
     static std::suspend_always initial_suspend() noexcept { return {}; }

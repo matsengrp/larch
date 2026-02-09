@@ -9,8 +9,8 @@
 
 static void test_linearham_load_and_merge() {
   const std::string data_dir = "data/linearham/";
-  const std::vector<std::string_view> fasta_paths = {
-      "data/linearham/igh.fa", "data/linearham/naive-seqs.fa"};
+  const std::vector<std::string_view> fasta_paths = {"data/linearham/igh.fa",
+                                                     "data/linearham/naive-seqs.fa"};
   const std::string ref_path = data_dir + "reference_sequence.txt";
 
   // Collect all -rerooted.treefile paths

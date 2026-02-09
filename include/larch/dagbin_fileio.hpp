@@ -6,13 +6,13 @@
 
 /**
  * @brief Handles binary serialization and deserialization of phylogenetic DAGs.
- * 
+ *
  * DagbinFileIO provides a custom binary format for efficiently storing and loading
  * phylogenetic DAG structures to/from disk. The format uses a section-based layout
  * with a magic number header for file validation. Sections include header metadata,
  * reference sequence, nodes, edges, and compact genomes. The format supports both
  * complete DAG writing and incremental appending operations.
- * 
+ *
  * The binary format is structured as:
  * - Magic number (6 bytes: "DAGBIN")
  * - Linked list of section offsets
@@ -24,15 +24,15 @@ class DagbinFileIO {
    * @brief Identifiers for different sections in the dagbin file format.
    */
   enum class SectionId : char {
-    Header = 'H',         ///< Header section containing metadata
-    RefSeq = 'R',         ///< Reference sequence section
-    Nodes = 'N',          ///< Nodes section
-    Edges = 'E',          ///< Edges section  
-    CompactGenomes = 'C', ///< Compact genomes section
-    Test = 'X'            ///< Test section for debugging
+    Header = 'H',          ///< Header section containing metadata
+    RefSeq = 'R',          ///< Reference sequence section
+    Nodes = 'N',           ///< Nodes section
+    Edges = 'E',           ///< Edges section
+    CompactGenomes = 'C',  ///< Compact genomes section
+    Test = 'X'             ///< Test section for debugging
   };
 
-  friend std::ostream &operator<<(std::ostream &os, SectionId section_id) {
+  friend std::ostream& operator<<(std::ostream& os, SectionId section_id) {
     std::cout << "SectionId::" << static_cast<char>(section_id);
     return os;
   }
@@ -43,7 +43,7 @@ class DagbinFileIO {
 
   /**
    * @brief Metadata header for dagbin files.
-   * 
+   *
    * Contains counts of various DAG components for validation and pre-allocation
    * during deserialization.
    */
@@ -90,59 +90,59 @@ class DagbinFileIO {
 
  private:
   template <typename T, typename iostream>
-  inline static T ReadData(iostream &infile);
+  inline static T ReadData(iostream& infile);
 
   template <typename T, typename iostream>
-  inline static void WriteData(iostream &outfile, const T data);
+  inline static void WriteData(iostream& outfile, const T data);
 
   template <typename iostream>
-  inline static std::string ReadString(iostream &infile);
+  inline static std::string ReadString(iostream& infile);
 
   template <typename iostream>
-  inline static void WriteString(iostream &outfile, const std::string &str);
+  inline static void WriteString(iostream& outfile, const std::string& str);
 
   template <typename iostream>
-  inline static std::vector<std::streampos> ReadLinkedList(iostream &infile);
+  inline static std::vector<std::streampos> ReadLinkedList(iostream& infile);
 
   template <typename iostream>
   inline static std::vector<std::pair<std::streampos, SectionId>> ReadLabeledLinkedList(
-      iostream &infile);
+      iostream& infile);
 
   template <typename iostream>
-  inline static void WriteLinkedList(iostream &outfile,
-                                     const std::vector<std::streampos> &offsets);
+  inline static void WriteLinkedList(iostream& outfile,
+                                     const std::vector<std::streampos>& offsets);
 
   template <typename iostream>
-  inline static bool CheckMagicNumber(iostream &infile, bool do_assert = true);
+  inline static bool CheckMagicNumber(iostream& infile, bool do_assert = true);
 
   template <typename iostream>
-  inline static void WriteMagicNumber(iostream &outfile);
+  inline static void WriteMagicNumber(iostream& outfile);
 
   template <typename iostream, typename DAG>
-  inline static Header ReadHeader(iostream &infile, DAG dag);
+  inline static Header ReadHeader(iostream& infile, DAG dag);
 
   template <typename iostream, typename DAG>
-  inline static void WriteHeader(iostream &outfile, const DAG dag);
+  inline static void WriteHeader(iostream& outfile, const DAG dag);
 
   template <typename iostream, typename DAG>
-  inline static void ReadReferenceSequence(iostream &infile, DAG dag);
+  inline static void ReadReferenceSequence(iostream& infile, DAG dag);
 
   template <typename iostream, typename DAG>
-  inline static void WriteReferenceSequence(iostream &outfile, const DAG dag);
+  inline static void WriteReferenceSequence(iostream& outfile, const DAG dag);
 
   template <typename iostream, typename DAG>
-  inline static void ReadNodes(iostream &infile, DAG dag);
+  inline static void ReadNodes(iostream& infile, DAG dag);
 
   template <typename iostream, typename DAG>
-  inline static void WriteNodes(iostream &outfile, const DAG dag,
+  inline static void WriteNodes(iostream& outfile, const DAG dag,
                                 std::optional<size_t> min_id_opt = std::nullopt,
                                 std::optional<size_t> max_id_opt = std::nullopt);
 
   template <typename iostream, typename DAG>
-  inline static void ReadEdges(iostream &infile, DAG dag);
+  inline static void ReadEdges(iostream& infile, DAG dag);
 
   template <typename iostream, typename DAG>
-  inline static void WriteEdges(iostream &outfile, const DAG dag,
+  inline static void WriteEdges(iostream& outfile, const DAG dag,
                                 std::optional<size_t> min_id_opt = std::nullopt,
                                 std::optional<size_t> max_id_opt = std::nullopt);
 };

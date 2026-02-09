@@ -7,8 +7,7 @@ namespace netam {
  * class indep_rscnn_params
  */
 
-indep_rscnn_params::indep_rscnn_params(std::size_t kmer_count,
-                                       const YAML::Node& yaml)
+indep_rscnn_params::indep_rscnn_params(std::size_t kmer_count, const YAML::Node& yaml)
     : kmer_count_{kmer_count},
       kmer_length_{yaml["kmer_length"].as<std::size_t>()},
       embedding_dim_{yaml["embedding_dim"].as<std::size_t>()},
@@ -16,29 +15,19 @@ indep_rscnn_params::indep_rscnn_params(std::size_t kmer_count,
       kernel_size_{yaml["kernel_size"].as<std::size_t>()},
       dropout_prob_{yaml["dropout_prob"].as<double>()} {}
 
-std::size_t indep_rscnn_params::kmer_count() const noexcept {
-  return kmer_count_;
-}
+std::size_t indep_rscnn_params::kmer_count() const noexcept { return kmer_count_; }
 
-std::size_t indep_rscnn_params::kmer_length() const noexcept {
-  return kmer_length_;
-}
+std::size_t indep_rscnn_params::kmer_length() const noexcept { return kmer_length_; }
 
 std::size_t indep_rscnn_params::embedding_dim() const noexcept {
   return embedding_dim_;
 }
 
-std::size_t indep_rscnn_params::filter_count() const noexcept {
-  return filter_count_;
-}
+std::size_t indep_rscnn_params::filter_count() const noexcept { return filter_count_; }
 
-std::size_t indep_rscnn_params::kernel_size() const noexcept {
-  return kernel_size_;
-}
+std::size_t indep_rscnn_params::kernel_size() const noexcept { return kernel_size_; }
 
-double indep_rscnn_params::dropout_prob() const noexcept {
-  return dropout_prob_;
-}
+double indep_rscnn_params::dropout_prob() const noexcept { return dropout_prob_; }
 
 /*
  * class indep_rscnn_model
@@ -56,29 +45,27 @@ indep_rscnn_model::indep_rscnn_model(const indep_rscnn_params& params)
       r_kmer_embedding_{register_module(
           "r_kmer_embedding",
           torch::nn::Embedding{params.kmer_count(), params.embedding_dim()})},
-      r_conv_{
-          register_module("r_conv", torch::nn::Conv1d{torch::nn::Conv1dOptions{
-                                        signed_cast(params.embedding_dim()),
-                                        signed_cast(params.filter_count()),
-                                        signed_cast(params.kernel_size())}})},
-      r_dropout_{register_module("r_dropout",
-                                 torch::nn::Dropout{params.dropout_prob()})},
-      r_linear_{register_module("r_linear",
-                                torch::nn::Linear{params.filter_count(), 1})},
+      r_conv_{register_module("r_conv", torch::nn::Conv1d{torch::nn::Conv1dOptions{
+                                            signed_cast(params.embedding_dim()),
+                                            signed_cast(params.filter_count()),
+                                            signed_cast(params.kernel_size())}})},
+      r_dropout_{
+          register_module("r_dropout", torch::nn::Dropout{params.dropout_prob()})},
+      r_linear_{
+          register_module("r_linear", torch::nn::Linear{params.filter_count(), 1})},
 
       // S component layers (no padding in conv, we pad manually)
       s_kmer_embedding_{register_module(
           "s_kmer_embedding",
           torch::nn::Embedding{params.kmer_count(), params.embedding_dim()})},
-      s_conv_{
-          register_module("s_conv", torch::nn::Conv1d{torch::nn::Conv1dOptions(
-                                        signed_cast(params.embedding_dim()),
-                                        signed_cast(params.filter_count()),
-                                        signed_cast(params.kernel_size()))})},
-      s_dropout_{register_module("s_dropout",
-                                 torch::nn::Dropout{params.dropout_prob()})},
-      s_linear_{register_module("s_linear",
-                                torch::nn::Linear{params.filter_count(), 4})} {}
+      s_conv_{register_module("s_conv", torch::nn::Conv1d{torch::nn::Conv1dOptions(
+                                            signed_cast(params.embedding_dim()),
+                                            signed_cast(params.filter_count()),
+                                            signed_cast(params.kernel_size()))})},
+      s_dropout_{
+          register_module("s_dropout", torch::nn::Dropout{params.dropout_prob()})},
+      s_linear_{
+          register_module("s_linear", torch::nn::Linear{params.filter_count(), 4})} {}
 
 std::pair<torch::Tensor, torch::Tensor> indep_rscnn_model::forward(
     torch::Tensor encoded_parents, torch::Tensor masks,

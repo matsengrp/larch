@@ -49,18 +49,18 @@ std::ifstream fp;
 
 // Decouple parsing (slow) and decompression, segment file into blocks for
 // parallelized parsing
-typedef tbb::flow::source_node<char *> decompressor_node_t;
+typedef tbb::flow::source_node<char*> decompressor_node_t;
 std::condition_variable progress_bar_cv;
 
 struct raw_input_source {
-  FILE *fh;
-  raw_input_source(const char *fname) {
+  FILE* fh;
+  raw_input_source(const char* fname) {
     fh = fopen(fname, "r");
     fp.open(fname);
   }
   int getc() { return fgetc(fh); }
   void operator()(
-      tbb::concurrent_bounded_queue<std::pair<char *, uint8_t *>> &out) const {
+      tbb::concurrent_bounded_queue<std::pair<char*, uint8_t*>>& out) const {
     std::string fp_line;
     // while (std::getline(fp, fp_line)) {
     //   std::cout << "LINE: " << std::endl;
@@ -76,7 +76,7 @@ struct raw_input_source {
       }
 
       *(line_out + bytes_read) = '\0';
-      out.emplace(line_out, (uint8_t *)line_out + bytes_read);
+      out.emplace(line_out, (uint8_t*)line_out + bytes_read);
     }
     out.emplace(nullptr, nullptr);
     out.emplace(nullptr, nullptr);
@@ -84,19 +84,18 @@ struct raw_input_source {
   void unalloc() { fclose(fh); }
 };
 struct line_start_later {
-  char *start;
-  char *alloc_start;
+  char* start;
+  char* alloc_start;
 };
 struct line_align {
   mutable line_start_later prev;
-  mutable uint8_t *prev_end;
-  tbb::concurrent_bounded_queue<std::pair<char *, uint8_t *>> &in;
-  line_align(tbb::concurrent_bounded_queue<std::pair<char *, uint8_t *>> &out)
-      : in(out) {
+  mutable uint8_t* prev_end;
+  tbb::concurrent_bounded_queue<std::pair<char*, uint8_t*>>& in;
+  line_align(tbb::concurrent_bounded_queue<std::pair<char*, uint8_t*>>& out) : in(out) {
     prev.start = nullptr;
   }
-  bool operator()(line_start_later &out) const {
-    std::pair<char *, unsigned char *> line;
+  bool operator()(line_start_later& out) const {
+    std::pair<char*, unsigned char*> line;
     in.pop(line);
     if (line.first == nullptr) {
       if (prev.start != nullptr) {
@@ -138,16 +137,16 @@ struct line_align {
 // Parse a block of lines, assuming there is a complete line in the line_in
 // buffer
 typedef tbb::flow::multifunction_node<line_start_later,
-                                      tbb::flow::tuple<Parsed_VCF_Line *>>
+                                      tbb::flow::tuple<Parsed_VCF_Line*>>
     line_parser_t;
 
 struct line_parser {
-  const std::vector<long> &header;
+  const std::vector<long>& header;
   void operator()(line_start_later line_in_struct,
-                  line_parser_t::output_ports_type &out) const {
-    char *line_in = line_in_struct.start;
-    char *to_free = line_in_struct.alloc_start;
-    Parsed_VCF_Line *parsed_line;
+                  line_parser_t::output_ports_type& out) const {
+    char* line_in = line_in_struct.start;
+    char* to_free = line_in_struct.alloc_start;
+    Parsed_VCF_Line* parsed_line;
 
     while (*line_in != '\0') {
       std::vector<nuc_one_hot> allele_translated;
@@ -176,7 +175,7 @@ struct line_parser {
       // REF
       parsed_line = new Parsed_VCF_Line{
           MAT::Mutation(chromosome, pos, 0, 0, 1, MAT::get_nuc_id(*line_in))};
-      auto &non_ref_muts_out = parsed_line->mutated;
+      auto& non_ref_muts_out = parsed_line->mutated;
       line_in++;
       // assert(*line_in=='\t');
       line_in++;
@@ -248,12 +247,12 @@ struct line_parser {
 
       std::get<0>(out).try_put(parsed_line);
     }
-    delete[](to_free);
+    delete[] (to_free);
   }
 };
 // tokenize header, get sample name
 template <typename infile_t>
-static void read_header(infile_t &fd, std::vector<std::string> &out) {
+static void read_header(infile_t& fd, std::vector<std::string>& out) {
   char in = fd.getc();
   in = fd.getc();
   bool second_char_pong = (in == '#');
@@ -287,11 +286,11 @@ static void read_header(infile_t &fd, std::vector<std::string> &out) {
 
 std::atomic<size_t> assigned_count;
 struct Assign_State {
-  const std::vector<backward_pass_range> &child_idx_range;
-  const std::vector<forward_pass_range> &parent_idx;
-  FS_result_per_thread_t &output;
-  void operator()(const Parsed_VCF_Line *vcf_line) const {
-    auto &this_out = output.local();
+  const std::vector<backward_pass_range>& child_idx_range;
+  const std::vector<forward_pass_range>& parent_idx;
+  FS_result_per_thread_t& output;
+  void operator()(const Parsed_VCF_Line* vcf_line) const {
+    auto& this_out = output.local();
     this_out.init(child_idx_range.size());
     assert(vcf_line->mutation.get_position() > 0);
     Fitch_Sankoff_Whole_Tree(child_idx_range, parent_idx, vcf_line->mutation,
@@ -301,7 +300,7 @@ struct Assign_State {
   }
 };
 
-void print_progress(std::atomic<bool> *done, std::mutex *done_mutex) {
+void print_progress(std::atomic<bool>* done, std::mutex* done_mutex) {
   while (true) {
     {
       std::unique_lock<std::mutex> lk(*done_mutex);
@@ -316,7 +315,7 @@ void print_progress(std::atomic<bool> *done, std::mutex *done_mutex) {
 }
 
 template <typename infile_t>
-static line_start_later try_get_first_line(infile_t &f, size_t &size) {
+static line_start_later try_get_first_line(infile_t& f, size_t& size) {
   std::string temp;
   char c;
   while ((c = f.getc()) != '\n') {
@@ -324,7 +323,7 @@ static line_start_later try_get_first_line(infile_t &f, size_t &size) {
   }
   temp.push_back('\n');
   size = temp.size() + 1;
-  char *buf = new char[size];
+  char* buf = new char[size];
   strcpy(buf, temp.data());
   return line_start_later{buf, buf};
 }
@@ -333,10 +332,10 @@ static line_start_later try_get_first_line(infile_t &f, size_t &size) {
 #define ONE_GB 0x4ffffffful
 
 template <typename infile_t>
-static void process(MAT::Tree &tree, infile_t &fd) {
+static void process(MAT::Tree& tree, infile_t& fd) {
   std::vector<std::string> fields;
   read_header(fd, fields);
-  std::vector<MAT::Node *> bfs_ordered_nodes = tree.breadth_first_expansion();
+  std::vector<MAT::Node*> bfs_ordered_nodes = tree.breadth_first_expansion();
   std::vector<long> idx_map(9);
   {
     std::unordered_set<std::string> inserted_samples;
@@ -367,7 +366,7 @@ static void process(MAT::Tree &tree, infile_t &fd) {
       line_parser_t parser(input_graph, /* tbb::flow::unlimited */ 1,
                            line_parser{idx_map});
       // feed used buffer back to decompressor
-      tbb::flow::function_node<Parsed_VCF_Line *> assign_state(
+      tbb::flow::function_node<Parsed_VCF_Line*> assign_state(
           input_graph, /* tbb::flow::unlimited */ 1,
           Assign_State{child_idx_range, parent_idx, output});
       tbb::flow::make_edge(tbb::flow::output_port<0>(parser), assign_state);
@@ -376,7 +375,7 @@ static void process(MAT::Tree &tree, infile_t &fd) {
       size_t first_approx_size = std::min(CHUNK_SIZ, ONE_GB / single_line_size) - 2;
       read_size = first_approx_size * single_line_size;
       alloc_size = (first_approx_size + 2) * single_line_size;
-      tbb::concurrent_bounded_queue<std::pair<char *, uint8_t *>> queue;
+      tbb::concurrent_bounded_queue<std::pair<char*, uint8_t*>> queue;
       queue.set_capacity(10);
       tbb::flow::source_node<line_start_later> line(input_graph, line_align(queue));
       tbb::flow::make_edge(line, parser);
@@ -414,7 +413,7 @@ static void process(MAT::Tree &tree, infile_t &fd) {
   fd.unalloc();
 }
 
-inline void VCF_input(const char *name, MAT::Tree &tree) {
+inline void VCF_input(const char* name, MAT::Tree& tree) {
   assigned_count = 0;
   std::atomic<bool> done(false);
   std::mutex done_mutex;

@@ -33,6 +33,20 @@ To get a recent cmake, download from `https://cmake.org/download/`, for example:
 wget https://github.com/Kitware/CMake/releases/download/v3.23.1/cmake-3.23.1-linux-x86_64.tar.gz
 ```
 
+For macOS (Apple Silicon or Intel) using Homebrew:
+
+```shell
+brew install cmake boost open-mpi protobuf@21
+```
+
+**Important**: Use protobuf v21 (3.21.x), not the latest version. Protobuf v29+ causes runtime segfaults when parsing .pb files. Configure cmake with:
+
+```shell
+CMAKE_PREFIX_PATH="/opt/homebrew/opt/protobuf@21" cmake ..
+```
+
+For Intel Macs, the Homebrew prefix is `/usr/local/opt/protobuf@21` instead.
+
 Build Environments
 ------------------
 
@@ -85,10 +99,28 @@ make install
 ```
 
 Cmake build options:
-  - add `-DMAKE_BUILD_TYPE=Debug` to build in debug mode.  `-DMAKE_BUILD_TYPE=Release` is enabled by default.
+  - add `-DCMAKE_BUILD_TYPE=Debug` to build in debug mode.  `-DCMAKE_BUILD_TYPE=Release` is enabled by default.
   - add `-DCMAKE_CXX_CLANG_TIDY="clang-tidy"` to enable clang-tidy.
   - add `-DUSE_ASAN=yes` to enable asan and ubsan.
   - add `-DCMAKE_INSTALL_PREFIX=path/to/install` to select install location.  By default, this will perform a system-wide installation.  To install in current conda environment, use `-DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX`.
+  - add `-DUSE_NETAM=yes` to enable ML-based scoring models (requires libtorch, see below).
+
+### Building with USE_NETAM (ML scoring)
+
+To build with machine learning scoring models enabled, you need libtorch (PyTorch C++):
+
+1. Download libtorch from https://pytorch.org/get-started/locally/ (select LibTorch, C++/Java, your OS)
+2. Extract to a location like `~/local/src/libtorch`
+3. Configure cmake with both protobuf and libtorch paths:
+
+```shell
+cmake -DUSE_NETAM=yes \
+  -DCMAKE_PREFIX_PATH="/opt/homebrew/opt/protobuf@21;$HOME/local/src/libtorch" \
+  -DCMAKE_CXX_FLAGS="-Wno-deprecated-declarations" \
+  ..
+```
+
+The `-Wno-deprecated-declarations` flag is needed because USE_NETAM enables C++23, which deprecates some constructs used by range-v3.
 
 
 ## Running

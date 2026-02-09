@@ -61,9 +61,15 @@ Benchmark::Benchmark(bool start_on_init) {
   }
 }
 
-void Benchmark::start() { start_ = std::chrono::high_resolution_clock::now(); isStarted_ = true;}
+void Benchmark::start() {
+  start_ = std::chrono::high_resolution_clock::now();
+  isStarted_ = true;
+}
 
-void Benchmark::stop() { stop_ = std::chrono::high_resolution_clock::now(); isStopped_ = true;}
+void Benchmark::stop() {
+  stop_ = std::chrono::high_resolution_clock::now();
+  isStopped_ = true;
+}
 
 template <typename time_scale>
 auto Benchmark::duration() const {
@@ -71,7 +77,9 @@ auto Benchmark::duration() const {
     if (isStopped_) {
       return std::chrono::duration_cast<time_scale>(stop_ - start_).count();
     }
-    return std::chrono::duration_cast<time_scale>(std::chrono::high_resolution_clock::now() - start_).count();
+    return std::chrono::duration_cast<time_scale>(
+               std::chrono::high_resolution_clock::now() - start_)
+        .count();
   }
   return std::chrono::duration_cast<time_scale>(start_ - start_).count();
 }
@@ -161,8 +169,9 @@ auto Benchmark::durationFloorMinutes() const {
     if (isStopped_) {
       return std::chrono::duration_cast<std::chrono::minutes>(stop_ - start_).count();
     }
-    return std::chrono::duration_cast<std::chrono::minutes>(std::chrono::high_resolution_clock::now() - start_).count();
+    return std::chrono::duration_cast<std::chrono::minutes>(
+               std::chrono::high_resolution_clock::now() - start_)
+        .count();
   }
   return std::chrono::duration_cast<std::chrono::minutes>(start_ - start_).count();
 }
-

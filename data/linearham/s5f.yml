@@ -1,0 +1,9 @@
+encoder_class: KmerSequenceEncoder
+encoder_parameters:
+  kmer_length: 5
+  site_count: 500
+model_class: RSFivemerModel
+model_hyperparameters:
+  kmer_length: 5
+serialization_version: 0
+training_hyperparameters: {}

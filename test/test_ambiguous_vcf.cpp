@@ -334,10 +334,11 @@ void test_vcf_reading() {
   MADAG amb_dag = amb_dag_storage.View();
   auto unamb_dag_storage = make_unambiguous_sample_dag();
   MADAG unamb_dag = unamb_dag_storage.View();
-  // get the number of leaf-ward mutations that do not reult in an ambiguity(these mutations do contribute to parsimony).
+  // get the number of leaf-ward mutations that do not reult in an ambiguity(these
+  // mutations do contribute to parsimony).
   size_t amb_dag_unamb_leaf_mutations = 0;
-  for (auto n: amb_dag.GetLeafs()) {
-    for (auto mutation: n.GetFirstParent().GetEdgeMutations()) {
+  for (auto n : amb_dag.GetLeafs()) {
+    for (auto mutation : n.GetFirstParent().GetEdgeMutations()) {
       if (not mutation.second.second.IsAmbiguous()) {
         ++amb_dag_unamb_leaf_mutations;
       }
@@ -345,7 +346,7 @@ void test_vcf_reading() {
   }
   // get the number of leaf-ward mutations in the disambiguated DAG
   size_t unamb_dag_leaf_mutations = 0;
-  for (auto n: unamb_dag.GetLeafs()) {
+  for (auto n : unamb_dag.GetLeafs()) {
     unamb_dag_leaf_mutations += n.GetFirstParent().GetEdgeMutations().size();
   }
   auto parsimony_adjust = unamb_dag_leaf_mutations - amb_dag_unamb_leaf_mutations;

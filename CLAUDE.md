@@ -220,6 +220,15 @@ The `tsan.suppressions` file in the repo root contains suppressions for known fa
 
 **Updating the submodule:** When updating to a new usher commit, check if `tree_rearrangement_internal.hpp` has new `extern` declarations that need definitions added to `usher_globals.cpp`.
 
+## Pre-PR Quality Checklist
+
+Before any pull request:
+
+1. **Format Code**: Run `clang-format` to ensure consistent formatting
+2. **Build Success**: Verify the code builds with relevant build configurations (at minimum, a debug build with USE_NETAM if the PR touches netam code)
+3. **Test Coverage**: Run relevant tests using `larch-test` with appropriate filters
+4. **PR Description Review**: Verify the PR description accurately reflects the full scope of changes
+
 ## Maintaining This File
 
 This CLAUDE.md is a living document. When working on the codebase, update it with new insights, patterns, or gotchas you discover.

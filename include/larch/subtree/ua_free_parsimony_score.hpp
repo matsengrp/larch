@@ -1,7 +1,8 @@
 /**
   Representation of edge mutations parsimony-based weight scoring for MADAG.
 
-  The parsimony score for this edge weight ignores the mutations on child edges of the UA node.
+  The parsimony score for this edge weight ignores the mutations on child edges of the
+  UA node.
 
   This type is meant to be used as a parameter to SubtreeWeight.
 
@@ -35,4 +36,3 @@ struct UAFreeParsimonyScore {
 };
 
 #include "larch/impl/subtree/ua_free_parsimony_score_impl.hpp"
-

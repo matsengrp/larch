@@ -49,7 +49,7 @@ typename WeightAccumulator<WeightOps>::Weight WeightAccumulator<WeightOps>::Abov
   Assert(edgeweight.GetWeights().size() == 1);
   auto edgepair = edgeweight.GetWeights().begin();
   ContiguousMap<typename WeightOps::Weight, Count> result;
-  for (auto const& childitem : childnodeweight.GetWeights()) {
+  for (const auto& childitem : childnodeweight.GetWeights()) {
     result.insert({weight_ops_.AboveNode(edgepair->first, childitem.first), 0});
     result.at(weight_ops_.AboveNode(edgepair->first, childitem.first)) +=
         childitem.second;
@@ -93,7 +93,7 @@ template <typename WeightOps>
 WeightCounter<WeightOps> WeightCounter<WeightOps>::operator+(
     const WeightCounter<WeightOps>& rhs) const {
   ContiguousMap<typename WeightOps::Weight, Count> result = weights_.Copy();
-  for (auto const& map_pair : rhs.GetWeights()) {
+  for (const auto& map_pair : rhs.GetWeights()) {
     result.insert({map_pair.first, 0});
     result.at(map_pair.first) += map_pair.second;
   }
@@ -104,8 +104,8 @@ template <typename WeightOps>
 WeightCounter<WeightOps> WeightCounter<WeightOps>::operator*(
     const WeightCounter<WeightOps>& rhs) const {
   ContiguousMap<typename WeightOps::Weight, Count> result;
-  for (auto const& lpair : weights_) {
-    for (auto const& rpair : rhs.GetWeights()) {
+  for (const auto& lpair : weights_) {
+    for (const auto& rpair : rhs.GetWeights()) {
       auto value = weight_ops_.BetweenClades({lpair.first, rpair.first});
       result.insert({value, 0});
       result.at(value) += lpair.second * rpair.second;
@@ -148,7 +148,7 @@ std::ostream& operator<<(std::ostream& os,
     os << "{}";
     return os;
   }
-  auto addpair = [&os](auto const& mappair) {
+  auto addpair = [&os](const auto& mappair) {
     os << mappair.first << ": " << mappair.second;
   };
   os << "{";

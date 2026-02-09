@@ -17,7 +17,7 @@ static void test_ua_free_parsimony_score(MADAG dag) {
   UAFreeParsimonyScore::Weight score_ua =
       weight_ua.ComputeWeightBelow(dag.GetRoot(), {});
   ParsimonyScore::Weight score = weight.ComputeWeightBelow(dag.GetRoot(), {});
-  for (auto child: dag.GetRoot().GetChildren()) {
+  for (auto child : dag.GetRoot().GetChildren()) {
     score -= child.GetEdgeMutations().size();
   }
   TestAssert(score_ua == score);

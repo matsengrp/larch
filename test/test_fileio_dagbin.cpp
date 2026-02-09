@@ -36,7 +36,7 @@
   auto sample_dag_from_protobuf = LoadDAGFromProtobuf(protobuf_path);
   auto sample_dag_from_dagbin = LoadDAGFromDagbin(dagbin_path);
   dag_info(sample_dag_from_protobuf);
-  dag_info(sample_dag_from_dagbin); 
+  dag_info(sample_dag_from_dagbin);
   TestAssert(compare_treedags(sample_dag_from_dagbin.View(),
                               sample_dag_from_protobuf.View()) &&
              "Loading Sample DAG via Protobuf and Dagbin do not have the same result.");
@@ -49,7 +49,6 @@
   TestAssert(compare_treedags(sample_dag_from_dagbin.View(), sample_dag.View()) &&
              "Loaded Dagbin DAG does not match Sample DAG.");
 }
-
 
 [[maybe_unused]] static void test_dagbin_sample_dag() {
   std::string protobuf_path = test_output_folder + "/sample_dag.pb";
@@ -64,7 +63,7 @@
   auto sample_dag_from_protobuf = LoadDAGFromProtobuf(protobuf_path);
   auto sample_dag_from_dagbin = LoadDAGFromDagbin(dagbin_path);
   dag_info(sample_dag_from_protobuf);
-  dag_info(sample_dag_from_dagbin); 
+  dag_info(sample_dag_from_dagbin);
   TestAssert(compare_treedags(sample_dag_from_dagbin.View(),
                               sample_dag_from_protobuf.View()) &&
              "Loading Sample DAG via Protobuf and Dagbin do not have the same result.");

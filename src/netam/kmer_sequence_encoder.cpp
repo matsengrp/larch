@@ -30,6 +30,9 @@ std::pair<torch::Tensor, torch::Tensor> kmer_sequence_encoder::encode_sequence(
   std::string padded_sequence = std::string(overhang_length_, 'N') + upper_seq +
                                 std::string(overhang_length_, 'N');
 
+  // Index for N-containing kmers (last index, 4^k)
+  auto n_index = signed_cast(narrowing_cast<std::uint32_t>(all_kmers_.size() - 1));
+
   // Encode kmers
   std::vector<std::int32_t> kmer_indices;
   for (std::size_t i = 0; i < site_count_; ++i) {
@@ -39,9 +42,9 @@ std::pair<torch::Tensor, torch::Tensor> kmer_sequence_encoder::encode_sequence(
       kmer_indices.push_back(
           it != kmer_to_index_.end()
               ? signed_cast(narrowing_cast<std::uint32_t>(it->second))
-              : 0);
+              : n_index);
     } else {
-      kmer_indices.push_back(0);
+      kmer_indices.push_back(n_index);
     }
   }
 
@@ -55,13 +58,9 @@ std::size_t kmer_sequence_encoder::kmer_count() const noexcept {
   return all_kmers_.size();
 }
 
-std::size_t kmer_sequence_encoder::kmer_length() const noexcept {
-  return kmer_length_;
-}
+std::size_t kmer_sequence_encoder::kmer_length() const noexcept { return kmer_length_; }
 
-std::size_t kmer_sequence_encoder::site_count() const noexcept {
-  return site_count_;
-}
+std::size_t kmer_sequence_encoder::site_count() const noexcept { return site_count_; }
 
 torch::Tensor kmer_sequence_encoder::encode_bases(const std::string& sequence) {
   std::string upper_seq = to_upper(sequence);
@@ -73,24 +72,26 @@ torch::Tensor kmer_sequence_encoder::encode_bases(const std::string& sequence) {
   return torch::tensor(base_indices, torch::kInt64);
 }
 
-std::vector<std::string> kmer_sequence_encoder::generate_kmers(
-    std::size_t length) {
+std::vector<std::string> kmer_sequence_encoder::generate_kmers(std::size_t length) {
   std::vector<std::string> kmers;
-  kmers.push_back("N");  // Placeholder for kmers with N
 
-  // Generate all possible kmers of given length
-  std::function<void(std::string, std::size_t)> generate =
-      [&](std::string current, std::size_t pos) {
-        if (pos == length) {
-          kmers.push_back(current);
-          return;
-        }
-        for (std::size_t i = 0; i < 4; ++i) {
-          generate(current + BASES[i], pos + 1);
-        }
-      };
+  // Generate all possible kmers of given length (4^k kmers)
+  // Uses lexicographic order: AAAAA=0, AAAAC=1, AAAAG=2, AAAAT=3, AAACA=4, ...
+  std::function<void(std::string, std::size_t)> generate = [&](std::string current,
+                                                               std::size_t pos) {
+    if (pos == length) {
+      kmers.push_back(current);
+      return;
+    }
+    for (std::size_t i = 0; i < 4; ++i) {
+      generate(current + BASES[i], pos + 1);
+    }
+  };
 
   generate("", 0);
+
+  // Add placeholder for N-containing kmers at the end (index 4^k)
+  kmers.push_back("N");
   return kmers;
 }
 

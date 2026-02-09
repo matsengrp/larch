@@ -34,8 +34,9 @@ namespace MAT = Mutation_Annotated_Tree;
 using MATNodePtr = MAT::Node*;
 
 /**
- * @brief Provides two-way conversion between MAT (Mutation Annotated Tree) and DAG structures.
- * 
+ * @brief Provides two-way conversion between MAT (Mutation Annotated Tree) and DAG
+ * structures.
+ *
  * MATConversion enables bidirectional conversion between MAT and DAG representations by
  * deep copying all data between the two formats. When converting from MAT to DAG, it
  * automatically uncondenses nodes that represent multiple samples, expanding them into
