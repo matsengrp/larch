@@ -2,6 +2,9 @@ name: Build larch on macOS
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - fix-macos-build
 
 jobs:
   build-larch-macos:
