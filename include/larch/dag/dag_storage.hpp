@@ -12,7 +12,7 @@ struct ExtraStorage {
 
   using FeatureTypes = std::tuple<Features...>;
 
-  template <template <typename, typename> typename T, typename CRTP>
+  template <template <typename, typename, typename...> typename T, typename CRTP>
   struct Base : T<Features, CRTP>... {};
 
   template <typename Feature>
