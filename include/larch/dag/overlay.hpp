@@ -73,7 +73,7 @@ struct OverlayDAGStorage {
         typename TargetView::StorageType::ExtraStorageType::FeatureTypes{},
         std::tuple<OverlayDAG>{}));
 
-    template <template <typename, typename> typename T, typename CRTP>
+    template <template <typename, typename, typename...> typename T, typename CRTP>
     struct Base : TargetView::StorageType::ExtraStorageType::template Base<T, CRTP> {};
 
     template <typename CRTP>
