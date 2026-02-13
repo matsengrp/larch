@@ -17,6 +17,7 @@ dependencies:
   # larch: run time
   - openmpi >=4.1.0,<5.0
   - boost-cpp >=1.82
+  - tbb-devel
   - zlib >=1.2
   # development
   - git
