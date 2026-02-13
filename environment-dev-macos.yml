@@ -12,10 +12,10 @@ dependencies:
   - autoconf
   - libtool
   - openssh
-  - protobuf =3.12.3
+  - protobuf
   # larch: run time
   - openmpi >=4.1.0,<5.0
-  - boost-cpp =1.82
+  - boost-cpp >=1.82
   - zlib >=1.2
   # development
   - git
