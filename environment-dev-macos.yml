@@ -12,6 +12,7 @@ dependencies:
   - autoconf
   - libtool
   - openssh
+  - libprotobuf
   - protobuf
   # larch: run time
   - openmpi >=4.1.0,<5.0
