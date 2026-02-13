@@ -87,8 +87,8 @@ function(lib_install PRODUCT)
   )
 endfunction()
 
-# FreeBSD linker options (not supported on macOS)
-if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+# GNU ld linker option (not supported on macOS)
+if(NOT APPLE)
   add_link_options("-Wl,--undefined-version")
 endif()
 
