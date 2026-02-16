@@ -58,10 +58,10 @@ include(ExternalProject)
 
 # Find Protobuf early, before any dependencies that might bundle their own protobuf
 # On Linux: clear CMAKE_PREFIX_PATH to prevent finding libtorch's vendored protobuf
-# On FreeBSD: use CONFIG mode explicitly to create all protobuf targets (including upb)
+# On FreeBSD/macOS: use CONFIG mode explicitly to create all protobuf targets (including upb)
 #   so that when Torch's Caffe2 calls find_package(Protobuf CONFIG), protobuf-targets.cmake
 #   sees all targets already defined and returns early instead of erroring
-if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR APPLE)
   find_package(Protobuf CONFIG REQUIRED)
   find_package(absl CONFIG REQUIRED)
 else()
