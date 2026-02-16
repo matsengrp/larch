@@ -1,0 +1,45 @@
+name: Build larch on macOS (netam)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix-macos-build
+
+jobs:
+  build-larch-macos-netam:
+    runs-on: macos-14
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniconda-version: latest
+          activate-environment: larch-dev
+          environment-file: environment-dev-macos-netam.yml
+          channels: pytorch,conda-forge,bioconda
+          auto-activate-base: false
+
+      - name: Build (cmake step)
+        shell: bash -el {0}
+        run: |
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_USHER=no -DUSE_SYSTEM_TBB=yes -DUSE_NETAM=yes -DProtobuf_ROOT=$CONDA_PREFIX ..
+
+      - name: Build (make step)
+        shell: bash -el {0}
+        run: |
+          cd build
+          make VERBOSE=1 -j$(sysctl -n hw.ncpu)
+
+      - name: Run tests
+        shell: bash -el {0}
+        run: |
+          cd build
+          ln -s ../data
+          ./bin/larch-test -tag slow
