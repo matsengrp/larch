@@ -269,5 +269,104 @@ class MLScoringBackend {
 #endif
 };
 
+/**
+ * @brief Pure-MADAG scoring backend using Fitch algorithm.
+ *
+ * This backend computes Fitch sets via bottom-up parsimony directly on the
+ * overlay tree created by ApplyMove. No MAT dependency — works entirely
+ * with larch-native NodeIds and DAG traversal.
+ *
+ * The backend runs a full Fitch (unweighted parsimony) pass on both the
+ * pre-move and post-move trees during Initialize, comparing the results
+ * to identify which sites changed their Fitch set at each node.
+ */
+template <typename DAG>
+class ParsimonyOnlyScoringBackend {
+ public:
+  using NucleotideSet = FitchSet;
+
+  ParsimonyOnlyScoringBackend() = default;
+
+  /**
+   * @brief Initialize by running Fitch algorithm on overlay and original trees.
+   *
+   * Computes Fitch sets for all variable sites at all nodes, compares
+   * pre-move and post-move results to identify changes and score delta.
+   */
+  template <typename DAGView>
+  bool Initialize(const DAGView& dag, NodeId src, NodeId dst, NodeId lca);
+
+  // Move access (always returns NodeId)
+  NodeId GetMoveSource() const { return src_; }
+  NodeId GetMoveTarget() const { return dst_; }
+  NodeId GetMoveLCA() const { return lca_; }
+  Score GetScoreChange() const { return Score{score_change_}; }
+
+  // Per-node scoring queries
+  ContiguousSet<MutationPosition> GetSitesWithScoringChanges(NodeId node) const;
+  bool HasScoringChanges(NodeId node) const;
+
+  /**
+   * @brief Get scoring data for a node.
+   *
+   * Returns empty Mutations_Collection and a changes map whose keys are the
+   * sites where the Fitch set changed. Values are default Mutation_Count_Change
+   * (only the keys matter for ComputeNewCompactGenome).
+   */
+  template <typename DAGView>
+  std::pair<MAT::Mutations_Collection,
+            std::optional<ContiguousMap<MutationPosition, Mutation_Count_Change>>>
+  GetFitchSetParts(const DAGView& dag, NodeId node, bool is_leaf, bool is_move_target,
+                   bool is_move_new) const;
+
+  /**
+   * @brief Compute the Fitch set at a specific site for a node.
+   *
+   * Returns the pre-computed Fitch set from the bottom-up pass.
+   */
+  template <typename DAGView>
+  FitchSet GetFitchSetAtSite(const DAGView& dag, NodeId node, MutationPosition site,
+                             bool is_leaf, bool is_move_target, bool is_move_new) const;
+
+  /**
+   * @brief Select the best base from a Fitch set given constraints.
+   * Same logic as MatOptimizeScoringBackend.
+   */
+  static MutationBase SelectBase(const FitchSet& fitch_set, MutationBase old_base,
+                                 MutationBase parent_base);
+
+  // Returns empty map (no MAT data)
+  const ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>&
+  GetChangedFitchSetMap() const;
+
+ private:
+  NodeId src_;
+  NodeId dst_;
+  NodeId lca_;
+  int score_change_ = 0;
+
+  // Ordered variable sites (positions with mutations in the tree)
+  std::vector<MutationPosition> variable_sites_;
+
+  // Map from position value to index in variable_sites_
+  std::unordered_map<size_t, size_t> site_to_index_;
+
+  // Post-move Fitch sets: [node_id.value][site_index] = nuc_one_hot bitmask
+  std::unordered_map<size_t, std::vector<uint8_t>> new_fitch_sets_;
+
+  // Sites with changed Fitch sets per node
+  ContiguousMap<NodeId, ContiguousSet<MutationPosition>> changed_sites_map_;
+
+  // Recursive Fitch bottom-up pass
+  template <typename TreeView>
+  void FitchVisit(const TreeView& tree, NodeId node_id,
+                  std::unordered_map<size_t, std::vector<uint8_t>>& fitch_sets,
+                  int& score) const;
+
+  // Find the tree root (non-UA node whose parent is UA)
+  template <typename TreeView>
+  NodeId FindTreeRoot(const TreeView& tree) const;
+};
+
 // Implementation included at the end
 #include "larch/impl/spr/scoring_backend_impl.hpp"

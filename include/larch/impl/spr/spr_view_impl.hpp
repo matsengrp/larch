@@ -1,10 +1,11 @@
 template <typename CRTP, typename Tag>
 bool FeatureConstView<HypotheticalNode, CRTP, Tag>::IsMATRoot() const {
   auto& node = static_cast<const CRTP&>(*this);
-  if (node.GetMATNode() != nullptr) {
-    return node.GetMATNode()->parent == nullptr;
+  auto old = node.GetOld();
+  if (old.IsUA()) {
+    return false;
   }
-  return false;
+  return old.GetSingleParent().GetParent().IsUA();
 }
 
 template <typename CRTP, typename Tag>
@@ -122,7 +123,6 @@ template <typename CRTP, typename Tag>
 CompactGenome FeatureConstView<HypotheticalNode, CRTP, Tag>::ComputeNewCompactGenome()
     const {
   auto node = static_cast<const CRTP&>(*this).Const();
-  Assert(node.HaveMATNode());
   ContiguousSet<MutationPosition> changed_base_sites =
       node.GetSitesWithChangedFitchSets();
   const CompactGenome& old_cg = node.GetOld().GetCompactGenome();
@@ -1238,15 +1238,21 @@ HypotheticalTree<DAG, Backend>::Data::Data(const DAGView& dag, NodeId src, NodeI
     : new_node_{new_node},
       has_unifurcation_after_move_{has_unifurcation_after_move},
       move_{} {
-  if constexpr (std::is_same_v<Backend, MLScoringBackend<DAG>>) {
-    backend_.Initialize(dag, src, dst, lca);
-  } else {
-    // For matOptimize backend, we need to convert NodeIds to MAT pointers
+  // Detect MatOptimizeScoringBackend by checking if it has
+  // Initialize(dag, Profitable_Moves, vector<Node_With_Major_Allele_Set_Change>).
+  // All other backends (ML, ParsimonyOnly) use NodeId-based Initialize.
+  if constexpr (requires(Backend b, DAGView d, Profitable_Moves m,
+                         std::vector<Node_With_Major_Allele_Set_Change> c) {
+                  b.Initialize(d, m, c);
+                }) {
+    // matOptimize backend: convert NodeIds to MAT pointers
     move_.src = dag.Get(src).GetMATNode();
     move_.dst = dag.Get(dst).GetMATNode();
     move_.LCA = dag.Get(lca).GetMATNode();
     move_.score_change = 0;
     std::vector<Node_With_Major_Allele_Set_Change> empty_changes;
     backend_.Initialize(dag, move_, empty_changes);
+  } else {
+    backend_.Initialize(dag, src, dst, lca);
   }
 }
