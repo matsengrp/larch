@@ -1,0 +1,28 @@
+name: larch-dev
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # larch: build time (compiler comes from Xcode on macOS)
+  - cmake>=3.19.6
+  - make
+  - openmpi-mpicc >=4.1.0,<5.0
+  - openmpi-mpicxx >=4.1.0,<5.0
+  - automake
+  - autoconf
+  - libtool
+  - openssh
+  - libprotobuf
+  - protobuf
+  # larch: run time
+  - openmpi >=4.1.0,<5.0
+  - boost-cpp >=1.82
+  - tbb-devel
+  - zlib >=1.2
+  # development
+  - git
+  - git-lfs
+  - python
+  - rsync
+  - wget
+  - bzip2
