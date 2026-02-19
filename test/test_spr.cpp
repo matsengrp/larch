@@ -85,7 +85,7 @@ static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
 
     auto chosen_node = weight.GetDAG().GetRoot();
     std::cout << "Sampling tree\n";
-    auto sample = AddMATConversion(weight.SampleTree({}, chosen_node));
+    auto sample = AddMATConversion(weight.MinWeightSampleTree({}, chosen_node));
     MAT::Tree mat;
     sample.View().GetRoot().Validate(true);
     std::cout << "Building MAT\n";
@@ -116,7 +116,8 @@ static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
       }
     }
     std::cout << "Parsimony score after iteration " << (i + 1) << ": " << parsimony
-              << "\n";
+              << " (DAG nodes=" << merge.GetResult().GetNodesCount()
+              << " edges=" << merge.GetResult().GetEdgesCount() << ")\n";
   }
 }
 

@@ -116,6 +116,7 @@ class Mutation {
   static inline GrowableHashMap<std::string, uint8_t> chromosome_map{32};
   static inline std::vector<std::string> chromosomes{};
 
+  bool is_valid() const { return (par_mut_nuc ^ (par_mut_nuc << 4)) & 0xf0; }
   inline bool is_masked() const { return (position < 0); }
   inline std::string get_string() const {
     if (is_masked()) {
