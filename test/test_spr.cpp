@@ -101,6 +101,22 @@ static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
     merge.AddDAGs(std::vector{optimized_dags.back().first.View()},
                   optimized_dags.back().first.View().GetRoot());
     mat.delete_nodes();
+
+    // Report parsimony score of best tree in DAG after this iteration
+    merge.ComputeResultEdgeMutations();
+    SubtreeWeight<ParsimonyScore, MergeDAG> post_weight{merge.GetResult()};
+    auto best = post_weight.MinWeightSampleTree({});
+    best.View().RecomputeCompactGenomes(true);
+    size_t parsimony = 0;
+    for (auto edge : best.View().GetEdges()) {
+      if (not edge.GetParent().IsUA()) {
+        for ([[maybe_unused]] auto& [pos, bases] : edge.GetEdgeMutations()) {
+          parsimony++;
+        }
+      }
+    }
+    std::cout << "Parsimony score after iteration " << (i + 1) << ": " << parsimony
+              << "\n";
   }
 }
 
