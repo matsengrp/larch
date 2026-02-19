@@ -468,13 +468,9 @@ inline size_t optimize_inner_loop(
     // std::optional<uint32_t> user_seed = std::nullopt,
     Move_Found_Callback& callback = Move_Found_Callback::default_instance()) {
   Assert(not nodes_to_search.empty());
-  std::random_device random_device;
-  auto rand = random_device();  // user_seed.value_or(random_device());
-  std::mt19937 gen(rand);
-  std::uniform_int_distribution<size_t> dist(0, nodes_to_search.size() - 1);
-  std::mutex random_mtx;
-  auto random_node = [&] {
-    std::unique_lock lock{random_mtx};
+  auto random_node = [&nodes_to_search] {
+    thread_local std::mt19937 gen{std::random_device{}()};
+    std::uniform_int_distribution<size_t> dist(0, nodes_to_search.size() - 1);
     return dist(gen);
   };
 

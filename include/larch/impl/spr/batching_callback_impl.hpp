@@ -38,74 +38,66 @@ bool BatchingCallback<CRTP>::operator()(Profitable_Moves& move, int best_score_c
     }
   });
 
-  return moves_batch_.AddElement(
-      [this, &move, best_score_change,
-       &nodes_with_major_allele_set_change](auto& bucket) -> bool {
-        std::shared_lock lock{mat_mtx_};
+  {
+    std::shared_lock lock{mat_mtx_};
 
-        Assert(sample_mat_storage_ != nullptr);
-        bucket.push_back(MoveStorage{
-            std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View())),
-            nullptr});
+    Assert(sample_mat_storage_ != nullptr);
+    auto spr =
+        std::make_unique<SPRType>(AddSPRStorage(sample_mat_storage_->View()));
 
-        auto& storage = bucket.back();
-    // MADAGToDOT(storage.spr->View(), std::cout);
-    // storage.spr->View().GetRoot().Validate(true);
 #ifdef KEEP_ASSERTS
-        for (auto i : storage.spr->View().Const().GetLeafs()) {
-          Assert(i.HaveSampleId());
-        }
-        auto old_src_parent = storage.spr->View().GetNodeFromMAT(move.src->parent);
+    for (auto i : spr->View().Const().GetLeafs()) {
+      Assert(i.HaveSampleId());
+    }
+    auto old_src_parent = spr->View().GetNodeFromMAT(move.src->parent);
 #endif
-        if (storage.spr->View().InitHypotheticalTree(
-                move, nodes_with_major_allele_set_change)) {
-          // storage.spr->View().GetRoot().Validate(true);
-          storage.fragment = std::make_unique<FragmentType>(
-              collapse_empty_fragment_edges_
-                  ? storage.spr->View().MakeFragment()
-                  : storage.spr->View().MakeUncollapsedFragment());
-#ifdef KEEP_ASSERTS
-          auto new_old_src_parent = storage.spr->View().GetOldSourceParent();
-          Assert(old_src_parent.GetId() == new_old_src_parent.GetId());
-#endif
-          auto fragment = storage.fragment->View();
-          // GetFullDAG(fragment).GetRoot().Validate(true, false);
-          auto& impl = static_cast<CRTP&>(*this);
-          std::pair<bool, bool> accepted =
-              impl.OnMove(storage.spr->View(), fragment, move, best_score_change,
-                          nodes_with_major_allele_set_change);
 
-          if (accepted.first) {
+    if (!spr->View().InitHypotheticalTree(move, nodes_with_major_allele_set_change)) {
+      return false;
+    }
+
+    auto fragment = std::make_unique<FragmentType>(
+        collapse_empty_fragment_edges_ ? spr->View().MakeFragment()
+                                       : spr->View().MakeUncollapsedFragment());
+
 #ifdef KEEP_ASSERTS
-            for (auto node : fragment.GetNodes()) {
-              if (not(node.IsUA() or node.IsMoveNew())) {
-                Assert(node.GetId().value != NoId);
-                if (node.GetOld().IsLeaf()) {
-                  Assert(node.GetOld().HaveSampleId());
-                  Assert(not node.GetOld().GetSampleId().value().empty());
-                }
-              }
-            }
-            for (auto edge : fragment.GetEdges()) {
-              Assert(edge.GetId().value != NoId);
-              Assert(edge.GetChild().GetId().value != NoId);
-              if (not edge.GetParent().IsUA()) {
-                Assert(edge.GetParent().GetId().value != NoId);
-              }
-            }
+    auto new_old_src_parent = spr->View().GetOldSourceParent();
+    Assert(old_src_parent.GetId() == new_old_src_parent.GetId());
 #endif
-            applied_moves_count_.fetch_add(1);
-          } else {
-            bucket.pop_back();
+
+    auto frag_view = fragment->View();
+    auto& impl = static_cast<CRTP&>(*this);
+    std::pair<bool, bool> accepted = impl.OnMove(
+        spr->View(), frag_view, move, best_score_change,
+        nodes_with_major_allele_set_change);
+
+    if (accepted.first) {
+#ifdef KEEP_ASSERTS
+      for (auto node : frag_view.GetNodes()) {
+        if (not(node.IsUA() or node.IsMoveNew())) {
+          Assert(node.GetId().value != NoId);
+          if (node.GetOld().IsLeaf()) {
+            Assert(node.GetOld().HaveSampleId());
+            Assert(not node.GetOld().GetSampleId().value().empty());
           }
-
-          return accepted.second;
-
-        } else {
-          bucket.pop_back();
-          return false;
         }
+      }
+      for (auto edge : frag_view.GetEdges()) {
+        Assert(edge.GetId().value != NoId);
+        Assert(edge.GetChild().GetId().value != NoId);
+        if (not edge.GetParent().IsUA()) {
+          Assert(edge.GetParent().GetId().value != NoId);
+        }
+      }
+#endif
+      moves_batch_.AddElement([&](auto& bucket) {
+        bucket.push_back(MoveStorage{std::move(spr), std::move(fragment)});
       });
+      applied_moves_count_.fetch_add(1);
+    }
+
+    return accepted.second;
+  }
 }
 
 template <typename CRTP>
