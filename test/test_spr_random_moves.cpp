@@ -5,6 +5,8 @@
 #include "larch/spr/random_optimize.hpp"
 #include "larch/benchmark.hpp"
 
+#include <sys/resource.h>
+
 static MADAGStorage<> Load(std::string_view input_dag_path,
                            std::string_view refseq_path) {
   std::string reference_sequence = LoadReferenceSequence(refseq_path);
@@ -104,9 +106,12 @@ static void test_spr_random(const MADAGStorage<>& input_dag_storage, size_t coun
               << "  Serial (outside optimize): " << serial_outside_optimize << " ms\n"
               << "  Total: " << total_ms << " ms\n";
 
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
     std::cout << "Parsimony score after iteration " << (i + 1) << ": " << parsimony
               << " (DAG nodes=" << merge.GetResult().GetNodesCount()
-              << " edges=" << merge.GetResult().GetEdgesCount() << ")\n";
+              << " edges=" << merge.GetResult().GetEdgesCount() << ")"
+              << " peak_mem=" << (usage.ru_maxrss / 1024) << "MB\n" << std::flush;
   }
 }
 
