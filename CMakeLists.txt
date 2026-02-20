@@ -568,6 +568,7 @@ larch_executable(larch-test
   test/test_s5f_likelihood.cpp
   test/test_sankoff.cpp
   test/test_random_optimize.cpp
+  test/test_spr_random_moves.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 

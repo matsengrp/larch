@@ -31,9 +31,14 @@ class RandomMoveGenerator {
   /**
    * @brief Generate a random valid SPR move.
    *
+   * @param max_distance If >0, only accept moves where the path distance
+   *        (path0.size() + path1.size() from LCA) does not exceed this value.
+   *        If 0, no distance constraint is applied.
+   * @param max_attempts Maximum random attempts before giving up.
    * Returns nullopt if no valid move could be found after max_attempts tries.
    */
-  std::optional<Move> GenerateMove(size_t max_attempts = 1000);
+  std::optional<Move> GenerateMove(size_t max_distance = 0,
+                                   size_t max_attempts = 1000);
 
  private:
   DAG dag_;
@@ -86,7 +91,7 @@ bool RandomMoveGenerator<DAG>::IsDescendant(NodeId ancestor,
 
 template <typename DAG>
 std::optional<typename RandomMoveGenerator<DAG>::Move>
-RandomMoveGenerator<DAG>::GenerateMove(size_t max_attempts) {
+RandomMoveGenerator<DAG>::GenerateMove(size_t max_distance, size_t max_attempts) {
   if (searchable_nodes_.size() < 3) {
     return std::nullopt;
   }
@@ -126,6 +131,14 @@ RandomMoveGenerator<DAG>::GenerateMove(size_t max_attempts) {
     // Find LCA
     auto lca_result = FindLCA(dag_.Get(src), dag_.Get(dst));
     NodeId lca = lca_result.lca;
+
+    // Check distance constraint
+    if (max_distance > 0) {
+      size_t distance = lca_result.path0.size() + lca_result.path1.size();
+      if (distance > max_distance) {
+        continue;
+      }
+    }
 
     // LCA's parent must not be UA (the move must not involve the root edge)
     auto lca_node = dag_.Get(lca);
