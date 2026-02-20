@@ -18,7 +18,7 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     return;
   }
 
-  const bool was_empty = ResultDAG().empty();
+  [[maybe_unused]] const bool was_empty = ResultDAG().empty();
 
   std::vector<size_t> idxs;
   idxs.resize(dags.size());
@@ -90,19 +90,10 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   SeqForEach(  // FIXME ParallelForEach
       idxs, [&](size_t i) { BuildResult(i, added_edges, edge_id); });  // FIXME parallel
 
-  if (was_empty) {
-    ResultDAG().BuildConnections();
-  } else {
-    for (auto& [label, id, parent_id, child_id, clade] : added_edges) {
-      ResultDAG().Get(parent_id).AddEdge(clade, id, true);
-      ResultDAG().Get(child_id).AddEdge(clade, id, false);
-    }
-    for ([[maybe_unused]] auto& [label, id, parent_id, child_id, clade] : added_edges) {
-      if (ResultDAG().Get(child_id).IsLeaf()) {
-        ResultDAG().AddLeaf(child_id);
-      }
-    }
-  }
+  // Always rebuild connections from scratch to ensure correct clade structure.
+  // The incremental AddEdge path had a bug where clade ordering could be
+  // inconsistent, causing SubtreeWeight DP to produce suboptimal trees.
+  ResultDAG().BuildConnections();
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   Assert(result_node_labels_.size() == ResultDAG().GetNodesCount());
   Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
@@ -158,9 +149,8 @@ void Merge::ComputeResultEdgeMutations() {
           Assert(label.GetParent().GetCompactGenome());
           const CompactGenome& parent = *label.GetParent().GetCompactGenome();
 
-          // Check NodeLabel's SampleId, not DAG structure, because a node might be
-          // structurally a leaf in the result DAG but was an internal node in the
-          // source
+          // Leaf NodeLabels don't carry CompactGenome pointers (only SampleId),
+          // so leaf child CGs must be looked up from sample_id_to_cg_map_.
           if (not label.GetChild().GetSampleId().empty()) {
             const CompactGenome& child =
                 sample_id_to_cg_map.at(label.GetChild().GetSampleId().ToString());
@@ -333,7 +323,7 @@ void Merge::ComputeResultEdgeMutations(Edge edge, const EdgeLabel& label) {
   Assert(label.GetParent().GetCompactGenome());
   const CompactGenome& parent = *label.GetParent().GetCompactGenome();
 
-  if (edge.GetChild().GetCladesCount() < 1) {
+  if (not label.GetChild().GetSampleId().empty()) {
     std::string sid = label.GetChild().GetSampleId().ToString();
     const CompactGenome* child = sample_id_to_cg_map_.find(sid);
     if (child == nullptr) {

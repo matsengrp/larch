@@ -42,7 +42,11 @@ class ContiguousSet {
   const_iterator end() const { return data_.end(); }
 
   const_iterator find(const T& value) const {
-    return std::lower_bound(data_.begin(), data_.end(), value);
+    auto result = LowerBound(value);
+    if (result != data_.end() and not(*result == value)) {
+      return data_.end();
+    }
+    return result;
   }
 
   bool Contains(const T& value) const { return find(value) != end(); }
@@ -62,7 +66,11 @@ class ContiguousSet {
   iterator end() { return data_.end(); }
 
   iterator find(const T& value) {
-    return std::lower_bound(data_.begin(), data_.end(), value, Compare{});
+    auto result = LowerBound(value);
+    if (result != data_.end() and not(*result == value)) {
+      return data_.end();
+    }
+    return result;
   }
 
   void clear() { data_.clear(); }
@@ -72,7 +80,7 @@ class ContiguousSet {
   void erase(iterator it) { data_.erase(it); }
 
   std::pair<iterator, bool> insert(const T& value) {
-    auto it = find(value);
+    auto it = LowerBound(value);
     if (it != data_.end() and *it == value) {
       return {it, false};
     }
@@ -80,7 +88,7 @@ class ContiguousSet {
   }
 
   std::pair<iterator, bool> insert(T&& value) {
-    auto it = find(value);
+    auto it = LowerBound(value);
     if (it != data_.end() and *it == value) {
       return {it, false};
     }
@@ -103,6 +111,15 @@ class ContiguousSet {
 
  private:
   ContiguousSet(const ContiguousSet&) = default;
+
+  const_iterator LowerBound(const T& value) const {
+    return std::lower_bound(data_.begin(), data_.end(), value, Compare{});
+  }
+
+  iterator LowerBound(const T& value) {
+    return std::lower_bound(data_.begin(), data_.end(), value, Compare{});
+  }
+
   storage_type data_;
 };
 
