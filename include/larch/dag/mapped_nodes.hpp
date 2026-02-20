@@ -20,6 +20,7 @@ template <>
 struct ExtraFeatureStorage<MappedNodes> {
   MOVE_ONLY_DEF_CTOR(ExtraFeatureStorage);
   IdContainer<NodeId, NodeId, IdContinuity::Sparse, Ordering::Ordered> reverse_map_;
+  std::unique_ptr<std::mutex> reverse_map_mtx_{std::make_unique<std::mutex>()};
 };
 
 template <typename CRTP>

@@ -76,10 +76,12 @@ static void test_spr_random(const MADAGStorage<>& input_dag_storage, size_t coun
 
     // Summarize radius results
     long apply_total_ms = 0;
+    long fragment_total_ms = 0;
     long merge_total_ms = 0;
     size_t total_accepted = 0;
     for (auto& r : radius_results) {
       apply_total_ms += r.apply_ms;
+      fragment_total_ms += r.fragment_ms;
       merge_total_ms += r.merge_ms;
       total_accepted += r.accepted_moves;
     }
@@ -95,7 +97,8 @@ static void test_spr_random(const MADAGStorage<>& input_dag_storage, size_t coun
               << "  [MIXED]    Optimize (" << total_accepted << " moves, "
               << radius_results.size() << " radii): " << optimize_ms << "\n"
               << "    [PARALLEL] Apply total:         " << apply_total_ms << " ms\n"
-              << "    [SERIAL]   Merge total:         " << merge_total_ms << " ms\n"
+              << "    [PARALLEL] Fragment total:      " << fragment_total_ms << " ms\n"
+              << "    [BATCH]    Merge total:         " << merge_total_ms << " ms\n"
               << "  [SERIAL]   MergeSampledTree:     " << merge_tree_ms << "\n"
               << "  [SERIAL]   ScoreReport:          " << score_report_ms << "\n"
               << "  Serial (outside optimize): " << serial_outside_optimize << " ms\n"

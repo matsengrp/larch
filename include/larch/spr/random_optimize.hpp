@@ -135,23 +135,19 @@ size_t ComputeTreeMaxDepth(DAG dag) {
  */
 struct RadiusResult {
   size_t accepted_moves;
-  long apply_ms;   // Parallel: move generation + SPR overlay + InitHypotheticalTree
-  long merge_ms;   // Serial: MakeFragment + merge.AddDAG
+  long apply_ms;     // Phase 1 (PARALLEL): move generation + SPR overlay
+  long fragment_ms;  // Phase 2 (PARALLEL): MakeFragment + SetOverlay<MappedNodes>
+  long merge_ms;     // Phase 3 (BATCH):    AddDAGs (internally parallel)
 };
 
 /**
  * @brief Parallel MADAG-only optimization using random SPR moves with radius iteration.
  *
  * Similar to the matOptimize-based optimize_dag_direct, but operates entirely on
- * MADAG structures. Parallelizes move generation (the read-only phase), then applies
- * moves and merges fragments serially.
- *
- * Each iteration:
- * 1. Sample a tree from the DAG
- * 2. For each radius (2, 4, 8, ... up to 2*tree_depth):
- *    a. Generate random moves in parallel (read-only access to sampled tree)
- *    b. Apply moves and merge fragments serially
- * 3. Merge the sampled tree into the DAG
+ * MADAG structures. Three-phase pipeline per radius:
+ *   Phase 1 (PARALLEL): Generate moves + apply SPR overlays
+ *   Phase 2 (PARALLEL): Create fragments + overlay MappedNodes
+ *   Phase 3 (BATCH):    Merge all fragments via AddDAGs (internally parallel)
  *
  * @param merge The Merge object to grow
  * @param sampled_storage The sampled tree storage (will be used for move generation)
@@ -211,35 +207,53 @@ std::vector<RadiusResult> OptimizeDAGParallelRadius(
 
     auto apply_ms = radius_bench.lapMs();
 
-    // Phase 2 (SERIAL): Create fragments and merge
-    // MakeFragment references SPR storage, and merge.AddDAG is not thread-safe.
-    size_t accepted = 0;
-    size_t generated = 0;
-    for (size_t idx = 0; idx < moves_per_radius; idx++) {
-      if (not spr_slots[idx].has_value()) {
-        continue;
-      }
-      generated++;
-      auto& spr = *spr_slots[idx];
+    // Phase 2 (PARALLEL): Create fragments and overlay MappedNodes.
+    // Each fragment only reads its own SPR overlay and creates independent storage.
+    // SetOverlay<MappedNodes> only writes to per-overlay replaced_node_storage_.
+    using FragStorageType =
+        decltype(std::declval<SPRStorageType&>().View().MakeFragment());
+    std::vector<std::optional<FragStorageType>> frag_slots(moves_per_radius);
 
-      auto fragment = spr.View().MakeFragment();
-      for (auto node : fragment.View().GetNodes()) {
+    ParallelForEach(work_items, [&](size_t idx) {
+      if (not spr_slots[idx].has_value()) {
+        return;
+      }
+      auto& spr = *spr_slots[idx];
+      frag_slots[idx].emplace(spr.View().MakeFragment());
+      for (auto node : frag_slots[idx]->View().GetNodes()) {
         auto spr_node = spr.View().Get(node.GetId());
         if (not spr_node.IsAppended()) {
           spr_node.template SetOverlay<MappedNodes>();
         }
       }
-      merge.AddDAG(fragment.View());
-      accepted++;
+    });
+
+    auto fragment_ms = radius_bench.lapMs();
+
+    // Phase 3 (BATCH): Merge all fragments at once via AddDAGs.
+    // AddDAGs internally parallelizes MergeCompactGenomes, MergeNodes, MergeEdges.
+    // The reverse_map_ race in SetOriginalId is guarded by reverse_map_mtx_.
+    using FragViewType = decltype(std::declval<FragStorageType&>().View());
+    std::vector<FragViewType> frag_views;
+    for (size_t idx = 0; idx < moves_per_radius; idx++) {
+      if (frag_slots[idx].has_value()) {
+        frag_views.push_back(frag_slots[idx]->View());
+      }
     }
+    if (not frag_views.empty()) {
+      merge.AddDAGs(frag_views);
+    }
+    size_t accepted = frag_views.size();
 
     auto merge_ms = radius_bench.lapMs();
 
-    std::cout << "  Accepted " << accepted << "/" << generated << " generated ("
-              << moves_per_radius << " attempted), apply=" << apply_ms
+    std::cout << "  Accepted " << accepted << "/" << frag_views.size()
+              << " generated (" << moves_per_radius
+              << " attempted), apply=" << apply_ms
+              << "ms frag=" << fragment_ms
               << "ms merge=" << merge_ms << "ms\n" << std::flush;
 
-    results.push_back(RadiusResult{accepted, apply_ms, merge_ms});
+    results.push_back(RadiusResult{accepted, apply_ms, fragment_ms, merge_ms});
   }
 
   return results;

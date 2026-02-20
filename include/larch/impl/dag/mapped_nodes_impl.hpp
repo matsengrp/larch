@@ -11,10 +11,11 @@ template <typename CRTP, typename Tag>
 void FeatureMutableView<MappedNodes, CRTP, Tag>::SetOriginalId(NodeId id) const {
   GetFeatureStorage(this).get().original_id_ = id;
   auto& node = static_cast<const CRTP&>(*this);
-  node.GetDAG()
-      .template GetFeatureExtraStorage<Component::Node, MappedNodes>()
-      .get()
-      .reverse_map_.insert({id, node.GetId()});
+  auto& extra = node.GetDAG()
+                    .template GetFeatureExtraStorage<Component::Node, MappedNodes>()
+                    .get();
+  std::lock_guard lock{*extra.reverse_map_mtx_};
+  extra.reverse_map_.insert({id, node.GetId()});
 }
 
 template <typename CRTP>
