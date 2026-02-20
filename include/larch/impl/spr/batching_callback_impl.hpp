@@ -30,10 +30,13 @@ bool BatchingCallback<CRTP>::operator()(Profitable_Moves& move, int best_score_c
         return result;
       });
       if (not all.empty()) {
+        Benchmark merge_bench;
         std::unique_lock lock{merge_mtx_};
         merge_.AddDAGs(
             all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
         // merge_.GetResult().GetRoot().Validate(true, true);
+        batch_merge_us_.fetch_add(merge_bench.lapUs());
+        batch_merge_count_.fetch_add(1);
       }
     }
   });
@@ -100,6 +103,12 @@ template <typename CRTP>
 void BatchingCallback<CRTP>::operator()(MAT::Tree& tree) {
   std::cout << "Larch-Usher callback Applying " << applied_moves_count_.load() << "\n"
             << std::flush;
+  auto merge_us = batch_merge_us_.exchange(0);
+  auto merge_count = batch_merge_count_.exchange(0);
+  if (merge_count > 0) {
+    std::cout << "    [SERIAL]   Batch merge contention (thread-time): "
+              << (merge_us / 1000) << " ms in " << merge_count << " merges\n";
+  }
   applied_moves_count_.store(0);
 
   reassigned_states_storage_ = std::make_unique<ReassignedStatesStorage>(

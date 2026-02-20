@@ -79,28 +79,38 @@ static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
       optimized_dags;
 
   for (size_t i = 0; i < count; ++i) {
+    Benchmark phase_bench;
+
     std::cout << "Computing edge mutations\n";
     merge.ComputeResultEdgeMutations();
     SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
+    auto compute_edge_ms = phase_bench.lapMs();
 
     auto chosen_node = weight.GetDAG().GetRoot();
     std::cout << "Sampling tree\n";
     auto sample = AddMATConversion(weight.MinWeightSampleTree({}, chosen_node));
+    auto sampling_ms = phase_bench.lapMs();
+
     MAT::Tree mat;
     sample.View().GetRoot().Validate(true);
     std::cout << "Building MAT\n";
     sample.View().BuildMAT(mat);
     sample.View().GetRoot().Validate(true);
     check_edge_mutations(sample.View().Const());
+    auto build_mat_ms = phase_bench.lapMs();
+
     Test_Move_Found_Callback callback{merge};
     std::cout << "Optimizing\n";
     // Empty_Callback callback;
     optimized_dags.push_back(
         optimize_dag_direct(sample.View(), callback, callback, callback));
+    auto optimize_ms = phase_bench.lapMs();
+
     optimized_dags.back().first.View().RecomputeCompactGenomes();
     merge.AddDAGs(std::vector{optimized_dags.back().first.View()},
                   optimized_dags.back().first.View().GetRoot());
     mat.delete_nodes();
+    auto post_merge_ms = phase_bench.lapMs();
 
     // Report parsimony score of best tree in DAG after this iteration
     merge.ComputeResultEdgeMutations();
@@ -115,6 +125,23 @@ static void test_spr(const MADAGStorage<>& input_dag_storage, size_t count) {
         }
       }
     }
+    auto score_report_ms = phase_bench.lapMs();
+
+    auto serial_outside_optimize =
+        compute_edge_ms + sampling_ms + build_mat_ms + post_merge_ms + score_report_ms;
+    auto total_ms = compute_edge_ms + sampling_ms + build_mat_ms + optimize_ms +
+                    post_merge_ms + score_report_ms;
+
+    std::cout << "=== Iteration " << (i + 1) << " timing (ms) ===\n"
+              << "  [SERIAL]   ComputeEdgeMutations: " << compute_edge_ms << "\n"
+              << "  [SERIAL]   Sampling:             " << sampling_ms << "\n"
+              << "  [SERIAL]   BuildMAT+validation:  " << build_mat_ms << "\n"
+              << "  [MIXED]    optimize_dag_direct:  " << optimize_ms << "\n"
+              << "  [SERIAL]   PostMerge:            " << post_merge_ms << "\n"
+              << "  [SERIAL]   ScoreReport:          " << score_report_ms << "\n"
+              << "  Serial (outside optimize): " << serial_outside_optimize << " ms\n"
+              << "  Total: " << total_ms << " ms\n";
+
     std::cout << "Parsimony score after iteration " << (i + 1) << ": " << parsimony
               << " (DAG nodes=" << merge.GetResult().GetNodesCount()
               << " edges=" << merge.GetResult().GetEdgesCount() << ")\n";

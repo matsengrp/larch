@@ -65,7 +65,7 @@ inline void OptimizeDAGWithRandomMoves(
     using SampledStorage = std::remove_reference_t<decltype(sampled_storage)>;
     using Backend = ParsimonyOnlyScoringBackend<SampledStorage>;
 
-    size_t accepted_moves = 0;
+    [[maybe_unused]] size_t accepted_moves = 0;
 
     for (size_t m = 0; m < moves_per_iteration; m++) {
       auto move = move_gen.GenerateMove();

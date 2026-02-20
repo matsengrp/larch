@@ -11,6 +11,7 @@
 #include "larch/dag_loader.hpp"
 #include "larch/subtree/subtree_weight.hpp"
 #include "larch/subtree/parsimony_score.hpp"
+#include "larch/benchmark.hpp"
 
 #include "larch/usher_glue.hpp"
 
@@ -52,6 +53,12 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   check_MAT_MADAG_Eq(tree, dag);
 #endif
 
+  Benchmark opt_bench;
+  long setup_ms = 0;
+  long inner_loop_total_ms = 0;
+  long radius_callback_total_ms = 0;
+  long teardown_ms = 0;
+
   Original_State_t origin_states;
   check_samples(tree.root, origin_states, &tree);
   reassign_states(tree, origin_states);
@@ -67,6 +74,8 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   }
   std::ignore = user_seed_64;
 
+  setup_ms = opt_bench.lapMs();
+
   std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
   // NOLINTNEXTLINE
   std::chrono::steady_clock::time_point end_time = start_time + std::chrono::hours(8);
@@ -76,6 +85,7 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   for (; static_cast<size_t>(1) << rad_exp <= ddepth; rad_exp++) {
     auto all_nodes = tree.depth_first_expansion();
     std::cout << "current radius is " << std::to_string(1 << rad_exp) << "\n";
+    opt_bench.start();
     optimize_inner_loop(all_nodes,              // nodes to search
                         tree,                   // tree
                         1 << rad_exp,           // radius
@@ -92,12 +102,15 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                         "intermediate_newick",  // intermediate newick name
                         callback                // callback
     );
+    inner_loop_total_ms += opt_bench.lapMs();
     tree.uncondense_leaves();
     tree.condense_leaves(condense_arg);
     tree.fix_node_idx();
     radius_callback(tree);
+    radius_callback_total_ms += opt_bench.lapMs();
   }
 
+  opt_bench.start();
   tree.uncondense_leaves();
   tree.fix_node_idx();
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
@@ -107,5 +120,13 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
 
   // TODO tree.delete_nodes();
   result.first.View().RecomputeCompactGenomes();
+  teardown_ms = opt_bench.lapMs();
+
+  std::cout << "    [SERIAL]   Setup:              " << setup_ms << " ms\n"
+            << "    [PARALLEL] Inner loop total:    " << inner_loop_total_ms << " ms\n"
+            << "    [SERIAL]   Radius callbacks:    " << radius_callback_total_ms
+            << " ms\n"
+            << "    [SERIAL]   Teardown:            " << teardown_ms << " ms\n";
+
   return result;
 }
