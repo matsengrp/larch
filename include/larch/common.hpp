@@ -17,6 +17,7 @@
 #include <thread>
 #include <atomic>
 #include <iostream>
+#include <sstream>
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -302,8 +303,7 @@ inline constexpr const auto HashCombine = [](size_t lhs, size_t rhs) noexcept {
 #endif
 #else
 #define Assert(x) \
-  {               \
-  }
+  {}
 #endif
 
 [[noreturn]] inline void Fail(const char* msg) {

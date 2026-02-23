@@ -1,4 +1,4 @@
-name: Build larch on linux
+name: Build larch on macOS (netam)
 
 on:
   workflow_dispatch:
@@ -7,8 +7,8 @@ on:
       - fix-macos-build
 
 jobs:
-  build-larch:
-    runs-on: ubuntu-latest
+  build-larch-macos-netam:
+    runs-on: macos-14
 
     steps:
       - name: Check out code
@@ -21,21 +21,21 @@ jobs:
         with:
           miniconda-version: latest
           activate-environment: larch-dev
-          environment-file: environment-ci-linux.yml
-          channels: conda-forge,bioconda
+          environment-file: environment-dev-macos-netam.yml
+          channels: pytorch,conda-forge,bioconda
           auto-activate-base: false
 
       - name: Build (cmake step)
         shell: bash -el {0}
         run: |
           mkdir build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_USHER=yes ..
+          cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_USHER=yes -DUSE_SYSTEM_TBB=yes -DUSE_NETAM=yes -DProtobuf_ROOT=$CONDA_PREFIX -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
 
       - name: Build (make step)
         shell: bash -el {0}
         run: |
           cd build
-          make VERBOSE=1 -j$(nproc)
+          make VERBOSE=1 -j$(sysctl -n hw.ncpu)
 
       - name: Run tests
         shell: bash -el {0}

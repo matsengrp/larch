@@ -161,9 +161,9 @@ static void test_rf_counter() {
   merge.AddDAGs(std::vector{dag1, dag2});
   ArbitraryInt shift_sum, result;
 
-  SubtreeWeight<WeightAccumulator<RFDistance>, MergeDAG> count{merge1.GetResult()};
-  RFDistance weight_ops{merge2, merge1};
-  Weight scores =
+  SubtreeWeight<WeightAccumulator<SumRFDistance>, MergeDAG> count{merge1.GetResult()};
+  SumRFDistance weight_ops{merge2, merge1};
+  auto scores =
       count.ComputeWeightBelow(merge1.GetResult().GetRoot(), std::move(weight_ops));
   shift_sum = weight_ops.GetOps().GetShiftSum();
 
