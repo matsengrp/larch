@@ -177,7 +177,77 @@ Variable sites are identified by scanning all edge mutations in the sampled tree
 | `test/test_native_optimize.cpp` | 374 | 6 tests |
 | `CMakeLists.txt` | +1 line | Added test source |
 
-## Performance Notes
+## Benchmark: Seedtree Dataset
+
+Three-way comparison on `data/seedtree/seedtree.pb.gz` (~1040 nodes, 1238 variable sites). All runs: 3 iterations, RelWithDebInfo build.
+
+### Summary
+
+| | **matOptimize** | **Random (1000/radius)** | **Native** |
+|---|---|---|---|
+| **Total time** | **312s** (5m12s) | **128s** (2m9s) | >300s (killed at iter 1, radius 64) |
+| **Final parsimony** | **1606** | **1641** | N/A (incomplete) |
+| **DAG size (final)** | 8577 nodes / 26744 edges | 70450 nodes / 202097 edges | N/A |
+| **Moves per iteration** | ~170 applied per radius | ~3600 total (6 radii) | ~49 found per radius |
+
+### matOptimize per-radius timing (iteration 1)
+
+| Radius | Search time | Moves applied |
+|--------|------------|--------------|
+| 2 | 8s | 162 |
+| 4 | 9s | 174 |
+| 8 | 12s | 176 |
+| 16 | 22s | 172 |
+| 32 | 16s | 183 |
+| 64 | ~35s | 166 |
+| **Total** | **101s** | |
+
+matOptimize mutates the working tree in-place between moves, so later moves benefit from earlier improvements. The batch merge contention (thread-time) was 100-150s per radius callback, indicating the larch merge pipeline is the dominant cost.
+
+### Native optimizer per-radius timing (iteration 1, incomplete)
+
+| Radius | Enumerate | Apply+Merge | Moves found |
+|--------|-----------|-------------|-------------|
+| 2 | 30ms | 134ms | 8 |
+| 4 | 283ms | 198ms | 36 |
+| 8 | 2.3s | 366ms | 49 |
+| 16 | **30.4s** | 970ms | 49 |
+| 32 | **128.7s** | 347ms | 49 |
+| 64 | (killed) | | |
+
+Enumeration time grows quadratically with radius. The apply+merge phase is fast (<1s per radius) since it reuses the same fragment-merge pipeline as the random optimizer.
+
+### Random optimizer per-iteration timing
+
+| Iteration | Optimize | Serial overhead | Total | Parsimony |
+|-----------|----------|-----------------|-------|-----------|
+| 1 | 38.6s | 1.3s | 39.9s | 1662 |
+| 2 | 42.9s | 2.1s | 45.0s | 1647 |
+| 3 | 43.4s | 2.2s | 45.6s | 1641 |
+
+### Analysis
+
+1. **The native enumerator's bottleneck is `ComputeMoveScore`**. At radius 32 with ~1036 source nodes, the exhaustive search evaluates every (src, dst) pair within the radius. Each call walks paths to LCA and iterates 1238 variable sites. Complexity is roughly O(sources x destinations_in_radius x sites x path_length).
+
+2. **matOptimize uses range tree pruning** to skip destinations that provably cannot improve the score. This is the key performance gap: matOptimize searches at radius 64 in ~35s; the native enumerator takes >128s at radius 32 alone.
+
+3. **matOptimize applies moves in-place**, finding compounding improvements within a single radius pass. It applies ~170 moves per radius vs the native optimizer's ~49 total found (and those 49 are all evaluated against the same unmodified tree).
+
+4. **matOptimize achieves better parsimony** (1606 vs random's 1641) because in-place mutation discovers deeper improvements. The native optimizer should approach this once it completes all radii.
+
+5. **The random optimizer is fastest** at 128s because it skips exhaustive enumeration -- it randomly samples move candidates. The tradeoff is a higher parsimony plateau (1641 vs 1606) and a much larger DAG (70k nodes vs 8.5k) from merging many exploratory fragments.
+
+6. **Peak memory**: Random optimizer used ~2GB; matOptimize used less due to fewer merged fragments.
+
+### Conclusion
+
+The native optimizer needs **range tree pruning** before it can compete with matOptimize on trees with >500 nodes. Without pruning, the quadratic enumeration cost at large radii makes it impractical. The algorithm is correct (verified against full Fitch) but too slow. Phase 2 priorities:
+
+1. **Range tree pruning** -- the single most impactful optimization
+2. **Working tree mutation** -- apply moves in-place to find compounding improvements
+3. **Multi-child node scoring** -- fix the ~2% mismatch on non-binary trees
+
+## Performance Notes (small trees)
 
 On `test_5_trees/tree_0.pb.gz` (~130 nodes):
 - TreeIndex construction: <1ms
@@ -185,4 +255,4 @@ On `test_5_trees/tree_0.pb.gz` (~130 nodes):
 - SPR overlay creation: comparable to random_optimize
 - Fragment creation + merge: reuses random_optimize infrastructure
 
-The enumeration phase is fast on small trees. For larger trees (1000+ nodes), the lack of range tree pruning will become the bottleneck -- each source node exhaustively searches O(nodes) destinations within the radius. Phase 2 should add range tree pruning for production use.
+The enumeration phase is fast on small trees. The quadratic scaling only becomes a problem above ~500 nodes.

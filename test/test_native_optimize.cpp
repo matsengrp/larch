@@ -15,6 +15,15 @@ static MADAGStorage<> Load(std::string_view input_dag_path) {
   return input_dag_storage;
 }
 
+static MADAGStorage<> Load(std::string_view input_dag_path,
+                           std::string_view refseq_path) {
+  std::string reference_sequence = LoadReferenceSequence(refseq_path);
+  MADAGStorage<> input_dag_storage =
+      LoadTreeFromProtobuf(input_dag_path, reference_sequence);
+  input_dag_storage.View().RecomputeCompactGenomes(true);
+  return input_dag_storage;
+}
+
 // ============================================================================
 // Test 1: TreeIndex construction
 // ============================================================================
@@ -371,3 +380,76 @@ static MADAGStorage<> Load(std::string_view input_dag_path) {
        std::cout << "Total time: " << total_bench.durationMs() << " ms\n";
      },
      "native-optimize: test_5_trees", {"native-optimize"}});
+
+// ============================================================================
+// Test 7: Native optimize on seedtree dataset
+// ============================================================================
+[[maybe_unused]] static const auto test_native_seedtree = add_test(
+    {[] {
+       auto input_storage =
+           Load("data/seedtree/seedtree.pb.gz", "data/seedtree/refseq.txt.gz");
+       MADAG input = input_storage.View();
+
+       Merge merge{input.GetReferenceSequence()};
+       merge.AddDAGs(std::vector{input});
+
+       Benchmark total_bench;
+
+       for (size_t iter = 0; iter < 3; iter++) {
+         Benchmark phase_bench;
+
+         merge.ComputeResultEdgeMutations();
+         auto compute_ms = phase_bench.lapMs();
+
+         SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
+         auto sampled_storage = weight.MinWeightSampleTree({});
+         auto sampled = sampled_storage.View();
+         sampled.RecomputeCompactGenomes(true);
+         sampled.SampleIdsFromCG();
+         TestAssert(sampled.IsTree());
+         auto sample_ms = phase_bench.lapMs();
+
+         auto radius_results = OptimizeDAGNative(merge, sampled_storage, 100);
+         auto optimize_ms = phase_bench.lapMs();
+
+         merge.AddDAG(sampled);
+         auto merge_tree_ms = phase_bench.lapMs();
+
+         // Report parsimony
+         merge.ComputeResultEdgeMutations();
+         SubtreeWeight<ParsimonyScore, MergeDAG> post_weight{merge.GetResult()};
+         auto best = post_weight.MinWeightSampleTree({});
+         best.View().RecomputeCompactGenomes(true);
+         size_t parsimony = 0;
+         for (auto edge : best.View().GetEdges()) {
+           if (not edge.GetParent().IsUA()) {
+             for ([[maybe_unused]] auto& [pos, bases] : edge.GetEdgeMutations()) {
+               parsimony++;
+             }
+           }
+         }
+
+         size_t total_accepted = 0;
+         for (auto& r : radius_results) {
+           total_accepted += r.accepted_moves;
+         }
+
+         struct rusage usage;
+         getrusage(RUSAGE_SELF, &usage);
+         std::cout << "Iteration " << (iter + 1)
+                   << ": compute=" << compute_ms
+                   << "ms sample=" << sample_ms
+                   << "ms optimize=" << optimize_ms
+                   << "ms merge=" << merge_tree_ms
+                   << "ms accepted=" << total_accepted
+                   << " parsimony=" << parsimony
+                   << " nodes=" << merge.GetResult().GetNodesCount()
+                   << " edges=" << merge.GetResult().GetEdgesCount()
+                   << " peak_mem=" << (usage.ru_maxrss / 1024) << "MB\n"
+                   << std::flush;
+       }
+
+       total_bench.stop();
+       std::cout << "Total time: " << total_bench.durationMs() << " ms\n";
+     },
+     "native-optimize: seedtree", {"native-optimize"}});
