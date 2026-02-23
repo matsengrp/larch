@@ -47,7 +47,7 @@ struct ProfitableMove {
  * the same LCA level.
  */
 struct SrcRemovalResult {
-  int score_change;
+  int score_change{0};
   // new_fitch[si]: the new Fitch set of the LCA's child on the src side
   // after src removal has been propagated up
   std::vector<uint8_t> new_fitch;
@@ -56,6 +56,29 @@ struct SrcRemovalResult {
   // Adjustment to the LCA's child count. -1 when src is directly removed
   // from the LCA (level 1), 0 otherwise.
   int lca_nc_adjustment{0};
+
+  void Resize(size_t n_sites) {
+    new_fitch.resize(n_sites);
+    old_fitch.resize(n_sites);
+  }
+};
+
+/**
+ * @brief Pre-allocated scratch buffers reused across ComputeMoveScoreCached calls,
+ * eliminating per-call heap allocations.
+ */
+struct ScratchBuffers {
+  std::vector<uint8_t> new_node_fitch;
+  std::vector<uint8_t> prev_old_fitch;
+  std::vector<uint8_t> prev_new_fitch;
+  SrcRemovalResult removal;
+
+  void Resize(size_t n_sites) {
+    new_node_fitch.resize(n_sites);
+    prev_old_fitch.resize(n_sites);
+    prev_new_fitch.resize(n_sites);
+    removal.Resize(n_sites);
+  }
 };
 
 // ============================================================================
@@ -140,6 +163,10 @@ class TreeIndex {
 
   uint8_t GetFitchSet(NodeId node, size_t site_idx) const {
     return fitch_sets_[node.value * num_variable_sites_ + site_idx];
+  }
+
+  const uint8_t* GetFitchSetPtr(NodeId node) const {
+    return &fitch_sets_[node.value * num_variable_sites_];
   }
 
   const std::array<uint8_t, 4>& GetChildCounts(NodeId node,
@@ -234,6 +261,7 @@ class MoveEnumerator {
   int ComputeMoveScore(NodeId src, NodeId dst, NodeId lca) const;
 
   SrcRemovalResult ComputeInitialRemoval(NodeId src) const;
+  void ComputeInitialRemoval(NodeId src, SrcRemovalResult& out) const;
 
   void PropagateRemovalUpward(NodeId current_lca,
                                SrcRemovalResult& removal) const;
@@ -244,17 +272,19 @@ class MoveEnumerator {
   int ComputeMoveScoreCached(NodeId src, NodeId dst, NodeId lca,
                               const SrcRemovalResult& removal) const;
 
+  int ComputeMoveScoreCached(NodeId src, NodeId dst, NodeId lca,
+                              const SrcRemovalResult& removal,
+                              ScratchBuffers& scratch) const;
+
  private:
-  void UpwardTraversal(NodeId src, size_t radius, Callback& callback) const;
+  void UpwardTraversal(NodeId src, size_t radius, Callback& callback,
+                        ScratchBuffers& scratch) const;
 
   void SearchSubtreeWithBound(NodeId node, NodeId src, NodeId lca,
                                size_t radius_left,
                                const SrcRemovalResult& removal,
-                               int& best_score, Callback& callback) const;
-
-  void SearchSubtreeDirectly(NodeId node, NodeId src, NodeId lca,
-                              size_t radius_left, int& best_score,
-                              Callback& callback) const;
+                               int& best_score, Callback& callback,
+                               ScratchBuffers& scratch) const;
 
   const TreeIndex<DAG>& index_;
 };
@@ -705,18 +735,18 @@ int MoveEnumerator<DAG>::ComputeMoveScore(NodeId src, NodeId dst,
 // ============================================================================
 
 template <typename DAG>
-SrcRemovalResult MoveEnumerator<DAG>::ComputeInitialRemoval(NodeId src) const {
+void MoveEnumerator<DAG>::ComputeInitialRemoval(NodeId src,
+                                                  SrcRemovalResult& result) const {
   size_t n_sites = index_.NumVariableSites();
-  SrcRemovalResult result;
   result.score_change = 0;
-  result.new_fitch.resize(n_sites);
-  result.old_fitch.resize(n_sites);
+  result.lca_nc_adjustment = 0;
 
   NodeId src_parent = index_.GetParent(src);
   bool src_parent_is_binary = (index_.GetNumChildren(src_parent) == 2);
 
+  const uint8_t* src_parent_fitch = index_.GetFitchSetPtr(src_parent);
+
   if (src_parent_is_binary) {
-    // src_parent gets collapsed: find sibling
     NodeId sibling{};
     for (auto child : index_.GetChildren(src_parent)) {
       if (child != src) {
@@ -725,27 +755,25 @@ SrcRemovalResult MoveEnumerator<DAG>::ComputeInitialRemoval(NodeId src) const {
       }
     }
 
+    const uint8_t* sibling_fitch = index_.GetFitchSetPtr(sibling);
     for (size_t si = 0; si < n_sites; si++) {
-      // Subtract old src_parent cost
       auto& counts = index_.GetChildCounts(src_parent, si);
       uint8_t nc = index_.GetNumChildren(src_parent);
       result.score_change -= FitchCostFromCounts(counts, nc);
 
-      // After collapse, src_parent's Fitch set becomes sibling's
-      result.old_fitch[si] = index_.GetFitchSet(src_parent, si);
-      result.new_fitch[si] = index_.GetFitchSet(sibling, si);
+      result.old_fitch[si] = src_parent_fitch[si];
+      result.new_fitch[si] = sibling_fitch[si];
     }
   } else {
-    // src_parent loses one child
+    const uint8_t* src_fitch = index_.GetFitchSetPtr(src);
     for (size_t si = 0; si < n_sites; si++) {
       auto counts = index_.GetChildCounts(src_parent, si);
       uint8_t nc = index_.GetNumChildren(src_parent);
       int old_cost = FitchCostFromCounts(counts, nc);
 
-      // Remove src's contribution
-      uint8_t src_fitch = index_.GetFitchSet(src, si);
+      uint8_t sf = src_fitch[si];
       for (int j = 0; j < 4; j++) {
-        if (src_fitch & (1 << j)) {
+        if (sf & (1 << j)) {
           if (counts[j] > 0) counts[j]--;
         }
       }
@@ -754,32 +782,34 @@ SrcRemovalResult MoveEnumerator<DAG>::ComputeInitialRemoval(NodeId src) const {
       uint8_t new_fitch = FitchSetFromCounts(counts, new_nc);
 
       result.score_change += new_cost - old_cost;
-      result.old_fitch[si] = index_.GetFitchSet(src_parent, si);
+      result.old_fitch[si] = src_parent_fitch[si];
       result.new_fitch[si] = new_fitch;
     }
   }
+}
 
+template <typename DAG>
+SrcRemovalResult MoveEnumerator<DAG>::ComputeInitialRemoval(NodeId src) const {
+  SrcRemovalResult result;
+  result.Resize(index_.NumVariableSites());
+  ComputeInitialRemoval(src, result);
   return result;
 }
 
 template <typename DAG>
 void MoveEnumerator<DAG>::PropagateRemovalUpward(
     NodeId current_lca, SrcRemovalResult& removal) const {
-  // current_lca is the node we're propagating through.
-  // removal.new_fitch/old_fitch currently describe the child of current_lca
-  // on the src side. We need to update current_lca's counts and then
-  // set new_fitch/old_fitch to describe current_lca itself.
   size_t n_sites = index_.NumVariableSites();
+  const uint8_t* lca_fitch = index_.GetFitchSetPtr(current_lca);
+  uint8_t nc = index_.GetNumChildren(current_lca);
 
   for (size_t si = 0; si < n_sites; si++) {
     auto counts = index_.GetChildCounts(current_lca, si);
-    uint8_t nc = index_.GetNumChildren(current_lca);
     int old_cost = FitchCostFromCounts(counts, nc);
 
     uint8_t old_child_f = removal.old_fitch[si];
     uint8_t new_child_f = removal.new_fitch[si];
 
-    // Update counts: remove old child's contribution, add new
     for (int j = 0; j < 4; j++) {
       if (old_child_f & (1 << j)) {
         if (counts[j] > 0) counts[j]--;
@@ -793,7 +823,7 @@ void MoveEnumerator<DAG>::PropagateRemovalUpward(
     uint8_t new_fitch = FitchSetFromCounts(counts, nc);
 
     removal.score_change += new_cost - old_cost;
-    removal.old_fitch[si] = index_.GetFitchSet(current_lca, si);
+    removal.old_fitch[si] = lca_fitch[si];
     removal.new_fitch[si] = new_fitch;
   }
 }
@@ -803,17 +833,11 @@ int MoveEnumerator<DAG>::ComputeLowerBound(
     NodeId src, const SrcRemovalResult& /*removal*/,
     NodeId subtree_root) const {
   size_t n_sites = index_.NumVariableSites();
-  // Count sites where src's allele doesn't appear in the subtree.
-  // At these sites, for ANY destination dst in the subtree,
-  // src_fitch & dst_fitch == 0, so new_node costs +1.
-  // This is a valid lower bound on the new_node cost component.
-  // We don't include removal.score_change because dst-side and LCA
-  // effects can compensate for it, making total score < lower_bound.
+  const uint8_t* src_fitch = index_.GetFitchSetPtr(src);
   int forced_new_node_cost = 0;
   for (size_t si = 0; si < n_sites; si++) {
-    uint8_t src_fitch = index_.GetFitchSet(src, si);
     uint8_t subtree_alleles = index_.GetAlleleUnion(subtree_root, si);
-    if (!(src_fitch & subtree_alleles)) {
+    if (!(src_fitch[si] & subtree_alleles)) {
       forced_new_node_cost += 1;
     }
   }
@@ -823,125 +847,138 @@ int MoveEnumerator<DAG>::ComputeLowerBound(
 template <typename DAG>
 int MoveEnumerator<DAG>::ComputeMoveScoreCached(
     NodeId src, NodeId dst, NodeId lca,
-    const SrcRemovalResult& removal) const {
+    const SrcRemovalResult& removal,
+    ScratchBuffers& scratch) const {
   size_t n_sites = index_.NumVariableSites();
   if (n_sites == 0) return 0;
 
   NodeId dst_parent = index_.GetParent(dst);
 
-  // Collect dst path from dst_parent to LCA (inclusive)
-  std::vector<NodeId> dst_path;
+  // Count path nodes remaining after each step for early-exit bound
+  int nodes_remaining = 0;
   {
     NodeId cur = dst_parent;
-    while (true) {
-      dst_path.push_back(cur);
-      if (cur == lca) break;
+    while (cur != lca) {
+      nodes_remaining++;
       cur = index_.GetParent(cur);
     }
+    nodes_remaining++;  // include LCA itself
   }
+
+  const uint8_t* src_fitch_ptr = index_.GetFitchSetPtr(src);
+  const uint8_t* dst_fitch_ptr = index_.GetFitchSetPtr(dst);
+  const uint8_t* removal_old = removal.old_fitch.data();
+  const uint8_t* removal_new = removal.new_fitch.data();
 
   int total = removal.score_change;
 
+  // Precompute new_node_fitch for all sites
+  auto& new_node_fitch = scratch.new_node_fitch;
   for (size_t si = 0; si < n_sites; si++) {
-    uint8_t src_fitch = index_.GetFitchSet(src, si);
-    uint8_t dst_fitch = index_.GetFitchSet(dst, si);
+    uint8_t sf = src_fitch_ptr[si];
+    uint8_t df = dst_fitch_ptr[si];
+    uint8_t inter = sf & df;
+    new_node_fitch[si] = inter ? inter : (sf | df);
+    total += inter ? 0 : 1;
+  }
 
-    // New node cost (children: src, dst)
-    uint8_t n_inter = src_fitch & dst_fitch;
-    uint8_t new_node_fitch = n_inter ? n_inter : (src_fitch | dst_fitch);
-    int new_node_cost = n_inter ? 0 : 1;
-    total += new_node_cost;
+  // Process dst path bottom-up using parent-pointer traversal.
+  auto& prev_old_fitch = scratch.prev_old_fitch;
+  auto& prev_new_fitch = scratch.prev_new_fitch;
 
-    // Process dst path bottom-up, tracking new Fitch sets
-    uint8_t prev_new_fitch = new_node_fitch;
-    uint8_t prev_old_fitch = dst_fitch;
-
-    for (size_t pi = 0; pi < dst_path.size(); pi++) {
-      NodeId node = dst_path[pi];
-      if (!index_.HasChildCounts(node)) continue;
-
-      auto counts = index_.GetChildCounts(node, si);
+  NodeId node = dst_parent;
+  bool is_first = true;
+  while (true) {
+    if (index_.HasChildCounts(node)) {
+      const uint8_t* node_fitch_ptr = index_.GetFitchSetPtr(node);
       uint8_t nc = index_.GetNumChildren(node);
-      int old_cost = FitchCostFromCounts(counts, nc);
+      bool is_lca = (node == lca);
+      uint8_t effective_nc = is_lca ? static_cast<uint8_t>(
+                                          static_cast<int>(nc) +
+                                          removal.lca_nc_adjustment)
+                                    : nc;
 
-      // At dst_parent: replace dst with new_node
-      // At higher nodes: replace the modified child's old fitch with new fitch
-      uint8_t old_child_f;
-      uint8_t new_child_f;
-      if (pi == 0) {
-        old_child_f = dst_fitch;
-        new_child_f = new_node_fitch;
-      } else {
-        old_child_f = prev_old_fitch;
-        new_child_f = prev_new_fitch;
-      }
+      for (size_t si = 0; si < n_sites; si++) {
+        auto counts = index_.GetChildCounts(node, si);
+        int old_cost = FitchCostFromCounts(counts, nc);
 
-      for (int j = 0; j < 4; j++) {
-        if (old_child_f & (1 << j)) {
-          if (counts[j] > 0) counts[j]--;
+        uint8_t old_child_f;
+        uint8_t new_child_f;
+        if (is_first) {
+          old_child_f = dst_fitch_ptr[si];
+          new_child_f = new_node_fitch[si];
+        } else {
+          old_child_f = prev_old_fitch[si];
+          new_child_f = prev_new_fitch[si];
         }
-        if (new_child_f & (1 << j)) {
-          counts[j]++;
-        }
-      }
 
-      // At LCA: also apply the src-side removal effect
-      uint8_t effective_nc = nc;
-      if (node == lca) {
-        uint8_t src_old_f = removal.old_fitch[si];
-        uint8_t src_new_f = removal.new_fitch[si];
         for (int j = 0; j < 4; j++) {
-          if (src_old_f & (1 << j)) {
+          if (old_child_f & (1 << j)) {
             if (counts[j] > 0) counts[j]--;
           }
-          if (src_new_f & (1 << j)) {
+          if (new_child_f & (1 << j)) {
             counts[j]++;
           }
         }
-        effective_nc = static_cast<uint8_t>(
-            static_cast<int>(nc) + removal.lca_nc_adjustment);
+
+        if (is_lca) {
+          uint8_t src_old_f = removal_old[si];
+          uint8_t src_new_f = removal_new[si];
+          for (int j = 0; j < 4; j++) {
+            if (src_old_f & (1 << j)) {
+              if (counts[j] > 0) counts[j]--;
+            }
+            if (src_new_f & (1 << j)) {
+              counts[j]++;
+            }
+          }
+        }
+
+        int new_cost = FitchCostFromCounts(counts, effective_nc);
+        total += new_cost - old_cost;
+
+        prev_old_fitch[si] = node_fitch_ptr[si];
+        prev_new_fitch[si] = FitchSetFromCounts(counts, effective_nc);
       }
-
-      int new_cost = FitchCostFromCounts(counts, effective_nc);
-      uint8_t new_fitch = FitchSetFromCounts(counts, effective_nc);
-      total += new_cost - old_cost;
-
-      prev_old_fitch = index_.GetFitchSet(node, si);
-      prev_new_fitch = new_fitch;
     }
+
+    nodes_remaining--;
+
+    // Early exit: each remaining path node can save at most 1 per site,
+    // so max remaining savings = nodes_remaining * n_sites. If total
+    // already exceeds that, it can't become negative.
+    if (total > 0 && nodes_remaining > 0 &&
+        total > static_cast<int>(n_sites) * nodes_remaining) {
+      return total;
+    }
+
+    if (node == lca) break;
+    node = index_.GetParent(node);
+    is_first = false;
   }
 
-  // Subtract the src-side path costs that were already counted in
-  // removal.score_change for nodes between src_parent and LCA.
-  // But we need to undo the LCA portion of removal.score_change since
-  // we've recomputed it above with both src and dst effects combined.
-  //
-  // Actually, removal.score_change includes cost changes from src_parent
-  // up to (but NOT including) the LCA. The LCA is the topmost node in
-  // the traversal, and PropagateRemovalUpward was called for nodes
-  // *below* LCA. So we need to check what's in removal.
-  //
-  // Wait — let's reconsider. The removal state when UpwardTraversal calls
-  // us has been propagated through all nodes from src_parent up to (but
-  // not including) the current LCA. The new_fitch/old_fitch describe
-  // the LCA's child on the src side. So removal.score_change does NOT
-  // include LCA's cost change. The dst path loop above processes LCA and
-  // applies both src-side and dst-side effects there. This is correct.
-
   return total;
+}
+
+template <typename DAG>
+int MoveEnumerator<DAG>::ComputeMoveScoreCached(
+    NodeId src, NodeId dst, NodeId lca,
+    const SrcRemovalResult& removal) const {
+  ScratchBuffers scratch;
+  scratch.Resize(index_.NumVariableSites());
+  return ComputeMoveScoreCached(src, dst, lca, removal, scratch);
 }
 
 template <typename DAG>
 void MoveEnumerator<DAG>::SearchSubtreeWithBound(
     NodeId node, NodeId src, NodeId lca, size_t radius_left,
     const SrcRemovalResult& removal, int& best_score,
-    Callback& callback) const {
+    Callback& callback, ScratchBuffers& scratch) const {
   if (index_.IsAncestor(src, node) || node == src) {
     return;
   }
 
-  // Score this destination
-  int score = ComputeMoveScoreCached(src, node, lca, removal);
+  int score = ComputeMoveScoreCached(src, node, lca, removal, scratch);
   if (score < 0) {
     callback(ProfitableMove{src, node, lca, score});
     if (score < best_score) {
@@ -953,37 +990,14 @@ void MoveEnumerator<DAG>::SearchSubtreeWithBound(
 
   for (auto child : index_.GetChildren(node)) {
     SearchSubtreeWithBound(child, src, lca, radius_left - 1, removal, best_score,
-                            callback);
-  }
-}
-
-template <typename DAG>
-void MoveEnumerator<DAG>::SearchSubtreeDirectly(
-    NodeId node, NodeId src, NodeId lca, size_t radius_left,
-    int& best_score, Callback& callback) const {
-  if (index_.IsAncestor(src, node) || node == src) {
-    return;
-  }
-
-  int score = ComputeMoveScore(src, node, lca);
-  if (score < 0) {
-    callback(ProfitableMove{src, node, lca, score});
-    if (score < best_score) {
-      best_score = score;
-    }
-  }
-
-  if (radius_left > 0) {
-    for (auto child : index_.GetChildren(node)) {
-      SearchSubtreeDirectly(child, src, lca, radius_left - 1, best_score,
-                             callback);
-    }
+                            callback, scratch);
   }
 }
 
 template <typename DAG>
 void MoveEnumerator<DAG>::UpwardTraversal(NodeId src, size_t radius,
-                                           Callback& callback) const {
+                                           Callback& callback,
+                                           ScratchBuffers& scratch) const {
   auto dag = index_.GetDAG();
   auto src_node = dag.Get(src);
   if (src_node.IsTreeRoot() || src_node.IsUA()) {
@@ -992,16 +1006,14 @@ void MoveEnumerator<DAG>::UpwardTraversal(NodeId src, size_t radius,
 
   size_t n_sites = index_.NumVariableSites();
 
-  // Level-1 removal: src is directly removed from LCA (= src_parent).
-  // score_change = 0 (no intermediate nodes), old/new_fitch describe
-  // src's contribution, nc_adjustment = -1.
-  SrcRemovalResult removal;
+  // Use pre-allocated removal from scratch buffers
+  SrcRemovalResult& removal = scratch.removal;
   removal.score_change = 0;
-  removal.old_fitch.resize(n_sites);
-  removal.new_fitch.resize(n_sites, 0);
   removal.lca_nc_adjustment = -1;
+  const uint8_t* src_fitch = index_.GetFitchSetPtr(src);
   for (size_t si = 0; si < n_sites; si++) {
-    removal.old_fitch[si] = index_.GetFitchSet(src, si);
+    removal.old_fitch[si] = src_fitch[si];
+    removal.new_fitch[si] = 0;
   }
 
   NodeId current = index_.GetParent(src);
@@ -1019,20 +1031,15 @@ void MoveEnumerator<DAG>::UpwardTraversal(NodeId src, size_t radius,
     for (auto child : children) {
       if (child == prev) continue;
       SearchSubtreeWithBound(child, src, current, remaining_radius, removal,
-                              best_score, callback);
+                              best_score, callback, scratch);
     }
 
-    // Move up
     if (current_node.IsTreeRoot() || current_node.IsUA()) {
       break;
     }
 
     if (levels_up == 1) {
-      // Transition from level 1 to level 2.
-      // ComputeInitialRemoval gives the state describing src_parent's
-      // fitch change as a child of its parent (for level 2+).
-      removal = ComputeInitialRemoval(src);
-      removal.lca_nc_adjustment = 0;
+      ComputeInitialRemoval(src, removal);
     } else {
       PropagateRemovalUpward(current, removal);
     }
@@ -1045,7 +1052,9 @@ void MoveEnumerator<DAG>::UpwardTraversal(NodeId src, size_t radius,
 template <typename DAG>
 void MoveEnumerator<DAG>::FindMovesForSource(NodeId src, size_t radius,
                                               Callback callback) const {
-  UpwardTraversal(src, radius, callback);
+  ScratchBuffers scratch;
+  scratch.Resize(index_.NumVariableSites());
+  UpwardTraversal(src, radius, callback, scratch);
 }
 
 template <typename DAG>
