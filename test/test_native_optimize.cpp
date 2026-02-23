@@ -382,7 +382,215 @@ static MADAGStorage<> Load(std::string_view input_dag_path,
      "native-optimize: test_5_trees", {"native-optimize"}});
 
 // ============================================================================
-// Test 7: Native optimize on seedtree dataset
+// Test 7: Pruned vs exhaustive enumeration
+// ============================================================================
+[[maybe_unused]] static const auto test_pruned_vs_exhaustive = add_test(
+    {[] {
+       auto input_storage = make_sample_dag();
+       MADAG input = input_storage.View();
+
+       Merge merge{input.GetReferenceSequence()};
+       merge.AddDAGs(std::vector{input});
+       merge.ComputeResultEdgeMutations();
+
+       SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
+       auto sampled_storage = weight.MinWeightSampleTree({});
+       auto sampled = sampled_storage.View();
+       sampled.RecomputeCompactGenomes(true);
+       sampled.SampleIdsFromCG();
+       TestAssert(sampled.IsTree());
+
+       auto sampled_const = sampled.Const();
+       TreeIndex tree_index{sampled_const};
+       MoveEnumerator enumerator{tree_index};
+
+       size_t max_depth = ComputeTreeMaxDepth(sampled_const);
+       size_t max_radius = max_depth * 2;
+
+       // Collect all moves via the (pruned) FindAllMoves
+       std::vector<ProfitableMove> pruned_moves;
+       enumerator.FindAllMoves(max_radius, [&](const ProfitableMove& m) {
+         pruned_moves.push_back(m);
+       });
+
+       // Collect all moves via exhaustive ComputeMoveScore (no pruning)
+       std::vector<ProfitableMove> exhaustive_moves;
+       for (auto src : tree_index.GetSearchableNodes()) {
+         NodeId current = tree_index.GetParent(src);
+         NodeId prev = src;
+         size_t levels_up = 0;
+         while (levels_up < max_radius) {
+           levels_up++;
+           for (auto child : tree_index.GetChildren(current)) {
+             if (child == prev) continue;
+             size_t remaining = max_radius - levels_up;
+             std::function<void(NodeId, size_t)> visit =
+                 [&](NodeId node, size_t rad_left) {
+                   if (tree_index.IsAncestor(src, node) || node == src) return;
+                   int score = enumerator.ComputeMoveScore(src, node, current);
+                   if (score < 0) {
+                     exhaustive_moves.push_back({src, node, current, score});
+                   }
+                   if (rad_left > 0) {
+                     for (auto c : tree_index.GetChildren(node)) {
+                       visit(c, rad_left - 1);
+                     }
+                   }
+                 };
+             visit(child, remaining);
+           }
+           auto cur_node = sampled_const.Get(current);
+           if (cur_node.IsTreeRoot() || cur_node.IsUA()) break;
+           prev = current;
+           current = tree_index.GetParent(current);
+         }
+       }
+
+       std::cout << "  Pruned moves: " << pruned_moves.size()
+                 << ", Exhaustive moves: " << exhaustive_moves.size() << "\n";
+
+       // Build set of (src, dst) pairs for comparison
+       std::set<std::pair<size_t, size_t>> pruned_set;
+       for (auto& m : pruned_moves) {
+         pruned_set.insert({m.src.value, m.dst.value});
+       }
+       std::set<std::pair<size_t, size_t>> exhaustive_set;
+       for (auto& m : exhaustive_moves) {
+         exhaustive_set.insert({m.src.value, m.dst.value});
+       }
+
+       // Check: every exhaustive move should be in pruned set
+       size_t missing = 0;
+       for (auto& m : exhaustive_moves) {
+         auto key = std::make_pair(m.src.value, m.dst.value);
+         if (pruned_set.find(key) == pruned_set.end()) {
+           std::cout << "  MISSING: src=" << m.src << " dst=" << m.dst
+                     << " lca=" << m.lca << " score=" << m.score_change << "\n";
+           missing++;
+         }
+       }
+
+       // Check: every pruned move should be in exhaustive set
+       size_t extra = 0;
+       for (auto& m : pruned_moves) {
+         auto key = std::make_pair(m.src.value, m.dst.value);
+         if (exhaustive_set.find(key) == exhaustive_set.end()) {
+           std::cout << "  EXTRA: src=" << m.src << " dst=" << m.dst
+                     << " lca=" << m.lca << " score=" << m.score_change << "\n";
+           extra++;
+         }
+       }
+
+       std::cout << "  Missing from pruned: " << missing
+                 << ", Extra in pruned: " << extra << "\n";
+       TestAssert(missing == 0);
+       std::cout << "  Pruned vs exhaustive: PASSED\n";
+     },
+     "native-optimize: Pruned vs exhaustive", {"native-optimize"}});
+
+// ============================================================================
+// Test 8: Cached vs independent scoring
+// ============================================================================
+[[maybe_unused]] static const auto test_cached_scoring = add_test(
+    {[] {
+       auto input_storage = make_sample_dag();
+       MADAG input = input_storage.View();
+
+       Merge merge{input.GetReferenceSequence()};
+       merge.AddDAGs(std::vector{input});
+       merge.ComputeResultEdgeMutations();
+
+       SubtreeWeight<ParsimonyScore, MergeDAG> weight{merge.GetResult()};
+       auto sampled_storage = weight.MinWeightSampleTree({});
+       auto sampled = sampled_storage.View();
+       sampled.RecomputeCompactGenomes(true);
+       sampled.SampleIdsFromCG();
+       TestAssert(sampled.IsTree());
+
+       auto sampled_const = sampled.Const();
+       TreeIndex tree_index{sampled_const};
+       MoveEnumerator enumerator{tree_index};
+
+       size_t n_sites = tree_index.NumVariableSites();
+       size_t checks = 0;
+       size_t mismatches = 0;
+
+       for (auto src : tree_index.GetSearchableNodes()) {
+         NodeId src_parent = tree_index.GetParent(src);
+         auto src_parent_node = sampled_const.Get(src_parent);
+
+         // Level 1: LCA = src_parent, removal describes direct src removal
+         {
+           SrcRemovalResult removal;
+           removal.score_change = 0;
+           removal.old_fitch.resize(n_sites);
+           removal.new_fitch.resize(n_sites, 0);
+           removal.lca_nc_adjustment = -1;
+           for (size_t si = 0; si < n_sites; si++) {
+             removal.old_fitch[si] = tree_index.GetFitchSet(src, si);
+           }
+
+           for (auto child : tree_index.GetChildren(src_parent)) {
+             if (child == src) continue;
+             std::function<void(NodeId)> check_dst = [&](NodeId node) {
+               if (tree_index.IsAncestor(src, node) || node == src) return;
+               int cached = enumerator.ComputeMoveScoreCached(
+                   src, node, src_parent, removal);
+               int independent =
+                   enumerator.ComputeMoveScore(src, node, src_parent);
+               checks++;
+               if (cached != independent) {
+                 std::cout << "  L1 MISMATCH: src=" << src << " dst=" << node
+                           << " lca=" << src_parent << " cached=" << cached
+                           << " independent=" << independent << "\n";
+                 mismatches++;
+               }
+               for (auto c : tree_index.GetChildren(node)) {
+                 check_dst(c);
+               }
+             };
+             check_dst(child);
+           }
+         }
+
+         // Level 2: LCA = grandparent, removal from ComputeInitialRemoval
+         if (!src_parent_node.IsTreeRoot() && !src_parent_node.IsUA()) {
+           auto removal = enumerator.ComputeInitialRemoval(src);
+           NodeId grandparent = tree_index.GetParent(src_parent);
+
+           for (auto child : tree_index.GetChildren(grandparent)) {
+             if (child == src_parent) continue;
+             std::function<void(NodeId)> check_dst = [&](NodeId node) {
+               if (tree_index.IsAncestor(src, node) || node == src) return;
+               int cached = enumerator.ComputeMoveScoreCached(
+                   src, node, grandparent, removal);
+               int independent =
+                   enumerator.ComputeMoveScore(src, node, grandparent);
+               checks++;
+               if (cached != independent) {
+                 std::cout << "  L2 MISMATCH: src=" << src << " dst=" << node
+                           << " lca=" << grandparent << " cached=" << cached
+                           << " independent=" << independent << "\n";
+                 mismatches++;
+               }
+               for (auto c : tree_index.GetChildren(node)) {
+                 check_dst(c);
+               }
+             };
+             check_dst(child);
+           }
+         }
+       }
+
+       std::cout << "  Checked " << checks << " cached scores, " << mismatches
+                 << " mismatches\n";
+       TestAssert(mismatches == 0);
+       std::cout << "  Cached vs independent scoring: PASSED\n";
+     },
+     "native-optimize: Cached vs independent scoring", {"native-optimize"}});
+
+// ============================================================================
+// Test 9: Native optimize on seedtree dataset
 // ============================================================================
 [[maybe_unused]] static const auto test_native_seedtree = add_test(
     {[] {
