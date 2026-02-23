@@ -194,6 +194,7 @@ class TreeIndex {
   }
 
   size_t NumVariableSites() const { return num_variable_sites_; }
+  size_t NumCondensedLeaves() const { return condensed_count_; }
 
  private:
   void ComputeDFSIndices();
@@ -229,6 +230,10 @@ class TreeIndex {
   // Precomputed topology
   std::vector<NodeId> parent_;
   std::vector<std::vector<NodeId>> children_;
+
+  // Condensing: identical sibling leaves are removed from topology
+  std::vector<bool> is_condensed_;
+  size_t condensed_count_{0};
 };
 
 // ============================================================================
@@ -310,7 +315,8 @@ std::vector<RadiusResult> OptimizeDAGNative(Merge& merge,
   auto index_ms = index_bench.lapMs();
   std::cout << " done (" << index_ms << "ms, "
             << tree_index.GetVariableSites().size() << " variable sites, "
-            << tree_index.GetSearchableNodes().size() << " searchable nodes)\n"
+            << tree_index.GetSearchableNodes().size() << " searchable nodes, "
+            << tree_index.NumCondensedLeaves() << " condensed)\n"
             << std::flush;
 
   size_t max_depth = ComputeTreeMaxDepth(sampled_const);
@@ -478,9 +484,47 @@ TreeIndex<DAG>::TreeIndex(DAG dag) : dag_{dag} {
     }
   }
 
-  // Collect searchable nodes (non-UA, non-tree-root)
+  // Condense identical sibling leaves: group leaves sharing the same parent
+  // and CompactGenome, keeping only one representative per group.
+  is_condensed_.assign(num_nodes_, false);
+  for (size_t nid = 0; nid < num_nodes_; nid++) {
+    auto& kids = children_[nid];
+    if (kids.size() <= 1) continue;
+
+    std::vector<bool> condensed(kids.size(), false);
+    bool any_condensed = false;
+    for (size_t i = 0; i < kids.size(); i++) {
+      if (condensed[i]) continue;
+      auto child_i = dag_.Get(kids[i]);
+      if (!child_i.IsLeaf()) continue;
+      const auto& cg_i = child_i.GetCompactGenome();
+
+      for (size_t j = i + 1; j < kids.size(); j++) {
+        if (condensed[j]) continue;
+        auto child_j = dag_.Get(kids[j]);
+        if (!child_j.IsLeaf()) continue;
+        if (child_j.GetCompactGenome() == cg_i) {
+          condensed[j] = true;
+          is_condensed_[kids[j].value] = true;
+          any_condensed = true;
+          condensed_count_++;
+        }
+      }
+    }
+
+    if (any_condensed) {
+      std::vector<NodeId> new_kids;
+      for (size_t i = 0; i < kids.size(); i++) {
+        if (!condensed[i]) new_kids.push_back(kids[i]);
+      }
+      kids = std::move(new_kids);
+    }
+  }
+
+  // Collect searchable nodes (non-UA, non-tree-root, non-condensed)
   for (auto node : dag_.GetNodes()) {
-    if (not node.IsUA() and not node.IsTreeRoot()) {
+    if (not node.IsUA() and not node.IsTreeRoot() and
+        not is_condensed_[node.GetId().value]) {
       searchable_nodes_.push_back(node.GetId());
     }
   }
