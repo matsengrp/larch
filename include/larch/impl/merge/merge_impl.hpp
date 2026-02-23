@@ -6,7 +6,6 @@ Merge::Merge(std::string_view reference_sequence)
 
 template <typename DAGSRange>
 void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
-  std::unique_lock lock{add_dags_mtx_};
   if (below.value != NoId and dags.size() != 1) {
     Fail("Pass exactly one DAG when merging below given node.");
   }
@@ -18,11 +17,79 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
     return;
   }
 
-  const bool was_empty = ResultDAG().empty();
+  // The `below` path is rare and complex — run the full pipeline under exclusive lock,
+  // after materializing any pending state first.
+  if (below.value != NoId) {
+    Finalize();
+    std::unique_lock lock{rw_mtx_};
 
-  std::vector<size_t> idxs;
-  idxs.resize(dags.size());
-  std::iota(idxs.begin(), idxs.end(), 0);
+    const bool was_empty = ResultDAG().empty();
+
+    std::vector<size_t> idxs;
+    idxs.resize(dags.size());
+    std::iota(idxs.begin(), idxs.end(), 0);
+
+    constexpr IdContinuity id_continuity = IdContinuity::Sparse;
+    std::vector<IdContainer<NodeId, NodeLabel, id_continuity, Ordering::Ordered>>
+        dags_labels;
+    dags_labels.resize(dags.size());
+
+    ParallelForEach(
+        idxs, [&](size_t i) { MergeCompactGenomes(i, dags, below, dags_labels); });
+
+    SeqForEach(idxs, [&](size_t i) {
+      ComputeLeafSets(i, dags, below, dags_labels);
+    });
+
+    ParallelForEach(
+        idxs, [&](size_t i) { MergeNodes(i, dags, below, dags_labels, node_id_counter_); });
+
+    Reduction<std::vector<AddedEdge>> added_edges_reduction{32};
+    ParallelForEach(idxs, [&](size_t i) {
+      MergeEdges(i, dags, below, dags_labels, added_edges_reduction);
+    });
+    std::vector<AddedEdge> added_edges;
+    added_edges_reduction.GatherAndClear(
+        [&added_edges_reduction](auto buckets, auto& result) {
+          for (auto&& bucket : buckets) {
+            result.reserve(added_edges_reduction.size_approx());
+            result.insert(result.end(), bucket.begin(), bucket.end());
+          }
+        },
+        added_edges);
+
+    ResultDAG().InitializeNodes(result_nodes_.size());
+    std::atomic<size_t> edge_id{
+        ResultDAG().template GetNextAvailableEdgeId<MergeDAG>().value};
+    ResultDAG().InitializeEdges(result_edges_.size());
+    idxs.resize(added_edges.size());
+    std::iota(idxs.begin(), idxs.end(), 0);
+    SeqForEach(idxs, [&](size_t i) { BuildResult(i, added_edges, edge_id); });
+
+    if (was_empty) {
+      ResultDAG().BuildConnections();
+    } else {
+      for (auto& [label, id, parent_id, child_id, clade] : added_edges) {
+        ResultDAG().Get(parent_id).AddEdge(clade, id, true);
+        ResultDAG().Get(child_id).AddEdge(clade, id, false);
+      }
+      for ([[maybe_unused]] auto& [label, id, parent_id, child_id, clade] :
+           added_edges) {
+        if (ResultDAG().Get(child_id).IsLeaf()) {
+          ResultDAG().AddLeaf(child_id);
+        }
+      }
+    }
+    was_empty_ = false;
+    Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
+    Assert(result_node_labels_.size() == ResultDAG().GetNodesCount());
+    Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
+    result_dag_storage_.View().Const().GetRoot().Validate(true, true);
+    return;
+  }
+
+  // Normal path: concurrent label resolution under shared lock, defer materialization.
+  std::shared_lock lock{rw_mtx_};
 
 #ifdef KEEP_ASSERTS
   // TODO uncomment once extra edges/nodes are cleared in CollapseEmptyFragmentEdges
@@ -32,10 +99,11 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   // });
 #endif
 
+  std::vector<size_t> idxs;
+  idxs.resize(dags.size());
+  std::iota(idxs.begin(), idxs.end(), 0);
+
   constexpr IdContinuity id_continuity = IdContinuity::Sparse;
-  // FIXME constexpr IdContinuity id_continuity =
-  // std::remove_reference_t<decltype(dags.at(
-  //     0))>::template id_continuity<Component::Node>;
   std::vector<IdContainer<NodeId, NodeLabel, id_continuity, Ordering::Ordered>>
       dags_labels;
   dags_labels.resize(dags.size());
@@ -55,9 +123,9 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   });
 #endif
 
-  std::atomic<size_t> node_id{ResultDAG().GetNextAvailableNodeId<MergeDAG>().value};
-  ParallelForEach(idxs,
-                  [&](size_t i) { MergeNodes(i, dags, below, dags_labels, node_id); });
+  ParallelForEach(idxs, [&](size_t i) {
+    MergeNodes(i, dags, below, dags_labels, node_id_counter_);
+  });
 
 #ifdef KEEP_ASSERTS
   result_nodes_.ReadAll([](auto result_nodes) {
@@ -67,15 +135,24 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   });
 #endif
 
-  Reduction<std::vector<AddedEdge>> added_edges_reduction{32};
   ParallelForEach(idxs, [&](size_t i) {
-    MergeEdges(i, dags, below, dags_labels, added_edges_reduction);
+    MergeEdges(i, dags, below, dags_labels, pending_edges_);
   });
+
+  materialized_ = false;
+}
+
+void Merge::Finalize() {
+  std::unique_lock lock{rw_mtx_};
+  if (materialized_) {
+    return;
+  }
+
   std::vector<AddedEdge> added_edges;
-  added_edges_reduction.GatherAndClear(
-      [&added_edges_reduction](auto buckets, auto& result) {
+  pending_edges_.GatherAndClear(
+      [this](auto buckets, auto& result) {
         for (auto&& bucket : buckets) {
-          result.reserve(added_edges_reduction.size_approx());
+          result.reserve(pending_edges_.size_approx());
           result.insert(result.end(), bucket.begin(), bucket.end());
         }
       },
@@ -85,12 +162,14 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
   std::atomic<size_t> edge_id{
       ResultDAG().template GetNextAvailableEdgeId<MergeDAG>().value};
   ResultDAG().InitializeEdges(result_edges_.size());
+
+  std::vector<size_t> idxs;
   idxs.resize(added_edges.size());
   std::iota(idxs.begin(), idxs.end(), 0);
   SeqForEach(  // FIXME ParallelForEach
-      idxs, [&](size_t i) { BuildResult(i, added_edges, edge_id); });  // FIXME parallel
+      idxs, [&](size_t i) { BuildResult(i, added_edges, edge_id); });
 
-  if (was_empty) {
+  if (was_empty_) {
     ResultDAG().BuildConnections();
   } else {
     for (auto& [label, id, parent_id, child_id, clade] : added_edges) {
@@ -103,10 +182,14 @@ void Merge::AddDAGs(const DAGSRange& dags, NodeId below) {
       }
     }
   }
+  was_empty_ = false;
+
   Assert(result_nodes_.size() == ResultDAG().GetNodesCount());
   Assert(result_node_labels_.size() == ResultDAG().GetNodesCount());
   Assert(result_edges_.size() == ResultDAG().GetEdgesCount());
-  GetResult().GetRoot().Validate(true, true);
+  result_dag_storage_.View().Const().GetRoot().Validate(true, true);
+
+  materialized_ = true;
 }
 
 template <typename DAG>
@@ -133,6 +216,11 @@ void Merge::AddDAG(DAG dag, NodeId below) {
   AddDAGs(dags, below);
 }
 
+MergeDAG Merge::GetResult() {
+  Finalize();
+  return result_dag_storage_.View().Const();
+}
+
 MergeDAG Merge::GetResult() const { return result_dag_storage_.View().Const(); }
 
 MutableMergeDAG Merge::ResultDAG() { return result_dag_storage_.View(); }
@@ -150,6 +238,7 @@ const GrowableHashMap<std::string, CompactGenome>& Merge::SampleIdToCGMap() cons
 }
 
 void Merge::ComputeResultEdgeMutations() {
+  Finalize();
   result_edges_.ReadAll(
       [](auto result_edges, auto& /*result_nodes*/, auto& sample_id_to_cg_map,
          auto result_dag) {

@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <numeric>
+#include <shared_mutex>
 
 #include "larch/madag/mutation_annotated_dag.hpp"
 #include "larch/merge/leaf_set.hpp"
@@ -65,9 +66,16 @@ class Merge {
   inline void AddDAG(DAG dag, NodeId below = {});
 
   /**
-   * Get the DAG resulting from merge
+   * Materialize any pending label resolutions into the DAG storage.
+   * Called automatically by GetResult() and ComputeResultEdgeMutations().
+   */
+  inline void Finalize();
+
+  /**
+   * Get the DAG resulting from merge. The non-const overload calls Finalize() first.
    * @{
    */
+  inline MergeDAG GetResult();
   inline MergeDAG GetResult() const;
   /** @} */
 
@@ -131,7 +139,11 @@ class Merge {
   // merge purposes.
   GrowableHashMap<std::string, CompactGenome> sample_id_to_cg_map_{32};
 
-  std::mutex add_dags_mtx_;
+  mutable std::shared_mutex rw_mtx_;
+  std::atomic<size_t> node_id_counter_{0};
+  Reduction<std::vector<AddedEdge>> pending_edges_{32};
+  bool materialized_{true};
+  bool was_empty_{true};
 };
 
 #include "larch/impl/merge/merge_impl.hpp"
