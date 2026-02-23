@@ -1,64 +1,45 @@
-name: Build larch on linux and run tests
+name: Build larch on linux
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - fix-macos-build
 
 jobs:
   build-larch:
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        environment: [build-larch-debug, build-larch-release]
-    environment: ${{ matrix.environment }}
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Prepare build environment
-        run: |
-          sudo apt-get update
-          sudo apt-get install build-essential zlib1g-dev python3-pip python3-pytest git git-lfs
-      - name: Install conda
-        run: |
-          curl -L https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh > Miniconda3-latest-Linux-x86_64.sh
-          bash Miniconda3-latest-Linux-x86_64.sh -b -p ~/miniconda
-          ~/miniconda/bin/conda update -n base -c defaults conda
-          mkdir build
-      - name: Create conda env
-        run: |
-          source ~/miniconda/etc/profile.d/conda.sh
-          conda config --prepend channels conda-forge
-          conda config --prepend channels bioconda
-          conda config --show channels
-          conda env create -f environment-dev.yml
+
+      - name: Install Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniconda-version: latest
+          activate-environment: larch-dev
+          environment-file: environment-ci-linux.yml
+          channels: conda-forge,bioconda
+          auto-activate-base: false
+
       - name: Build (cmake step)
-        env:
-          CMAKE_BUILD_TYPE: ${{ vars.CMAKE_BUILD_TYPE }}
-          CMAKE_NUM_THREADS: ${{ vars.CMAKE_NUM_THREADS }}
-          USE_USHER: ${{ vars.USE_USHER }}
+        shell: bash -el {0}
         run: |
-          source ~/miniconda/etc/profile.d/conda.sh
-          conda activate larch-dev
-          cd build
-          export CMAKE_NUM_THREADS=${CMAKE_NUM_THREADS}
-          cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DUSE_USHER=${USE_USHER} ..
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_USHER=yes ..
+
       - name: Build (make step)
-        env:
-          MAKE_NUM_THREADS: ${{ vars.MAKE_NUM_THREADS }}
+        shell: bash -el {0}
         run: |
-          source ~/miniconda/etc/profile.d/conda.sh
-          conda activate larch-dev
           cd build
-          make VERBOSE=1 -j${MAKE_NUM_THREADS}
+          make VERBOSE=1 -j$(nproc)
+
       - name: Run tests
-        env:
-          LARCH_TEST_FLAGS: ${{ vars.LARCH_TEST_FLAGS }}
+        shell: bash -el {0}
         run: |
-          source ~/miniconda/etc/profile.d/conda.sh
-          conda activate larch-dev
           cd build
           ln -s ../data
-          ./larch-test ${LARCH_TEST_FLAGS}
+          ./bin/larch-test -tag slow
