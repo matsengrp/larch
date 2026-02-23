@@ -569,6 +569,7 @@ larch_executable(larch-test
   test/test_sankoff.cpp
   test/test_random_optimize.cpp
   test/test_spr_random_moves.cpp
+  test/test_native_optimize.cpp
 )
 target_compile_options(larch-test PRIVATE ${STRICT_WARNINGS})
 
