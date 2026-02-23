@@ -31,7 +31,6 @@ bool BatchingCallback<CRTP>::operator()(Profitable_Moves& move, int best_score_c
       });
       if (not all.empty()) {
         Benchmark merge_bench;
-        std::unique_lock lock{merge_mtx_};
         merge_.AddDAGs(
             all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
         // merge_.GetResult().GetRoot().Validate(true, true);
@@ -121,45 +120,42 @@ void BatchingCallback<CRTP>::operator()(MAT::Tree& tree) {
   check_edge_mutations(reassigned_states.Const());
 #endif
   reassigned_states.RecomputeCompactGenomes(true);
-  {
-    auto all = moves_batch_.GatherAndClear([this](auto buckets) {
-      std::vector<MoveStorage> result;
-      result.reserve(moves_batch_.size_approx());
-      for (auto&& bucket : buckets) {
-        for (auto&& stored_move : bucket) {
-          Assert(stored_move.fragment);
-          // GetFullDAG(stored_move.fragment->View()).GetRoot().Validate(true, false);
-          result.push_back(std::move(stored_move));
-        }
+  auto all = moves_batch_.GatherAndClear([this](auto buckets) {
+    std::vector<MoveStorage> result;
+    result.reserve(moves_batch_.size_approx());
+    for (auto&& bucket : buckets) {
+      for (auto&& stored_move : bucket) {
+        Assert(stored_move.fragment);
+        // GetFullDAG(stored_move.fragment->View()).GetRoot().Validate(true, false);
+        result.push_back(std::move(stored_move));
       }
-      return result;
-    });
-    std::unique_lock lock{merge_mtx_};
-    if (not all.empty()) {
-#ifdef KEEP_ASSERTS
-      auto orig_num_leafs = merge_.GetResult().GetLeafsCount();
-#endif
-      merge_.AddDAGs(
-          all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
-
-      //// FOR DEBUGGING: alternative "serialized" merging of fragments to check them
-      // for (auto& i : all) {
-      //   auto frag = i.fragment->View();
-      //   MADAGToDOT(frag, std::cout);
-      //   MADAGToDOT(i.spr->View(), std::cout);
-      //   std::vector dags = {frag};
-      //   merge_.AddDAGs(dags);
-      //   MADAGToDOT(merge_.GetResult(), std::cout);
-      // Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
-      // }
-
-#ifdef KEEP_ASSERTS
-      Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
-#endif
     }
-    merge_.AddDAGs(std::vector{reassigned_states});
-    // merge_.GetResult().GetRoot().Validate(true, true);
+    return result;
+  });
+  if (not all.empty()) {
+#ifdef KEEP_ASSERTS
+    auto orig_num_leafs = merge_.GetResult().GetLeafsCount();
+#endif
+    merge_.AddDAGs(
+        all | ranges::views::transform([](auto& i) { return i.fragment->View(); }));
+
+    //// FOR DEBUGGING: alternative "serialized" merging of fragments to check them
+    // for (auto& i : all) {
+    //   auto frag = i.fragment->View();
+    //   MADAGToDOT(frag, std::cout);
+    //   MADAGToDOT(i.spr->View(), std::cout);
+    //   std::vector dags = {frag};
+    //   merge_.AddDAGs(dags);
+    //   MADAGToDOT(merge_.GetResult(), std::cout);
+    // Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
+    // }
+
+#ifdef KEEP_ASSERTS
+    Assert(merge_.GetResult().GetLeafsCount() == orig_num_leafs);
+#endif
   }
+  merge_.AddDAGs(std::vector{reassigned_states});
+  // merge_.GetResult().GetRoot().Validate(true, true);
   {
     std::unique_lock lock{mat_mtx_};
 #if USE_MAT_VIEW
@@ -182,11 +178,8 @@ void BatchingCallback<CRTP>::OnReassignedStates(MAT::Tree& tree) {
   check_edge_mutations(reassigned_states.Const());
 #endif
   reassigned_states.RecomputeCompactGenomes(false);
-  {
-    std::unique_lock lock{merge_mtx_};
-    merge_.AddDAGs(std::vector{reassigned_states});
-    // merge_.GetResult().GetRoot().Validate(true, true);
-  }
+  merge_.AddDAGs(std::vector{reassigned_states});
+  // merge_.GetResult().GetRoot().Validate(true, true);
   {
     std::unique_lock lock{mat_mtx_};
 #if USE_MAT_VIEW

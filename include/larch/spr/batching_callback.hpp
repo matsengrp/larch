@@ -132,7 +132,6 @@ class BatchingCallback : public Move_Found_Callback {
   std::atomic<long> batch_merge_us_{0};
   std::atomic<long> batch_merge_count_{0};
   std::shared_mutex mat_mtx_;
-  std::mutex merge_mtx_;
   Reduction<std::deque<MoveStorage>> moves_batch_{32};
 };
 
