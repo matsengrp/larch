@@ -121,22 +121,95 @@ set(TF_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
 set(TF_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
 FetchContent_MakeAvailable(taskflow)
 
+# Workaround: Some versions of CMake's FindMPI module fail to parse the -I
+# prefix from mpicc --showme:compile output, producing paths like
+# "-I/path/include" instead of "/path/include". We detect this and manually
+# set all MPI variables to bypass FindMPI's broken parsing.
 find_program(MPI_C_COMPILER mpicc)
+find_program(MPI_CXX_COMPILER mpicxx)
 if(MPI_C_COMPILER)
     execute_process(
-        COMMAND ${MPI_C_COMPILER} --showme:incdirs
-        OUTPUT_VARIABLE MPI_INCDIRS
+        COMMAND ${MPI_C_COMPILER} --showme:compile
+        OUTPUT_VARIABLE _MPI_C_COMPILE_FLAGS
         OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
     )
-    # Get the first path (space-separated list)
-    string(REPLACE " " ";" MPI_INCDIRS_LIST "${MPI_INCDIRS}")
-    list(GET MPI_INCDIRS_LIST 0 MPI_PRIMARY_INCDIR)
-    
-    set(MPI_C_HEADER_DIR "${MPI_PRIMARY_INCDIR}" CACHE PATH "")
-    set(MPI_CXX_HEADER_DIR "${MPI_PRIMARY_INCDIR}" CACHE PATH "")
-endif()
+    # Check if mpicc output contains -I flags (indicating OpenMPI-style wrapper)
+    if(_MPI_C_COMPILE_FLAGS MATCHES "-I")
+        # Extract include directories, stripping -I prefix
+        string(REGEX MATCHALL "-I[^ ]+" _MPI_INC_FLAGS "${_MPI_C_COMPILE_FLAGS}")
+        set(_MPI_INCLUDE_DIRS "")
+        foreach(_flag ${_MPI_INC_FLAGS})
+            string(REGEX REPLACE "^-I" "" _dir "${_flag}")
+            list(APPEND _MPI_INCLUDE_DIRS "${_dir}")
+        endforeach()
 
-find_package(MPI REQUIRED)
+        execute_process(
+            COMMAND ${MPI_C_COMPILER} --showme:link
+            OUTPUT_VARIABLE _MPI_C_LINK_FLAGS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        execute_process(
+            COMMAND ${MPI_CXX_COMPILER} --showme:link
+            OUTPUT_VARIABLE _MPI_CXX_LINK_FLAGS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        # Extract library directories
+        string(REGEX MATCHALL "-L[^ ]+" _MPI_LIB_DIR_FLAGS "${_MPI_C_LINK_FLAGS}")
+        set(_MPI_LIB_DIRS "")
+        foreach(_flag ${_MPI_LIB_DIR_FLAGS})
+            string(REGEX REPLACE "^-L" "" _dir "${_flag}")
+            list(APPEND _MPI_LIB_DIRS "${_dir}")
+        endforeach()
+        # Extract library names
+        string(REGEX MATCHALL "-l[^ ]+" _MPI_LIB_FLAGS "${_MPI_C_LINK_FLAGS}")
+        set(_MPI_LIBRARIES "")
+        foreach(_flag ${_MPI_LIB_FLAGS})
+            string(REGEX REPLACE "^-l" "" _lib "${_flag}")
+            foreach(_dir ${_MPI_LIB_DIRS})
+                if(EXISTS "${_dir}/lib${_lib}.so" OR EXISTS "${_dir}/lib${_lib}.dylib" OR EXISTS "${_dir}/lib${_lib}.a")
+                    list(APPEND _MPI_LIBRARIES "${_dir}/lib${_lib}.so")
+                    break()
+                endif()
+            endforeach()
+        endforeach()
+
+        set(MPI_C_FOUND TRUE)
+        set(MPI_CXX_FOUND TRUE)
+        set(MPI_FOUND TRUE)
+        set(MPI_C_INCLUDE_DIRS "${_MPI_INCLUDE_DIRS}" CACHE STRING "")
+        set(MPI_CXX_INCLUDE_DIRS "${_MPI_INCLUDE_DIRS}" CACHE STRING "")
+        set(MPI_INCLUDE_PATH "${_MPI_INCLUDE_DIRS}" CACHE STRING "")
+        set(MPI_C_LIBRARIES "${_MPI_LIBRARIES}" CACHE STRING "")
+        set(MPI_CXX_LIBRARIES "${_MPI_LIBRARIES}" CACHE STRING "")
+        set(MPI_CXX_LINK_FLAGS "${_MPI_CXX_LINK_FLAGS}" CACHE STRING "")
+
+        # Create imported targets that find_package(MPI) would normally create
+        if(NOT TARGET MPI::MPI_C)
+            add_library(MPI::MPI_C IMPORTED INTERFACE)
+            set_target_properties(MPI::MPI_C PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${_MPI_INCLUDE_DIRS}"
+                INTERFACE_LINK_LIBRARIES "${_MPI_LIBRARIES}"
+            )
+        endif()
+        if(NOT TARGET MPI::MPI_CXX)
+            add_library(MPI::MPI_CXX IMPORTED INTERFACE)
+            set_target_properties(MPI::MPI_CXX PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${_MPI_INCLUDE_DIRS}"
+                INTERFACE_LINK_LIBRARIES "${_MPI_LIBRARIES}"
+            )
+        endif()
+        message(STATUS "MPI found manually (workaround for FindMPI -I prefix bug)")
+        message(STATUS "  MPI include dirs: ${_MPI_INCLUDE_DIRS}")
+        message(STATUS "  MPI libraries: ${_MPI_LIBRARIES}")
+    else()
+        find_package(MPI REQUIRED)
+    endif()
+else()
+    find_package(MPI REQUIRED)
+endif()
 include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
 add_library(larch-autogen OBJECT

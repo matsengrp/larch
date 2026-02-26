@@ -27,14 +27,14 @@ source:
 
 build:
   number: 0
-  skip: true # [win or osx]
+  skip: true # [win]
 
 requirements:
   build:
     - python
-    - gcc >=12.4.0,<14.0.0
-    - gxx >=12.4.0,<14.0.0
-    - cmake =3.19.6
+    - gcc >=12.4.0,<14.0.0  # [linux]
+    - gxx >=12.4.0,<14.0.0  # [linux]
+    - cmake >=3.19.6,<4.0
     - make
     - openmpi >=4.1.0,<5.0
     - openmpi-mpicc >=4.1.0,<5.0
@@ -42,21 +42,20 @@ requirements:
     - automake
     - autoconf
     - libtool
-    - yasm
+    - yasm  # [linux]
     - openssh
+    - libprotobuf
     - protobuf
-
-    - openmpi >=4.1.0,<5.0
-    - boost-cpp =1.76
-    - ucx >=1.16.0
-    - zlib >=1.2.11
+    - boost-cpp >=1.82
+    - ucx >=1.16.0  # [linux]
+    - zlib >=1.2
     - tbb-devel
 
   run:
     - openmpi >=4.1.0,<5.0
-    - boost-cpp =1.76
-    - ucx >=1.16.0
-    - zlib >=1.2.11
+    - boost-cpp >=1.82
+    - ucx >=1.16.0  # [linux]
+    - zlib >=1.2
     - tbb
 
 test:
