@@ -326,3 +326,223 @@ MLScoringBackend<DAG>::GetNucleotideSetAtSite(const DAGView& dag, NodeId node,
       dag.Get(node).GetCompactGenome().GetBase(site, dag.GetReferenceSequence());
   return NucleotideSet{base.ToChar()};
 }
+
+// ParsimonyOnlyScoringBackend implementation
+
+template <typename DAG>
+template <typename TreeView>
+NodeId ParsimonyOnlyScoringBackend<DAG>::FindTreeRoot(const TreeView& tree) const {
+  auto ua = tree.GetRoot();
+  for (auto clade : ua.GetClades()) {
+    for (auto edge : clade) {
+      return edge.GetChild().GetId();
+    }
+  }
+  Fail("No tree root found");
+}
+
+template <typename DAG>
+template <typename TreeView>
+void ParsimonyOnlyScoringBackend<DAG>::FitchVisit(
+    const TreeView& tree, NodeId node_id,
+    std::unordered_map<size_t, std::vector<uint8_t>>& fitch_sets, int& score) const {
+  auto node = tree.Get(node_id);
+  auto& node_sets = fitch_sets[node_id.value];
+  node_sets.resize(variable_sites_.size());
+
+  if (node.IsLeaf()) {
+    for (size_t i = 0; i < variable_sites_.size(); i++) {
+      auto base =
+          node.GetCompactGenome().GetBase(variable_sites_[i], tree.GetReferenceSequence());
+      node_sets[i] = static_cast<uint8_t>(base_to_singleton(base));
+    }
+  } else {
+    // Visit children first (postorder)
+    std::vector<NodeId> children;
+    for (auto clade : node.GetClades()) {
+      for (auto edge : clade) {
+        auto child_id = edge.GetChild().GetId();
+        FitchVisit(tree, child_id, fitch_sets, score);
+        children.push_back(child_id);
+      }
+    }
+
+    // Compute Fitch sets from children
+    for (size_t i = 0; i < variable_sites_.size(); i++) {
+      uint8_t intersection = fitch_sets[children[0].value][i];
+      uint8_t union_set = fitch_sets[children[0].value][i];
+      for (size_t c = 1; c < children.size(); c++) {
+        uint8_t child_set = fitch_sets[children[c].value][i];
+        intersection &= child_set;
+        union_set |= child_set;
+      }
+      if (intersection != 0) {
+        node_sets[i] = intersection;
+      } else {
+        node_sets[i] = union_set;
+        score++;
+      }
+    }
+  }
+}
+
+template <typename DAG>
+template <typename DAGView>
+bool ParsimonyOnlyScoringBackend<DAG>::Initialize(const DAGView& dag, NodeId src,
+                                                   NodeId dst, NodeId lca) {
+  src_ = src;
+  dst_ = dst;
+  lca_ = lca;
+
+  // Collect variable sites from the original tree's edge mutations
+  auto original = dag.GetOriginal();
+  std::set<size_t> var_sites_set;
+  for (auto edge : original.GetEdges()) {
+    for (auto& [pos, mut] : edge.GetEdgeMutations()) {
+      var_sites_set.insert(pos.value);
+    }
+  }
+  variable_sites_.clear();
+  site_to_index_.clear();
+  size_t idx = 0;
+  for (auto site : var_sites_set) {
+    variable_sites_.push_back({site});
+    site_to_index_[site] = idx++;
+  }
+
+  if (variable_sites_.empty()) {
+    score_change_ = 0;
+    return true;
+  }
+
+  // Run Fitch on original tree (pre-move)
+  int old_score = 0;
+  std::unordered_map<size_t, std::vector<uint8_t>> old_fitch_sets;
+  NodeId old_root = FindTreeRoot(original);
+  FitchVisit(original, old_root, old_fitch_sets, old_score);
+
+  // Run Fitch on overlay tree (post-move)
+  // Use .Const() to read through the const overlay path, which falls through
+  // to the target for non-overlaid features (avoids "Can't modify non-overlaid
+  // node" error on mutable overlays).
+  int new_score = 0;
+  new_fitch_sets_.clear();
+  auto const_dag = dag.Const();
+  NodeId new_root = FindTreeRoot(const_dag);
+  FitchVisit(const_dag, new_root, new_fitch_sets_, new_score);
+
+  // Score change = new parsimony - old parsimony (negative = improvement)
+  score_change_ = new_score - old_score;
+
+  // Find changed sites per node
+  changed_sites_map_ = {};
+  for (auto& [node_val, new_sets] : new_fitch_sets_) {
+    NodeId node_id{node_val};
+    auto old_it = old_fitch_sets.find(node_val);
+    if (old_it == old_fitch_sets.end()) {
+      // New node (appended by SPR): all sites are "changed"
+      ContiguousSet<MutationPosition> sites;
+      for (auto& site : variable_sites_) {
+        sites.insert(site);
+      }
+      changed_sites_map_.insert({node_id, std::move(sites)});
+    } else {
+      ContiguousSet<MutationPosition> sites;
+      for (size_t i = 0; i < variable_sites_.size(); i++) {
+        if (new_sets[i] != old_it->second[i]) {
+          sites.insert(variable_sites_[i]);
+        }
+      }
+      if (not sites.empty()) {
+        changed_sites_map_.insert({node_id, std::move(sites)});
+      }
+    }
+  }
+
+  return true;
+}
+
+template <typename DAG>
+ContiguousSet<MutationPosition>
+ParsimonyOnlyScoringBackend<DAG>::GetSitesWithScoringChanges(NodeId node) const {
+  auto it = changed_sites_map_.find(node);
+  if (it != changed_sites_map_.end()) {
+    return it->second.Copy();
+  }
+  return {};
+}
+
+template <typename DAG>
+bool ParsimonyOnlyScoringBackend<DAG>::HasScoringChanges(NodeId node) const {
+  auto it = changed_sites_map_.find(node);
+  return it != changed_sites_map_.end();
+}
+
+template <typename DAG>
+template <typename DAGView>
+std::pair<MAT::Mutations_Collection,
+          std::optional<ContiguousMap<MutationPosition, Mutation_Count_Change>>>
+ParsimonyOnlyScoringBackend<DAG>::GetFitchSetParts(const DAGView&, NodeId node, bool,
+                                                    bool, bool) const {
+  // Return empty Mutations_Collection and a changes map with keys = changed positions
+  ContiguousMap<MutationPosition, Mutation_Count_Change> changes;
+  auto it = changed_sites_map_.find(node);
+  if (it != changed_sites_map_.end()) {
+    for (auto site : it->second) {
+      changes.insert({site, Mutation_Count_Change{}});
+    }
+  }
+  return {MAT::Mutations_Collection{},
+          changes.empty() ? std::nullopt : std::make_optional(std::move(changes))};
+}
+
+template <typename DAG>
+template <typename DAGView>
+FitchSet ParsimonyOnlyScoringBackend<DAG>::GetFitchSetAtSite(
+    const DAGView& dag, NodeId node, MutationPosition site, bool is_leaf, bool,
+    bool) const {
+  if (is_leaf) {
+    // For leaves, return the observed base as a singleton
+    auto base =
+        dag.GetOriginal().Get(node).GetCompactGenome().GetBase(
+            site, dag.GetReferenceSequence());
+    return FitchSet{static_cast<int>(static_cast<uint8_t>(base_to_singleton(base)))};
+  }
+
+  // Look up in the pre-computed Fitch sets
+  auto node_it = new_fitch_sets_.find(node.value);
+  if (node_it != new_fitch_sets_.end()) {
+    auto site_it = site_to_index_.find(site.value);
+    if (site_it != site_to_index_.end() && site_it->second < node_it->second.size()) {
+      return FitchSet{static_cast<int>(node_it->second[site_it->second])};
+    }
+  }
+
+  // Site not in variable sites: return the reference base
+  const auto& ref = dag.GetReferenceSequence();
+  Assert(site.value > 0 and site.value <= ref.size());
+  return FitchSet{static_cast<int>(static_cast<uint8_t>(
+      base_to_singleton(MutationBase{ref[site.value - 1]})))};
+}
+
+template <typename DAG>
+MutationBase ParsimonyOnlyScoringBackend<DAG>::SelectBase(const FitchSet& fitch_set,
+                                                           MutationBase old_base,
+                                                           MutationBase parent_base) {
+  // Same logic as MatOptimizeScoringBackend
+  if (fitch_set.find(parent_base.ToChar())) {
+    return parent_base;
+  }
+  if (fitch_set.find(old_base.ToChar())) {
+    return old_base;
+  }
+  return MutationBase{fitch_set.at(0)};
+}
+
+template <typename DAG>
+const ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>&
+ParsimonyOnlyScoringBackend<DAG>::GetChangedFitchSetMap() const {
+  static ContiguousMap<MATNodePtr, ContiguousMap<MutationPosition, Mutation_Count_Change>>
+      empty;
+  return empty;
+}

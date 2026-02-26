@@ -137,6 +137,7 @@ static inline uint8_t EncodeBaseMAT(char base) {
 
 inline auto mutations_view(MATNodePtr node) {
   return node->mutations |
+         ranges::views::filter([](const MAT::Mutation& mut) { return mut.is_valid(); }) |
          ranges::views::transform(
              [](const MAT::Mutation& mut)
                  -> std::pair<MutationPosition, std::pair<char, char>> {

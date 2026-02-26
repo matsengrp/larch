@@ -1,4 +1,7 @@
 // Modified from deps/usher/matOptimize/import_vcf.hpp
+#pragma once
+
+#ifdef USE_USHER
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -40,3 +43,5 @@ struct Parsed_VCF_Line {
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #include "larch/impl/import_vcf_impl.hpp"
 #pragma GCC diagnostic pop
+
+#endif  // USE_USHER
