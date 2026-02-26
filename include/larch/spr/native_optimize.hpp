@@ -256,7 +256,8 @@ class MoveEnumerator {
 
   explicit MoveEnumerator(const TreeIndex<DAG>& index) : index_{index} {}
 
-  void FindMovesForSource(NodeId src, size_t radius, Callback callback) const;
+  void FindMovesForSource(NodeId src, size_t radius, Callback callback,
+                          size_t* scored_count = nullptr) const;
   void FindAllMoves(size_t radius, Callback callback) const;
 
   /**
@@ -283,13 +284,15 @@ class MoveEnumerator {
 
  private:
   void UpwardTraversal(NodeId src, size_t radius, Callback& callback,
-                        ScratchBuffers& scratch) const;
+                        ScratchBuffers& scratch,
+                        size_t* scored_count) const;
 
   void SearchSubtreeWithBound(NodeId node, NodeId src, NodeId lca,
                                size_t radius_left,
                                const SrcRemovalResult& removal,
                                int& best_score, Callback& callback,
-                               ScratchBuffers& scratch) const;
+                               ScratchBuffers& scratch,
+                               size_t* scored_count) const;
 
   const TreeIndex<DAG>& index_;
 };
@@ -336,14 +339,18 @@ std::vector<RadiusResult> OptimizeDAGNative(Merge& merge,
     // Phase 1 (PARALLEL): Enumerate profitable moves
     std::vector<ProfitableMove> all_moves;
     std::mutex moves_mtx;
+    std::atomic<size_t> scored_pairs{0};
 
     auto& searchable = tree_index.GetSearchableNodes();
     ParallelForEach(searchable, [&](NodeId src) {
+      size_t local_scored = 0;
       enumerator.FindMovesForSource(src, radius,
                                      [&](const ProfitableMove& move) {
                                        std::lock_guard lock{moves_mtx};
                                        all_moves.push_back(move);
-                                     });
+                                     },
+                                     &local_scored);
+      scored_pairs.fetch_add(local_scored, std::memory_order_relaxed);
     });
 
     // Sort by score_change (most improving first) and cap
@@ -413,6 +420,7 @@ std::vector<RadiusResult> OptimizeDAGNative(Merge& merge,
     auto merge_ms = radius_bench.lapMs();
 
     std::cout << "  Found " << all_moves.size() << " moves, applied " << accepted
+              << ", scored=" << scored_pairs.load()
               << ", enumerate=" << enumerate_ms << "ms apply=" << apply_ms
               << "ms frag=" << fragment_ms << "ms merge=" << merge_ms << "ms\n"
               << std::flush;
@@ -1017,12 +1025,14 @@ template <typename DAG>
 void MoveEnumerator<DAG>::SearchSubtreeWithBound(
     NodeId node, NodeId src, NodeId lca, size_t radius_left,
     const SrcRemovalResult& removal, int& best_score,
-    Callback& callback, ScratchBuffers& scratch) const {
+    Callback& callback, ScratchBuffers& scratch,
+    size_t* scored_count) const {
   if (index_.IsAncestor(src, node) || node == src) {
     return;
   }
 
   int score = ComputeMoveScoreCached(src, node, lca, removal, scratch);
+  if (scored_count) ++(*scored_count);
   if (score < 0) {
     callback(ProfitableMove{src, node, lca, score});
     if (score < best_score) {
@@ -1034,14 +1044,15 @@ void MoveEnumerator<DAG>::SearchSubtreeWithBound(
 
   for (auto child : index_.GetChildren(node)) {
     SearchSubtreeWithBound(child, src, lca, radius_left - 1, removal, best_score,
-                            callback, scratch);
+                            callback, scratch, scored_count);
   }
 }
 
 template <typename DAG>
 void MoveEnumerator<DAG>::UpwardTraversal(NodeId src, size_t radius,
                                            Callback& callback,
-                                           ScratchBuffers& scratch) const {
+                                           ScratchBuffers& scratch,
+                                           size_t* scored_count) const {
   auto dag = index_.GetDAG();
   auto src_node = dag.Get(src);
   if (src_node.IsTreeRoot() || src_node.IsUA()) {
@@ -1075,7 +1086,7 @@ void MoveEnumerator<DAG>::UpwardTraversal(NodeId src, size_t radius,
     for (auto child : children) {
       if (child == prev) continue;
       SearchSubtreeWithBound(child, src, current, remaining_radius, removal,
-                              best_score, callback, scratch);
+                              best_score, callback, scratch, scored_count);
     }
 
     if (current_node.IsTreeRoot() || current_node.IsUA()) {
@@ -1095,10 +1106,11 @@ void MoveEnumerator<DAG>::UpwardTraversal(NodeId src, size_t radius,
 
 template <typename DAG>
 void MoveEnumerator<DAG>::FindMovesForSource(NodeId src, size_t radius,
-                                              Callback callback) const {
+                                              Callback callback,
+                                              size_t* scored_count) const {
   ScratchBuffers scratch;
   scratch.Resize(index_.NumVariableSites());
-  UpwardTraversal(src, radius, callback, scratch);
+  UpwardTraversal(src, radius, callback, scratch, scored_count);
 }
 
 template <typename DAG>
