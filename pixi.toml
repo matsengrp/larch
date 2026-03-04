@@ -6,6 +6,17 @@ platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks]
+# --- Without usher (mock) ---
+configure-mock = "cmake -S . -B build-mock -DCMAKE_BUILD_TYPE=Debug -DUSE_USHER=no -DTBB_DISABLE_HWLOC_AUTOMATIC_SEARCH=ON"
+build-mock = { cmd = "cmake --build build-mock -j32", depends-on = ["configure-mock"] }
+setup-test-mock = { cmd = "mkdir -p build-mock/tests && ln -sfn ../../data build-mock/tests/data", depends-on = ["configure-mock"] }
+test-mock = { cmd = "cd build-mock/tests && ../bin/larch-test", depends-on = ["build-mock", "setup-test-mock"] }
+
+# --- With usher ---
+configure = "cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DUSE_USHER=yes -DTBB_DISABLE_HWLOC_AUTOMATIC_SEARCH=ON"
+build = { cmd = "cmake --build build -j32", depends-on = ["configure"] }
+setup-test = { cmd = "mkdir -p build/tests && ln -sfn ../../data build/tests/data", depends-on = ["configure"] }
+test = { cmd = "cd build/tests && ../bin/larch-test", depends-on = ["build", "setup-test"] }
 
 [dependencies]
 python = "*"
