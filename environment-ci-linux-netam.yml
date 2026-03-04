@@ -1,6 +1,6 @@
-name: larch-dev
+name: larch-dev--netam
 channels:
-  - pytorch
+  #  - pytorch
   - conda-forge
   - bioconda
 dependencies:
