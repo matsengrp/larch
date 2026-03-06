@@ -7,7 +7,7 @@ authors = [
 ]
 channels = ["conda-forge", "bioconda"]
 name = "larch"
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
 version = "0.1.4"
 
 [tasks]
@@ -37,15 +37,13 @@ description = "Run tests (excluding slow tests). Build first with 'pixi run buil
 cmd = "bash scripts/run-tests.sh"
 description = "Run all tests including slow tests. WARNING: Very slow."
 
+# Shared dependencies (all platforms)
 [dependencies]
 autoconf = "*"
 automake = "*"
 boost-cpp = "1.82.*"
 cmake = ">=3.19.6"
 curl = "*"
-gcc = ">=13.0.0,<14.0.0"
-gxx = ">=13.0.0,<14.0.0"
-libhwloc = "*"
 libtool = "*"
 make = "*"
 openmpi = ">=4.1.0,<5.0"
@@ -53,7 +51,23 @@ openssh = "*"
 protobuf = ">=3.12,<3.21"
 python = ">=3.10"
 pytorch-cpu = "*"
-ucx = ">=1.16.0"
 unzip = "*"
-yasm = "*"
 zlib = ">=1.2"
+
+# Linux-specific dependencies
+[target.linux-64.dependencies]
+gcc = ">=13.0.0,<14.0.0"
+gxx = ">=13.0.0,<14.0.0"
+libhwloc = "*"
+ucx = ">=1.16.0"
+yasm = "*"
+
+# macOS uses Xcode's Apple Clang (no gcc/gxx needed)
+# USE_SYSTEM_TBB=yes is required on macOS
+[target.osx-64.dependencies]
+tbb-devel = "*"
+libprotobuf = "*"
+
+[target.osx-arm64.dependencies]
+tbb-devel = "*"
+libprotobuf = "*"

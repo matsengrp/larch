@@ -46,6 +46,15 @@ if [[ "$LARCH_USE_NETAM" == "ON" || "$LARCH_USE_NETAM" == "yes" ]]; then
   fi
 fi
 
+# macOS-specific flags
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  CMAKE_ARGS+=("-DUSE_SYSTEM_TBB=yes")
+  if [[ -n "${CONDA_PREFIX:-}" ]]; then
+    CMAKE_ARGS+=("-DProtobuf_ROOT=$CONDA_PREFIX")
+  fi
+  echo "Detected macOS: enabling USE_SYSTEM_TBB, setting Protobuf_ROOT"
+fi
+
 # Resolve protobuf path
 if [[ "$LARCH_PROTOBUF_PATH" == "auto" ]]; then
   # Ensure cmake finds protobuf headers from pixi/conda, not the system
