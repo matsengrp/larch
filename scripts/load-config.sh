@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Source larch-build.env if it exists, otherwise use defaults.
+# Source larch-build.env and export settings.
 # This script is meant to be sourced (not executed) by other tasks.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,13 +13,11 @@ else
     exit 1
 fi
 
-export LARCH_BUILD_DIR="${LARCH_BUILD_DIR:-build}"
-export LARCH_BUILD_TYPE="${LARCH_BUILD_TYPE:-RelWithDebInfo}"
-export LARCH_USE_USHER="${LARCH_USE_USHER:-ON}"
-export LARCH_USE_NETAM="${LARCH_USE_NETAM:-OFF}"
-export LARCH_LIBTORCH_PATH="${LARCH_LIBTORCH_PATH:-auto}"
-export LARCH_CMAKE_EXTRA="${LARCH_CMAKE_EXTRA:-}"
+# Default LARCH_BUILD_JOBS to number of CPU cores if empty
 export LARCH_BUILD_JOBS="${LARCH_BUILD_JOBS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)}"
+
+export LARCH_BUILD_DIR LARCH_BUILD_TYPE LARCH_USE_USHER LARCH_USE_NETAM
+export LARCH_LIBTORCH_PATH LARCH_PROTOBUF_PATH LARCH_CMAKE_EXTRA
 
 echo "=== Build settings ==="
 echo "  LARCH_BUILD_DIR=$LARCH_BUILD_DIR"
@@ -27,5 +25,6 @@ echo "  LARCH_BUILD_TYPE=$LARCH_BUILD_TYPE"
 echo "  LARCH_USE_USHER=$LARCH_USE_USHER"
 echo "  LARCH_USE_NETAM=$LARCH_USE_NETAM"
 echo "  LARCH_LIBTORCH_PATH=$LARCH_LIBTORCH_PATH"
+echo "  LARCH_PROTOBUF_PATH=$LARCH_PROTOBUF_PATH"
 echo "  LARCH_BUILD_JOBS=$LARCH_BUILD_JOBS"
 echo "======================"
