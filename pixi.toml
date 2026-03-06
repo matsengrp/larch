@@ -1,0 +1,73 @@
+[workspace]
+authors = [
+  "Erick Matsen <ematsen@gmail.com>",
+  "Ognian Milanov <ognian.milanov@gmail.com>",
+  "Mary Barker <marybarker103@gmail.com>",
+  "David Rich <david.rich27@gmail.com>",
+]
+channels = ["conda-forge", "bioconda"]
+name = "larch"
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+version = "0.1.4"
+
+[tasks]
+# Workflow: init -> (edit larch-build.env) -> configure -> build -> test
+
+[tasks.init]
+cmd = "bash scripts/init.sh"
+description = "Create larch-build.env. E.g.: LARCH_BUILD_DIR=build-dev LARCH_USE_USHER=OFF pixi run init"
+
+[tasks.fetch-libtorch]
+cmd = "bash scripts/fetch-libtorch.sh"
+description = "Download libtorch binary to deps/libtorch/. Only needed if not using conda pytorch-cpu."
+
+[tasks.configure]
+cmd = "bash scripts/configure.sh"
+description = "Run cmake using settings from larch-build.env. Run init first."
+
+[tasks.build]
+cmd = "bash -c '. scripts/load-config.sh && cmake --build $LARCH_BUILD_DIR -j$LARCH_BUILD_JOBS'"
+description = "Build larch using settings from larch-build.env."
+
+[tasks.test]
+cmd = "bash scripts/run-tests.sh -tag slow"
+description = "Run tests (excluding slow tests). Build first with 'pixi run build'."
+
+[tasks.test-all]
+cmd = "bash scripts/run-tests.sh"
+description = "Run all tests including slow tests. WARNING: Very slow."
+
+# Shared dependencies (all platforms)
+[dependencies]
+autoconf = "*"
+automake = "*"
+boost-cpp = "1.82.*"
+cmake = ">=3.19.6"
+curl = "*"
+libtool = "*"
+make = "*"
+openmpi = ">=4.1.0,<5.0"
+openssh = "*"
+protobuf = ">=3.12,<3.21"
+python = ">=3.10"
+pytorch-cpu = "*"
+unzip = "*"
+zlib = ">=1.2"
+
+# Linux-specific dependencies
+[target.linux-64.dependencies]
+gcc = ">=13.0.0,<14.0.0"
+gxx = ">=13.0.0,<14.0.0"
+libhwloc = "*"
+ucx = ">=1.16.0"
+yasm = "*"
+
+# macOS uses Xcode's Apple Clang (no gcc/gxx needed)
+# USE_SYSTEM_TBB=yes is required on macOS
+[target.osx-64.dependencies]
+tbb-devel = "*"
+libprotobuf = "*"
+
+[target.osx-arm64.dependencies]
+tbb-devel = "*"
+libprotobuf = "*"

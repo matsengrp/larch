@@ -85,7 +85,7 @@ struct FragmentExtraStorage {
 
   using FeatureTypes = typename Target::StorageType::ExtraStorageType::FeatureTypes;
 
-  template <template <typename, typename> typename T, typename CRTP>
+  template <template <typename, typename, typename...> typename T, typename CRTP>
   using Base = typename Target::StorageType::ExtraStorageType::template Base<T, CRTP>;
 
   template <typename Feature>
