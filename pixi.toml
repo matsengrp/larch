@@ -2,13 +2,13 @@
 authors = [
   "Erick Matsen <ematsen@gmail.com>",
   "Ognian Milanov <ognian.milanov@gmail.com>",
-  "David Rich <david.rich27@gmail.com>",
   "Mary Barker <marybarker103@gmail.com>",
+  "David Rich <david.rich27@gmail.com>",
 ]
 channels = ["conda-forge", "bioconda"]
 name = "larch"
 platforms = ["linux-64"]
-version = "0.1.0"
+version = "0.1.4"
 
 [tasks]
 # Workflow: init -> (edit larch-build.env) -> configure -> build -> test
@@ -38,22 +38,22 @@ cmd = "bash scripts/run-tests.sh"
 description = "Run all tests including slow tests. WARNING: Very slow."
 
 [dependencies]
-python = ">=3.10"
+autoconf = "*"
+automake = "*"
+boost-cpp = "1.82.*"
+cmake = ">=3.19.6"
+curl = "*"
 gcc = ">=13.0.0,<14.0.0"
 gxx = ">=13.0.0,<14.0.0"
-cmake = ">=3.19.6"
-make = "*"
-automake = "*"
-autoconf = "*"
+libhwloc = "*"
 libtool = "*"
-yasm = "*"
+make = "*"
+openmpi = ">=4.1.0,<5.0"
 openssh = "*"
 protobuf = ">=3.12,<3.21"
+python = ">=3.10"
 pytorch-cpu = "*"
-openmpi = ">=4.1.0,<5.0"
-boost-cpp = "1.82.*"
 ucx = ">=1.16.0"
-zlib = ">=1.2"
-libhwloc = "*"
-curl = "*"
 unzip = "*"
+yasm = "*"
+zlib = ">=1.2"
