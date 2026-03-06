@@ -2,6 +2,8 @@
 # Source larch-build.env and export settings.
 # This script is meant to be sourced (not executed) by other tasks.
 
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/../larch-build.env"
 

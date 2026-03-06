@@ -30,12 +30,12 @@ cmd = "bash -c '. scripts/load-config.sh && cmake --build $LARCH_BUILD_DIR -j$LA
 description = "Build larch using settings from larch-build.env."
 
 [tasks.test]
-cmd = "bash -c '. scripts/load-config.sh && mkdir -p $LARCH_BUILD_DIR/tests && ln -sfn ../../data $LARCH_BUILD_DIR/tests/data && cd $LARCH_BUILD_DIR/tests && ../bin/larch-test -tag slow'"
+cmd = "bash scripts/run-tests.sh -tag slow"
 description = "Run tests (excluding slow tests). Build first with 'pixi run build'."
 
 [tasks.test-all]
-cmd = "bash -c '. scripts/load-config.sh && mkdir -p $LARCH_BUILD_DIR/tests && ln -sfn ../../data $LARCH_BUILD_DIR/tests/data && cd $LARCH_BUILD_DIR/tests && ../bin/larch-test'"
-description = "Run all tests including slow tests."
+cmd = "bash scripts/run-tests.sh"
+description = "Run all tests including slow tests. WARNING: Very slow."
 
 [dependencies]
 python = ">=3.10"
