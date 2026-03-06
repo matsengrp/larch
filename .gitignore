@@ -1,5 +1,6 @@
 doc-build
 build*
+larch-build.env
 .vscode
 compile_commands.json
 .cache

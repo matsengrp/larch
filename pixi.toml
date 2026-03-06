@@ -6,17 +6,31 @@ platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks]
-# --- Without usher (mock) ---
-configure-mock = "cmake -S . -B build-mock -DCMAKE_BUILD_TYPE=Debug -DUSE_USHER=no -DTBB_DISABLE_HWLOC_AUTOMATIC_SEARCH=ON"
-build-mock = { cmd = "cmake --build build-mock -j32", depends-on = ["configure-mock"] }
-setup-test-mock = { cmd = "mkdir -p build-mock/tests && ln -sfn ../../data build-mock/tests/data", depends-on = ["configure-mock"] }
-test-mock = { cmd = "cd build-mock/tests && ../bin/larch-test", depends-on = ["build-mock", "setup-test-mock"] }
+# Workflow: init -> (edit larch-build.env) -> configure -> build -> test
 
-# --- With usher ---
-configure = "cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DUSE_USHER=yes -DTBB_DISABLE_HWLOC_AUTOMATIC_SEARCH=ON"
-build = { cmd = "cmake --build build -j32", depends-on = ["configure"] }
-setup-test = { cmd = "mkdir -p build/tests && ln -sfn ../../data build/tests/data", depends-on = ["configure"] }
-test = { cmd = "cd build/tests && ../bin/larch-test", depends-on = ["build", "setup-test"] }
+[tasks.init]
+cmd = "bash scripts/init.sh"
+description = "Create larch-build.env. E.g.: LARCH_BUILD_DIR=build-dev LARCH_USE_USHER=OFF pixi run init"
+
+[tasks.fetch-libtorch]
+cmd = "bash scripts/fetch-libtorch.sh"
+description = "Download libtorch binary to deps/libtorch/. Required for LARCH_USE_NETAM=ON."
+
+[tasks.configure]
+cmd = "bash scripts/configure.sh"
+description = "Run cmake using settings from larch-build.env. Run init first."
+
+[tasks.build]
+cmd = "bash -c '. scripts/load-config.sh && cmake --build $LARCH_BUILD_DIR -j$LARCH_BUILD_JOBS'"
+description = "Build larch using settings from larch-build.env."
+
+[tasks.test]
+cmd = "bash -c '. scripts/load-config.sh && mkdir -p $LARCH_BUILD_DIR/tests && ln -sfn ../../data $LARCH_BUILD_DIR/tests/data && cd $LARCH_BUILD_DIR/tests && ../bin/larch-test -tag slow'"
+description = "Run tests (excluding slow tests). Build first with 'pixi run build'."
+
+[tasks.test-all]
+cmd = "bash -c '. scripts/load-config.sh && mkdir -p $LARCH_BUILD_DIR/tests && ln -sfn ../../data $LARCH_BUILD_DIR/tests/data && cd $LARCH_BUILD_DIR/tests && ../bin/larch-test'"
+description = "Run all tests including slow tests."
 
 [dependencies]
 python = "*"
@@ -37,3 +51,5 @@ boost-cpp = "1.82.*"
 ucx = ">=1.16.0"
 zlib = ">=1.2"
 libhwloc = "*"
+curl = "*"
+unzip = "*"
