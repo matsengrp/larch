@@ -884,12 +884,15 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 #endif
 
   // Resolve scoring coefficients based on backend.
-  // ML backend: default to ML-only (pscore=0, nodes=1, ml=1)
+  // ML backend: default to ML-only (pscore=0, nodes=0, ml=1)
+  //   nodes=0 because the node penalty (integer count) is not on the same
+  //   scale as log-likelihood deltas.
   // Parsimony backend: default to parsimony-only (pscore=1, nodes=1, ml=0)
+  //   nodes=1 because 1 node ≈ 1 mutation on the parsimony scale.
   // User-specified values always override these defaults.
   bool is_ml = (scoring_backend == ScoringBackend::ML);
   int move_coeff_pscore = user_move_coeff_pscore.value_or(is_ml ? 0 : 1);
-  int move_coeff_nodes = user_move_coeff_nodes.value_or(1);
+  int move_coeff_nodes = user_move_coeff_nodes.value_or(is_ml ? 0 : 1);
   double move_coeff_ml = user_move_coeff_ml.value_or(is_ml ? 1.0 : 0.0);
 
   bool is_input_dag = refseq_path.empty();
