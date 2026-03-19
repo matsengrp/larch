@@ -25,6 +25,12 @@
 
 #include "larch/usher_glue.hpp"
 
+#ifdef USE_NETAM
+#include <netam/crepe.hpp>
+#include <netam/likelihood.hpp>
+#include <netam/kmer_sequence_encoder.hpp>
+#endif
+
 #include <tbb/global_control.h>
 
 [[noreturn]] static void Usage() {
@@ -85,7 +91,20 @@
       {"--ignore-root_edge_mutations",
        "Ignore root edge mutations when computing parsimony\n"},
       {"-S,--autodetect-stoptime",
-       "Set program to exit after parsimony improvement plateaus\n"}};
+       "Set program to exit after parsimony improvement plateaus\n"},
+      {"--scoring-backend ENUM",
+       "Scoring backend for evaluating SPR moves (default: parsimony)\n"
+       "[parsimony, ml] (ml requires building with -DUSE_NETAM=yes)"},
+      {"--model-config FILE",
+       "Path to YAML model config (REQUIRED when --scoring-backend ml)\n"
+       "e.g., data/linearham/ThriftyHumV0.2-45.yml"},
+      {"--model-weights FILE",
+       "Path to libtorch .pth weights (REQUIRED when --scoring-backend ml)\n"
+       "e.g., data/linearham/ThriftyHumV0.2-45-libtorch.pth"},
+      {"--move-coeff-ml FLOAT",
+       "ML log-likelihood coefficient for scoring moves (default: 1.0 when\n"
+       "--scoring-backend ml, 0.0 otherwise). Higher values weight ML more\n"
+       "relative to parsimony."}};
 
   std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
 
@@ -128,6 +147,61 @@ std::vector<std::vector<UniqueData>> clades_difference(
   ranges::sort(result);
   return result;
 }
+
+#ifdef USE_NETAM
+// Expand a CompactGenome to a full sequence string using the reference sequence.
+template <typename RefSeq, typename CG>
+std::string ExpandCompactGenome(const RefSeq& ref_seq, const CG& compact_genome) {
+  std::string result{ref_seq.begin(), ref_seq.end()};
+  for (const auto& [pos, base] : compact_genome) {
+    result[pos.value - 1] = base.ToChar();  // MutationPosition is 1-indexed
+  }
+  return result;
+}
+
+// Compute the total log-likelihood of edges in a fragment using an ML model.
+// Iterates over fragment edges, expands parent/child sequences from compact
+// genomes in the SPR view (post-move state), and sums per-edge log-likelihoods.
+template <typename SPRView, typename FragmentView>
+double ComputeFragmentMLScore(const SPRView& spr, const FragmentView& fragment,
+                              netam::crepe& model) {
+  torch::NoGradGuard no_grad;
+  const auto& ref_seq = spr.Const().GetReferenceSequence();
+  double total_ll = 0.0;
+
+  for (auto edge : fragment.GetEdges()) {
+    auto parent_id = edge.GetParent().GetId();
+    auto child_id = edge.GetChild().GetId();
+
+    if (spr.Const().Get(parent_id).IsUA()) {
+      continue;
+    }
+
+    const auto& parent_cg = spr.Const().Get(parent_id).GetCompactGenome();
+    const auto& child_cg = spr.Const().Get(child_id).GetCompactGenome();
+
+    std::string parent_seq = ExpandCompactGenome(ref_seq, parent_cg);
+    std::string child_seq = ExpandCompactGenome(ref_seq, child_cg);
+
+    auto [encoded_1d, wt_mod_2d] = model.encoder().encode_sequence(parent_seq);
+    auto encoded = encoded_1d.unsqueeze(0);
+    auto wt_mod = wt_mod_2d.unsqueeze(0);
+    auto mask = torch::ones({1, encoded.size(1)}, torch::kBool);
+
+    auto [rates, csp_logits] = model->forward(encoded, mask, wt_mod);
+    auto csp = torch::softmax(csp_logits, -1);
+
+    auto parent_indices = netam::kmer_sequence_encoder::encode_bases(parent_seq);
+    auto child_indices = netam::kmer_sequence_encoder::encode_bases(child_seq);
+
+    auto ll =
+        netam::poisson_context_log_likelihood(rates, csp, parent_indices, child_indices);
+    total_ll += ll.item<double>();
+  }
+
+  return total_ll;
+}
+#endif  // USE_NETAM
 
 using Storage = MergeDAGStorage<>;
 using ReassignedStatesStorage =
@@ -233,12 +307,23 @@ struct Treebased_Move_Found_Callback
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
-    return {false, move.score_change <= 0};
+    double effective_score = move.score_change;
+#ifdef USE_NETAM
+    if (ml_model_ != nullptr and ml_coeff_ != 0.0) {
+      double fragment_ll = ComputeFragmentMLScore(spr, fragment, *ml_model_);
+      effective_score -= ml_coeff_ * fragment_ll;
+    }
+#endif
+    return {false, effective_score <= 0};
   }
 
   void OnRadius() {};
 
   std::pair<int, int> move_score_coeffs_;
+#ifdef USE_NETAM
+  netam::crepe* ml_model_ = nullptr;
+#endif
+  double ml_coeff_ = 0.0;
 };
 
 struct Merge_All_Moves_Found_Callback
@@ -373,7 +458,14 @@ struct Merge_All_Profitable_Moves_Found_Callback
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
-    return {move.score_change <= 0, move.score_change <= 0};
+    double effective_score = move.score_change;
+#ifdef USE_NETAM
+    if (ml_model_ != nullptr and ml_coeff_ != 0.0) {
+      double fragment_ll = ComputeFragmentMLScore(spr, fragment, *ml_model_);
+      effective_score -= ml_coeff_ * fragment_ll;
+    }
+#endif
+    return {effective_score <= 0, effective_score <= 0};
   }
 
   void OnRadius() {};
@@ -384,6 +476,10 @@ struct Merge_All_Profitable_Moves_Found_Callback
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
+#ifdef USE_NETAM
+  netam::crepe* ml_model_ = nullptr;
+#endif
+  double ml_coeff_ = 0.0;
 };
 
 struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
@@ -495,7 +591,14 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
-    return {move.score_change <= 0, false};
+    double effective_score = move.score_change;
+#ifdef USE_NETAM
+    if (ml_model_ != nullptr and ml_coeff_ != 0.0) {
+      double fragment_ll = ComputeFragmentMLScore(spr, fragment, *ml_model_);
+      effective_score -= ml_coeff_ * fragment_ll;
+    }
+#endif
+    return {effective_score <= 0, false};
   }
 
   void OnRadius() {};
@@ -506,6 +609,10 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
+#ifdef USE_NETAM
+  netam::crepe* ml_model_ = nullptr;
+#endif
+  double ml_coeff_ = 0.0;
 };
 
 enum class SampleMethod {
@@ -523,6 +630,8 @@ enum class CallbackMethod {
   BestMovesTreeBased,
   AllMoves
 };
+
+enum class ScoringBackend { Parsimony, ML };
 
 int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   Arguments args = GetArguments(argc, argv);
@@ -557,6 +666,10 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   size_t current_best_parsimony = NoId;
   size_t time_limit = NoId;
   std::optional<uint32_t> user_seed = std::nullopt;
+  ScoringBackend scoring_backend = ScoringBackend::Parsimony;
+  std::string model_config_path;
+  std::string model_weights_path;
+  std::optional<double> user_move_coeff_ml = std::nullopt;
 
   Benchmark total_timer;
 
@@ -663,6 +776,26 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       time_limit = ParseNumber(*params.begin());
     } else if (name == "-S" or name == "--autodetect-stoptime") {
       plateau_stopping_condition = true;
+    } else if (name == "--scoring-backend") {
+      std::string temp;
+      ParseOption(name, params, temp, 1);
+      if (temp == "parsimony") {
+        scoring_backend = ScoringBackend::Parsimony;
+      } else if (temp == "ml") {
+        scoring_backend = ScoringBackend::ML;
+      } else {
+        std::cerr << "ERROR: Unknown `--scoring-backend` option '" << temp << "'."
+                  << std::endl;
+        Fail();
+      }
+    } else if (name == "--model-config") {
+      ParseOption(name, params, model_config_path, 1);
+    } else if (name == "--model-weights") {
+      ParseOption(name, params, model_weights_path, 1);
+    } else if (name == "--move-coeff-ml") {
+      double temp;
+      ParseOption(name, params, temp, 1);
+      user_move_coeff_ml = temp;
     } else {
       std::cerr << "Unknown argument '" << name << "'.\n";
       Fail();
@@ -685,6 +818,37 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     std::cerr << "Path to output DAG not specified.\n";
     Fail();
   }
+
+  // Validate ML scoring backend arguments
+  if (scoring_backend == ScoringBackend::ML) {
+    if (model_config_path.empty() or model_weights_path.empty()) {
+      std::cerr
+          << "ERROR: --model-config and --model-weights are required when "
+             "--scoring-backend ml is selected.\n";
+      Fail();
+    }
+#ifndef USE_NETAM
+    std::cerr << "ERROR: ML scoring backend requires building with -DUSE_NETAM=yes.\n";
+    Fail();
+#endif
+  }
+
+  // Load ML model if requested
+#ifdef USE_NETAM
+  std::optional<netam::crepe> ml_model;
+  if (scoring_backend == ScoringBackend::ML) {
+    std::cout << "Loading ML model..." << std::flush;
+    ml_model.emplace(model_weights_path, model_config_path);
+    (*ml_model)->eval();
+    std::cout << " done.\n";
+    std::cout << "  Model config: " << model_config_path << "\n";
+    std::cout << "  Model weights: " << model_weights_path << "\n";
+  }
+#endif
+
+  // Resolve ML coefficient: default to 1.0 when ML backend is selected, 0.0 otherwise
+  double move_coeff_ml =
+      user_move_coeff_ml.value_or(scoring_backend == ScoringBackend::ML ? 1.0 : 0.0);
 
   bool is_input_dag = refseq_path.empty();
   if (input_format == FileFormat::Infer) {
@@ -973,6 +1137,16 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     sample_tree.View().BuildMAT(mat);
     check_edge_mutations(sample_tree.View().Const());
 
+    // Helper to set ML scoring on a callback
+    [[maybe_unused]] auto set_ml_scoring = [&]([[maybe_unused]] auto& callback) {
+#ifdef USE_NETAM
+      if (ml_model.has_value()) {
+        callback.ml_model_ = &(*ml_model);
+      }
+#endif
+      callback.ml_coeff_ = move_coeff_ml;
+    };
+
     if (callback_config == CallbackMethod::AllMoves) {
       Merge_All_Moves_Found_Callback callback{merge, collapse_empty_fragment_edges};
       optimized_dags.push_back(
@@ -980,16 +1154,19 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     } else if (callback_config == CallbackMethod::BestMovesFixedTree) {
       Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback callback{
           merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
+      set_ml_scoring(callback);
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesTreeBased) {
       Treebased_Move_Found_Callback callback{
           merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
+      set_ml_scoring(callback);
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMoves) {
       Merge_All_Profitable_Moves_Found_Callback callback{
           merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
+      set_ml_scoring(callback);
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else {
@@ -1022,6 +1199,11 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   std::cout << "new node coefficient: " << move_coeff_nodes << "\n";
   std::cout << "parsimony score coefficient: " << move_coeff_pscore << "\n";
+  std::cout << "scoring backend: "
+            << (scoring_backend == ScoringBackend::ML ? "ml" : "parsimony") << "\n";
+  if (move_coeff_ml != 0.0) {
+    std::cout << "ML score coefficient: " << move_coeff_ml << "\n";
+  }
 
   logfile.close();
 
