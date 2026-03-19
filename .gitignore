@@ -1,5 +1,7 @@
 doc-build
 build*
+larch-build.env
+deps/libtorch
 .vscode
 compile_commands.json
 .cache
@@ -7,5 +9,6 @@ tags
 .kak*
 cscope.*
 *.code-workspace
+_ignore
 
 tools/version.hpp

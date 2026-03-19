@@ -50,10 +50,23 @@ For Intel Macs, the Homebrew prefix is `/usr/local/opt/protobuf@21` instead.
 Build Environments
 ------------------
 
-* singularity 3.5.3
-* conda 22.9.0
+### Pixi
 
-Larch can be built utilizing a Singularity container or a Conda environment.
+[Pixi](https://pixi.sh) provides all dependencies (compiler, libraries, tools) from conda-forge with no system requirements beyond pixi itself.
+
+```shell
+pixi run init          # creates larch-build.env, inits submodules
+# (optionally edit larch-build.env to change build type, enable USE_NETAM, etc.)
+pixi run configure     # runs cmake
+pixi run build         # builds larch
+pixi run test          # runs tests (excluding slow and build-specific tests)
+```
+
+See `scripts/larch-build.env.template` for all available build options.
+
+### Singularity / Conda
+
+Larch can also be built utilizing a Singularity container or a Conda environment.
 
 To build Singularity image, use the definition provided:
 

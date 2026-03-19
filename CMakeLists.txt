@@ -254,7 +254,7 @@ if(USE_NETAM)
   set(MATPLOTPP_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
   FetchContent_MakeAvailable(matplotplusplus)
   # Fix warning-as-error in matplotplusplus with newer GCC
-  target_compile_options(matplot PRIVATE -Wno-ignored-attributes)
+  target_compile_options(matplot PRIVATE -Wno-ignored-attributes -Wno-stringop-truncation -Wno-array-bounds -Wno-stringop-overread)
   if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     target_compile_definitions(matplot PUBLIC __linux)
   endif()
