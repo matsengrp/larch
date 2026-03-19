@@ -954,10 +954,41 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       optimized_dags;
   merge.ComputeResultEdgeMutations();
 
+  // Compute total log-likelihood for the best parsimony tree in the DAG.
+  // Returns the sum of edge log-likelihoods (skipping UA edges).
+#ifdef USE_NETAM
+  auto compute_best_tree_ll = [&merge](netam::crepe& model) -> double {
+    torch::NoGradGuard no_grad;
+    auto dag = merge.GetResult();
+    const auto& ref_seq = dag.GetReferenceSequence();
+
+    // Sample the min-parsimony tree
+    SubtreeWeight<BinaryParsimonyScore, MergeDAG> scorer{dag};
+    auto tree_storage = scorer.MinWeightSampleTree({}, std::nullopt);
+    auto tree = tree_storage.View();
+    tree.GetRoot().Validate(true);
+
+    double total_ll = 0.0;
+    for (auto edge : tree.GetEdges()) {
+      if (edge.GetParent().IsUA()) {
+        continue;
+      }
+      total_ll += ComputeEdgeLL(ref_seq, edge.GetParent().GetCompactGenome(),
+                                edge.GetChild().GetCompactGenome(), model);
+    }
+    return total_ll;
+  };
+#endif
+
   Benchmark log_timer;
   auto logger = [&merge, &logfile, &log_timer, &intermediate_dag_path,
                  &write_intermediate_dag, &write_intermediate_every_x_iters,
-                 &output_format, &use_ua_free_parsimony](size_t iteration) {
+                 &output_format, &use_ua_free_parsimony
+#ifdef USE_NETAM
+                 ,
+                 &ml_model, &compute_best_tree_ll
+#endif
+  ](size_t iteration) {
     std::cout << "############ Logging for iteration " << iteration << " #######\n";
     merge.ComputeResultEdgeMutations();
 
@@ -1013,6 +1044,12 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     std::cout << "Optimal trees in DAG: " << min_parsimony_count << "\n";
     std::cout << "Min summed RF distance over trees: " << min_sum_rf_distance << "\n";
     std::cout << "Max summed RF distance over trees: " << max_sum_rf_distance << "\n";
+#ifdef USE_NETAM
+    if (ml_model.has_value()) {
+      double best_tree_ll = compute_best_tree_ll(*ml_model);
+      std::cout << "Best tree log-likelihood: " << best_tree_ll << "\n";
+    }
+#endif
 
     logfile << '\n'
             << iteration << '\t' << tree_count << '\t'
