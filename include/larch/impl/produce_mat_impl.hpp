@@ -94,6 +94,12 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                         "intermediate_newick",  // intermediate newick name
                         callback                // callback
     );
+#ifndef USE_TEST_LOGS
+    // matOptimize unconditionally writes intermediate_newick*.pb.gz when
+    // allow_drift is true. Clean up since we can't suppress it without
+    // changing search behavior.
+    std::remove("intermediate_newick1.pb.gz");
+#endif
     tree.uncondense_leaves();
     tree.condense_leaves(condense_arg);
     tree.fix_node_idx();

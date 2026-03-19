@@ -912,8 +912,15 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   RandomNumberGenerator main_rng{user_seed};
   std::cout << "Random seed: " << main_rng.seed_ << "\n";
 
-  std::filesystem::create_directory(logfile_path);
-  std::string logfile_name = logfile_path + "/logfile.csv";
+  std::ofstream logfile;
+  if (write_intermediate_dag) {
+    std::filesystem::create_directory(logfile_path);
+    std::string logfile_name = logfile_path + "/logfile.csv";
+    logfile.open(logfile_name);
+    logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\t"
+               "WorstParsimony\tMinSumRFDistance\tMaxSumRFDistance\tMinSumRFCount\t"
+               "MaxSumRFCount\tSecondsElapsed";
+  }
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
 #ifdef DISABLE_PARALLELISM
@@ -926,12 +933,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 #endif
   std::cout << "Thread count: "
             << c.active_value(tbb::global_control::max_allowed_parallelism) << "\n";
-
-  std::ofstream logfile;
-  logfile.open(logfile_name);
-  logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\tWors"
-             "tParsimony\tMinSumRFDistance\tMaxSumRFDistance\tMinSumRFCount\tMaxSumRFCo"
-             "unt\tSecondsElapsed";
 
   Benchmark load_timer;
   std::cout << "Loading input DAG..." << std::flush;
@@ -1051,16 +1052,16 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     }
 #endif
 
-    logfile << '\n'
-            << iteration << '\t' << tree_count << '\t'
-            << merge.GetResult().GetNodesCount() << '\t'
-            << merge.GetResult().GetEdgesCount() << '\t' << min_parsimony_score << '\t'
-            << min_parsimony_count << '\t' << max_parsimony_score << '\t'
-            << min_sum_rf_distance << '\t' << max_sum_rf_distance << '\t'
-            << min_sum_rf_count << '\t' << max_sum_rf_count << '\t'
-            << log_timer.durationS() << std::flush;
-
     if (write_intermediate_dag) {
+      logfile << '\n'
+              << iteration << '\t' << tree_count << '\t'
+              << merge.GetResult().GetNodesCount() << '\t'
+              << merge.GetResult().GetEdgesCount() << '\t' << min_parsimony_score << '\t'
+              << min_parsimony_count << '\t' << max_parsimony_score << '\t'
+              << min_sum_rf_distance << '\t' << max_sum_rf_distance << '\t'
+              << min_sum_rf_count << '\t' << max_sum_rf_count << '\t'
+              << log_timer.durationS() << std::flush;
+
       bool append_changes = (iteration > 0);
       StoreDAG(merge.GetResult(), intermediate_dag_path, output_format, append_changes);
       if (write_intermediate_every_x_iters.has_value() and
@@ -1284,7 +1285,9 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     std::cout << "ML score coefficient: " << move_coeff_ml << "\n";
   }
 
-  logfile.close();
+  if (write_intermediate_dag) {
+    logfile.close();
+  }
 
   Benchmark save_timer;
   std::cout << "Saving final DAG..." << std::flush;
