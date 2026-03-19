@@ -45,6 +45,7 @@ option(USE_HTSLIB "Use htslib" OFF)
 option(USE_NETAM "Use netam/thrifty libtorch integration" OFF)
 option(DISABLE_PARALLELISM "Disable all parallelism for debugging" OFF)
 option(USE_SYSTEM_TBB "Use system-installed TBB instead of fetching from source" OFF)
+option(USE_TEST_LOGS "Write debug artifacts (before_optimize.pb, after_optimize.pb)" OFF)
 
 set(TBB_VERSION "v2022.1.0")
 
@@ -337,6 +338,10 @@ function(larch_compile_opts PRODUCT)
 
   if(DISABLE_PARALLELISM)
     target_compile_options(${PRODUCT} PUBLIC -DDISABLE_PARALLELISM)
+  endif()
+
+  if(USE_TEST_LOGS)
+    target_compile_options(${PRODUCT} PUBLIC -DUSE_TEST_LOGS)
   endif()
 
   if(USE_ASAN)
