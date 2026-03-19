@@ -968,6 +968,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     auto tree_storage = scorer.MinWeightSampleTree({}, std::nullopt);
     auto tree = tree_storage.View();
     tree.GetRoot().Validate(true);
+    tree.RecomputeCompactGenomes(true);
 
     double total_ll = 0.0;
     for (auto edge : tree.GetEdges()) {
