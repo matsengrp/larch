@@ -159,47 +159,76 @@ std::string ExpandCompactGenome(const RefSeq& ref_seq, const CG& compact_genome)
   return result;
 }
 
-// Compute the total log-likelihood of edges in a fragment using an ML model.
-// Iterates over fragment edges, expands parent/child sequences from compact
-// genomes in the SPR view (post-move state), and sums per-edge log-likelihoods.
+// Compute edge log-likelihood from two compact genomes.
+template <typename RefSeq, typename CG>
+double ComputeEdgeLL(const RefSeq& ref_seq, const CG& parent_cg, const CG& child_cg,
+                     netam::crepe& model) {
+  std::string parent_seq = ExpandCompactGenome(ref_seq, parent_cg);
+  std::string child_seq = ExpandCompactGenome(ref_seq, child_cg);
+
+  auto [encoded_1d, wt_mod_2d] = model.encoder().encode_sequence(parent_seq);
+  auto encoded = encoded_1d.unsqueeze(0);
+  auto wt_mod = wt_mod_2d.unsqueeze(0);
+  auto mask = torch::ones({1, encoded.size(1)}, torch::kBool);
+
+  auto [rates, csp_logits] = model->forward(encoded, mask, wt_mod);
+  auto csp = torch::softmax(csp_logits, -1);
+
+  auto parent_indices = netam::kmer_sequence_encoder::encode_bases(parent_seq);
+  auto child_indices = netam::kmer_sequence_encoder::encode_bases(child_seq);
+
+  auto ll =
+      netam::poisson_context_log_likelihood(rates, csp, parent_indices, child_indices);
+  return ll.item<double>();
+}
+
+// Compute the ML log-likelihood CHANGE for an SPR move.
+//
+// Returns (new_LL - old_LL) for the edges affected by the move:
+// - new_LL: sum of edge LLs for fragment edges using post-move compact genomes
+// - old_LL: sum of edge LLs for the same child nodes' pre-move parent edges
+//
+// Only edges that changed are scored. The MoveNew node (created by the SPR)
+// has no old edge, so it contributes only to new_LL. Its children (source and
+// destination) have old parent edges that contribute to old_LL.
+//
+// Positive return = move improved likelihood. Negative = move worsened it.
 template <typename SPRView, typename FragmentView>
 double ComputeFragmentMLScore(const SPRView& spr, const FragmentView& fragment,
                               netam::crepe& model) {
   torch::NoGradGuard no_grad;
   const auto& ref_seq = spr.Const().GetReferenceSequence();
-  double total_ll = 0.0;
+  double new_ll = 0.0;
+  double old_ll = 0.0;
 
   for (auto edge : fragment.GetEdges()) {
     auto parent_id = edge.GetParent().GetId();
     auto child_id = edge.GetChild().GetId();
+    auto parent_node = spr.Const().Get(parent_id);
+    auto child_node = spr.Const().Get(child_id);
 
-    if (spr.Const().Get(parent_id).IsUA()) {
+    if (parent_node.IsUA()) {
       continue;
     }
 
-    const auto& parent_cg = spr.Const().Get(parent_id).GetCompactGenome();
-    const auto& child_cg = spr.Const().Get(child_id).GetCompactGenome();
+    // New edge LL: post-move compact genomes from the SPR view
+    new_ll +=
+        ComputeEdgeLL(ref_seq, parent_node.GetCompactGenome(),
+                      child_node.GetCompactGenome(), model);
 
-    std::string parent_seq = ExpandCompactGenome(ref_seq, parent_cg);
-    std::string child_seq = ExpandCompactGenome(ref_seq, child_cg);
-
-    auto [encoded_1d, wt_mod_2d] = model.encoder().encode_sequence(parent_seq);
-    auto encoded = encoded_1d.unsqueeze(0);
-    auto wt_mod = wt_mod_2d.unsqueeze(0);
-    auto mask = torch::ones({1, encoded.size(1)}, torch::kBool);
-
-    auto [rates, csp_logits] = model->forward(encoded, mask, wt_mod);
-    auto csp = torch::softmax(csp_logits, -1);
-
-    auto parent_indices = netam::kmer_sequence_encoder::encode_bases(parent_seq);
-    auto child_indices = netam::kmer_sequence_encoder::encode_bases(child_seq);
-
-    auto ll =
-        netam::poisson_context_log_likelihood(rates, csp, parent_indices, child_indices);
-    total_ll += ll.item<double>();
+    // Old edge LL: pre-move parent→child relationship
+    // MoveNew nodes didn't exist before the move, so they have no old edge.
+    if (not child_node.IsMoveNew()) {
+      auto old_child = child_node.GetOld();
+      auto old_parent = old_child.GetSingleParent().GetParent();
+      if (not old_parent.IsUA()) {
+        old_ll += ComputeEdgeLL(ref_seq, old_parent.GetCompactGenome(),
+                                old_child.GetCompactGenome(), model);
+      }
+    }
   }
 
-  return total_ll;
+  return new_ll - old_ll;
 }
 #endif  // USE_NETAM
 
@@ -651,8 +680,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   bool sample_uniformly = false;
   size_t iter_count = 1;
   unsigned int thread_count = 0;
-  int move_coeff_nodes = 1;
-  int move_coeff_pscore = 1;
+  std::optional<int> user_move_coeff_nodes = std::nullopt;
+  std::optional<int> user_move_coeff_pscore = std::nullopt;
   size_t switch_subtrees = std::numeric_limits<size_t>::max();
   size_t min_subtree_clade_size = 100;   // NOLINT
   size_t max_subtree_clade_size = 1000;  // NOLINT
@@ -689,13 +718,17 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     } else if (name == "-l" or name == "--logpath") {
       ParseOption(name, params, logfile_path, 1);
     } else if (name == "--move-coeff-pscore") {
-      ParseOption(name, params, move_coeff_pscore, 1);
+      int temp;
+      ParseOption(name, params, temp, 1);
+      user_move_coeff_pscore = temp;
     } else if (name == "--min-subtree-clade-size") {
       ParseOption(name, params, min_subtree_clade_size, 1);
     } else if (name == "--max-subtree-clade-size") {
       ParseOption(name, params, max_subtree_clade_size, 1);
     } else if (name == "--move-coeff-nodes") {
-      ParseOption(name, params, move_coeff_nodes, 1);
+      int temp;
+      ParseOption(name, params, temp, 1);
+      user_move_coeff_nodes = temp;
     } else if (name == "--sample-method") {
       std::string temp;
       ParseOption(name, params, temp, 1);
@@ -820,6 +853,10 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   }
 
   // Validate ML scoring backend arguments
+  if (user_move_coeff_ml.has_value() and scoring_backend != ScoringBackend::ML) {
+    std::cerr << "ERROR: --move-coeff-ml requires --scoring-backend ml.\n";
+    Fail();
+  }
   if (scoring_backend == ScoringBackend::ML) {
     if (model_config_path.empty() or model_weights_path.empty()) {
       std::cerr
@@ -846,9 +883,14 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   }
 #endif
 
-  // Resolve ML coefficient: default to 1.0 when ML backend is selected, 0.0 otherwise
-  double move_coeff_ml =
-      user_move_coeff_ml.value_or(scoring_backend == ScoringBackend::ML ? 1.0 : 0.0);
+  // Resolve scoring coefficients based on backend.
+  // ML backend: default to ML-only (pscore=0, nodes=1, ml=1)
+  // Parsimony backend: default to parsimony-only (pscore=1, nodes=1, ml=0)
+  // User-specified values always override these defaults.
+  bool is_ml = (scoring_backend == ScoringBackend::ML);
+  int move_coeff_pscore = user_move_coeff_pscore.value_or(is_ml ? 0 : 1);
+  int move_coeff_nodes = user_move_coeff_nodes.value_or(1);
+  double move_coeff_ml = user_move_coeff_ml.value_or(is_ml ? 1.0 : 0.0);
 
   bool is_input_dag = refseq_path.empty();
   if (input_format == FileFormat::Infer) {
