@@ -35,6 +35,7 @@ static void get_usage() {
       {"--list",
        "Prints information about all selected tests (IDs, tags), but does not run "
        "them"},
+      {"--list-tags", "List all available test tags and exit"},
       {"nocatch", "Allow exceptions to escape for debugging"}};
 
   std::cout << FormatUsage(program_desc, usage_examples, flag_desc_pairs);
@@ -91,6 +92,7 @@ int main(int argc, char* argv[]) {
 #endif
   bool no_catch = false;
   bool opt_list_names = false;
+  bool opt_list_tags = false;
   bool opt_test_range = false;
 
   assert(std::filesystem::exists("./data/") && "Test data folder not found.");
@@ -108,6 +110,8 @@ int main(int argc, char* argv[]) {
       no_catch = true;
     } else if (std::string("--list") == argv[i]) {
       opt_list_names = true;
+    } else if (std::string("--list-tags") == argv[i]) {
+      opt_list_tags = true;
     } else if (std::string("--range") == argv[i]) {
       opt_test_range = true;
       range = parse_range(argv[++i]);
@@ -158,6 +162,20 @@ int main(int argc, char* argv[]) {
       }
     }
     std::cout << std::endl;
+  }
+
+  if (opt_list_tags) {
+    std::set<std::string> all_tags;
+    for (const auto& test : get_all_tests()) {
+      for (const auto& tag : test.tags) {
+        all_tags.insert(tag);
+      }
+    }
+    std::cout << "AVAILABLE TAGS:" << std::endl;
+    for (const auto& tag : all_tags) {
+      std::cout << "  " << tag << std::endl;
+    }
+    return EXIT_SUCCESS;
   }
 
   if (opt_list_names) {
