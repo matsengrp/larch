@@ -104,23 +104,20 @@
   std::string output_dag_path_no_ext = test_output_folder + "/temp";
   std::string output_dag_path_protobuf = test_output_folder + "/temp.pb";
   std::string output_dag_path_dagbin = test_output_folder + "/temp.dagbin";
-  std::string inter_dag_path_protobuf = output_dag_path_protobuf + ".intermediate";
-  std::string inter_dag_path_dagbin = output_dag_path_dagbin + ".intermediate";
+  // Intermediate DAGs are written inside the log directory by larch-usher
+  std::string inter_dag_path_protobuf = test_log_folder + "/intermediate.pb";
+  std::string inter_dag_path_dagbin = test_log_folder + "/intermediate.dagbin";
   std::string other_options = "--thread 1 ";
   if (use_seed) {
     other_options += "--seed 42 ";
   }
 
   if (save_both) {
-    inter_dag_path_protobuf = output_dag_path_no_ext + ".intermediate.pb";
-    inter_dag_path_dagbin = output_dag_path_no_ext + ".intermediate.dagbin";
     other_options += " --output-format debug-all";
     auto [command, result] = run_larch_usher(input_dag_path, output_dag_path_no_ext,
                                              std::nullopt, iter, other_options);
     TestAssert((result == 0) && "larch-usher debug-all run failed.");
   } else {
-    inter_dag_path_protobuf = output_dag_path_protobuf + ".intermediate";
-    inter_dag_path_dagbin = output_dag_path_dagbin + ".intermediate";
     auto [command1, result1] = run_larch_usher(input_dag_path, output_dag_path_protobuf,
                                                std::nullopt, iter, other_options);
     TestAssert((result1 == 0) && "larch-usher protobuf run failed.");

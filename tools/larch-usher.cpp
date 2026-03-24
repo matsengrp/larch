@@ -49,9 +49,11 @@
       {"-v,--VCF-input-file FILE",
        "Path to VCF file, containing ambiguous leaf sequence data"},
       {"-c,--count INT", "Number of iterations (default: 1)"},
+      {"-l,--logpath DIR",
+       "Enable optimization logging to the given directory. Writes logfile.csv\n"
+       "and intermediate DAG files to this directory."},
       {"--inter-save INT",
-       "Saves a new intermediate DAG file once every given number of iterations \n"
-       "(default: no intermediate DAG files saved)"},
+       "Save a numbered DAG snapshot every N iterations (requires -l)"},
       {"-s,--switch-subtrees INT",
        "Switch to optimizing subtrees after the specified number of iterations \n"
        "(default: never)"},
@@ -212,9 +214,8 @@ double ComputeFragmentMLScore(const SPRView& spr, const FragmentView& fragment,
     }
 
     // New edge LL: post-move compact genomes from the SPR view
-    new_ll +=
-        ComputeEdgeLL(ref_seq, parent_node.GetCompactGenome(),
-                      child_node.GetCompactGenome(), model);
+    new_ll += ComputeEdgeLL(ref_seq, parent_node.GetCompactGenome(),
+                            child_node.GetCompactGenome(), model);
 
     // Old edge LL: pre-move parent→child relationship
     // MoveNew nodes didn't exist before the move, so they have no old edge.
@@ -231,6 +232,207 @@ double ComputeFragmentMLScore(const SPRView& spr, const FragmentView& fragment,
   return new_ll - old_ll;
 }
 #endif  // USE_NETAM
+
+class OptimizationLogger {
+ public:
+  OptimizationLogger(Merge& merge, bool use_ua_free_parsimony, FileFormat output_format)
+      : merge_{merge},
+        use_ua_free_parsimony_{use_ua_free_parsimony},
+        output_format_{output_format} {}
+
+  void OpenLogfile(const std::string& log_dir) {
+    log_dir_ = log_dir;
+    std::filesystem::create_directory(log_dir);
+    logfile_.open(log_dir + "/logfile.csv");
+    WriteHeader();
+  }
+
+  void SetIntermediateSaveInterval(uint interval) {
+    intermediate_save_interval_ = interval;
+  }
+
+#ifdef USE_NETAM
+  void SetMLModel(netam::crepe* model) { ml_model_ = model; }
+#endif
+
+  // Compute and log all DAG metrics for this iteration.
+  // Returns the min parsimony score.
+  size_t Log(size_t iteration) {
+    std::cout << "############ Logging for iteration " << iteration << " #######\n";
+    merge_.ComputeResultEdgeMutations();
+
+    auto metrics = ComputeMetrics();
+    PrintMetrics(metrics);
+    WriteRow(iteration, metrics);
+    SaveIntermediateDAG(iteration);
+
+    return metrics.min_parsimony;
+  }
+
+ private:
+  struct Metrics {
+    ArbitraryInt tree_count;
+    size_t min_parsimony;
+    ArbitraryInt min_parsimony_count;
+    size_t max_parsimony;
+    ArbitraryInt min_sum_rf;
+    ArbitraryInt max_sum_rf;
+    ArbitraryInt min_sum_rf_count;
+    ArbitraryInt max_sum_rf_count;
+    double best_tree_ll = 0.0;
+    bool has_ml_score = false;
+  };
+
+  Metrics ComputeMetrics() {
+    Metrics m{};
+    const auto root = merge_.GetResult().GetRoot();
+
+    SubtreeWeight<TreeCount, MergeDAG> tree_counter{merge_.GetResult()};
+    m.tree_count = tree_counter.ComputeWeightBelow(root, {});
+
+    SubtreeWeight<BinaryParsimonyScore, MergeDAG> min_pars{merge_.GetResult()};
+    m.min_parsimony = min_pars.ComputeWeightBelow(root, {});
+    m.min_parsimony_count = min_pars.MinWeightCount(root, {});
+
+    SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> max_pars{merge_.GetResult()};
+    m.max_parsimony = max_pars.ComputeWeightBelow(root, {});
+
+    if (use_ua_free_parsimony_) {
+      SubtreeWeight<UAFreeParsimonyScore, MergeDAG> ua_free{merge_.GetResult()};
+      m.min_parsimony = ua_free.ComputeWeightBelow(root, {});
+      m.min_parsimony_count = ua_free.MinWeightCount(root, {});
+    }
+
+    SumRFDistance min_rf_ops{merge_, merge_};
+    SubtreeWeight<SumRFDistance, MergeDAG> min_rf{merge_.GetResult()};
+    m.min_sum_rf =
+        min_rf.ComputeWeightBelow(root, min_rf_ops) + min_rf_ops.GetOps().GetShiftSum();
+    m.min_sum_rf_count = min_rf.MinWeightCount(root, min_rf_ops);
+
+    MaxSumRFDistance max_rf_ops{merge_, merge_};
+    SubtreeWeight<MaxSumRFDistance, MergeDAG> max_rf{merge_.GetResult()};
+    m.max_sum_rf =
+        max_rf.ComputeWeightBelow(root, max_rf_ops) + max_rf_ops.GetOps().GetShiftSum();
+    m.max_sum_rf_count = max_rf.MinWeightCount(root, max_rf_ops);
+
+#ifdef USE_NETAM
+    if (ml_model_ != nullptr) {
+      m.best_tree_ll = ComputeBestTreeLL();
+      m.has_ml_score = true;
+    }
+#endif
+
+    timer_.stop();
+    return m;
+  }
+
+  void PrintMetrics(const Metrics& m) {
+    std::cout << "Min parsimony score in DAG: " << m.min_parsimony << "\n";
+    std::cout << "Max parsimony score in DAG: " << m.max_parsimony << "\n";
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << m.tree_count
+              << "\n";
+    std::cout << "Optimal trees in DAG: " << m.min_parsimony_count << "\n";
+    std::cout << "Min summed RF distance over trees: " << m.min_sum_rf << "\n";
+    std::cout << "Max summed RF distance over trees: " << m.max_sum_rf << "\n";
+    if (m.has_ml_score) {
+      std::cout << "Best tree log-likelihood: " << m.best_tree_ll << "\n";
+    }
+  }
+
+  void WriteHeader() {
+    logfile_ << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\t"
+                "WorstParsimony\tMinSumRFDistance\tMaxSumRFDistance\tMinSumRFCount\t"
+                "MaxSumRFCount\tSecondsElapsed";
+#ifdef USE_NETAM
+    if (ml_model_ != nullptr) {
+      logfile_ << "\tBestTreeLL";
+    }
+#endif
+  }
+
+  void WriteRow(size_t iteration, const Metrics& m) {
+    if (not logfile_.is_open()) {
+      return;
+    }
+    logfile_ << '\n'
+             << iteration << '\t' << m.tree_count << '\t'
+             << merge_.GetResult().GetNodesCount() << '\t'
+             << merge_.GetResult().GetEdgesCount() << '\t' << m.min_parsimony << '\t'
+             << m.min_parsimony_count << '\t' << m.max_parsimony << '\t' << m.min_sum_rf
+             << '\t' << m.max_sum_rf << '\t' << m.min_sum_rf_count << '\t'
+             << m.max_sum_rf_count << '\t' << timer_.durationS();
+    if (m.has_ml_score) {
+      logfile_ << '\t' << m.best_tree_ll;
+    }
+    logfile_ << std::flush;
+  }
+
+  void SaveIntermediateDAG(size_t iteration) {
+    if (not logfile_.is_open()) {
+      return;
+    }
+    std::string path = IntermediatePath();
+    bool append_changes = (iteration > 0);
+    StoreDAG(merge_.GetResult(), path, output_format_, append_changes);
+    if (intermediate_save_interval_.has_value() and
+        (iteration % intermediate_save_interval_.value() == 0)) {
+      std::string snapshot =
+          log_dir_ + "/snapshot." + std::to_string(iteration) + FormatExt();
+      std::cout << "############ Saving snapshot DAG to: " << snapshot << std::endl;
+      StoreDAG(merge_.GetResult(), snapshot, output_format_);
+    }
+  }
+
+  // DebugAll appends its own extensions (.pb, .dagbin), so no ext for that format.
+  std::string FormatExt() const {
+    if (output_format_ == FileFormat::Dagbin) {
+      return ".dagbin";
+    }
+    if (output_format_ == FileFormat::DebugAll) {
+      return "";
+    }
+    return ".pb";
+  }
+
+  std::string IntermediatePath() const {
+    return log_dir_ + "/intermediate" + FormatExt();
+  }
+
+#ifdef USE_NETAM
+  double ComputeBestTreeLL() {
+    torch::NoGradGuard no_grad;
+    auto dag = merge_.GetResult();
+    const auto& ref_seq = dag.GetReferenceSequence();
+
+    SubtreeWeight<BinaryParsimonyScore, MergeDAG> scorer{dag};
+    auto tree_storage = scorer.MinWeightSampleTree({}, std::nullopt);
+    auto tree = tree_storage.View();
+    tree.GetRoot().Validate(true);
+    tree.RecomputeCompactGenomes(true);
+
+    double total_ll = 0.0;
+    for (auto edge : tree.GetEdges()) {
+      if (edge.GetParent().IsUA()) {
+        continue;
+      }
+      total_ll += ComputeEdgeLL(ref_seq, edge.GetParent().GetCompactGenome(),
+                                edge.GetChild().GetCompactGenome(), *ml_model_);
+    }
+    return total_ll;
+  }
+#endif
+
+  Merge& merge_;
+  bool use_ua_free_parsimony_;
+  FileFormat output_format_;
+  std::string log_dir_;
+  std::optional<uint> intermediate_save_interval_;
+  std::ofstream logfile_;
+  Benchmark timer_;
+#ifdef USE_NETAM
+  netam::crepe* ml_model_ = nullptr;
+#endif
+};
 
 using Storage = MergeDAGStorage<>;
 using ReassignedStatesStorage =
@@ -667,12 +869,10 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   int ignored{};
   std::string input_dag_path;
   std::string output_dag_path;
-  std::string intermediate_dag_path;
-  std::string logfile_path = "optimization_log";
+  std::string logfile_path;
   std::string refseq_path;
   std::string vcf_path;
   CallbackMethod callback_config = CallbackMethod::BestMoves;
-  bool write_intermediate_dag = true;
   std::optional<uint> write_intermediate_every_x_iters = std::nullopt;
   FileFormat input_format = FileFormat::Infer;
   FileFormat output_format = FileFormat::Infer;
@@ -777,9 +977,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     } else if (name == "--keep-fragment-uncollapsed") {
       ParseOption<false>(name, params, collapse_empty_fragment_edges, 0);
       collapse_empty_fragment_edges = false;
-    } else if (name == "--quiet") {
-      ParseOption<false>(name, params, write_intermediate_dag, 0);
-      write_intermediate_dag = false;
     } else if (name == "--inter-save") {
       uint temp;
       ParseOption(name, params, temp, 1);
@@ -852,6 +1049,12 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     Fail();
   }
 
+  // Validate logging arguments
+  if (write_intermediate_every_x_iters.has_value() and logfile_path.empty()) {
+    std::cerr << "ERROR: --inter-save requires -l,--logpath.\n";
+    Fail();
+  }
+
   // Validate ML scoring backend arguments
   if (user_move_coeff_ml.has_value() and scoring_backend != ScoringBackend::ML) {
     std::cerr << "ERROR: --move-coeff-ml requires --scoring-backend ml.\n";
@@ -859,9 +1062,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   }
   if (scoring_backend == ScoringBackend::ML) {
     if (model_config_path.empty() or model_weights_path.empty()) {
-      std::cerr
-          << "ERROR: --model-config and --model-weights are required when "
-             "--scoring-backend ml is selected.\n";
+      std::cerr << "ERROR: --model-config and --model-weights are required when "
+                   "--scoring-backend ml is selected.\n";
       Fail();
     }
 #ifndef USE_NETAM
@@ -885,10 +1087,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
 
   // Resolve scoring coefficients based on backend.
   // ML backend: default to ML-only (pscore=0, nodes=0, ml=1)
-  //   nodes=0 because the node penalty (integer count) is not on the same
-  //   scale as log-likelihood deltas.
   // Parsimony backend: default to parsimony-only (pscore=1, nodes=1, ml=0)
-  //   nodes=1 because 1 node ≈ 1 mutation on the parsimony scale.
   // User-specified values always override these defaults.
   bool is_ml = (scoring_backend == ScoringBackend::ML);
   int move_coeff_pscore = user_move_coeff_pscore.value_or(is_ml ? 0 : 1);
@@ -908,22 +1107,8 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       output_format = FileFormat::ProtobufDAG;
     }
   }
-  if (intermediate_dag_path.empty()) {
-    intermediate_dag_path = output_dag_path + ".intermediate";
-  }
-
   RandomNumberGenerator main_rng{user_seed};
   std::cout << "Random seed: " << main_rng.seed_ << "\n";
-
-  std::ofstream logfile;
-  if (write_intermediate_dag) {
-    std::filesystem::create_directory(logfile_path);
-    std::string logfile_name = logfile_path + "/logfile.csv";
-    logfile.open(logfile_name);
-    logfile << "Iteration\tNTrees\tNNodes\tNEdges\tMaxParsimony\tNTreesMaxParsimony\t"
-               "WorstParsimony\tMinSumRFDistance\tMaxSumRFDistance\tMinSumRFCount\t"
-               "MaxSumRFCount\tSecondsElapsed";
-  }
 
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &ignored);
 #ifdef DISABLE_PARALLELISM
@@ -958,129 +1143,19 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
       optimized_dags;
   merge.ComputeResultEdgeMutations();
 
-  // Compute total log-likelihood for the best parsimony tree in the DAG.
-  // Returns the sum of edge log-likelihoods (skipping UA edges).
+  OptimizationLogger logger{merge, use_ua_free_parsimony, output_format};
+  if (not logfile_path.empty()) {
+    logger.OpenLogfile(logfile_path);
+    if (write_intermediate_every_x_iters.has_value()) {
+      logger.SetIntermediateSaveInterval(write_intermediate_every_x_iters.value());
+    }
+  }
 #ifdef USE_NETAM
-  auto compute_best_tree_ll = [&merge](netam::crepe& model) -> double {
-    torch::NoGradGuard no_grad;
-    auto dag = merge.GetResult();
-    const auto& ref_seq = dag.GetReferenceSequence();
-
-    // Sample the min-parsimony tree
-    SubtreeWeight<BinaryParsimonyScore, MergeDAG> scorer{dag};
-    auto tree_storage = scorer.MinWeightSampleTree({}, std::nullopt);
-    auto tree = tree_storage.View();
-    tree.GetRoot().Validate(true);
-    tree.RecomputeCompactGenomes(true);
-
-    double total_ll = 0.0;
-    for (auto edge : tree.GetEdges()) {
-      if (edge.GetParent().IsUA()) {
-        continue;
-      }
-      total_ll += ComputeEdgeLL(ref_seq, edge.GetParent().GetCompactGenome(),
-                                edge.GetChild().GetCompactGenome(), model);
-    }
-    return total_ll;
-  };
+  if (ml_model.has_value()) {
+    logger.SetMLModel(&(*ml_model));
+  }
 #endif
-
-  Benchmark log_timer;
-  auto logger = [&merge, &logfile, &log_timer, &intermediate_dag_path,
-                 &write_intermediate_dag, &write_intermediate_every_x_iters,
-                 &output_format, &use_ua_free_parsimony
-#ifdef USE_NETAM
-                 ,
-                 &ml_model, &compute_best_tree_ll
-#endif
-  ](size_t iteration) {
-    std::cout << "############ Logging for iteration " << iteration << " #######\n";
-    merge.ComputeResultEdgeMutations();
-
-    const auto root_node = merge.GetResult().GetRoot();
-    // Tree count
-    SubtreeWeight<TreeCount, MergeDAG> tree_counter{merge.GetResult()};
-    auto tree_count = tree_counter.ComputeWeightBelow(root_node, {});
-    // Min Parsimony score
-    SubtreeWeight<BinaryParsimonyScore, MergeDAG> min_parsimony_scorer{
-        merge.GetResult()};
-    auto min_parsimony_score = min_parsimony_scorer.ComputeWeightBelow(root_node, {});
-    auto min_parsimony_count = min_parsimony_scorer.MinWeightCount(root_node, {});
-    // Max Parsimony score
-    SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> max_parsimony_scorer{
-        merge.GetResult()};
-    auto max_parsimony_score = max_parsimony_scorer.ComputeWeightBelow(root_node, {});
-    // Min UA-FREE Parsimony score
-    SubtreeWeight<UAFreeParsimonyScore, MergeDAG> min_ua_free_parsimony_scorer{
-        merge.GetResult()};
-    auto min_ua_free_parsimony_score =
-        min_ua_free_parsimony_scorer.ComputeWeightBelow(root_node, {});
-    auto min_ua_free_parsimony_count =
-        min_ua_free_parsimony_scorer.MinWeightCount(root_node, {});
-    // Min Sum RF Distance
-    SumRFDistance min_sum_rf_dist_weight_ops{merge, merge};
-    auto min_shift_sum = min_sum_rf_dist_weight_ops.GetOps().GetShiftSum();
-    SubtreeWeight<SumRFDistance, MergeDAG> min_sum_rf_dist_scorer{merge.GetResult()};
-    auto min_sum_rf_distance = min_sum_rf_dist_scorer.ComputeWeightBelow(
-        root_node, min_sum_rf_dist_weight_ops);
-    min_sum_rf_distance += min_shift_sum;
-    auto min_sum_rf_count =
-        min_sum_rf_dist_scorer.MinWeightCount(root_node, min_sum_rf_dist_weight_ops);
-    // Max Sum RF Distance
-    MaxSumRFDistance max_sum_rf_dist_weight_ops{merge, merge};
-    auto max_shift_sum = max_sum_rf_dist_weight_ops.GetOps().GetShiftSum();
-    SubtreeWeight<MaxSumRFDistance, MergeDAG> max_sum_rf_dist_scorer{merge.GetResult()};
-    auto max_sum_rf_distance = max_sum_rf_dist_scorer.ComputeWeightBelow(
-        root_node, max_sum_rf_dist_weight_ops);
-    max_sum_rf_distance += max_shift_sum;
-    auto max_sum_rf_count =
-        max_sum_rf_dist_scorer.MinWeightCount(root_node, max_sum_rf_dist_weight_ops);
-
-    log_timer.stop();
-
-    if (use_ua_free_parsimony) {
-      min_parsimony_score = min_ua_free_parsimony_score;
-      min_parsimony_count = min_ua_free_parsimony_count;
-    }
-    std::cout << "Min parsimony score in DAG: " << min_parsimony_score << "\n";
-    std::cout << "Max parsimony score in DAG: " << max_parsimony_score << "\n";
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Total trees in DAG: " << tree_count
-              << "\n";
-    std::cout << "Optimal trees in DAG: " << min_parsimony_count << "\n";
-    std::cout << "Min summed RF distance over trees: " << min_sum_rf_distance << "\n";
-    std::cout << "Max summed RF distance over trees: " << max_sum_rf_distance << "\n";
-#ifdef USE_NETAM
-    if (ml_model.has_value()) {
-      double best_tree_ll = compute_best_tree_ll(*ml_model);
-      std::cout << "Best tree log-likelihood: " << best_tree_ll << "\n";
-    }
-#endif
-
-    if (write_intermediate_dag) {
-      logfile << '\n'
-              << iteration << '\t' << tree_count << '\t'
-              << merge.GetResult().GetNodesCount() << '\t'
-              << merge.GetResult().GetEdgesCount() << '\t' << min_parsimony_score << '\t'
-              << min_parsimony_count << '\t' << max_parsimony_score << '\t'
-              << min_sum_rf_distance << '\t' << max_sum_rf_distance << '\t'
-              << min_sum_rf_count << '\t' << max_sum_rf_count << '\t'
-              << log_timer.durationS() << std::flush;
-
-      bool append_changes = (iteration > 0);
-      StoreDAG(merge.GetResult(), intermediate_dag_path, output_format, append_changes);
-      if (write_intermediate_every_x_iters.has_value() and
-          (iteration % write_intermediate_every_x_iters.value() == 0)) {
-        std::string intermediate_dag_path_final =
-            intermediate_dag_path + "." + std::to_string(iteration);
-        std::cout << "############ Saving intermediate DAG file to: "
-                  << intermediate_dag_path_final << std::endl;
-        std::filesystem::copy_file(intermediate_dag_path, intermediate_dag_path_final,
-                                   std::filesystem::copy_options::overwrite_existing);
-      }
-    }
-    return min_parsimony_score;
-  };
-  current_best_parsimony = logger(0);
+  current_best_parsimony = logger.Log(0);
 
   bool subtrees = false;
   for (size_t i = 0; i < iter_count; ++i) {
@@ -1261,7 +1336,7 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     auto optimized_view = optimized_dags.back().first.View();
     optimized_view.RecomputeCompactGenomes(false);
     merge.AddDAG(optimized_view);
-    auto this_parsimony = logger(i + 1);
+    auto this_parsimony = logger.Log(i + 1);
     if (time_limit > 0) {
       total_timer.stop();
       if (size_t(total_timer.durationFloorMinutes()) >= time_limit) {
@@ -1287,10 +1362,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
             << (scoring_backend == ScoringBackend::ML ? "ml" : "parsimony") << "\n";
   if (move_coeff_ml != 0.0) {
     std::cout << "ML score coefficient: " << move_coeff_ml << "\n";
-  }
-
-  if (write_intermediate_dag) {
-    logfile.close();
   }
 
   Benchmark save_timer;

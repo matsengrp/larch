@@ -67,6 +67,7 @@ inline void print_peak_mem() {
 }
 
 inline const std::string test_output_folder = "data/_ignore/";
+inline const std::string test_log_folder = test_output_folder + "/optimization_log";
 
 inline std::pair<std::string, int> run_larch_usher(
     std::string_view input_dag_path, std::string_view output_dag_path,
@@ -75,7 +76,7 @@ inline std::pair<std::string, int> run_larch_usher(
     std::optional<std::string_view> other_options = std::nullopt,
     bool do_print_stdout = true, bool do_print_stderr = false,
     bool do_print_summary = true) {
-  std::string log_path = test_output_folder + "/optimization_log";
+  std::string log_path = test_log_folder;
 
   std::stringstream ss;
   // ss << "/usr/bin/time ";
