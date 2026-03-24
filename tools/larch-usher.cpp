@@ -233,6 +233,26 @@ double ComputeFragmentMLScore(const SPRView& spr, const FragmentView& fragment,
 }
 #endif  // USE_NETAM
 
+struct MLScoringConfig {
+#ifdef USE_NETAM
+  netam::crepe* model = nullptr;
+#endif
+  double coeff = 0.0;
+
+  template <typename SPRView, typename FragmentType>
+  double AdjustScore(double base_score,
+                     [[maybe_unused]] const SPRView& spr,
+                     [[maybe_unused]] const FragmentType& fragment) const {
+#ifdef USE_NETAM
+    if (model != nullptr and coeff != 0.0) {
+      double fragment_ll = ComputeFragmentMLScore(spr, fragment, *model);
+      return base_score - coeff * fragment_ll;
+    }
+#endif
+    return base_score;
+  }
+};
+
 class OptimizationLogger {
  public:
   OptimizationLogger(Merge& merge, bool use_ua_free_parsimony, FileFormat output_format)
@@ -290,18 +310,19 @@ class OptimizationLogger {
     SubtreeWeight<TreeCount, MergeDAG> tree_counter{merge_.GetResult()};
     m.tree_count = tree_counter.ComputeWeightBelow(root, {});
 
-    SubtreeWeight<BinaryParsimonyScore, MergeDAG> min_pars{merge_.GetResult()};
-    m.min_parsimony = min_pars.ComputeWeightBelow(root, {});
-    m.min_parsimony_count = min_pars.MinWeightCount(root, {});
+    if (use_ua_free_parsimony_) {
+      SubtreeWeight<UAFreeParsimonyScore, MergeDAG> scorer{merge_.GetResult()};
+      m.min_parsimony = scorer.ComputeWeightBelow(root, {});
+      m.min_parsimony_count = scorer.MinWeightCount(root, {});
+    } else {
+      SubtreeWeight<BinaryParsimonyScore, MergeDAG> scorer{merge_.GetResult()};
+      m.min_parsimony = scorer.ComputeWeightBelow(root, {});
+      m.min_parsimony_count = scorer.MinWeightCount(root, {});
+    }
 
+    // Max parsimony always uses BinaryParsimonyScore (no UA-free variant exists)
     SubtreeWeight<MaxBinaryParsimonyScore, MergeDAG> max_pars{merge_.GetResult()};
     m.max_parsimony = max_pars.ComputeWeightBelow(root, {});
-
-    if (use_ua_free_parsimony_) {
-      SubtreeWeight<UAFreeParsimonyScore, MergeDAG> ua_free{merge_.GetResult()};
-      m.min_parsimony = ua_free.ComputeWeightBelow(root, {});
-      m.min_parsimony_count = ua_free.MinWeightCount(root, {});
-    }
 
     SumRFDistance min_rf_ops{merge_, merge_};
     SubtreeWeight<SumRFDistance, MergeDAG> min_rf{merge_.GetResult()};
@@ -538,23 +559,14 @@ struct Treebased_Move_Found_Callback
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
-    double effective_score = move.score_change;
-#ifdef USE_NETAM
-    if (ml_model_ != nullptr and ml_coeff_ != 0.0) {
-      double fragment_ll = ComputeFragmentMLScore(spr, fragment, *ml_model_);
-      effective_score -= ml_coeff_ * fragment_ll;
-    }
-#endif
+    double effective_score = ml_config_.AdjustScore(move.score_change, spr, fragment);
     return {false, effective_score <= 0};
   }
 
   void OnRadius() {};
 
   std::pair<int, int> move_score_coeffs_;
-#ifdef USE_NETAM
-  netam::crepe* ml_model_ = nullptr;
-#endif
-  double ml_coeff_ = 0.0;
+  MLScoringConfig ml_config_;
 };
 
 struct Merge_All_Moves_Found_Callback
@@ -689,13 +701,7 @@ struct Merge_All_Profitable_Moves_Found_Callback
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
-    double effective_score = move.score_change;
-#ifdef USE_NETAM
-    if (ml_model_ != nullptr and ml_coeff_ != 0.0) {
-      double fragment_ll = ComputeFragmentMLScore(spr, fragment, *ml_model_);
-      effective_score -= ml_coeff_ * fragment_ll;
-    }
-#endif
+    double effective_score = ml_config_.AdjustScore(move.score_change, spr, fragment);
     return {effective_score <= 0, effective_score <= 0};
   }
 
@@ -707,10 +713,7 @@ struct Merge_All_Profitable_Moves_Found_Callback
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
-#ifdef USE_NETAM
-  netam::crepe* ml_model_ = nullptr;
-#endif
-  double ml_coeff_ = 0.0;
+  MLScoringConfig ml_config_;
 };
 
 struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
@@ -822,13 +825,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
     }
     move.score_change = move_score_coeffs_.second * move.score_change -
                         move_score_coeffs_.first * node_id_map_count;
-    double effective_score = move.score_change;
-#ifdef USE_NETAM
-    if (ml_model_ != nullptr and ml_coeff_ != 0.0) {
-      double fragment_ll = ComputeFragmentMLScore(spr, fragment, *ml_model_);
-      effective_score -= ml_coeff_ * fragment_ll;
-    }
-#endif
+    double effective_score = ml_config_.AdjustScore(move.score_change, spr, fragment);
     return {effective_score <= 0, false};
   }
 
@@ -840,10 +837,7 @@ struct Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback
   std::atomic<MAT::Tree*> sample_mat_ = nullptr;
   std::mutex merge_mtx_;
   std::pair<int, int> move_score_coeffs_;
-#ifdef USE_NETAM
-  netam::crepe* ml_model_ = nullptr;
-#endif
-  double ml_coeff_ = 0.0;
+  MLScoringConfig ml_config_;
 };
 
 enum class SampleMethod {
@@ -1144,18 +1138,26 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
   merge.ComputeResultEdgeMutations();
 
   OptimizationLogger logger{merge, use_ua_free_parsimony, output_format};
+#ifdef USE_NETAM
+  if (ml_model.has_value()) {
+    logger.SetMLModel(&(*ml_model));
+  }
+#endif
   if (not logfile_path.empty()) {
     logger.OpenLogfile(logfile_path);
     if (write_intermediate_every_x_iters.has_value()) {
       logger.SetIntermediateSaveInterval(write_intermediate_every_x_iters.value());
     }
   }
+  current_best_parsimony = logger.Log(0);
+
+  MLScoringConfig ml_config;
 #ifdef USE_NETAM
   if (ml_model.has_value()) {
-    logger.SetMLModel(&(*ml_model));
+    ml_config.model = &(*ml_model);
   }
 #endif
-  current_best_parsimony = logger.Log(0);
+  ml_config.coeff = move_coeff_ml;
 
   bool subtrees = false;
   for (size_t i = 0; i < iter_count; ++i) {
@@ -1296,16 +1298,6 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     sample_tree.View().BuildMAT(mat);
     check_edge_mutations(sample_tree.View().Const());
 
-    // Helper to set ML scoring on a callback
-    [[maybe_unused]] auto set_ml_scoring = [&]([[maybe_unused]] auto& callback) {
-#ifdef USE_NETAM
-      if (ml_model.has_value()) {
-        callback.ml_model_ = &(*ml_model);
-      }
-#endif
-      callback.ml_coeff_ = move_coeff_ml;
-    };
-
     if (callback_config == CallbackMethod::AllMoves) {
       Merge_All_Moves_Found_Callback callback{merge, collapse_empty_fragment_edges};
       optimized_dags.push_back(
@@ -1313,19 +1305,19 @@ int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape)
     } else if (callback_config == CallbackMethod::BestMovesFixedTree) {
       Merge_All_Profitable_Moves_Found_Fixed_Tree_Callback callback{
           merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
-      set_ml_scoring(callback);
+      callback.ml_config_ = ml_config;
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMovesTreeBased) {
       Treebased_Move_Found_Callback callback{
           merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
-      set_ml_scoring(callback);
+      callback.ml_config_ = ml_config;
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else if (callback_config == CallbackMethod::BestMoves) {
       Merge_All_Profitable_Moves_Found_Callback callback{
           merge, {move_coeff_nodes, move_coeff_pscore}, collapse_empty_fragment_edges};
-      set_ml_scoring(callback);
+      callback.ml_config_ = ml_config;
       optimized_dags.push_back(
           optimize_dag_direct(sample_tree.View(), callback, callback, callback));
     } else {
