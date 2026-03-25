@@ -338,7 +338,7 @@ class OptimizationLogger {
 
 #ifdef USE_NETAM
     if (ml_model_ != nullptr) {
-      m.best_tree_ll = ComputeBestTreeLL();
+      m.best_tree_ll = ComputeBestParsimonyTreeLL();
       m.has_ml_score = true;
     }
 #endif
@@ -369,14 +369,14 @@ class OptimizationLogger {
       logfile_ << "\tBestTreeLL";
     }
 #endif
+    logfile_ << '\n';
   }
 
   void WriteRow(size_t iteration, const Metrics& m) {
     if (not logfile_.is_open()) {
       return;
     }
-    logfile_ << '\n'
-             << iteration << '\t' << m.tree_count << '\t'
+    logfile_ << iteration << '\t' << m.tree_count << '\t'
              << merge_.GetResult().GetNodesCount() << '\t'
              << merge_.GetResult().GetEdgesCount() << '\t' << m.min_parsimony << '\t'
              << m.min_parsimony_count << '\t' << m.max_parsimony << '\t' << m.min_sum_rf
@@ -385,7 +385,7 @@ class OptimizationLogger {
     if (m.has_ml_score) {
       logfile_ << '\t' << m.best_tree_ll;
     }
-    logfile_ << std::flush;
+    logfile_ << '\n' << std::flush;
   }
 
   void SaveIntermediateDAG(size_t iteration) {
@@ -406,13 +406,16 @@ class OptimizationLogger {
 
   // DebugAll appends its own extensions (.pb, .dagbin), so no ext for that format.
   std::string FormatExt() const {
-    if (output_format_ == FileFormat::Dagbin) {
-      return ".dagbin";
+    switch (output_format_) {
+      case FileFormat::Dagbin:
+        return ".dagbin";
+      case FileFormat::DebugAll:
+        return "";
+      case FileFormat::ProtobufDAG:
+        return ".pb";
+      default:
+        Fail("FormatExt: unsupported output format for intermediate DAG");
     }
-    if (output_format_ == FileFormat::DebugAll) {
-      return "";
-    }
-    return ".pb";
   }
 
   std::string IntermediatePath() const {
@@ -420,7 +423,8 @@ class OptimizationLogger {
   }
 
 #ifdef USE_NETAM
-  double ComputeBestTreeLL() {
+  // Compute the LL of the best-parsimony tree sampled from the DAG.
+  double ComputeBestParsimonyTreeLL() {
     torch::NoGradGuard no_grad;
     auto dag = merge_.GetResult();
     const auto& ref_seq = dag.GetReferenceSequence();
@@ -569,6 +573,8 @@ struct Treebased_Move_Found_Callback
   MLScoringConfig ml_config_;
 };
 
+// Accepts all moves unconditionally (--callback-option all-moves).
+// No ML scoring — this callback is for maximum DAG exploration regardless of score.
 struct Merge_All_Moves_Found_Callback
     : public BatchingCallback<Merge_All_Moves_Found_Callback> {
   MOVE_ONLY_VIRT_DTOR(Merge_All_Moves_Found_Callback);
