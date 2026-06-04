@@ -45,7 +45,7 @@ static void test_larch_usher_merged_dag() {
   std::string output_dag_path = test_output_folder + "/opt_dag.pb";
   std::string command = "./bin/larch-usher -i data/larch_merged_dag.pb -o " +
                         output_dag_path +
-                        " -c 1 -s 0 --max-subtree-clade-size 2000 --trim --quiet";
+                        " -c 1 -s 0 --max-subtree-clade-size 2000 --trim";
   std::cout << ">COMMAND_EXECUTE: \"" << command << "\"" << std::endl;
   int result = std::system(command.c_str());
   TestAssert(0 == result);

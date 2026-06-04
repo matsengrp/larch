@@ -226,20 +226,19 @@ void test_encode_sequence_kmer_indices_valid() {
 }
 
 void test_encode_sequence_padding_creates_zero_index() {
-  // K-mers containing N should map to the last index (kmer_count - 1)
+  // K-mers containing N should map to index 0 (matching Python netam convention)
   auto yaml = make_config(3, 5);
   kmer_sequence_encoder encoder{yaml};
 
   auto [encoded, wt_modifier] = encoder.encode_sequence("ACG");
 
   auto encoded_accessor = encoded.accessor<int32_t, 1>();
-  auto n_index =
-      static_cast<int32_t>(encoder.kmer_count() - 1);
+  constexpr int32_t n_index = 0;
 
-  // Position 0: k-mer is "NAC" (contains N from padding) -> last index
+  // Position 0: k-mer is "NAC" (contains N from padding) -> index 0
   TestAssert(encoded_accessor[0] == n_index);
 
-  // Position 2: k-mer is "CGN" (contains N from padding) -> last index
+  // Position 2: k-mer is "CGN" (contains N from padding) -> index 0
   TestAssert(encoded_accessor[2] == n_index);
 }
 

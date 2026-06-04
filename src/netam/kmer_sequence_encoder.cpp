@@ -30,8 +30,8 @@ std::pair<torch::Tensor, torch::Tensor> kmer_sequence_encoder::encode_sequence(
   std::string padded_sequence = std::string(overhang_length_, 'N') + upper_seq +
                                 std::string(overhang_length_, 'N');
 
-  // Index for N-containing kmers (last index, 4^k)
-  auto n_index = signed_cast(narrowing_cast<std::uint32_t>(all_kmers_.size() - 1));
+  // Index for N-containing kmers (index 0, matching Python netam convention)
+  constexpr std::int32_t n_index = 0;
 
   // Encode kmers
   std::vector<std::int32_t> kmer_indices;
@@ -75,8 +75,8 @@ torch::Tensor kmer_sequence_encoder::encode_bases(const std::string& sequence) {
 std::vector<std::string> kmer_sequence_encoder::generate_kmers(std::size_t length) {
   std::vector<std::string> kmers;
 
-  // Generate all possible kmers of given length (4^k kmers)
-  // Uses lexicographic order: AAAAA=0, AAAAC=1, AAAAG=2, AAAAT=3, AAACA=4, ...
+  // Generate all possible kmers of given length (4^k kmers) in lexicographic order.
+  // Final indices: N=0, AAA=1, AAC=2, ..., TTT=4^k (N-kmer prepended below).
   std::function<void(std::string, std::size_t)> generate = [&](std::string current,
                                                                std::size_t pos) {
     if (pos == length) {
@@ -90,9 +90,12 @@ std::vector<std::string> kmer_sequence_encoder::generate_kmers(std::size_t lengt
 
   generate("", 0);
 
-  // Add placeholder for N-containing kmers at the end (index 4^k)
-  kmers.push_back("N");
-  return kmers;
+  // N-kmer placeholder at index 0 (matches Python netam convention)
+  std::vector<std::string> result;
+  result.reserve(1 + kmers.size());
+  result.push_back("N");
+  result.insert(result.end(), kmers.begin(), kmers.end());
+  return result;
 }
 
 torch::Tensor kmer_sequence_encoder::compute_wt_base_modifier(

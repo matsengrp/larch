@@ -47,8 +47,10 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
   static_assert(DAG::template contains_element_feature<Component::Node, MATConversion>);
   auto& tree = dag.GetMutableMAT();
 
-#ifdef KEEP_ASSERTS
+#ifdef USE_TEST_LOGS
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "before_optimize.pb");
+#endif
+#ifdef KEEP_ASSERTS
   check_MAT_MADAG_Eq(tree, dag);
 #endif
 
@@ -92,6 +94,12 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
                         "intermediate_newick",  // intermediate newick name
                         callback                // callback
     );
+#ifndef USE_TEST_LOGS
+    // matOptimize unconditionally writes intermediate_newick*.pb.gz when
+    // allow_drift is true. Clean up since we can't suppress it without
+    // changing search behavior.
+    std::remove("intermediate_newick1.pb.gz");
+#endif
     tree.uncondense_leaves();
     tree.condense_leaves(condense_arg);
     tree.fix_node_idx();
@@ -100,7 +108,9 @@ auto optimize_dag_direct(DAG dag, Move_Found_Callback& callback,
 
   tree.uncondense_leaves();
   tree.fix_node_idx();
+#ifdef USE_TEST_LOGS
   Mutation_Annotated_Tree::save_mutation_annotated_tree(tree, "after_optimize.pb");
+#endif
   auto result =
       std::make_pair(AddMATConversion(MADAGStorage<>::EmptyDefault()), std::move(tree));
   result.first.View().BuildFromMAT(result.second, dag.GetReferenceSequence());

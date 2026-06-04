@@ -33,6 +33,10 @@ description = "Build larch using settings from larch-build.env."
 cmd = "bash scripts/run-tests.sh -tag slow"
 description = "Run tests (excluding slow tests). Build first with 'pixi run build'."
 
+[tasks.test-netam]
+cmd = "bash scripts/run-tests.sh +tag netam"
+description = "Run all netam tests (ML SPR, likelihood, model, S5F). Requires USE_NETAM=yes build."
+
 [tasks.test-all]
 cmd = "bash scripts/run-tests.sh"
 description = "Run all tests including slow tests. WARNING: Very slow."
