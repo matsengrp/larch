@@ -132,7 +132,7 @@ if(MPI_C_COMPILER)
     # Get the first path (space-separated list)
     string(REPLACE " " ";" MPI_INCDIRS_LIST "${MPI_INCDIRS}")
     list(GET MPI_INCDIRS_LIST 0 MPI_PRIMARY_INCDIR)
-    
+
     set(MPI_C_HEADER_DIR "${MPI_PRIMARY_INCDIR}" CACHE PATH "")
     set(MPI_CXX_HEADER_DIR "${MPI_PRIMARY_INCDIR}" CACHE PATH "")
 endif()
@@ -355,14 +355,14 @@ function(larch_compile_opts PRODUCT)
   # (see torch target modification after find_package(Torch))
   target_link_libraries(${PRODUCT} PUBLIC protobuf::libprotobuf)
   if(absl_FOUND)
-    target_link_libraries(${PRODUCT} PUBLIC 
+    target_link_libraries(${PRODUCT} PUBLIC
       absl::log
       absl::log_internal_check_impl
     )
   endif()
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR})
   target_include_directories(${PRODUCT} PUBLIC ${PROTO_OUT_DIR}/deps/usher)
-  
+
   target_include_directories(${PRODUCT} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/deps/range-v3/install/include)
   target_compile_options(${PRODUCT} PUBLIC -DRANGES_DISABLE_DEPRECATED_WARNINGS)
   add_dependencies(${PRODUCT} range-v3)
@@ -601,11 +601,11 @@ larch_executable(larch-dag2dot
 )
 larch_install(larch-dag2dot)
 
-# # bcr-larch
-larch_executable(bcr-larch
+# # larch-bcr
+larch_executable(larch-bcr
   tools/bcr-larch.cpp
 )
-larch_install(bcr-larch)
+larch_install(larch-bcr)
 
 # # larch-usher
 if(USE_USHER)
